@@ -431,16 +431,7 @@ public class CasperIMD {
         final long delay;
         int onDirectFather = 0;
         int onOlderAncestor = 0;
-
-        CasperBlock father(@NotNull CasperBlock grandFather) {
-            for (Network.Block b : blocksReceivedByFatherId.get(grandFather.id)) {
-                if (b.height == h - 2) {
-                    return (CasperBlock) b;
-                }
-            }
-            return null;
-        }
-
+        int incNotTheBestFather = 0;
 
         ByzantineProd(int nodeId, long delay, @NotNull CasperBlock genesis) {
             super(nodeId, 0, genesis);
@@ -464,8 +455,10 @@ public class CasperIMD {
                 onDirectFather++;
             } else {
                 onOlderAncestor++;
-                if (head.parent.height == h - 2 && father((CasperBlock) head.parent) != null) {
-                    throw new IllegalStateException("If we have received the son of a block we should have used it as the new head");
+                // Sometimes we received our direct father but it wasn't the best head
+                Network.Block possibleFather = blocksReceivedByHeight.get(h-1);
+                if (possibleFather != null && possibleFather.parent.height != h - 1) {
+                    incNotTheBestFather++;
                 }
             }
 
@@ -482,13 +475,14 @@ public class CasperIMD {
                     "delay=" + delay +
                     ", onDirectFather=" + onDirectFather +
                     ", onOlderAncestor=" + onOlderAncestor +
+                    ", incNotTheBestFather=" + incNotTheBestFather +
                     '}';
         }
     }
 
     /**
-     * Skip its father's block.
-     * Idea: it can them include the transactions of its father.
+     * Skip its son's block.
+     * Idea: it can them include the transactions of its son.
      */
     class ByzantineProdSF extends ByzantineProd {
         ByzantineProdSF(int nodeId, long delay, @NotNull CasperBlock genesis) {
@@ -551,6 +545,10 @@ public class CasperIMD {
 
         @Override
         public boolean onBlock(@NotNull final Network.Block b) {
+            if (network.time > b.proposalTime + network.distribVal[network.distribVal.length - 1] + blockConstructionTime) {
+             //   throw new IllegalStateException();
+            }
+
             if (super.onBlock(b)) {
                 if (b.height == toSend - 1) {
 

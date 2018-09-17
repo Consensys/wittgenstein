@@ -18,7 +18,7 @@ public class Network {
 
     // Distribution taken from: https://ethstats.net/
     private final int[] distribProp = {16, 18, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
-    private final long[] distribVal = {250, 500, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750, 4500, 6000, 8500, 9750, 10000};
+    public final long[] distribVal = {250, 500, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750, 4500, 6000, 8500, 9750, 10000};
     private final long[] longDistrib = new long[100];
 
 
@@ -111,6 +111,7 @@ public class Network {
 
     public void printNetworkLatency() {
         for (int s = 1, cur = 0, sum = 0; cur < 100; s++) {
+            System.out.println("Network latency: time to receive a message:");
             int size = 0;
             while (cur < longDistrib.length && longDistrib[cur] < s * 1000) {
                 size++;
@@ -336,8 +337,10 @@ public class Network {
 
     public static abstract class Node {
         public final int nodeId;
-        protected final Map<Long, Block> blocksReceived = new HashMap<>();
+        protected final Map<Long, Block> blocksReceivedByBlockId = new HashMap<>();
         protected final Map<Long, Set<Network.Block>> blocksReceivedByFatherId = new HashMap<>();
+        protected final Map<Integer, Network.Block> blocksReceivedByHeight= new HashMap<>();
+
 
         protected long msgReceived = 0;
         protected long msgSent = 0;
@@ -350,7 +353,7 @@ public class Network {
             this.nodeId = nodeId;
             this.genesis = genesis;
             this.head = genesis;
-            this.blocksReceived.put(genesis.id, genesis);
+            this.blocksReceivedByBlockId.put(genesis.id, genesis);
         }
 
         /**
@@ -359,12 +362,12 @@ public class Network {
         public boolean onBlock(@NotNull Network.Block b) {
             if (!b.valid) return false;
 
-            if (this.blocksReceived.put(b.id, b) != null) {
+            if (this.blocksReceivedByBlockId.put(b.id, b) != null) {
                 return false; // If we have already received this block
             }
             Set<Block> pa = this.blocksReceivedByFatherId.computeIfAbsent(b.parent.id, k -> new HashSet<>());
             pa.add(b);
-            //this.blocksReceivedByFatherId.put(b.parent.id, b);
+            blocksReceivedByHeight.put(b.height, b);
 
             head = best(head, b);
 
