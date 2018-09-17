@@ -1,9 +1,12 @@
+package net.consensys.wittgenstein.core;
+
+
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
 @SuppressWarnings({"WeakerAccess", "SameParameterValue", "FieldCanBeLocal"})
-class Network {
+public class Network {
     public final static int OBSERVER_NODE_ID = 0;
     public final static int BYZANTINE_NODE_ID = 1;
 
@@ -11,7 +14,7 @@ class Network {
     private final HashSet<Integer> partition = new HashSet<>();
     private final ArrayList<Node> allNodes = new ArrayList<>();
 
-    final Random rd = new Random(0);
+    public final Random rd = new Random(0);
 
     // Distribution taken from: https://ethstats.net/
     private final int[] distribProp = {16, 18, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
@@ -19,19 +22,21 @@ class Network {
     private final long[] longDistrib = new long[100];
 
 
-    long time = 0;
+    public long time = 0;
+
+
 
     /**
      * The node we use as an observer for the final stats
      */
     private final Node observer;
 
-    abstract static class MessageContent {
-        abstract void action(Node from, Node to);
+    public abstract static class MessageContent {
+       public abstract void action(Node from, Node to);
     }
 
 
-    class StartWork extends MessageContent {
+    public class StartWork extends MessageContent {
         final long startTime;
 
         public StartWork(long startTime) {
@@ -39,7 +44,7 @@ class Network {
         }
 
         @Override
-        void action(Node from, Node to) {
+        public void action(Node from, Node to) {
             StartWork nextWork = to.work(startTime);
             if (nextWork != null) {
                 if (nextWork.startTime <= startTime)
@@ -50,16 +55,16 @@ class Network {
     }
 
 
-    static class SendBlock extends MessageContent {
+    public static class SendBlock extends MessageContent {
         @NotNull
         final Block toSend;
 
-        SendBlock(@NotNull Block toSend) {
+        public SendBlock(@NotNull Block toSend) {
             this.toSend = toSend;
         }
 
         @Override
-        void action(@NotNull Node fromNode, @NotNull Node toNode) {
+        public void action(@NotNull Node fromNode, @NotNull Node toNode) {
             toNode.onBlock(toSend);
         }
 
@@ -114,11 +119,11 @@ class Network {
     /**
      * Send a message to all nodes.
      */
-    void sendAll(@NotNull MessageContent m, long sendTime, @NotNull Node fromNode) {
+    public void sendAll(@NotNull MessageContent m, long sendTime, @NotNull Node fromNode) {
         send(m, sendTime, fromNode, allNodes);
     }
 
-    void send(@NotNull MessageContent m, long sendTime, @NotNull Node fromNode, @NotNull ArrayList<? extends Node> dests) {
+    public void send(@NotNull MessageContent m, long sendTime, @NotNull Node fromNode, @NotNull ArrayList<? extends Node> dests) {
         for (Node n : dests) {
             if (n != fromNode) {
                 if ((partition.contains(fromNode.nodeId) && partition.contains(n.nodeId)) ||
@@ -131,10 +136,10 @@ class Network {
         }
     }
 
-    void registerTask(@NotNull final Runnable task, long executionTime, @NotNull Node fromNode) {
+    public void registerTask(@NotNull final Runnable task, long executionTime, @NotNull Node fromNode) {
         StartWork sw = new StartWork(executionTime) {
             @Override
-            void action(Node from, Node to) {
+            public void action(Node from, Node to) {
                 task.run();
             }
         };
@@ -159,7 +164,7 @@ class Network {
     }
 
 
-    void partition(float part, List<List<? extends Node>> nodesPerType) {
+    public void partition(float part, List<List<? extends Node>> nodesPerType) {
         for (List<? extends Node> ln : nodesPerType) {
             for (int i = 0; i < (ln.size() * part); i++) {
                 partition.add(ln.get(i).nodeId);
@@ -167,7 +172,7 @@ class Network {
         }
     }
 
-    void endPartition() {
+    public void endPartition() {
         partition.clear();
 
         // On a p2p network all the blocks are exchanged all the time. We simulate this
@@ -181,7 +186,7 @@ class Network {
         allNodes.add(node);
     }
 
-    static class Message implements Comparable<Message> {
+    public static class Message implements Comparable<Message> {
         final MessageContent messageContent;
         @NotNull
         final Node fromNode;
@@ -218,15 +223,15 @@ class Network {
      */
     private static long blockId = 1;
 
-    static class Block<TB extends Block> {
-        final int height;
-        final long proposalTime;
-        final long lastTxId;
-        final long id;
-        final TB parent;
-        final Node producer;
+    public static class Block<TB extends Block> {
+        public final int height;
+        public final long proposalTime;
+        public final long lastTxId;
+        public final long id;
+        public final TB parent;
+        public final Node producer;
 
-        boolean valid;
+        public final boolean valid;
 
         /**
          * To create a genesis block...
@@ -238,10 +243,11 @@ class Network {
             parent = null;
             producer = null;
             proposalTime = 0;
+            valid = true;;
         }
 
 
-        Block(@NotNull Node producer, int height, @NotNull TB parent, boolean valid, long time) {
+        public Block(@NotNull Node producer, int height, @NotNull TB parent, boolean valid, long time) {
             if (height <= 0) throw new IllegalArgumentException("Only the genesis block has a special height");
             if (time < parent.proposalTime)
                 throw new IllegalArgumentException("bad time: parent is (" + parent + "), our time:" + time);
@@ -260,7 +266,7 @@ class Network {
         /**
          * @return the number of transactions in this block.
          */
-        long txCount() {
+        public long txCount() {
             if (id == 0) return 0;
             assert parent != null;
 
@@ -273,7 +279,7 @@ class Network {
 
 
         @SuppressWarnings("unused")
-        boolean isAncestor(@NotNull Block b) {
+        public boolean isAncestor(@NotNull Block b) {
             if (this == b) return false;
 
             Block cur = b;
@@ -288,7 +294,7 @@ class Network {
         /***
          * @return true if b is a direct father or ancestor. false if 'b' is on a different branch
          */
-        boolean hasDirectLink(@NotNull TB b) {
+        public boolean hasDirectLink(@NotNull TB b) {
             if (b == this) return true;
             if (b.height == height) return false;
 
@@ -320,16 +326,16 @@ class Network {
     }
 
     public static abstract class Node {
-        final int nodeId;
-        final Map<Long, Block> blocksReceived = new HashMap<>();
-        final Map<Long, Set<Network.Block>> blocksReceivedByFatherId = new HashMap<>();
+        public final int nodeId;
+        protected final Map<Long, Block> blocksReceived = new HashMap<>();
+        protected final Map<Long, Set<Network.Block>> blocksReceivedByFatherId = new HashMap<>();
 
-        long msgReceived = 0;
-        long msgSent = 0;
+        protected long msgReceived = 0;
+        protected long msgSent = 0;
 
         @NotNull
-        final Network.Block genesis;
-        @NotNull Network.Block head;
+        protected final Network.Block genesis;
+        public @NotNull Network.Block head;
 
         public Node(int nodeId, @NotNull Network.Block genesis) {
             this.nodeId = nodeId;
@@ -341,7 +347,7 @@ class Network {
         /**
          * @return true if it's a new block, false if the block in invalid or if we have already received it.
          */
-        boolean onBlock(@NotNull Network.Block b) {
+        public boolean onBlock(@NotNull Network.Block b) {
             if (!b.valid) return false;
 
             if (this.blocksReceived.put(b.id, b) != null) {
@@ -356,18 +362,18 @@ class Network {
             return true;
         }
 
-        abstract Block best(Block cur, Block alt);
+        public abstract Block best(Block cur, Block alt);
 
-        void onVote(@NotNull Node voter, @NotNull Network.Block voteFor) {
+        public void onVote(@NotNull Node voter, @NotNull Network.Block voteFor) {
             ;
         }
 
 
-        Network.StartWork firstWork() {
+        public Network.StartWork firstWork() {
             return null;
         }
 
-        Network.StartWork work(long time) {
+        public Network.StartWork work(long time) {
             return null;
         }
     }
@@ -381,7 +387,7 @@ class Network {
         }
     }
 
-    void run(long howLong) {
+    public void run(long howLong) {
         if (time == 0) init();
         time++;
 
@@ -391,7 +397,7 @@ class Network {
     }
 
 
-    void printStat(boolean small) {
+    public void printStat(boolean small) {
         HashMap<Integer, HashSet<Block>> productionCount = new HashMap<>();
 
         Network.Block cur = observer.head;

@@ -1,3 +1,7 @@
+package net.consensys.wittgenstein.protocol;
+
+
+import net.consensys.wittgenstein.core.Network;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -96,7 +100,7 @@ public class Dfinity {
         }
 
         @Override
-        void action(@NotNull Network.Node from, @NotNull Network.Node to) {
+        public void action(@NotNull Network.Node from, @NotNull Network.Node to) {
             AttesterNode n = (AttesterNode) to;
             n.onProposal(block);
         }
@@ -110,7 +114,7 @@ public class Dfinity {
         }
 
         @Override
-        void action(@NotNull Network.Node fromNode, @NotNull Network.Node toNode) {
+        public void action(@NotNull Network.Node fromNode, @NotNull Network.Node toNode) {
             toNode.onVote(fromNode, voteFor);
         }
     }
@@ -124,7 +128,7 @@ public class Dfinity {
         }
 
         @Override
-        void action(Network.Node from, Network.Node to) {
+        public void action(Network.Node from, Network.Node to) {
             RandomBeaconNode rbn = (RandomBeaconNode) to;
             rbn.onRandomBeaconExchange((RandomBeaconNode) from, height);
         }
@@ -140,7 +144,7 @@ public class Dfinity {
         }
 
         @Override
-        void action(@NotNull Network.Node from, @NotNull Network.Node to) {
+        public void action(@NotNull Network.Node from, @NotNull Network.Node to) {
             DfinityNode n = (DfinityNode) to;
             n.onRandomBeacon(height, rd);
         }
@@ -153,7 +157,7 @@ public class Dfinity {
         int lastRandomBeacon;
 
 
-        Network.Block best(Network.Block o1, Network.Block o2) {
+        public Network.Block best(Network.Block o1, Network.Block o2) {
             return blockComparator.compare(o1, o2) >= 0 ? o1 : o2;
         }
 
@@ -161,7 +165,7 @@ public class Dfinity {
             super(nodeId, genesis);
         }
 
-        void onVote(@NotNull Network.Node voter, @NotNull Network.Block voteFor) {
+        public void onVote(@NotNull Network.Node voter, @NotNull Network.Block voteFor) {
         }
 
         /**
@@ -201,7 +205,7 @@ public class Dfinity {
         }
 
         @Override
-        boolean onBlock(@NotNull Network.Block b) {
+        public boolean onBlock(@NotNull Network.Block b) {
             if (!super.onBlock(b)) return false;
             if (head.height == waitForBlockHeight) {
                 createProposal(waitForBlockHeight + 1);
@@ -236,7 +240,7 @@ public class Dfinity {
         }
 
         @Override
-        void onVote(@NotNull Network.Node voter, @NotNull Network.Block voteFor) {
+        public void onVote(@NotNull Network.Node voter, @NotNull Network.Block voteFor) {
             Set<Integer> voters = votes.computeIfAbsent(voteFor.id, k -> new HashSet<>());
             if (voteForHeight == voteFor.height) {
                 if (voters.add(voter.nodeId) && voters.size() >= majority) {
@@ -279,7 +283,7 @@ public class Dfinity {
         }
 
         @Override
-        boolean onBlock(@NotNull Network.Block b) {
+        public boolean onBlock(@NotNull Network.Block b) {
             if (!super.onBlock(b)) return false;
             committeeMajorityBlocks.add(b.id);
             committeeMajorityHeight.add(b.height);
@@ -339,7 +343,7 @@ public class Dfinity {
          * the next height
          */
         @Override
-        boolean onBlock(@NotNull Network.Block b) {
+        public boolean onBlock(@NotNull Network.Block b) {
             if (!super.onBlock(b)) return true;
             if (head.height == height) {
                 height++;

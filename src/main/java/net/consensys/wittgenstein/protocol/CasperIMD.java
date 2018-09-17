@@ -1,3 +1,6 @@
+package net.consensys.wittgenstein.protocol;
+
+import net.consensys.wittgenstein.core.Network;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -66,7 +69,7 @@ public class CasperIMD {
         }
 
         @Override
-        void action(Network.Node from, Network.Node to) {
+        public void action(Network.Node from, Network.Node to) {
             ((CasperNode) to).onAttestation(this);
         }
 
@@ -140,7 +143,7 @@ public class CasperIMD {
         }
 
         @Override
-        CasperBlock best(Network.Block bl1, Network.Block bl2) {
+        public CasperBlock best(Network.Block bl1, Network.Block bl2) {
             CasperBlock o1 = (CasperBlock) bl1;
             CasperBlock o2 = (CasperBlock) bl2;
 
@@ -238,7 +241,7 @@ public class CasperIMD {
 
 
         @Override
-        boolean onBlock(@NotNull Network.Block b) {
+        public boolean onBlock(@NotNull Network.Block b) {
             // Spec: The node’s local clock time is greater than or equal to the minimum timestamp as
             // computed by GENESIS_TIME + slot_number * SLOT_DURATION
             if (network.time >= genesis.proposalTime + b.height * SLOT_DURATION) {
@@ -339,12 +342,12 @@ public class CasperIMD {
         }
 
         @Override
-        Network.StartWork firstWork() {
+        public Network.StartWork firstWork() {
             return network.new StartWork(startAt + SLOT_DURATION);
         }
 
         @Override
-        Network.StartWork work(long time) {
+        public Network.StartWork work(long time) {
             reevaluateHead();
             createAndSendBlock((int) (time / SLOT_DURATION));
             return network.new StartWork(time + blockProducersCount * SLOT_DURATION);
@@ -378,12 +381,12 @@ public class CasperIMD {
         }
 
         @Override
-        Network.StartWork firstWork() {
+        public Network.StartWork firstWork() {
             return network.new StartWork(startAt + SLOT_DURATION / 2);
         }
 
         @Override
-        Network.StartWork work(long time) {
+        public Network.StartWork work(long time) {
             vote((int) (time / SLOT_DURATION));
             return network.new StartWork(time + (CYCLE_LENGTH * SLOT_DURATION));
         }
@@ -454,7 +457,7 @@ public class CasperIMD {
         }
 
         @Override
-        Network.StartWork work(long time) {
+        public Network.StartWork work(long time) {
             revaluateH(time);
 
             if (head.height == h - 1) {
@@ -493,7 +496,7 @@ public class CasperIMD {
         }
 
         @Override
-        Network.StartWork work(long time) {
+        public Network.StartWork work(long time) {
             revaluateH(time);
             if (head.id != 0 && head.height == h - 1) {
                 head = head.parent;
@@ -516,7 +519,7 @@ public class CasperIMD {
         }
 
         @Override
-        Network.StartWork work(long time) {
+        public Network.StartWork work(long time) {
             revaluateH(time);
 
             if (head.id != 0 && head.height == h - 1 && head.parent.height == h - 3) {
@@ -547,7 +550,7 @@ public class CasperIMD {
         }
 
         @Override
-        boolean onBlock(@NotNull final Network.Block b) {
+        public boolean onBlock(@NotNull final Network.Block b) {
             if (super.onBlock(b)) {
                 if (b.height == toSend - 1) {
 
@@ -581,7 +584,7 @@ public class CasperIMD {
         }
 
         @Override
-        Network.StartWork work(long time) {
+        public Network.StartWork work(long time) {
             super.work(time); // we just
             return null;
         }

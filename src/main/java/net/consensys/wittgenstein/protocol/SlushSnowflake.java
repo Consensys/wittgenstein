@@ -1,3 +1,5 @@
+package net.consensys.wittgenstein.protocol;
+
 import java.util.*;
 
 public class SlushSnowflake {
