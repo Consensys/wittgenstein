@@ -464,7 +464,7 @@ public class CasperIMD {
                 onDirectFather++;
             } else {
                 onOlderAncestor++;
-                if (head.parent.height == h - 2 && father((CasperBlock)head.parent) != null){
+                if (head.parent.height == h - 2 && father((CasperBlock) head.parent) != null) {
                     throw new IllegalStateException("If we have received the son of a block we should have used it as the new head");
                 }
             }
@@ -600,6 +600,9 @@ public class CasperIMD {
     }
 
     public static void main(String... args) {
+
+        new CasperIMD().network.printNetworkLatency();
+
         for (int delay = -3000; delay < 7000; delay += 1000) {
             CasperIMD bc = new CasperIMD();
             bc.init(bc.new ByzantineProd(Network.BYZANTINE_NODE_ID, delay, bc.genesis));
@@ -622,35 +625,3 @@ public class CasperIMD {
         }
     }
 }
-
-
-
-
-
-
-
-/*
-ByzantineProdSFdelay=-3000, onDirectFather=351, onOlderAncestor=101}; 12; 151000; 183060; 182445
-ByzantineProdSFdelay=-2000, onDirectFather=353, onOlderAncestor=99}; 51; 812000; 183060; 182445
-ByzantineProdSFdelay=-1000, onDirectFather=363, onOlderAncestor=89}; 47; 698000; 183060; 182445
-ByzantineProdSFdelay=0, onDirectFather=364, onOlderAncestor=88}; 47; 744000; 183060; 182445
-ByzantineProdSFdelay=1000, onDirectFather=364, onOlderAncestor=88}; 47; 790000; 183060; 182445
-ByzantineProdSFdelay=2000, onDirectFather=372, onOlderAncestor=80}; 47; 836000; 183060; 182445
-ByzantineProdSFdelay=3000, onDirectFather=415, onOlderAncestor=37}; 36; 673000; 183060; 182445
-ByzantineProdSFdelay=4000, onDirectFather=418, onOlderAncestor=34}; 32; 628000; 183060; 182445
-ByzantineProdSFdelay=5000, onDirectFather=416, onOlderAncestor=36}; 31; 638000; 183060; 182445
-ByzantineProdSFdelay=6000, onDirectFather=403, onOlderAncestor=49}; 39; 844000; 183060; 182445
-
-ByzantineProddelay=-3000, onDirectFather=357, onOlderAncestor=95}; 75; 466000; 183060; 182445
-ByzantineProddelay=-2000, onDirectFather=355, onOlderAncestor=97}; 406; 3518000; 183060; 182445
-ByzantineProddelay=-1000, onDirectFather=364, onOlderAncestor=88}; 410; 3239000; 183060; 182445
-ByzantineProddelay=0, onDirectFather=365, onOlderAncestor=87}; 411; 3656000; 183060; 182445
-ByzantineProddelay=1000, onDirectFather=365, onOlderAncestor=87}; 411; 4066000; 183060; 182445
-ByzantineProddelay=2000, onDirectFather=373, onOlderAncestor=79}; 419; 4556000; 183060; 182445
-ByzantineProddelay=3000, onDirectFather=414, onOlderAncestor=38}; 412; 4817000; 183060; 182445
-ByzantineProddelay=4000, onDirectFather=415, onOlderAncestor=37}; 425; 5376000; 183060; 182445
-ByzantineProddelay=5000, onDirectFather=414, onOlderAncestor=38}; 402; 5469000; 183060; 182445
-ByzantineProddelay=6000, onDirectFather=413, onOlderAncestor=39}; 334; 4934000; 183060; 182445
-
-
- */

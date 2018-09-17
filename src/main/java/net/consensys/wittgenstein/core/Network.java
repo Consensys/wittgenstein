@@ -5,7 +5,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
-@SuppressWarnings({"WeakerAccess", "SameParameterValue", "FieldCanBeLocal"})
+@SuppressWarnings({"WeakerAccess", "SameParameterValue", "FieldCanBeLocal", "unused"})
 public class Network {
     public final static int OBSERVER_NODE_ID = 0;
     public final static int BYZANTINE_NODE_ID = 1;
@@ -25,14 +25,13 @@ public class Network {
     public long time = 0;
 
 
-
     /**
      * The node we use as an observer for the final stats
      */
     private final Node observer;
 
     public abstract static class MessageContent {
-       public abstract void action(Node from, Node to);
+        public abstract void action(Node from, Node to);
     }
 
 
@@ -82,20 +81,24 @@ public class Network {
         if (observer.nodeId != OBSERVER_NODE_ID) throw new IllegalArgumentException();
         this.observer = observer;
         allNodes.add(observer);
+        setNetworkLatency(distribProp, distribVal);
+    }
 
+    public void setNetworkLatency(int[] dP, long[] dV) {
         int li = 0;
         int cur = 0;
         int sum = 0;
-        for (int i = 0; i < distribProp.length; i++) {
-            sum += distribProp[i];
-            long step = (distribVal[i] - cur) / distribProp[i];
-            for (int ii = 0; ii < distribProp[i]; ii++) {
+        for (int i = 0; i < dP.length; i++) {
+            sum += dP[i];
+            long step = (dV[i] - cur) / dP[i];
+            for (int ii = 0; ii < dP[i]; ii++) {
                 cur += step;
                 longDistrib[li++] = cur;
             }
         }
-        assert sum == 100;
-        assert li == 100;
+
+        if (sum != 100) throw new IllegalArgumentException();
+        if (li != 100) throw new IllegalArgumentException();
     }
 
     /**
@@ -106,9 +109,14 @@ public class Network {
         for (int i = 0; i < 100; i++) longDistrib[i] = 1;
     }
 
-    public void printNetworkLatency(){
-        for (int i=1; i<10; i++) {
-            // todo
+    public void printNetworkLatency() {
+        for (int s = 1, cur = 0, sum = 0; cur < 100; s++) {
+            int size = 0;
+            while (cur < longDistrib.length && longDistrib[cur] < s * 1000) {
+                size++;
+                cur++;
+            }
+            System.out.println(s + " seconds:" + size + "%, cumulative=" + cur + "%");
         }
     }
 
@@ -243,7 +251,8 @@ public class Network {
             parent = null;
             producer = null;
             proposalTime = 0;
-            valid = true;;
+            valid = true;
+            ;
         }
 
 
@@ -298,11 +307,11 @@ public class Network {
             if (b == this) return true;
             if (b.height == height) return false;
 
-            TB older = height > b.height ? (TB)this : b;
-            TB young = height < b.height ? (TB)this : b;
+            TB older = height > b.height ? (TB) this : b;
+            TB young = height < b.height ? (TB) this : b;
 
             while (older.height > young.height) {
-                older = (TB)older.parent;
+                older = (TB) older.parent;
                 assert older != null;
             }
 
