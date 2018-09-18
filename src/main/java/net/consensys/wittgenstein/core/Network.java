@@ -339,7 +339,7 @@ public class Network {
         public final int nodeId;
         protected final Map<Long, Block> blocksReceivedByBlockId = new HashMap<>();
         protected final Map<Long, Set<Network.Block>> blocksReceivedByFatherId = new HashMap<>();
-        protected final Map<Integer, Network.Block> blocksReceivedByHeight= new HashMap<>();
+        protected final Map<Integer, Network.Block> blocksReceivedByHeight = new HashMap<>();
 
 
         protected long msgReceived = 0;

@@ -59,19 +59,26 @@ public class Dfinity {
     final ArrayList<BlockProducerNode> bps = new ArrayList<>();
     final ArrayList<RandomBeaconNode> rds = new ArrayList<>();
 
-    static class DfinityBlock extends Network.Block {
+    static class DfinityBlock extends Network.Block<DfinityBlock> {
+        public DfinityBlock(BlockProducerNode blockProducerNode, int height, DfinityBlock head, boolean b, long time) {
+            super(blockProducerNode, height, head, b, time);
+        }
+
+        DfinityBlock() {
+        }
+
         public static DfinityBlock createGenesis() {
             return new DfinityBlock();
         }
     }
 
-    static class DfinityBlockComparator implements Comparator<Network.Block> {
+    static class DfinityBlockComparator implements Comparator<DfinityBlock> {
 
         /**
          * @return -1 if o1 is lower than o2,
          */
         @Override
-        public int compare(Network.Block o1, Network.Block o2) {
+        public int compare(DfinityBlock o1, DfinityBlock o2) {
             if (o1 == o2) return 0;
 
             if (!o2.valid) return 1;
@@ -157,8 +164,9 @@ public class Dfinity {
         int lastRandomBeacon;
 
 
-        public Network.Block best(Network.Block o1, Network.Block o2) {
-            return blockComparator.compare(o1, o2) >= 0 ? o1 : o2;
+        @Override
+        public DfinityBlock best(Network.Block o1, Network.Block o2) {
+            return blockComparator.compare((DfinityBlock) o1, (DfinityBlock) o2) >= 0 ? (DfinityBlock) o1 : (DfinityBlock) o2;
         }
 
         DfinityNode(int nodeId, @NotNull Network.Block genesis) {
@@ -198,7 +206,7 @@ public class Dfinity {
                 throw new IllegalArgumentException();
             }
 
-            Network.Block newBlock = new Network.Block(this, height, head, true, network.time);
+            DfinityBlock newBlock = new DfinityBlock(this, height, (DfinityBlock) head, true, network.time);
 
             network.send(new BlockProposal(newBlock), network.time + blockConstructionTime, this, attesters);
             waitForBlockHeight = -1;

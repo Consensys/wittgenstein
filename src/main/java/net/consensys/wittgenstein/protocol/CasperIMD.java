@@ -5,7 +5,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
-@SuppressWarnings({"WeakerAccess", "SameParameterValue"})
+@SuppressWarnings({"WeakerAccess", "SameParameterValue", "unused"})
 public class CasperIMD {
     final long SLOT_DURATION = 8000;
     final int CYCLE_LENGTH = 5;
@@ -105,11 +105,8 @@ public class CasperIMD {
         public String toString() {
             if (id == 0) return "genesis";
             StringBuilder sb = new StringBuilder();
-            sb.append("{" +
-                    " height=" + height +
-                    ", id=" + id +
-                    ", proposalTime=" + proposalTime +
-                    ", parent=" + parent.id);
+            sb.append("{" + " height=").append(height).append(", id=").append(id);
+            sb.append(", proposalTime=").append(proposalTime).append(", parent=").append(parent.id);
 
             List<Integer> keys = new ArrayList<>(attestationsByHeight.keySet());
             Collections.sort(keys);
@@ -118,7 +115,7 @@ public class CasperIMD {
                 as.sort(Comparator.comparingInt(o -> o.attester.nodeId));
 
                 if (!as.isEmpty()) {
-                    sb.append(", (h " + h + ":");
+                    sb.append(", (h ").append(h).append(":");
 
                     for (Attestation a : as) {
                         sb.append(" ").append(a.attester.nodeId);
@@ -456,7 +453,7 @@ public class CasperIMD {
             } else {
                 onOlderAncestor++;
                 // Sometimes we received our direct father but it wasn't the best head
-                Network.Block possibleFather = blocksReceivedByHeight.get(h-1);
+                Network.Block possibleFather = blocksReceivedByHeight.get(h - 1);
                 if (possibleFather != null && possibleFather.parent.height != h - 1) {
                     incNotTheBestFather++;
                 }
@@ -535,6 +532,7 @@ public class CasperIMD {
     /**
      * Wait for the previous block (height - 1) before applying the delay
      */
+    @SuppressWarnings("unused")
     class ByzantineProdWF extends ByzantineProd {
         int late = 0;
         int onTime = 0;
@@ -545,10 +543,6 @@ public class CasperIMD {
 
         @Override
         public boolean onBlock(@NotNull final Network.Block b) {
-            if (network.time > b.proposalTime + network.distribVal[network.distribVal.length - 1] + blockConstructionTime) {
-             //   throw new IllegalStateException();
-            }
-
             if (super.onBlock(b)) {
                 if (b.height == toSend - 1) {
 
