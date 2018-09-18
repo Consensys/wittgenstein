@@ -35,7 +35,7 @@ public class CasperIMD {
         this.attestationConstructionTime = attestationConstructionTime;
         this.percentageDeadAttester = percentageDeadAttester;
 
-        this.network = new Network(new CasperNode(0, 0, genesis) {
+        this.network = new Network(new CasperNode(0, genesis) {
         });
     }
 
@@ -60,7 +60,7 @@ public class CasperIMD {
         final Set<Long> hs = new HashSet<>(); // technically, we put them in a set for efficiency
         final CasperBlock head; // It's not in the spec, but we need this to be sure we're not confusing the attestations from different branches
 
-        public Attestation(Attester attester, int height) {
+        public Attestation(@NotNull Attester attester, int height) {
             this.attester = attester;
             this.height = height;
             this.head = attester.head;
@@ -74,7 +74,7 @@ public class CasperIMD {
         }
 
         @Override
-        public void action(Node from, Node to) {
+        public void action(@NotNull Node from, @NotNull Node to) {
             ((CasperNode) to).onAttestation(this);
         }
 
@@ -96,9 +96,11 @@ public class CasperIMD {
     static class CasperBlock extends Block<CasperBlock> {
         final Map<Integer, Set<Attestation>> attestationsByHeight;
 
-        public CasperBlock(BlockProducer blockProducer,
-                           int height, CasperBlock head, Map<Integer, Set<Attestation>> attestationsByHeight, boolean b, long time) {
-            super(blockProducer, height, head, b, time);
+        public CasperBlock(@NotNull BlockProducer blockProducer,
+                           int height, @NotNull CasperBlock father,
+                           @NotNull Map<Integer, @NotNull Set<Attestation>> attestationsByHeight,
+                           boolean valid, long time) {
+            super(blockProducer, height, father, valid, time);
             this.attestationsByHeight = attestationsByHeight;
         }
 
@@ -137,15 +139,13 @@ public class CasperIMD {
     abstract class CasperNode extends Node<CasperBlock> {
         final Map<Long, Set<Attestation>> attestationsByHead = new HashMap<>();
         final Set<CasperBlock> lastReceivedBlocks = new HashSet<>();
-        final long startAt;
 
-        CasperNode(int nodeId, long pos, CasperBlock genesis) {
+        CasperNode(int nodeId, @NotNull CasperBlock genesis) {
             super(nodeId, genesis);
-            this.startAt = pos * SLOT_DURATION;
         }
 
         @Override
-        public CasperBlock best(CasperBlock o1, CasperBlock o2) {
+        public @NotNull CasperBlock best(@NotNull CasperBlock o1, @NotNull CasperBlock o2) {
             if (o1 == o2) return o1;
 
             if (!o2.valid) return o1;
@@ -230,7 +230,7 @@ public class CasperIMD {
             return a1.size();
         }
 
-        private Set<Long> attestsFor(int height) {
+        private @NotNull Set<Long> attestsFor(int height) {
             Set<Long> as = new HashSet<>();
             for (Block c = head; c != genesis && height - CYCLE_LENGTH >= c.height; c = c.parent) {
                 as.add(c.id);
@@ -286,14 +286,27 @@ public class CasperIMD {
                     "nodeId=" + nodeId +
                     '}';
         }
+
+        protected Runnable getPeriodicTask() {
+            return null;
+        }
     }
 
 
     class BlockProducer extends CasperNode {
 
-        BlockProducer(int nodeId, long pos, @NotNull CasperBlock genesis) {
-            super(nodeId, pos, genesis);
+        BlockProducer(int nodeId, @NotNull CasperBlock genesis) {
+            super(nodeId, genesis);
         }
+
+        @Override
+        protected Runnable getPeriodicTask() {
+            return () -> {
+                reevaluateHead();
+                createAndSendBlock((int) (network.time / SLOT_DURATION));
+            };
+        }
+
 
         CasperBlock buildBlock(CasperBlock base, int height) {
             // Spec:
@@ -342,18 +355,6 @@ public class CasperIMD {
         }
 
         @Override
-        public Network.StartWork firstWork() {
-            return network.new StartWork(startAt + SLOT_DURATION);
-        }
-
-        @Override
-        public Network.StartWork work(long time) {
-            reevaluateHead();
-            createAndSendBlock((int) (time / SLOT_DURATION));
-            return network.new StartWork(time + blockProducersCount * SLOT_DURATION);
-        }
-
-        @Override
         public String toString() {
             return "BlockProducer{" +
                     "nodeId=" + nodeId +
@@ -364,12 +365,16 @@ public class CasperIMD {
 
     class Attester extends CasperNode {
 
-        Attester(int nodeId, long pos, @NotNull CasperBlock genesis) {
-            super(nodeId, pos, genesis);
+        Attester(int nodeId, @NotNull CasperBlock genesis) {
+            super(nodeId, genesis);
         }
 
+        @Override
+        protected Runnable getPeriodicTask() {
+            return () -> vote((int) (network.time / SLOT_DURATION));
+        }
 
-        private void vote(int height) {
+        void vote(int height) {
             // Spec:
             // After 4 seconds, [attesters] are expected to take the newly published block
             // (if it has actually been published) into account, determine what they think is the new
@@ -381,17 +386,6 @@ public class CasperIMD {
         }
 
         @Override
-        public Network.StartWork firstWork() {
-            return network.new StartWork(startAt + SLOT_DURATION / 2);
-        }
-
-        @Override
-        public Network.StartWork work(long time) {
-            vote((int) (time / SLOT_DURATION));
-            return network.new StartWork(time + (CYCLE_LENGTH * SLOT_DURATION));
-        }
-
-        @Override
         public String toString() {
             return "Attester{" +
                     "nodeId=" + nodeId +
@@ -400,23 +394,30 @@ public class CasperIMD {
     }
 
 
-    void init(BlockProducer byzantineNode) {
+    void init(ByzantineProd byzantineNode) {
         if (byzantineNode.nodeId != 1) throw new IllegalStateException();
 
         int nodeId = 2;
 
         bps.add(byzantineNode);
         network.addNode(byzantineNode);
+        network.registerPeriodicTask(byzantineNode.getPeriodicTask(),
+                SLOT_DURATION + byzantineNode.delay, SLOT_DURATION * blockProducersCount, byzantineNode);
+
         for (int i = 1; i < blockProducersCount; i++) {
-            BlockProducer n = new BlockProducer(nodeId++, i, genesis);
+            BlockProducer n = new BlockProducer(nodeId++, genesis);
             bps.add(n);
             network.addNode(n);
+            network.registerPeriodicTask(n.getPeriodicTask(),
+                    SLOT_DURATION * (i + 1), SLOT_DURATION * blockProducersCount, n);
         }
 
         for (int i = 0; i < attestersCount; i++) {
-            Attester n = new Attester(nodeId++, i % CYCLE_LENGTH, genesis);
+            Attester n = new Attester(nodeId++, genesis);
             attesters.add(n);
             network.addNode(n);
+            network.registerPeriodicTask(n.getPeriodicTask(),
+                    SLOT_DURATION * (i + 1) + 4000, SLOT_DURATION * CYCLE_LENGTH, n);
         }
 
     }
@@ -434,39 +435,39 @@ public class CasperIMD {
         int incNotTheBestFather = 0;
 
         ByzantineProd(int nodeId, long delay, @NotNull CasperBlock genesis) {
-            super(nodeId, 0, genesis);
+            super(nodeId, genesis);
             this.delay = delay;
         }
 
         public void revaluateH(long time) {
             reevaluateHead();
 
-            long slotTime = time > SLOT_DURATION ? time - delay : time; // for the first slot we're honest => no delay
+            long slotTime = time - delay;
             h = (int) (slotTime / SLOT_DURATION);
 
-            if (h != toSend) throw new IllegalStateException();
+            if (h != toSend) throw new IllegalStateException("h=" + h + ", toSend=" + toSend);
         }
 
         @Override
-        public Network.StartWork work(long time) {
-            revaluateH(time);
+        protected Runnable getPeriodicTask() {
+            return () -> {
+                revaluateH(network.time);
 
-            if (head.height == h - 1) {
-                onDirectFather++;
-            } else {
-                onOlderAncestor++;
-                // Sometimes we received our direct father but it wasn't the best head
-                Block possibleFather = blocksReceivedByHeight.get(h - 1);
-                if (possibleFather != null && possibleFather.parent.height != h - 1) {
-                    incNotTheBestFather++;
+                if (head.height == h - 1) {
+                    onDirectFather++;
+                } else {
+                    onOlderAncestor++;
+                    // Sometimes we received our direct father but it wasn't the best head
+                    Block possibleFather = blocksReceivedByHeight.get(h - 1);
+                    if (possibleFather != null && possibleFather.parent.height != h - 1) {
+                        incNotTheBestFather++;
+                    }
                 }
-            }
 
-            createAndSendBlock(toSend);
-            int lastSent = toSend;
-            toSend += blockProducersCount;
-
-            return network.new StartWork((lastSent * SLOT_DURATION) + (blockProducersCount * SLOT_DURATION) + delay);
+                createAndSendBlock(toSend);
+                int lastSent = toSend;
+                toSend += blockProducersCount;
+            };
         }
 
         @Override
@@ -490,27 +491,28 @@ public class CasperIMD {
         }
 
         @Override
-        public Network.StartWork work(long time) {
-            revaluateH(time);
-            if (head.id != 0 && head.height == h - 1) {
-                head = head.parent;
-                onDirectFather++;
-            } else {
-                onOlderAncestor++;
-            }
+        protected Runnable getPeriodicTask() {
+            return () -> {
+                revaluateH(network.time);
+                if (head.id != 0 && head.height == h - 1) {
+                    head = head.parent;
+                    onDirectFather++;
+                } else {
+                    onOlderAncestor++;
+                }
 
 
-            createAndSendBlock(toSend);
-            int lastSent = toSend;
-            toSend += blockProducersCount;
-            return network.new StartWork((lastSent * SLOT_DURATION) + (blockProducersCount * SLOT_DURATION) + delay);
+                createAndSendBlock(toSend);
+                int lastSent = toSend;
+                toSend += blockProducersCount;
+            };
         }
     }
 
     /**
      * Try to skip his father if his father skipped his grand father
      * Idea: you will have the attestation of your grand father with you, so you will win
-     *  the fight with the grand father.
+     * the fight with the grand father.
      */
     class ByzantineProdNS extends ByzantineProd {
         ByzantineProdNS(int nodeId, long delay, @NotNull CasperBlock genesis) {
@@ -518,29 +520,30 @@ public class CasperIMD {
         }
 
         @Override
-        public Network.StartWork work(long time) {
-            revaluateH(time);
+        protected Runnable getPeriodicTask() {
+            return () -> {
+                revaluateH(network.time);
 
-            if (head.id != 0 && head.height == h - 1 && head.parent.height == h - 3) {
-                for (CasperBlock b : blocksReceivedByFatherId.get(head.parent.id)) {
-                    if (b.height == h - 2) {
-                        head = b;
-                        break;
+                if (head.id != 0 && head.height == h - 1 && head.parent.height == h - 3) {
+                    for (CasperBlock b : blocksReceivedByFatherId.get(head.parent.id)) {
+                        if (b.height == h - 2) {
+                            head = b;
+                            break;
+                        }
                     }
                 }
-            }
 
-            createAndSendBlock(toSend);
-            int lastSent = toSend;
-            toSend += blockProducersCount;
-            return network.new StartWork((lastSent * SLOT_DURATION) + (blockProducersCount * SLOT_DURATION) + delay);
+                createAndSendBlock(toSend);
+                int lastSent = toSend;
+                toSend += blockProducersCount;
+            };
         }
     }
 
     /**
      * Wait for the previous block (height - 1) before applying the delay
      * Idea: by always including your father, you will be more often on the "good" branch so
-     *  you will increase your reward
+     * you will increase your reward
      */
     @SuppressWarnings("unused")
     class ByzantineProdWF extends ByzantineProd {
@@ -549,6 +552,12 @@ public class CasperIMD {
 
         ByzantineProdWF(int nodeId, long delay, @NotNull CasperBlock genesis) {
             super(nodeId, delay, genesis);
+        }
+
+        protected Runnable getPeriodicTask() {
+            return () -> {
+                // This node doesn't care of the slot, it only react on the reception of the previous block
+            };
         }
 
         @Override
@@ -585,12 +594,6 @@ public class CasperIMD {
         }
 
         @Override
-        public Network.StartWork work(long time) {
-            super.work(time); // we just
-            return null;
-        }
-
-        @Override
         public String toString() {
             return "ByzantineProdWF{" +
                     "delay=" + delay +
@@ -604,9 +607,10 @@ public class CasperIMD {
 
         new CasperIMD().network.printNetworkLatency();
 
-        for (int delay = -3000; delay < 15000; delay += 100000) {
+        for (int delay = -3000; delay < 15000; delay += 1000) {
             CasperIMD bc = new CasperIMD();
             bc.init(bc.new ByzantineProd(Network.BYZANTINE_NODE_ID, delay, bc.genesis));
+            // bc.init(bc.new BlockProducer(Network.BYZANTINE_NODE_ID, bc.genesis));
             //bc.network.removeNetworkLatency();
 
             List<List<? extends Node>> lns = new ArrayList<>();
@@ -622,7 +626,7 @@ public class CasperIMD {
             bc.network.run(30);
 
             // System.out.println("");
-            bc.network.printStat(false);
+            bc.network.printStat(true);
         }
     }
 }

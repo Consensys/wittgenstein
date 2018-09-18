@@ -17,8 +17,7 @@ public abstract class Node<TB extends Block> {
     protected long msgReceived = 0;
     protected long msgSent = 0;
 
-    protected @NotNull
-    final TB genesis;
+    protected final @NotNull TB genesis;
     public @NotNull TB head;
 
     public Node(int nodeId, @NotNull TB genesis) {
@@ -46,13 +45,6 @@ public abstract class Node<TB extends Block> {
         return true;
     }
 
-    public abstract TB best(TB cur, TB alt);
-
-    public Network.StartWork firstWork() {
-        return null;
-    }
-
-    public Network.StartWork work(long time) {
-        return null;
-    }
+    public @NotNull
+    abstract TB best(@NotNull TB cur, @NotNull TB alt);
 }

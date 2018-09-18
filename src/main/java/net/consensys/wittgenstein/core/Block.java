@@ -34,7 +34,7 @@ abstract public class Block<TB extends Block> {
 
 
     public Block(@NotNull Node producer, int height, @NotNull TB parent, boolean valid, long time) {
-        if (height <= 0){
+        if (height <= 0) {
             throw new IllegalArgumentException("Only the genesis block has a special height");
         }
         if (time < parent.proposalTime) {
@@ -88,7 +88,7 @@ abstract public class Block<TB extends Block> {
         if (b.height == height) return false;
 
         Block older = height > b.height ? this : b;
-        Block young = height < b.height ?  this : b;
+        Block young = height < b.height ? this : b;
 
         while (older.height > young.height) {
             older = older.parent;

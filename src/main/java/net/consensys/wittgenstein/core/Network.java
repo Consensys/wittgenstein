@@ -31,25 +31,42 @@ public class Network {
     private final Node observer;
 
     public abstract static class MessageContent {
-        public abstract void action(Node from, Node to);
+        public abstract void action(@NotNull Node from, @NotNull Node to);
     }
 
+    /**
+     * Some protocols want some tasks to be executed at a given time
+     */
+    public class Task extends MessageContent {
+        final Runnable r;
 
-    public class StartWork extends MessageContent {
-        final long startTime;
-
-        public StartWork(long startTime) {
-            this.startTime = startTime;
+        public Task(@NotNull Runnable r) {
+            this.r = r;
         }
 
         @Override
-        public void action(Node from, Node to) {
-            StartWork nextWork = to.work(startTime);
-            if (nextWork != null) {
-                if (nextWork.startTime <= startTime)
-                    throw new IllegalArgumentException("startTime:" + nextWork.startTime + " must be greater than time:" + time);
-                msgs.add(new Message(nextWork, from, from, nextWork.startTime));
-            }
+        public void action(@NotNull Node from, @NotNull Node to) {
+            r.run();
+        }
+    }
+
+    /**
+     * Some protocols want some tasks to be executed periodically
+     */
+    public class PeriodicTask extends Task {
+        final long period;
+        final Node sender;
+
+        public PeriodicTask(@NotNull Runnable r, @NotNull Node fromNode, long period) {
+            super(r);
+            this.period = period;
+            this.sender = fromNode;
+        }
+
+        @Override
+        public void action(@NotNull Node from, @NotNull Node to) {
+            r.run();
+            msgs.add(new Message(this, sender, sender, time + period));
         }
     }
 
@@ -77,14 +94,14 @@ public class Network {
     }
 
 
-    public Network(Node observer) {
+    public Network(@NotNull Node observer) {
         if (observer.nodeId != OBSERVER_NODE_ID) throw new IllegalArgumentException();
         this.observer = observer;
         allNodes.add(observer);
         setNetworkLatency(distribProp, distribVal);
     }
 
-    public void setNetworkLatency(int[] dP, long[] dV) {
+    public void setNetworkLatency(@NotNull int[] dP, @NotNull long[] dV) {
         int li = 0;
         int cur = 0;
         int sum = 0;
@@ -147,12 +164,12 @@ public class Network {
     }
 
     public void registerTask(@NotNull final Runnable task, long executionTime, @NotNull Node fromNode) {
-        StartWork sw = new StartWork(executionTime) {
-            @Override
-            public void action(Node from, Node to) {
-                task.run();
-            }
-        };
+        Task sw = new Task(task);
+        msgs.add(new Message(sw, fromNode, fromNode, executionTime));
+    }
+
+    public void registerPeriodicTask(@NotNull final Runnable task, long executionTime, long period, @NotNull Node fromNode) {
+        PeriodicTask sw = new PeriodicTask(task, fromNode, period);
         msgs.add(new Message(sw, fromNode, fromNode, executionTime));
     }
 
@@ -174,7 +191,7 @@ public class Network {
     }
 
 
-    public void partition(float part, List<List<? extends Node>> nodesPerType) {
+    public void partition(float part, @NotNull List<List<? extends Node>> nodesPerType) {
         for (List<? extends Node> ln : nodesPerType) {
             for (int i = 0; i < (ln.size() * part); i++) {
                 partition.add(ln.get(i).nodeId);
@@ -192,7 +209,7 @@ public class Network {
         }
     }
 
-    public void addNode(Node node) {
+    public void addNode(@NotNull Node node) {
         allNodes.add(node);
     }
 
@@ -204,7 +221,7 @@ public class Network {
         final Node toNode;
         final long arrivalTime;
 
-        public Message(MessageContent messageContent, @NotNull Node fromNode, @NotNull Node toNode, long arrivalTime) {
+        public Message(@NotNull MessageContent messageContent, @NotNull Node fromNode, @NotNull Node toNode, long arrivalTime) {
             this.messageContent = messageContent;
             this.fromNode = fromNode;
             this.toNode = toNode;
@@ -227,17 +244,7 @@ public class Network {
         }
     }
 
-    private void init() {
-        for (Node n : allNodes) {
-            StartWork sw = n.firstWork();
-            if (sw != null) {
-                msgs.add(new Message(sw, n, n, sw.startTime));
-            }
-        }
-    }
-
     public void run(long howLong) {
-        if (time == 0) init();
         time++;
 
         long endAt = time + howLong * 1000;
@@ -289,5 +296,4 @@ public class Network {
             }
         }
     }
-
 }

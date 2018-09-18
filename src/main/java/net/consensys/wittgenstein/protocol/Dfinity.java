@@ -80,7 +80,7 @@ public class Dfinity {
          * @return -1 if o1 is lower than o2,
          */
         @Override
-        public int compare(DfinityBlock o1, DfinityBlock o2) {
+        public int compare(@NotNull DfinityBlock o1, @NotNull DfinityBlock o2) {
             if (o1 == o2) return 0;
 
             if (!o2.valid) return 1;
@@ -118,13 +118,13 @@ public class Dfinity {
     static class Vote extends Network.MessageContent {
         final DfinityBlock voteFor;
 
-        public Vote(DfinityBlock voteFor) {
+        public Vote(@NotNull DfinityBlock voteFor) {
             this.voteFor = voteFor;
         }
 
         @Override
         public void action(@NotNull Node fromNode, @NotNull Node toNode) {
-            ((DfinityNode)toNode).onVote(fromNode, voteFor);
+            ((DfinityNode) toNode).onVote(fromNode, voteFor);
         }
     }
 
@@ -137,7 +137,7 @@ public class Dfinity {
         }
 
         @Override
-        public void action(Node from, Node to) {
+        public void action(@NotNull Node from, @NotNull Node to) {
             RandomBeaconNode rbn = (RandomBeaconNode) to;
             rbn.onRandomBeaconExchange((RandomBeaconNode) from, height);
         }
