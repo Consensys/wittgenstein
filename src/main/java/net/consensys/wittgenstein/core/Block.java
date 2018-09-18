@@ -2,7 +2,7 @@ package net.consensys.wittgenstein.core;
 
 import org.jetbrains.annotations.NotNull;
 
-public class Block<TB extends Block> {
+abstract public class Block<TB extends Block> {
 
     /**
      * To ensure that all blocks id are unique we increment a counter.
@@ -30,14 +30,16 @@ public class Block<TB extends Block> {
         producer = null;
         proposalTime = 0;
         valid = true;
-        ;
     }
 
 
     public Block(@NotNull Node producer, int height, @NotNull TB parent, boolean valid, long time) {
-        if (height <= 0) throw new IllegalArgumentException("Only the genesis block has a special height");
-        if (time < parent.proposalTime)
+        if (height <= 0){
+            throw new IllegalArgumentException("Only the genesis block has a special height");
+        }
+        if (time < parent.proposalTime) {
             throw new IllegalArgumentException("bad time: parent is (" + parent + "), our time:" + time);
+        }
 
         this.producer = producer;
         this.height = height;
@@ -85,17 +87,18 @@ public class Block<TB extends Block> {
         if (b == this) return true;
         if (b.height == height) return false;
 
-        TB older = height > b.height ? (TB) this : b;
-        TB young = height < b.height ? (TB) this : b;
+        Block older = height > b.height ? this : b;
+        Block young = height < b.height ?  this : b;
 
         while (older.height > young.height) {
-            older = (TB) older.parent;
+            older = older.parent;
             assert older != null;
         }
 
         return older == young;
     }
 
+    @Override
     public String toString() {
         if (id == 0) return "genesis";
         assert producer != null;

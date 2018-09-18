@@ -7,16 +7,15 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+@SuppressWarnings("WeakerAccess")
 public abstract class Node<TB extends Block> {
     public final int nodeId;
     protected final Map<Long, TB> blocksReceivedByBlockId = new HashMap<>();
     protected final Map<Long, Set<TB>> blocksReceivedByFatherId = new HashMap<>();
     protected final Map<Integer, TB> blocksReceivedByHeight = new HashMap<>();
 
-
     protected long msgReceived = 0;
     protected long msgSent = 0;
-
 
     protected @NotNull
     final TB genesis;

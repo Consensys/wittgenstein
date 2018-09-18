@@ -13,7 +13,6 @@ public class CasperIMD {
     final int CYCLE_LENGTH = 5;
     final boolean RANDOM_ON_TIES;
 
-
     final int blockProducersCount;
     final int attestersCount;
     final int attestersPerRound;
@@ -478,8 +477,8 @@ public class CasperIMD {
     }
 
     /**
-     * Skip its son's block.
-     * Idea: it can them include the transactions of its son.
+     * Skip its father's block.
+     * Idea: it can them include the transactions of its father.
      */
     class ByzantineProdSF extends ByzantineProd {
         ByzantineProdSF(int nodeId, long delay, @NotNull CasperBlock genesis) {
@@ -504,6 +503,11 @@ public class CasperIMD {
         }
     }
 
+    /**
+     * Try to skip his father if his father skipped his grand father
+     * Idea: you will have the attestation of your grand father with you, so you will win
+     *  the fight with the grand father.
+     */
     class ByzantineProdNS extends ByzantineProd {
         ByzantineProdNS(int nodeId, long delay, @NotNull CasperBlock genesis) {
             super(nodeId, delay, genesis);
@@ -531,6 +535,8 @@ public class CasperIMD {
 
     /**
      * Wait for the previous block (height - 1) before applying the delay
+     * Idea: by always including your father, you will be more often on the "good" branch so
+     *  you will increase your reward
      */
     @SuppressWarnings("unused")
     class ByzantineProdWF extends ByzantineProd {
@@ -572,7 +578,6 @@ public class CasperIMD {
             } else {
                 return false;
             }
-
         }
 
         @Override
