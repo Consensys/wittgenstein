@@ -1,6 +1,8 @@
 package net.consensys.wittgenstein.protocol;
 
+import net.consensys.wittgenstein.core.Block;
 import net.consensys.wittgenstein.core.Network;
+import net.consensys.wittgenstein.core.Node;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -58,18 +60,18 @@ public class CasperIMD {
         public Attestation(Attester attester, int height) {
             this.attester = attester;
             this.height = height;
-            this.head = (CasperBlock) attester.head;
+            this.head = attester.head;
 
             // Note that's not the head, but the head's parent. As a son, we're going to be selected
             //  from the attestations to our parents, so that makes sense. But it means that the attestation
             //  is valid for all sons of the same parent (hence the need to add 'head'.
-            for (Network.Block cur = attester.head.parent; cur != null && cur.height >= attester.head.height - CYCLE_LENGTH; cur = cur.parent) {
+            for (Block cur = attester.head.parent; cur != null && cur.height >= attester.head.height - CYCLE_LENGTH; cur = cur.parent) {
                 hs.add(cur.id);
             }
         }
 
         @Override
-        public void action(Network.Node from, Network.Node to) {
+        public void action(Node from, Node to) {
             ((CasperNode) to).onAttestation(this);
         }
 
@@ -88,7 +90,7 @@ public class CasperIMD {
     }
 
 
-    static class CasperBlock extends Network.Block<CasperBlock> {
+    static class CasperBlock extends Block<CasperBlock> {
         final Map<Integer, Set<Attestation>> attestationsByHeight;
 
         public CasperBlock(BlockProducer blockProducer,
@@ -129,7 +131,7 @@ public class CasperIMD {
     }
 
 
-    abstract class CasperNode extends Network.Node {
+    abstract class CasperNode extends Node<CasperBlock> {
         final Map<Long, Set<Attestation>> attestationsByHead = new HashMap<>();
         final Set<CasperBlock> lastReceivedBlocks = new HashSet<>();
         final long startAt;
@@ -140,10 +142,7 @@ public class CasperIMD {
         }
 
         @Override
-        public CasperBlock best(Network.Block bl1, Network.Block bl2) {
-            CasperBlock o1 = (CasperBlock) bl1;
-            CasperBlock o2 = (CasperBlock) bl2;
-
+        public CasperBlock best(CasperBlock o1, CasperBlock o2) {
             if (o1 == o2) return o1;
 
             if (!o2.valid) return o1;
@@ -168,8 +167,8 @@ public class CasperIMD {
             // We suppose here we already received the parents of the block b. It may not be true in reality
 
             // Phase 1: find 'H'
-            Network.Block b1 = o1;
-            Network.Block b2 = o2;
+            CasperBlock b1 = o1;
+            CasperBlock b2 = o2;
             while (b1.parent != b2.parent) {
                 assert b1.parent.height != b2.parent.height;
                 if (b1.parent.height > b2.parent.height) {
@@ -178,7 +177,7 @@ public class CasperIMD {
                     b2 = b2.parent;
                 }
             }
-            CasperBlock h = (CasperBlock) b1.parent;
+            CasperBlock h = b1.parent;
 
             // Phase 2: count the votes
             int b1Votes = countAttestations(o1, h);
@@ -230,7 +229,7 @@ public class CasperIMD {
 
         private Set<Long> attestsFor(int height) {
             Set<Long> as = new HashSet<>();
-            for (Network.Block c = head; c != genesis && height - CYCLE_LENGTH >= c.height; c = c.parent) {
+            for (Block c = head; c != genesis && height - CYCLE_LENGTH >= c.height; c = c.parent) {
                 as.add(c.id);
             }
             return as;
@@ -238,11 +237,12 @@ public class CasperIMD {
 
 
         @Override
-        public boolean onBlock(@NotNull Network.Block b) {
+        public boolean onBlock(@NotNull CasperBlock b) {
             // Spec: The node’s local clock time is greater than or equal to the minimum timestamp as
             // computed by GENESIS_TIME + slot_number * SLOT_DURATION
             if (network.time >= genesis.proposalTime + b.height * SLOT_DURATION) {
-                lastReceivedBlocks.add((CasperBlock) b);
+                lastReceivedBlocks.add(head); // if head loose the race it may win later.
+                lastReceivedBlocks.add(b);
                 return super.onBlock(b);
             }
             return false;
@@ -334,7 +334,7 @@ public class CasperIMD {
         }
 
         void createAndSendBlock(int height) {
-            head = buildBlock((CasperBlock) head, height);
+            head = buildBlock(head, height);
             network.sendAll(new Network.SendBlock(head), network.time + blockConstructionTime, this);
         }
 
@@ -453,7 +453,7 @@ public class CasperIMD {
             } else {
                 onOlderAncestor++;
                 // Sometimes we received our direct father but it wasn't the best head
-                Network.Block possibleFather = blocksReceivedByHeight.get(h - 1);
+                Block possibleFather = blocksReceivedByHeight.get(h - 1);
                 if (possibleFather != null && possibleFather.parent.height != h - 1) {
                     incNotTheBestFather++;
                 }
@@ -514,7 +514,7 @@ public class CasperIMD {
             revaluateH(time);
 
             if (head.id != 0 && head.height == h - 1 && head.parent.height == h - 3) {
-                for (Network.Block b : blocksReceivedByFatherId.get(head.parent.id)) {
+                for (CasperBlock b : blocksReceivedByFatherId.get(head.parent.id)) {
                     if (b.height == h - 2) {
                         head = b;
                         break;
@@ -542,7 +542,7 @@ public class CasperIMD {
         }
 
         @Override
-        public boolean onBlock(@NotNull final Network.Block b) {
+        public boolean onBlock(@NotNull final CasperBlock b) {
             if (super.onBlock(b)) {
                 if (b.height == toSend - 1) {
 
@@ -553,7 +553,7 @@ public class CasperIMD {
 
                         @Override
                         public void run() {
-                            CasperBlock nh = buildBlock((CasperBlock) b, th);
+                            CasperBlock nh = buildBlock(b, th);
                             network.sendAll(new Network.SendBlock(nh), network.time + blockConstructionTime, ByzantineProdWF.this);
                         }
                     };
@@ -595,25 +595,25 @@ public class CasperIMD {
 
         new CasperIMD().network.printNetworkLatency();
 
-        for (int delay = -3000; delay < 7000; delay += 1000) {
+        for (int delay = 6000; delay < 7000; delay += 100000) {
             CasperIMD bc = new CasperIMD();
             bc.init(bc.new ByzantineProd(Network.BYZANTINE_NODE_ID, delay, bc.genesis));
             //bc.network.removeNetworkLatency();
 
-            List<List<? extends Network.Node>> lns = new ArrayList<>();
+            List<List<? extends Node>> lns = new ArrayList<>();
             lns.add(bc.bps);
             lns.add(bc.attesters);
 
             bc.network.run(30);
 
             //   bc.network.partition(.5f, lns);
-            bc.network.run(3600 * 5); // 5 hours is a minimum if you want something statistically reasonable
+            bc.network.run(3600 * 2); // 5 hours is a minimum if you want something statistically reasonable
             //   bc.network.endPartition();
 
             bc.network.run(30);
 
             // System.out.println("");
-            bc.network.printStat(true);
+            bc.network.printStat(false);
         }
     }
 }

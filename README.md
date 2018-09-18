@@ -8,3 +8,12 @@ Wittgenstein was a concert pianist. He commissioned Ravel's Piano Concerto for t
   at the end a newly created series of great swirling arpeggios in the final cadenza.'
 
 As it's often what happens with mock protocol implementations, it looked like the right name.
+
+
+## How to build it
+To check everything is correct:
+
+mvn test
+
+But you're actually supposed to write code to implement your specific scenarios today. An obvious improvement
+ would be to be able to define scenarios reusable between protocols.

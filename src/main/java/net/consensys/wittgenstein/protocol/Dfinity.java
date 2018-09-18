@@ -1,7 +1,9 @@
 package net.consensys.wittgenstein.protocol;
 
 
+import net.consensys.wittgenstein.core.Block;
 import net.consensys.wittgenstein.core.Network;
+import net.consensys.wittgenstein.core.Node;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -27,7 +29,7 @@ public class Dfinity {
     final int majority;
 
     public Dfinity() {
-        this(20, 100, 50, 1000, 1, 0);
+        this(20, 600, 200, 1000, 1, 0);
     }
 
     public Dfinity(int blockProducersCount, int attestersCount, int attestersPerRound,
@@ -59,7 +61,7 @@ public class Dfinity {
     final ArrayList<BlockProducerNode> bps = new ArrayList<>();
     final ArrayList<RandomBeaconNode> rds = new ArrayList<>();
 
-    static class DfinityBlock extends Network.Block<DfinityBlock> {
+    static class DfinityBlock extends Block<DfinityBlock> {
         public DfinityBlock(BlockProducerNode blockProducerNode, int height, DfinityBlock head, boolean b, long time) {
             super(blockProducerNode, height, head, b, time);
         }
@@ -100,28 +102,28 @@ public class Dfinity {
 
     static class BlockProposal extends Network.MessageContent {
         @NotNull
-        final Network.Block block;
+        final DfinityBlock block;
 
-        public BlockProposal(@NotNull Network.Block block) {
+        public BlockProposal(@NotNull DfinityBlock block) {
             this.block = block;
         }
 
         @Override
-        public void action(@NotNull Network.Node from, @NotNull Network.Node to) {
+        public void action(@NotNull Node from, @NotNull Node to) {
             AttesterNode n = (AttesterNode) to;
             n.onProposal(block);
         }
     }
 
     static class Vote extends Network.MessageContent {
-        final Network.Block voteFor;
+        final DfinityBlock voteFor;
 
-        public Vote(Network.Block voteFor) {
+        public Vote(DfinityBlock voteFor) {
             this.voteFor = voteFor;
         }
 
         @Override
-        public void action(@NotNull Network.Node fromNode, @NotNull Network.Node toNode) {
+        public void action(@NotNull Node fromNode, @NotNull Node toNode) {
             toNode.onVote(fromNode, voteFor);
         }
     }
@@ -135,7 +137,7 @@ public class Dfinity {
         }
 
         @Override
-        public void action(Network.Node from, Network.Node to) {
+        public void action(Node from, Node to) {
             RandomBeaconNode rbn = (RandomBeaconNode) to;
             rbn.onRandomBeaconExchange((RandomBeaconNode) from, height);
         }
@@ -151,29 +153,29 @@ public class Dfinity {
         }
 
         @Override
-        public void action(@NotNull Network.Node from, @NotNull Network.Node to) {
+        public void action(@NotNull Node from, @NotNull Node to) {
             DfinityNode n = (DfinityNode) to;
             n.onRandomBeacon(height, rd);
         }
     }
 
 
-    abstract class DfinityNode extends Network.Node {
+    abstract class DfinityNode extends Node<DfinityBlock> {
         final Set<Long> committeeMajorityBlocks = new HashSet<>();
         final Set<Integer> committeeMajorityHeight = new HashSet<>();
         int lastRandomBeacon;
 
 
         @Override
-        public DfinityBlock best(Network.Block o1, Network.Block o2) {
-            return blockComparator.compare((DfinityBlock) o1, (DfinityBlock) o2) >= 0 ? (DfinityBlock) o1 : (DfinityBlock) o2;
+        public DfinityBlock best(DfinityBlock o1, DfinityBlock o2) {
+            return blockComparator.compare(o1, o2) >= 0 ? o1 : o2;
         }
 
-        DfinityNode(int nodeId, @NotNull Network.Block genesis) {
+        DfinityNode(int nodeId, @NotNull DfinityBlock genesis) {
             super(nodeId, genesis);
         }
 
-        public void onVote(@NotNull Network.Node voter, @NotNull Network.Block voteFor) {
+        public void onVote(@NotNull Node voter, @NotNull DfinityBlock voteFor) {
         }
 
         /**
@@ -195,7 +197,7 @@ public class Dfinity {
         final int myRound;
         int waitForBlockHeight; // If we're supposed to create a block but we don"t have the parent yet
 
-        BlockProducerNode(int nodeId, final int myRound, @NotNull Network.Block genesis) {
+        BlockProducerNode(int nodeId, final int myRound, @NotNull DfinityBlock genesis) {
             super(nodeId, genesis);
             this.myRound = myRound;
             this.waitForBlockHeight = -1;
@@ -206,14 +208,14 @@ public class Dfinity {
                 throw new IllegalArgumentException();
             }
 
-            DfinityBlock newBlock = new DfinityBlock(this, height, (DfinityBlock) head, true, network.time);
+            DfinityBlock newBlock = new DfinityBlock(this, height, head, true, network.time);
 
             network.send(new BlockProposal(newBlock), network.time + blockConstructionTime, this, attesters);
             waitForBlockHeight = -1;
         }
 
         @Override
-        public boolean onBlock(@NotNull Network.Block b) {
+        public boolean onBlock(@NotNull DfinityBlock b) {
             if (!super.onBlock(b)) return false;
             if (head.height == waitForBlockHeight) {
                 createProposal(waitForBlockHeight + 1);
@@ -238,17 +240,17 @@ public class Dfinity {
 
     class AttesterNode extends DfinityNode {
         final Map<Long, Set<Integer>> votes = new HashMap<>();
-        final Set<Network.Block> proposals = new HashSet<>();
+        final Set<DfinityBlock> proposals = new HashSet<>();
         final int myRound;
         int voteForHeight = -1;
 
-        AttesterNode(int nodeId, int myRound, Network.Block genesis) {
+        AttesterNode(int nodeId, int myRound, DfinityBlock genesis) {
             super(nodeId, genesis);
             this.myRound = myRound;
         }
 
         @Override
-        public void onVote(@NotNull Network.Node voter, @NotNull Network.Block voteFor) {
+        public void onVote(@NotNull Node voter, @NotNull DfinityBlock voteFor) {
             Set<Integer> voters = votes.computeIfAbsent(voteFor.id, k -> new HashSet<>());
             if (voteForHeight == voteFor.height) {
                 if (voters.add(voter.nodeId) && voters.size() >= majority) {
@@ -257,7 +259,7 @@ public class Dfinity {
             }
         }
 
-        private void sendBlock(@NotNull Network.Block voteFor) {
+        private void sendBlock(@NotNull DfinityBlock voteFor) {
             committeeMajorityBlocks.add(voteFor.id);
             committeeMajorityHeight.add(voteFor.height);
             voteForHeight = -1;
@@ -270,7 +272,7 @@ public class Dfinity {
          * for this new proposal.
          * If we reach the majority, we can send the (signed) block on the network.
          */
-        void onProposal(@NotNull Network.Block b) {
+        void onProposal(@NotNull DfinityBlock b) {
             if (voteForHeight == b.height) {
                 Set<Integer> voters = votes.computeIfAbsent(b.id, k -> new HashSet<>());
 
@@ -291,7 +293,7 @@ public class Dfinity {
         }
 
         @Override
-        public boolean onBlock(@NotNull Network.Block b) {
+        public boolean onBlock(@NotNull DfinityBlock b) {
             if (!super.onBlock(b)) return false;
             committeeMajorityBlocks.add(b.id);
             committeeMajorityHeight.add(b.height);
@@ -305,7 +307,7 @@ public class Dfinity {
         void onRandomBeaconOnce(int h, long rd) {
             if (rd % attestersRound == myRound && !committeeMajorityHeight.contains(h)) {
                 voteForHeight = h;
-                for (Network.Block b : proposals) {
+                for (DfinityBlock b : proposals) {
                     if (b.height == h) {
                         Vote v = new Vote(b);
                         network.send(v, network.time + attestationConstructionTime, this, attesters);
@@ -322,7 +324,7 @@ public class Dfinity {
         int lastRDSent = 0;
         Map<Integer, Set<Integer>> exchanged = new HashMap<>();
 
-        RandomBeaconNode(int nodeId, @NotNull Network.Block genesis) {
+        RandomBeaconNode(int nodeId, @NotNull DfinityBlock genesis) {
             super(nodeId, genesis);
         }
 
@@ -351,7 +353,7 @@ public class Dfinity {
          * the next height
          */
         @Override
-        public boolean onBlock(@NotNull Network.Block b) {
+        public boolean onBlock(@NotNull DfinityBlock b) {
             if (!super.onBlock(b)) return true;
             if (head.height == height) {
                 height++;
@@ -417,7 +419,7 @@ public class Dfinity {
         for (RandomBeaconNode n : bc.rds) n.sendRB();
         bc.network.run(50);
 
-        List<List<? extends Network.Node>> lns = new ArrayList<>();
+        List<List<? extends Node>> lns = new ArrayList<>();
         lns.add(bc.bps);
         lns.add(bc.attesters);
         lns.add(bc.rds);

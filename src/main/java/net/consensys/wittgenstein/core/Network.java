@@ -110,8 +110,9 @@ public class Network {
     }
 
     public void printNetworkLatency() {
+        System.out.println("Network latency: time to receive a message:");
+
         for (int s = 1, cur = 0, sum = 0; cur < 100; s++) {
-            System.out.println("Network latency: time to receive a message:");
             int size = 0;
             while (cur < longDistrib.length && longDistrib[cur] < s * 1000) {
                 size++;
@@ -226,170 +227,6 @@ public class Network {
         }
     }
 
-    /**
-     * To ensure that all blocks id are unique we increment a counter.
-     * We suppose it's impossible to create two blocks with the same id.
-     */
-    private static long blockId = 1;
-
-    public static class Block<TB extends Block> {
-        public final int height;
-        public final long proposalTime;
-        public final long lastTxId;
-        public final long id;
-        public final TB parent;
-        public final Node producer;
-
-        public final boolean valid;
-
-        /**
-         * To create a genesis block...
-         */
-        protected Block() {
-            height = 0;
-            lastTxId = 0;
-            id = 0;
-            parent = null;
-            producer = null;
-            proposalTime = 0;
-            valid = true;
-            ;
-        }
-
-
-        public Block(@NotNull Node producer, int height, @NotNull TB parent, boolean valid, long time) {
-            if (height <= 0) throw new IllegalArgumentException("Only the genesis block has a special height");
-            if (time < parent.proposalTime)
-                throw new IllegalArgumentException("bad time: parent is (" + parent + "), our time:" + time);
-
-            this.producer = producer;
-            this.height = height;
-            this.id = blockId++;
-            this.parent = parent;
-            this.valid = valid;
-            this.lastTxId = time;
-            this.proposalTime = time;
-
-        }
-
-
-        /**
-         * @return the number of transactions in this block.
-         */
-        public long txCount() {
-            if (id == 0) return 0;
-            assert parent != null;
-
-            long res = lastTxId - parent.lastTxId;
-            if (res < 0) {
-                throw new IllegalStateException(this + ", bad txCount:" + res);
-            }
-            return res;
-        }
-
-
-        @SuppressWarnings("unused")
-        public boolean isAncestor(@NotNull Block b) {
-            if (this == b) return false;
-
-            Block cur = b;
-            while (cur.height > this.height) {
-                cur = cur.parent;
-                assert cur != null;
-            }
-
-            return (cur == this);
-        }
-
-        /***
-         * @return true if b is a direct father or ancestor. false if 'b' is on a different branch
-         */
-        public boolean hasDirectLink(@NotNull TB b) {
-            if (b == this) return true;
-            if (b.height == height) return false;
-
-            TB older = height > b.height ? (TB) this : b;
-            TB young = height < b.height ? (TB) this : b;
-
-            while (older.height > young.height) {
-                older = (TB) older.parent;
-                assert older != null;
-            }
-
-            return older == young;
-        }
-
-        public String toString() {
-            if (id == 0) return "genesis";
-            assert producer != null;
-            assert parent != null;
-
-            StringBuilder sb = new StringBuilder();
-            sb.append("h:").append(height).append(", id=").append(id);
-            sb.append(", creationTime:").append(proposalTime);
-            sb.append(", producer=").append(producer.nodeId);
-            sb.append(", parent:").append(parent.id);
-
-            return sb.toString();
-        }
-
-    }
-
-    public static abstract class Node {
-        public final int nodeId;
-        protected final Map<Long, Block> blocksReceivedByBlockId = new HashMap<>();
-        protected final Map<Long, Set<Network.Block>> blocksReceivedByFatherId = new HashMap<>();
-        protected final Map<Integer, Network.Block> blocksReceivedByHeight = new HashMap<>();
-
-
-        protected long msgReceived = 0;
-        protected long msgSent = 0;
-
-        @NotNull
-        protected final Network.Block genesis;
-        public @NotNull Network.Block head;
-
-        public Node(int nodeId, @NotNull Network.Block genesis) {
-            this.nodeId = nodeId;
-            this.genesis = genesis;
-            this.head = genesis;
-            this.blocksReceivedByBlockId.put(genesis.id, genesis);
-        }
-
-        /**
-         * @return true if it's a new block, false if the block in invalid or if we have already received it.
-         */
-        public boolean onBlock(@NotNull Network.Block b) {
-            if (!b.valid) return false;
-
-            if (this.blocksReceivedByBlockId.put(b.id, b) != null) {
-                return false; // If we have already received this block
-            }
-            Set<Block> pa = this.blocksReceivedByFatherId.computeIfAbsent(b.parent.id, k -> new HashSet<>());
-            pa.add(b);
-            blocksReceivedByHeight.put(b.height, b);
-
-            head = best(head, b);
-
-            return true;
-        }
-
-        public abstract Block best(Block cur, Block alt);
-
-        public void onVote(@NotNull Node voter, @NotNull Network.Block voteFor) {
-            ;
-        }
-
-
-        public Network.StartWork firstWork() {
-            return null;
-        }
-
-        public Network.StartWork work(long time) {
-            return null;
-        }
-    }
-
     private void init() {
         for (Node n : allNodes) {
             StartWork sw = n.firstWork();
@@ -412,7 +249,7 @@ public class Network {
     public void printStat(boolean small) {
         HashMap<Integer, HashSet<Block>> productionCount = new HashMap<>();
 
-        Network.Block cur = observer.head;
+        Block cur = observer.head;
         int blocksCreated = 0;
         while (cur != observer.genesis) {
             if (!small) System.out.println("block: " + cur.toString());
@@ -446,7 +283,7 @@ public class Network {
                     );
 
             } else {
-                System.out.println(bp.getClass().getSimpleName() + " " + bp.nodeId + ": " + productionCount.get(bp.nodeId).size() +
+                System.out.println(bp + ": " + productionCount.get(bp.nodeId).size() +
                         ", tx count: " + bpTx +
                         ", msg count:");
             }
