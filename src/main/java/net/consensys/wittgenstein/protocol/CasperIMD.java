@@ -50,6 +50,10 @@ public class CasperIMD {
     //   of the ancestors of the head up to 64 slots and current_slot is the current slot number.
     //   (if a chain has missing slots between heights a and b, then use the hash of the block at
     //   height a for heights a+1....b−1), and current_slot is the current slot number.
+    //
+    // EF team repo:
+    // https://github.com/ethereum/beacon_chain/blob/master/beacon_chain/state/attestation_record.py
+    // It contains a field referencing the block hash: 'shard_block_hash': 'hash32'
     class Attestation extends Network.MessageContent {
         final Attester attester;
         final int height;
