@@ -45,6 +45,5 @@ public abstract class Node<TB extends Block> {
         return true;
     }
 
-    public @NotNull
-    abstract TB best(@NotNull TB cur, @NotNull TB alt);
+    public abstract @NotNull TB best(@NotNull TB cur, @NotNull TB alt);
 }

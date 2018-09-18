@@ -28,7 +28,7 @@ public class Network {
     /**
      * The node we use as an observer for the final stats
      */
-    private final Node observer;
+    private final @NotNull Node observer;
 
     public abstract static class MessageContent {
         public abstract void action(@NotNull Node from, @NotNull Node to);
@@ -38,7 +38,7 @@ public class Network {
      * Some protocols want some tasks to be executed at a given time
      */
     public class Task extends MessageContent {
-        final Runnable r;
+        final @NotNull Runnable r;
 
         public Task(@NotNull Runnable r) {
             this.r = r;
@@ -70,10 +70,8 @@ public class Network {
         }
     }
 
-
     public static class SendBlock extends MessageContent {
-        @NotNull
-        final Block toSend;
+        final @NotNull Block toSend;
 
         public SendBlock(@NotNull Block toSend) {
             this.toSend = toSend;
@@ -95,7 +93,9 @@ public class Network {
 
 
     public Network(@NotNull Node observer) {
-        if (observer.nodeId != OBSERVER_NODE_ID) throw new IllegalArgumentException();
+        if (observer.nodeId != OBSERVER_NODE_ID) {
+            throw new IllegalArgumentException();
+        }
         this.observer = observer;
         allNodes.add(observer);
         setNetworkLatency(distribProp, distribVal);
@@ -135,7 +135,7 @@ public class Network {
                 size++;
                 cur++;
             }
-            System.out.println(s + " seconds:" + size + "%, cumulative=" + cur + "%");
+            System.out.println(s + " second" + (s > 1 ? "s: " : ": ") + size + "%, cumulative=" + cur + "%");
         }
     }
 
@@ -151,6 +151,9 @@ public class Network {
     }
 
     public void send(@NotNull MessageContent m, long sendTime, @NotNull Node fromNode, @NotNull ArrayList<? extends Node> dests) {
+        if (sendTime <= time) {
+            throw new IllegalStateException();
+        }
         for (Node n : dests) {
             if (n != fromNode) {
                 if ((partition.contains(fromNode.nodeId) && partition.contains(n.nodeId)) ||
@@ -214,11 +217,9 @@ public class Network {
     }
 
     public static class Message implements Comparable<Message> {
-        final MessageContent messageContent;
-        @NotNull
-        final Node fromNode;
-        @NotNull
-        final Node toNode;
+        final @NotNull MessageContent messageContent;
+        final @NotNull Node fromNode;
+        final @NotNull Node toNode;
         final long arrivalTime;
 
         public Message(@NotNull MessageContent messageContent, @NotNull Node fromNode, @NotNull Node toNode, long arrivalTime) {

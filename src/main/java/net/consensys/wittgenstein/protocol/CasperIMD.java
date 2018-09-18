@@ -138,7 +138,7 @@ public class CasperIMD {
 
     abstract class CasperNode extends Node<CasperBlock> {
         final Map<Long, Set<Attestation>> attestationsByHead = new HashMap<>();
-        final Set<CasperBlock> lastReceivedBlocks = new HashSet<>();
+        final Set<CasperBlock> blocksRoRevaluate = new HashSet<>();
 
         CasperNode(int nodeId, @NotNull CasperBlock genesis) {
             super(nodeId, genesis);
@@ -244,8 +244,8 @@ public class CasperIMD {
             // Spec: The node’s local clock time is greater than or equal to the minimum timestamp as
             // computed by GENESIS_TIME + slot_number * SLOT_DURATION
             if (network.time >= genesis.proposalTime + b.height * SLOT_DURATION) {
-                lastReceivedBlocks.add(head); // if head loose the race it may win later.
-                lastReceivedBlocks.add(b);
+                blocksRoRevaluate.add(head); // if head loose the race it may win later.
+                blocksRoRevaluate.add(b);
                 return super.onBlock(b);
             }
             return false;
@@ -263,6 +263,11 @@ public class CasperIMD {
             //  here: https://docs.google.com/presentation/d/1aqU1gK8B_sozm6orNVqqyvBTC2u2_13Re0Fi99rFhjg/edit#slide=id.g413fdd60fc_1_250
             Set<Attestation> as = attestationsByHead.computeIfAbsent(a.head.id, k -> new HashSet<>());
             as.add(a);
+
+            // A new attestation => a possible change in the fork-choice-rule... If we have received the block!
+            if (blocksReceivedByBlockId.containsKey(a.head.id)) {
+                blocksRoRevaluate.add(a.head);
+            }
         }
 
         /**
@@ -274,10 +279,10 @@ public class CasperIMD {
          * send the head, it may be less possible.
          */
         void reevaluateHead() {
-            for (CasperBlock b : lastReceivedBlocks) {
+            for (CasperBlock b : blocksRoRevaluate) {
                 head = best(head, b);
             }
-            lastReceivedBlocks.clear();
+            blocksRoRevaluate.clear();
         }
 
         @Override
@@ -394,7 +399,7 @@ public class CasperIMD {
     }
 
 
-    void init(ByzantineProd byzantineNode) {
+    void init(@NotNull ByzantineProd byzantineNode) {
         if (byzantineNode.nodeId != 1) throw new IllegalStateException();
 
         int nodeId = 2;
@@ -501,7 +506,6 @@ public class CasperIMD {
                     onOlderAncestor++;
                 }
 
-
                 createAndSendBlock(toSend);
                 int lastSent = toSend;
                 toSend += blockProducersCount;
@@ -556,7 +560,7 @@ public class CasperIMD {
 
         protected Runnable getPeriodicTask() {
             return () -> {
-                // This node doesn't care of the slot, it only react on the reception of the previous block
+                // This node doesn't care of the slot, it only reacts on the reception of the previous block
             };
         }
 

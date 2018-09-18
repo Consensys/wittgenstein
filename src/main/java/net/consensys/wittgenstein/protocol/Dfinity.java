@@ -53,23 +53,24 @@ public class Dfinity {
         });
     }
 
-    final Network network;
-    final DfinityBlock genesis = DfinityBlock.createGenesis();
-    final DfinityBlockComparator blockComparator = new DfinityBlockComparator();
+    final @NotNull Network network;
+    final @NotNull DfinityBlock genesis = DfinityBlock.createGenesis();
+    final @NotNull DfinityBlockComparator blockComparator = new DfinityBlockComparator();
 
-    final ArrayList<AttesterNode> attesters = new ArrayList<>();
-    final ArrayList<BlockProducerNode> bps = new ArrayList<>();
-    final ArrayList<RandomBeaconNode> rds = new ArrayList<>();
+    final @NotNull ArrayList<AttesterNode> attesters = new ArrayList<>();
+    final @NotNull ArrayList<BlockProducerNode> bps = new ArrayList<>();
+    final @NotNull ArrayList<RandomBeaconNode> rds = new ArrayList<>();
 
     static class DfinityBlock extends Block<DfinityBlock> {
-        public DfinityBlock(BlockProducerNode blockProducerNode, int height, DfinityBlock head, boolean b, long time) {
+        public DfinityBlock(@NotNull BlockProducerNode blockProducerNode, int height, @NotNull DfinityBlock head, boolean b, long time) {
             super(blockProducerNode, height, head, b, time);
         }
 
         DfinityBlock() {
         }
 
-        public static DfinityBlock createGenesis() {
+        public @NotNull
+        static DfinityBlock createGenesis() {
             return new DfinityBlock();
         }
     }
@@ -167,7 +168,7 @@ public class Dfinity {
 
 
         @Override
-        public DfinityBlock best(DfinityBlock o1, DfinityBlock o2) {
+        public @NotNull DfinityBlock best(@NotNull DfinityBlock o1, @NotNull DfinityBlock o2) {
             return blockComparator.compare(o1, o2) >= 0 ? o1 : o2;
         }
 
@@ -244,7 +245,7 @@ public class Dfinity {
         final int myRound;
         int voteForHeight = -1;
 
-        AttesterNode(int nodeId, int myRound, DfinityBlock genesis) {
+        AttesterNode(int nodeId, int myRound, @NotNull DfinityBlock genesis) {
             super(nodeId, genesis);
             this.myRound = myRound;
         }
