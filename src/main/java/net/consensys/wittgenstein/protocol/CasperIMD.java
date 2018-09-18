@@ -595,7 +595,7 @@ public class CasperIMD {
 
         new CasperIMD().network.printNetworkLatency();
 
-        for (int delay = 6000; delay < 7000; delay += 100000) {
+        for (int delay = -3000; delay < 15000; delay += 100000) {
             CasperIMD bc = new CasperIMD();
             bc.init(bc.new ByzantineProd(Network.BYZANTINE_NODE_ID, delay, bc.genesis));
             //bc.network.removeNetworkLatency();
@@ -607,7 +607,7 @@ public class CasperIMD {
             bc.network.run(30);
 
             //   bc.network.partition(.5f, lns);
-            bc.network.run(3600 * 2); // 5 hours is a minimum if you want something statistically reasonable
+            bc.network.run(3600 * 5); // 5 hours is a minimum if you want something statistically reasonable
             //   bc.network.endPartition();
 
             bc.network.run(30);

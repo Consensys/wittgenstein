@@ -49,11 +49,6 @@ public abstract class Node<TB extends Block> {
 
     public abstract TB best(TB cur, TB alt);
 
-    public void onVote(@NotNull Node voter, @NotNull TB voteFor) {
-        ;
-    }
-
-
     public Network.StartWork firstWork() {
         return null;
     }

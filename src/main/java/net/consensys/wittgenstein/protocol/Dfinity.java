@@ -124,7 +124,7 @@ public class Dfinity {
 
         @Override
         public void action(@NotNull Node fromNode, @NotNull Node toNode) {
-            toNode.onVote(fromNode, voteFor);
+            ((DfinityNode)toNode).onVote(fromNode, voteFor);
         }
     }
 
