@@ -7,7 +7,7 @@ import org.junit.Test;
 
 
 public class CasperIMDTest {
-    private final CasperIMD ci = new CasperIMD(false, 5, 80, 1000, 1, 0);
+    private final CasperIMD ci = new CasperIMD(5, false, 5, 80, 1000, 1);
     private final CasperIMD.BlockProducer bp1 = ci.new BlockProducer(0,  ci.genesis);
     private final CasperIMD.BlockProducer bp2 = ci.new BlockProducer(0, ci.genesis);
     private final CasperIMD.Attester at1 = ci.new Attester(0,  ci.genesis);
@@ -126,15 +126,15 @@ public class CasperIMDTest {
         bp1.onAttestation(a1);
         Assert.assertTrue(bp1.attestationsByHead.containsKey(b.id));
 
-        // for CYCLE_LENGTH == 2
+        // for cycleLength == 2
         //    a.h == 2
         //    b.h == 3  => contains attestation for h == 2 && h == 1
         //    b.h == 4  => contains attestation for h == 3 && h == 2
         //    b.h == 5  => contains attestation for h == 4 && h == 3
-        b = bp1.buildBlock( bp1.head, a1.height + ci.CYCLE_LENGTH);
+        b = bp1.buildBlock( bp1.head, a1.height + ci.cycleLength);
         Assert.assertTrue(b.attestationsByHeight.containsKey(2));
 
-        b = bp1.buildBlock( bp1.head, a1.height + ci.CYCLE_LENGTH + 1);
+        b = bp1.buildBlock( bp1.head, a1.height + ci.cycleLength + 1);
         Assert.assertFalse(b.attestationsByHeight.containsKey(2));
     }
 

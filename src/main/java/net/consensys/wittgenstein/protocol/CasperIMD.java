@@ -10,30 +10,56 @@ import java.util.*;
 @SuppressWarnings({"WeakerAccess", "SameParameterValue", "unused"})
 public class CasperIMD {
     final long SLOT_DURATION = 8000;
-    final int CYCLE_LENGTH = 5;
-    final boolean RANDOM_ON_TIES;
 
+    /**
+     * Number of rounds per cycle. 64 in the spec
+     */
+    final int cycleLength;
+
+    /**
+     * On tie, the best strategy is randomness. But unit tests are simpler with determinist strategy.
+     */
+    final boolean randomOnTies;
+
+    /**
+     * Number of block producers. There is a single block producer per round.
+     */
     final int blockProducersCount;
-    final int attestersCount;
+
+    /**
+     * Number of attesters in a round. Spec says 892.
+     */
     final int attestersPerRound;
+
+    /**
+     * Calculated attestersPerRound * cycleLength
+     */
+    final int attestersCount;
+
+    /**
+     * Time to build a block. Same for all blocks & all block producers.
+     */
     final long blockConstructionTime;
+
+    /**
+     * Time to build an attestation. Same for all.
+     */
     final long attestationConstructionTime;
-    final int percentageDeadAttester;
 
     public CasperIMD() {
-        this(true, 5, 80, 1000, 1, 0);
+        this(5, true, 5, 80, 1000, 1);
     }
 
-    public CasperIMD(boolean RANDOM_ON_TIES, int blockProducersCount, int attestersPerRound,
+    public CasperIMD(int cycleLength, boolean randomOnTies, int blockProducersCount, int attestersPerRound,
                      long blockConstructionTime,
-                     long attestationConstructionTime, int percentageDeadAttester) {
-        this.RANDOM_ON_TIES = RANDOM_ON_TIES;
+                     long attestationConstructionTime) {
+        this.cycleLength = cycleLength;
+        this.randomOnTies = randomOnTies;
         this.blockProducersCount = blockProducersCount;
         this.attestersPerRound = attestersPerRound;
-        this.attestersCount = attestersPerRound * CYCLE_LENGTH;
+        this.attestersCount = attestersPerRound * cycleLength;
         this.blockConstructionTime = blockConstructionTime;
         this.attestationConstructionTime = attestationConstructionTime;
-        this.percentageDeadAttester = percentageDeadAttester;
 
         this.network = new Network(new CasperNode(0, genesis) {
         });
@@ -68,7 +94,7 @@ public class CasperIMD {
             // Note that's not the head, but the head's parent. As a son, we're going to be selected
             //  from the attestations to our parents, so that makes sense. But it means that the attestation
             //  is valid for all sons of the same parent (hence the need to add 'head'.
-            for (Block cur = attester.head.parent; cur != null && cur.height >= attester.head.height - CYCLE_LENGTH; cur = cur.parent) {
+            for (Block cur = attester.head.parent; cur != null && cur.height >= attester.head.height - cycleLength; cur = cur.parent) {
                 hs.add(cur.id);
             }
         }
@@ -190,7 +216,7 @@ public class CasperIMD {
             if (b1Votes > b2Votes) return o1;
             if (b1Votes < b2Votes) return o2;
 
-            if (RANDOM_ON_TIES) {
+            if (randomOnTies) {
                 // VB: I’d say break ties via client-side randomness. Seems safest in the existing cases where it’s been studied.
                 return network.rd.nextBoolean() ? o1 : o2;
             } else {
@@ -232,7 +258,7 @@ public class CasperIMD {
 
         private @NotNull Set<Long> attestsFor(int height) {
             Set<Long> as = new HashSet<>();
-            for (Block c = head; c != genesis && height - CYCLE_LENGTH >= c.height; c = c.parent) {
+            for (Block c = head; c != genesis && height - cycleLength >= c.height; c = c.parent) {
                 as.add(c.id);
             }
             return as;
@@ -240,15 +266,20 @@ public class CasperIMD {
 
 
         @Override
-        public boolean onBlock(@NotNull CasperBlock b) {
+        public boolean onBlock(@NotNull final CasperBlock b) {
             // Spec: The node’s local clock time is greater than or equal to the minimum timestamp as
             // computed by GENESIS_TIME + slot_number * SLOT_DURATION
-            if (network.time >= genesis.proposalTime + b.height * SLOT_DURATION) {
+            final long delta = network.time - genesis.proposalTime + b.height * SLOT_DURATION;
+            if (delta >= 0) {
                 blocksRoRevaluate.add(head); // if head loose the race it may win later.
                 blocksRoRevaluate.add(b);
                 return super.onBlock(b);
+            } else {
+                // Spec: If these conditions are not met, the client should delay processing the block until the
+                //  conditions are all satisfied.
+                network.registerTask(() -> onBlock(b), delta * -1, CasperNode.this);
+                return false;
             }
-            return false;
         }
 
         void onAttestation(@NotNull Attestation a) {
@@ -321,14 +352,14 @@ public class CasperIMD {
             //
             // So we merge all the previous blocks and the ones we received
             Map<Integer, Set<Attestation>> res = new HashMap<>();
-            for (int i = height - 1; i >= 0 && i >= height - CYCLE_LENGTH; i--) {
+            for (int i = height - 1; i >= 0 && i >= height - cycleLength; i--) {
                 res.put(i, new HashSet<>());
             }
 
             // phase 1: take all attestations already included in our parent's blocks.
-            // as each block includes only the new attestations, we need to go through all parents < CYCLE_LENGTH
+            // as each block includes only the new attestations, we need to go through all parents < cycleLength
             Set<Attestation> allFromBlocks = new HashSet<>();
-            for (CasperBlock cur = base; cur != genesis && cur.height >= height - CYCLE_LENGTH; cur = cur.parent) {
+            for (CasperBlock cur = base; cur != genesis && cur.height >= height - cycleLength; cur = cur.parent) {
                 for (Set<Attestation> ats : cur.attestationsByHeight.values()) {
                     allFromBlocks.addAll(ats);
                 }
@@ -336,7 +367,7 @@ public class CasperIMD {
 
             // phase 2: add all missing attestations
             for (CasperBlock cur = base;
-                 cur != null && cur.height >= height - CYCLE_LENGTH;
+                 cur != null && cur.height >= height - cycleLength;
                  cur = cur.parent) {
 
                 Set<Attestation> as = attestationsByHead.getOrDefault(cur.id, new HashSet<>());
@@ -421,7 +452,7 @@ public class CasperIMD {
             attesters.add(n);
             network.addNode(n);
             network.registerPeriodicTask(n.getPeriodicTask(),
-                    SLOT_DURATION * (i + 1) + 4000, SLOT_DURATION * CYCLE_LENGTH, n);
+                    SLOT_DURATION * (i + 1) + 4000, SLOT_DURATION * cycleLength, n);
         }
 
     }
@@ -563,9 +594,17 @@ public class CasperIMD {
             super(nodeId, delay, genesis);
         }
 
+        @Override
         protected Runnable getPeriodicTask() {
             return () -> {
-                // This node doesn't care of the slot, it only reacts on the reception of the previous block
+                if (head == genesis) {
+                    // If we're the first producer we need to kick off the system.
+                    revaluateH(network.time);
+                    if (toSend == 1) {
+                        createAndSendBlock(h);
+                        toSend += blockProducersCount;
+                    }
+                }
             };
         }
 
@@ -581,8 +620,8 @@ public class CasperIMD {
 
                         @Override
                         public void run() {
-                            CasperBlock nh = buildBlock(b, th);
-                            network.sendAll(new Network.SendBlock(nh), network.time + blockConstructionTime, ByzantineProdWF.this);
+                            head = buildBlock(b, th);
+                            network.sendAll(new Network.SendBlock(head), network.time + blockConstructionTime, ByzantineProdWF.this);
                         }
                     };
                     toSend += blockProducersCount;
@@ -616,9 +655,9 @@ public class CasperIMD {
 
         new CasperIMD().network.printNetworkLatency();
 
-        for (int delay = 20000; delay < 25000; delay += 1000) {
+        for (int delay = -4000; delay < 25000; delay += 1000) {
             CasperIMD bc = new CasperIMD();
-            bc.init(bc.new ByzantineProd(Network.BYZANTINE_NODE_ID, delay, bc.genesis));
+            bc.init(bc.new ByzantineProdWF(Network.BYZANTINE_NODE_ID, delay, bc.genesis));
             // bc.init(bc.new BlockProducer(Network.BYZANTINE_NODE_ID, bc.genesis));
             //bc.network.removeNetworkLatency();
 
@@ -639,3 +678,25 @@ public class CasperIMD {
         }
     }
 }
+/*
+ByzantineProd{delay=-4000, onDirectFather=354, onOlderAncestor=98, incNotTheBestFather=41}; 48; 216000; 183060; 166565
+ByzantineProd{delay=-3000, onDirectFather=366, onOlderAncestor=86, incNotTheBestFather=33}; 62; 350000; 183060; 166565
+ByzantineProd{delay=-2000, onDirectFather=342, onOlderAncestor=110, incNotTheBestFather=63}; 397; 3622000; 183060; 166565
+ByzantineProd{delay=-1000, onDirectFather=369, onOlderAncestor=83, incNotTheBestFather=46}; 417; 3303000; 183060; 166565
+ByzantineProd{delay=0, onDirectFather=369, onOlderAncestor=83, incNotTheBestFather=46}; 417; 3720000; 183060; 166565
+ByzantineProd{delay=1000, onDirectFather=367, onOlderAncestor=85, incNotTheBestFather=31}; 405; 3949000; 183060; 166565
+ByzantineProd{delay=2000, onDirectFather=383, onOlderAncestor=69, incNotTheBestFather=35}; 419; 4478000; 183060; 166565
+ByzantineProd{delay=3000, onDirectFather=403, onOlderAncestor=49, incNotTheBestFather=49}; 428; 5068000; 183060; 166565
+ByzantineProd{delay=4000, onDirectFather=412, onOlderAncestor=40, incNotTheBestFather=40}; 434; 5520000; 183060; 166565
+ByzantineProd{delay=5000, onDirectFather=406, onOlderAncestor=46, incNotTheBestFather=46}; 416; 5760000; 183060; 166565
+ByzantineProd{delay=6000, onDirectFather=410, onOlderAncestor=42, incNotTheBestFather=42}; 332; 4864000; 183060; 166565
+ByzantineProd{delay=7000, onDirectFather=417, onOlderAncestor=35, incNotTheBestFather=35}; 237; 3683000; 183060; 166565
+ByzantineProd{delay=8000, onDirectFather=397, onOlderAncestor=55, incNotTheBestFather=55}; 239; 4064000; 183060; 166565
+ByzantineProd{delay=9000, onDirectFather=402, onOlderAncestor=50, incNotTheBestFather=50}; 166; 2942000; 183060; 166565
+ByzantineProd{delay=10000, onDirectFather=407, onOlderAncestor=45, incNotTheBestFather=45}; 6; 108000; 183060; 166565
+ByzantineProd{delay=13000, onDirectFather=408, onOlderAncestor=43, incNotTheBestFather=43}; 1; 21000; 182655; 166565
+ByzantineProd{delay=14000, onDirectFather=406, onOlderAncestor=45, incNotTheBestFather=45}; 1; 22000; 182655; 166565
+ByzantineProd{delay=15000, onDirectFather=413, onOlderAncestor=38, incNotTheBestFather=38}; 1; 23000; 182655; 166565
+ByzantineProd{delay=16000, onDirectFather=403, onOlderAncestor=48, incNotTheBestFather=48}; 1; 24000; 182655; 166565
+
+ */

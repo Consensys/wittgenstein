@@ -28,7 +28,7 @@ public class Network {
     /**
      * The node we use as an observer for the final stats
      */
-    private final @NotNull Node observer;
+    public final @NotNull Node observer;
 
     /**
      * The generic message that goes on a network. Triggers an 'action' on reception.
@@ -248,10 +248,8 @@ public class Network {
         }
     }
 
-    public void run(long howLong) {
-        time++;
-
-        long endAt = time + howLong * 1000;
+    public void run(long seconds) {
+        long endAt = time + seconds * 1000;
         receiveUntil(endAt);
         time = endAt;
     }
