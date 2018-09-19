@@ -232,14 +232,14 @@ public class CasperIMD {
             //  We obviously need to count them only once
             // Also, we cannot reuse attestations that are for other branches.
 
-            HashSet<Attestation> a1 = new HashSet<>();
+            Set<Attestation> a1 = new HashSet<>();
 
             for (CasperBlock cur = start; cur != h; cur = cur.parent) {
                 assert cur != null;
 
                 // Then, for all the block, we take the attestation to 'h' they contain
                 for (int i = cur.height - 1; i > h.height; i--) {
-                    for (Attestation a : cur.attestationsByHeight.getOrDefault(i, new HashSet<>())) {
+                    for (Attestation a : cur.attestationsByHeight.getOrDefault(i, Collections.emptySet())) {
                         // We may have attestation that will attest a parent of 'h' but not 'h'
                         if (a.attests(h)) a1.add(a);
                     }
@@ -247,7 +247,7 @@ public class CasperIMD {
 
                 // Lastly, we look at the attestation we received
                 //  We take only the attestation with an head on our branch.
-                for (Attestation a : attestationsByHead.getOrDefault(cur.id, new HashSet<>())) {
+                for (Attestation a : attestationsByHead.getOrDefault(cur.id, Collections.emptySet())) {
                     if (a.attests(h)) a1.add(a);
                 }
             }
@@ -370,7 +370,7 @@ public class CasperIMD {
                  cur != null && cur.height >= height - cycleLength;
                  cur = cur.parent) {
 
-                Set<Attestation> as = attestationsByHead.getOrDefault(cur.id, new HashSet<>());
+                Set<Attestation> as = attestationsByHead.getOrDefault(cur.id, Collections.emptySet());
 
                 for (Attestation a : as) {
                     if (a.height < height && !allFromBlocks.contains(a)) {
@@ -559,24 +559,34 @@ public class CasperIMD {
             super(nodeId, delay, genesis);
         }
 
+        int skipped = 0;
+
         @Override
         protected Runnable getPeriodicTask() {
             return () -> {
                 revaluateH(network.time);
 
                 if (head.id != 0 && head.height == h - 1 && head.parent.height == h - 3) {
-                    for (CasperBlock b : blocksReceivedByFatherId.get(head.parent.id)) {
-                        if (b.height == h - 2) {
-                            head = b;
-                            break;
-                        }
+                    CasperBlock b = blocksReceivedByHeight.get(h - 2);
+                    if (b != null) {
+                        head = b;
+                        skipped++;
                     }
                 }
+
 
                 createAndSendBlock(toSend);
                 int lastSent = toSend;
                 toSend += blockProducersCount;
             };
+        }
+
+        @Override
+        public String toString() {
+            return "ByzantineProdNS{" +
+                    "delay=" + delay +
+                    ", skipped=" + skipped +
+                    '}';
         }
     }
 
@@ -655,7 +665,7 @@ public class CasperIMD {
 
         new CasperIMD().network.printNetworkLatency();
 
-        for (int delay = -4000; delay < 25000; delay += 1000) {
+        for (int delay = 4000; delay < 25000; delay += 1000) {
             CasperIMD bc = new CasperIMD();
             bc.init(bc.new ByzantineProdWF(Network.BYZANTINE_NODE_ID, delay, bc.genesis));
             // bc.init(bc.new BlockProducer(Network.BYZANTINE_NODE_ID, bc.genesis));
@@ -679,24 +689,52 @@ public class CasperIMD {
     }
 }
 /*
-ByzantineProd{delay=-4000, onDirectFather=354, onOlderAncestor=98, incNotTheBestFather=41}; 48; 216000; 183060; 166565
-ByzantineProd{delay=-3000, onDirectFather=366, onOlderAncestor=86, incNotTheBestFather=33}; 62; 350000; 183060; 166565
-ByzantineProd{delay=-2000, onDirectFather=342, onOlderAncestor=110, incNotTheBestFather=63}; 397; 3622000; 183060; 166565
+
+ByzantineProd{delay=-4000, onDirectFather=372, onOlderAncestor=80, incNotTheBestFather=32}; 408; 1920000; 183060; 166565
+ByzantineProd{delay=-3000, onDirectFather=353, onOlderAncestor=99, incNotTheBestFather=45}; 401; 2389000; 183060; 166565
+ByzantineProd{delay=-2000, onDirectFather=360, onOlderAncestor=92, incNotTheBestFather=45}; 408; 2832000; 183060; 166565
 ByzantineProd{delay=-1000, onDirectFather=369, onOlderAncestor=83, incNotTheBestFather=46}; 417; 3303000; 183060; 166565
-ByzantineProd{delay=0, onDirectFather=369, onOlderAncestor=83, incNotTheBestFather=46}; 417; 3720000; 183060; 166565
+ByzantineProd{delay=0, onDirectFather=369, onOlderAncestor=83, incNotTheBestFather=46}; 417; 3720000; 183060; 166565 <========
 ByzantineProd{delay=1000, onDirectFather=367, onOlderAncestor=85, incNotTheBestFather=31}; 405; 3949000; 183060; 166565
 ByzantineProd{delay=2000, onDirectFather=383, onOlderAncestor=69, incNotTheBestFather=35}; 419; 4478000; 183060; 166565
-ByzantineProd{delay=3000, onDirectFather=403, onOlderAncestor=49, incNotTheBestFather=49}; 428; 5068000; 183060; 166565
-ByzantineProd{delay=4000, onDirectFather=412, onOlderAncestor=40, incNotTheBestFather=40}; 434; 5520000; 183060; 166565
-ByzantineProd{delay=5000, onDirectFather=406, onOlderAncestor=46, incNotTheBestFather=46}; 416; 5760000; 183060; 166565
-ByzantineProd{delay=6000, onDirectFather=410, onOlderAncestor=42, incNotTheBestFather=42}; 332; 4864000; 183060; 166565
-ByzantineProd{delay=7000, onDirectFather=417, onOlderAncestor=35, incNotTheBestFather=35}; 237; 3683000; 183060; 166565
-ByzantineProd{delay=8000, onDirectFather=397, onOlderAncestor=55, incNotTheBestFather=55}; 239; 4064000; 183060; 166565
-ByzantineProd{delay=9000, onDirectFather=402, onOlderAncestor=50, incNotTheBestFather=50}; 166; 2942000; 183060; 166565
-ByzantineProd{delay=10000, onDirectFather=407, onOlderAncestor=45, incNotTheBestFather=45}; 6; 108000; 183060; 166565
+ByzantineProd{delay=3000, onDirectFather=417, onOlderAncestor=35, incNotTheBestFather=35}; 426; 4926000; 183060; 166565
+ByzantineProd{delay=4000, onDirectFather=418, onOlderAncestor=34, incNotTheBestFather=34}; 432; 5440000; 183060; 166565
+ByzantineProd{delay=5000, onDirectFather=411, onOlderAncestor=41, incNotTheBestFather=41}; 407; 5587000; 183060; 166565 <========
+ByzantineProd{delay=6000, onDirectFather=402, onOlderAncestor=50, incNotTheBestFather=50}; 350; 5196000; 183060; 166565
+ByzantineProd{delay=7000, onDirectFather=406, onOlderAncestor=46, incNotTheBestFather=46}; 222; 3530000; 183060; 166565
+ByzantineProd{delay=8000, onDirectFather=421, onOlderAncestor=31, incNotTheBestFather=31}; 224; 3688000; 183060; 166565
+ByzantineProd{delay=9000, onDirectFather=406, onOlderAncestor=46, incNotTheBestFather=46}; 163; 2939000; 183060; 166565
+ByzantineProd{delay=10000, onDirectFather=404, onOlderAncestor=48, incNotTheBestFather=48}; 2; 36000; 183060; 166565
 ByzantineProd{delay=13000, onDirectFather=408, onOlderAncestor=43, incNotTheBestFather=43}; 1; 21000; 182655; 166565
 ByzantineProd{delay=14000, onDirectFather=406, onOlderAncestor=45, incNotTheBestFather=45}; 1; 22000; 182655; 166565
-ByzantineProd{delay=15000, onDirectFather=413, onOlderAncestor=38, incNotTheBestFather=38}; 1; 23000; 182655; 166565
 ByzantineProd{delay=16000, onDirectFather=403, onOlderAncestor=48, incNotTheBestFather=48}; 1; 24000; 182655; 166565
+
+ByzantineProdWF{delay=-4000, late=54, onTime=397}; 404; 1886844; 183060; 166565
+ByzantineProdWF{delay=-3000, late=54, onTime=397}; 404; 2239844; 183060; 166565
+ByzantineProdWF{delay=-2000, late=47, onTime=404}; 404; 2596344; 183060; 166565
+ByzantineProdWF{delay=-1000, late=43, onTime=408}; 404; 2959344; 183060; 166565
+ByzantineProdWF{delay=0, late=37, onTime=414}; 404; 3328344; 183060; 166565
+ByzantineProdWF{delay=1000, late=37, onTime=414}; 404; 3697344; 183060; 166565
+ByzantineProdWF{delay=2000, late=45, onTime=406}; 403; 4068047; 183060; 166565
+ByzantineProdWF{delay=3000, late=0, onTime=451}; 398; 4378000; 183060; 166565
+ByzantineProdWF{delay=4000, late=0, onTime=451}; 396; 4752000; 183060; 166565
+ByzantineProdWF{delay=5000, late=0, onTime=451}; 378; 4914000; 183060; 166565
+ByzantineProdWF{delay=6000, late=0, onTime=451}; 307; 4298000; 183060; 166565
+ByzantineProdWF{delay=7000, late=0, onTime=451}; 205; 3075000; 183060; 166565
+
+
+ByzantineProdNS{delay=-4000, skipped=34}; 374; 1784000; 183060; 166565
+ByzantineProdNS{delay=-3000, skipped=37}; 364; 2204000; 183060; 166565
+ByzantineProdNS{delay=-2000, skipped=38}; 370; 2604000; 183060; 166565
+ByzantineProdNS{delay=-1000, skipped=39}; 378; 3030000; 183060; 166565
+ByzantineProdNS{delay=0, skipped=39}; 378; 3408000; 183060; 166565
+ByzantineProdNS{delay=1000, skipped=51}; 354; 3490000; 183060; 166565
+ByzantineProdNS{delay=2000, skipped=49}; 370; 3988000; 183060; 166565
+ByzantineProdNS{delay=3000, skipped=40}; 390; 4658000; 183060; 166565
+ByzantineProdNS{delay=4000, skipped=42}; 387; 4972000; 183060; 166565
+ByzantineProdNS{delay=5000, skipped=38}; 368; 5120000; 183060; 166565  <=== not as good as a simple delay
+ByzantineProdNS{delay=6000, skipped=47}; 289; 4278000; 183060; 166565
+ByzantineProdNS{delay=7000, skipped=45}; 219; 3485000; 183060; 166565
+
 
  */
