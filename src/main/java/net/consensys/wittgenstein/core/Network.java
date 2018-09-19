@@ -30,6 +30,9 @@ public class Network {
      */
     private final @NotNull Node observer;
 
+    /**
+     * The generic message that goes on a network. Triggers an 'action' on reception.
+     */
     public abstract static class MessageContent {
         public abstract void action(@NotNull Node from, @NotNull Node to);
     }

@@ -40,6 +40,9 @@ abstract public class Block<TB extends Block> {
         if (time < parent.proposalTime) {
             throw new IllegalArgumentException("bad time: parent is (" + parent + "), our time:" + time);
         }
+        if (parent != null && parent.height >= height) {
+            throw new IllegalArgumentException("Bad parent. me:" + this + ", parent:" + parent);
+        }
 
         this.producer = producer;
         this.height = height;

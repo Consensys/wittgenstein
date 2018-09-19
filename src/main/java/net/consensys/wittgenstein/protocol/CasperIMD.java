@@ -326,8 +326,7 @@ public class CasperIMD {
             }
 
             // phase 1: take all attestations already included in our parent's blocks.
-            // as each block includes only the new attestation, we need to go through all parents < 64
-
+            // as each block includes only the new attestations, we need to go through all parents < CYCLE_LENGTH
             Set<Attestation> allFromBlocks = new HashSet<>();
             for (CasperBlock cur = base; cur != genesis && cur.height >= height - CYCLE_LENGTH; cur = cur.parent) {
                 for (Set<Attestation> ats : cur.attestationsByHeight.values()) {
@@ -446,6 +445,12 @@ public class CasperIMD {
 
         public void revaluateH(long time) {
             reevaluateHead();
+
+            // There is a delay, so may be our current head is 'newer' than us. It's not
+            //   legal to have a parent younger than us...
+            while (head.height >= toSend) {
+                head = head.parent;
+            }
 
             long slotTime = time - delay;
             h = (int) (slotTime / SLOT_DURATION);
@@ -611,7 +616,7 @@ public class CasperIMD {
 
         new CasperIMD().network.printNetworkLatency();
 
-        for (int delay = -3000; delay < 15000; delay += 1000) {
+        for (int delay = 20000; delay < 25000; delay += 1000) {
             CasperIMD bc = new CasperIMD();
             bc.init(bc.new ByzantineProd(Network.BYZANTINE_NODE_ID, delay, bc.genesis));
             // bc.init(bc.new BlockProducer(Network.BYZANTINE_NODE_ID, bc.genesis));
