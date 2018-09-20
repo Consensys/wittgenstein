@@ -8,10 +8,10 @@ import org.junit.Test;
 
 public class CasperIMDTest {
     private final CasperIMD ci = new CasperIMD(5, false, 5, 80, 1000, 1);
-    private final CasperIMD.BlockProducer bp1 = ci.new BlockProducer(0,  ci.genesis);
-    private final CasperIMD.BlockProducer bp2 = ci.new BlockProducer(0, ci.genesis);
-    private final CasperIMD.Attester at1 = ci.new Attester(0,  ci.genesis);
-    private final CasperIMD.Attester at2 = ci.new Attester(1,  ci.genesis);
+    private final CasperIMD.BlockProducer bp1 = ci.new BlockProducer(ci.genesis);
+    private final CasperIMD.BlockProducer bp2 = ci.new BlockProducer(ci.genesis);
+    private final CasperIMD.Attester at1 = ci.new Attester(ci.genesis);
+    private final CasperIMD.Attester at2 = ci.new Attester(ci.genesis);
 
     @Before
     public void before() {

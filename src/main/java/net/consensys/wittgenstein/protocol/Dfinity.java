@@ -49,7 +49,7 @@ public class Dfinity {
         this.attestationConstructionTime = attestationConstructionTime;
         this.percentageDeadAttester = percentageDeadAttester;
 
-        this.network = new Network(new DfinityNode(0, genesis) {
+        this.network = new Network(new DfinityNode(genesis) {
         });
     }
 
@@ -57,9 +57,9 @@ public class Dfinity {
     final @NotNull DfinityBlock genesis = DfinityBlock.createGenesis();
     final @NotNull DfinityBlockComparator blockComparator = new DfinityBlockComparator();
 
-    final @NotNull ArrayList<AttesterNode> attesters = new ArrayList<>();
-    final @NotNull ArrayList<BlockProducerNode> bps = new ArrayList<>();
-    final @NotNull ArrayList<RandomBeaconNode> rds = new ArrayList<>();
+    final @NotNull Set<AttesterNode> attesters = new HashSet<>();
+    final @NotNull Set<BlockProducerNode> bps = new HashSet<>();
+    final @NotNull Set<RandomBeaconNode> rds = new HashSet<>();
 
     static class DfinityBlock extends Block<DfinityBlock> {
         public DfinityBlock(@NotNull BlockProducerNode blockProducerNode, int height, @NotNull DfinityBlock head, boolean b, long time) {
@@ -172,8 +172,8 @@ public class Dfinity {
             return blockComparator.compare(o1, o2) >= 0 ? o1 : o2;
         }
 
-        DfinityNode(int nodeId, @NotNull DfinityBlock genesis) {
-            super(nodeId, genesis);
+        DfinityNode(@NotNull DfinityBlock genesis) {
+            super(false, genesis);
         }
 
         public void onVote(@NotNull Node voter, @NotNull DfinityBlock voteFor) {
@@ -198,8 +198,8 @@ public class Dfinity {
         final int myRound;
         int waitForBlockHeight; // If we're supposed to create a block but we don"t have the parent yet
 
-        BlockProducerNode(int nodeId, final int myRound, @NotNull DfinityBlock genesis) {
-            super(nodeId, genesis);
+        BlockProducerNode(final int myRound, @NotNull DfinityBlock genesis) {
+            super(genesis);
             this.myRound = myRound;
             this.waitForBlockHeight = -1;
         }
@@ -245,8 +245,8 @@ public class Dfinity {
         final int myRound;
         int voteForHeight = -1;
 
-        AttesterNode(int nodeId, int myRound, @NotNull DfinityBlock genesis) {
-            super(nodeId, genesis);
+        AttesterNode(int myRound, @NotNull DfinityBlock genesis) {
+            super(genesis);
             this.myRound = myRound;
         }
 
@@ -325,8 +325,8 @@ public class Dfinity {
         int lastRDSent = 0;
         Map<Integer, Set<Integer>> exchanged = new HashMap<>();
 
-        RandomBeaconNode(int nodeId, @NotNull DfinityBlock genesis) {
-            super(nodeId, genesis);
+        RandomBeaconNode(@NotNull DfinityBlock genesis) {
+            super(genesis);
         }
 
         /**
@@ -391,21 +391,19 @@ public class Dfinity {
     void init() {
         int nodeId = 1;
         for (int i = 0; i < attestersCount; i++) {
-            AttesterNode n = new AttesterNode(nodeId++, i % attestersRound, genesis);
+            AttesterNode n = new AttesterNode(i % attestersRound, genesis);
             attesters.add(n);
             network.addNode(n);
         }
 
-        bps.add(new BlockProducerNode(nodeId++, 0, genesis));
-        network.addNode(bps.get(0));
-        for (int i = 1; i < blockProducersCount; i++) {
-            BlockProducerNode n = new BlockProducerNode(nodeId++, i % blockProducersRound, genesis);
+        for (int i = 0; i < blockProducersCount; i++) {
+            BlockProducerNode n = new BlockProducerNode(i % blockProducersRound, genesis);
             bps.add(n);
             network.addNode(n);
         }
 
         for (int i = 0; i < randomBeaconCount; i++) {
-            RandomBeaconNode n = new RandomBeaconNode(nodeId++, genesis);
+            RandomBeaconNode n = new RandomBeaconNode(genesis);
             rds.add(n);
             network.addNode(n);
         }
@@ -420,7 +418,7 @@ public class Dfinity {
         for (RandomBeaconNode n : bc.rds) n.sendRB();
         bc.network.run(50);
 
-        List<List<? extends Node>> lns = new ArrayList<>();
+        List<Set<? extends Node>> lns = new ArrayList<>();
         lns.add(bc.bps);
         lns.add(bc.attesters);
         lns.add(bc.rds);

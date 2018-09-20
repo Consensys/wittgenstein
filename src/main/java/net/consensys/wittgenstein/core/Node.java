@@ -9,7 +9,13 @@ import java.util.Set;
 
 @SuppressWarnings("WeakerAccess")
 public abstract class Node<TB extends Block> {
+    private static int nodeIds = 0;
+
     public final int nodeId;
+    public final boolean byzantine;
+    protected final @NotNull TB genesis;
+
+
     protected final Map<Long, TB> blocksReceivedByBlockId = new HashMap<>();
     protected final Map<Long, Set<TB>> blocksReceivedByFatherId = new HashMap<>();
     protected final Map<Integer, TB> blocksReceivedByHeight = new HashMap<>();
@@ -17,11 +23,11 @@ public abstract class Node<TB extends Block> {
     protected long msgReceived = 0;
     protected long msgSent = 0;
 
-    protected final @NotNull TB genesis;
     public @NotNull TB head;
 
-    public Node(int nodeId, @NotNull TB genesis) {
-        this.nodeId = nodeId;
+    public Node(boolean byzantine, @NotNull TB genesis) {
+        this.nodeId = nodeIds++;
+        this.byzantine = byzantine;
         this.genesis = genesis;
         this.head = genesis;
         this.blocksReceivedByBlockId.put(genesis.id, genesis);

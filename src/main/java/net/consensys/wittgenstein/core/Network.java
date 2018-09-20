@@ -7,12 +7,9 @@ import java.util.*;
 
 @SuppressWarnings({"WeakerAccess", "SameParameterValue", "FieldCanBeLocal", "unused"})
 public class Network {
-    public final static int OBSERVER_NODE_ID = 0;
-    public final static int BYZANTINE_NODE_ID = 1;
-
     private final PriorityQueue<Message> msgs = new PriorityQueue<>();
     private final HashSet<Integer> partition = new HashSet<>();
-    private final ArrayList<Node> allNodes = new ArrayList<>();
+    private final Set<Node> allNodes = new HashSet<>();
 
     public final Random rd = new Random(0);
 
@@ -96,9 +93,6 @@ public class Network {
 
 
     public Network(@NotNull Node observer) {
-        if (observer.nodeId != OBSERVER_NODE_ID) {
-            throw new IllegalArgumentException();
-        }
         this.observer = observer;
         allNodes.add(observer);
         setNetworkLatency(distribProp, distribVal);
@@ -153,7 +147,7 @@ public class Network {
         send(m, sendTime, fromNode, allNodes);
     }
 
-    public void send(@NotNull MessageContent m, long sendTime, @NotNull Node fromNode, @NotNull ArrayList<? extends Node> dests) {
+    public void send(@NotNull MessageContent m, long sendTime, @NotNull Node fromNode, @NotNull Set<? extends Node> dests) {
         if (sendTime <= time) {
             throw new IllegalStateException();
         }
@@ -197,10 +191,11 @@ public class Network {
     }
 
 
-    public void partition(float part, @NotNull List<List<? extends Node>> nodesPerType) {
-        for (List<? extends Node> ln : nodesPerType) {
+    public void partition(float part, @NotNull List<Set<? extends Node>> nodesPerType) {
+        for (Set<? extends Node> ln : nodesPerType) {
+            Iterator<? extends Node> it = ln.iterator();
             for (int i = 0; i < (ln.size() * part); i++) {
-                partition.add(ln.get(i).nodeId);
+                partition.add(it.next().nodeId);
             }
         }
     }
@@ -256,7 +251,8 @@ public class Network {
 
 
     public void printStat(boolean small) {
-        HashMap<Integer, HashSet<Block>> productionCount = new HashMap<>();
+        HashMap<Integer, Set<Block>> productionCount = new HashMap<>();
+        Set<Node> blockProducers = new HashSet<>();
 
         Block cur = observer.head;
         int blocksCreated = 0;
@@ -266,6 +262,7 @@ public class Network {
 
             productionCount.putIfAbsent(cur.producer.nodeId, new HashSet<>());
             productionCount.get(cur.producer.nodeId).add(cur);
+            blockProducers.add(cur.producer);
 
             cur = cur.parent;
         }
@@ -275,14 +272,14 @@ public class Network {
         } else {
             System.out.println("block count:" + blocksCreated + ", all tx: " + observer.head.lastTxId);
         }
-        List<Integer> producerIds = new ArrayList<>(productionCount.keySet());
-        Collections.sort(producerIds);
-        for (Integer pId : producerIds) {
-            Node bp = allNodes.get(pId);
+        List<Node> bps = new ArrayList<>(blockProducers);
+        bps.sort(Comparator.comparingInt(o -> o.nodeId));
+
+        for (Node bp:bps) {
             int bpTx = 0;
             for (Block b : productionCount.get(bp.nodeId)) bpTx += b.txCount();
             if (small) {
-                if (bp.nodeId == BYZANTINE_NODE_ID)
+                if (bp.byzantine)
                     System.out.println(
                             bp + "; " +
                                     productionCount.get(bp.nodeId).size() + "; " +
