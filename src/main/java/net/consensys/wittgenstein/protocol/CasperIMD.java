@@ -1,7 +1,8 @@
 package net.consensys.wittgenstein.protocol;
 
 import net.consensys.wittgenstein.core.Block;
-import net.consensys.wittgenstein.core.Network;
+import net.consensys.wittgenstein.core.BlockChainNetwork;
+import net.consensys.wittgenstein.core.BlockChainNode;
 import net.consensys.wittgenstein.core.Node;
 import org.jetbrains.annotations.NotNull;
 
@@ -61,11 +62,12 @@ public class CasperIMD {
         this.blockConstructionTime = blockConstructionTime;
         this.attestationConstructionTime = attestationConstructionTime;
 
-        this.network = new Network(new CasperNode(false, genesis) {
+        this.network.addObserver(new CasperNode(false, genesis) {
         });
     }
 
-    final Network network;
+
+    final BlockChainNetwork network = new BlockChainNetwork();
     final CasperBlock genesis = new CasperBlock();
 
     final ArrayList<Attester> attesters = new ArrayList<>();
@@ -80,7 +82,7 @@ public class CasperIMD {
     // EF team repo:
     // https://github.com/ethereum/beacon_chain/blob/master/beacon_chain/state/attestation_record.py
     // It contains a field referencing the block hash: 'shard_block_hash': 'hash32'
-    class Attestation extends Network.MessageContent {
+    class Attestation extends BlockChainNetwork.MessageContent {
         final Attester attester;
         final int height;
         final Set<Long> hs = new HashSet<>(); // technically, we put them in a set for efficiency
@@ -162,12 +164,12 @@ public class CasperIMD {
     }
 
 
-    abstract class CasperNode extends Node<CasperBlock> {
+    abstract class CasperNode extends BlockChainNode<CasperBlock> {
         final Map<Long, Set<Attestation>> attestationsByHead = new HashMap<>();
         final Set<CasperBlock> blocksRoRevaluate = new HashSet<>();
 
         CasperNode(boolean byzantine, @NotNull CasperBlock genesis) {
-            super(byzantine, genesis);
+            super(network.ids, byzantine, genesis);
         }
 
         @Override
@@ -183,8 +185,9 @@ public class CasperIMD {
                 throw new IllegalStateException();
             }
 
-            if (o1.hasDirectLink(o2)) // if 'o1' is an ancestor of 'o2', then 'o1' is NOT greater than 'o2'
+            if (o1.hasDirectLink(o2)) { // if 'o1' is an ancestor of 'o2', then 'o1' is NOT greater than 'o2'
                 return (o1.height < o2.height ? o2 : o1);
+            }
 
             // Spec:
             // Choose the descendant of H such that the highest number of validators attests to H
@@ -350,7 +353,7 @@ public class CasperIMD {
 
         CasperBlock buildBlock(CasperBlock base, int height) {
             // Spec:
-            // [Network.Block proposer] is expected to create (“propose”) a block, which contains a pointer to some
+            // [BlockChainNetwork.Block proposer] is expected to create (“propose”) a block, which contains a pointer to some
             //  parent block that they perceive as the “head of the chain”, and includes all of the attestations
             //  that they know about that have not yet been included into that chain.
             //
@@ -390,7 +393,7 @@ public class CasperIMD {
 
         void createAndSendBlock(int height) {
             head = buildBlock(head, height);
-            network.sendAll(new Network.SendBlock(head), network.time + blockConstructionTime, this);
+            network.sendAll(new BlockChainNetwork.SendBlock(head), network.time + blockConstructionTime, this);
         }
 
         @Override
@@ -476,9 +479,9 @@ public class CasperIMD {
 
         /**
          * As this node is byzantine, it needs to take into account the delay
-         *  to know what the actual height is.
+         * to know what the actual height is.
          * Moreover, the current head may be off, because of the latest attestations.
-         *  So we need to recalculate all this: actual head & actual heights
+         * So we need to recalculate all this: actual head & actual heights
          */
         public void reevaluateH(long time) {
             reevaluateHead();
@@ -636,7 +639,7 @@ public class CasperIMD {
                         public void run() {
                             head = buildBlock(b, th);
                             network.sendAll(
-                                    new Network.SendBlock(head),
+                                    new BlockChainNetwork.SendBlock(head),
                                     network.time + blockConstructionTime, ByzBlockProducerWF.this);
                         }
                     };
@@ -674,10 +677,10 @@ public class CasperIMD {
         for (int delay = -4000; delay < 25000; delay += 1000) {
             CasperIMD bc = new CasperIMD();
             bc.init(bc.new ByzBlockProducerWF(delay, bc.genesis));
-            // bc.init(bc.new BlockProducer(Network.BYZANTINE_NODE_ID, bc.genesis));
+            // bc.init(bc.new BlockProducer(BlockChainNetwork.BYZANTINE_NODE_ID, bc.genesis));
             //bc.network.removeNetworkLatency();
 
-            List<List<? extends Node>> lns = new ArrayList<>();
+            List<List<? extends BlockChainNode>> lns = new ArrayList<>();
             lns.add(bc.bps);
             lns.add(bc.attesters);
 
@@ -690,7 +693,7 @@ public class CasperIMD {
             bc.network.run(30);
 
             // System.out.println("");
-            bc.network.printStat(true);
+            bc.network.printStat(false);
         }
     }
 }

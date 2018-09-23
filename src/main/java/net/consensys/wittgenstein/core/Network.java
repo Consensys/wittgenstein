@@ -1,17 +1,20 @@
 package net.consensys.wittgenstein.core;
 
-
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
-@SuppressWarnings({"WeakerAccess", "SameParameterValue", "FieldCanBeLocal", "unused"})
-public class Network {
-    private final PriorityQueue<Message> msgs = new PriorityQueue<>();
-    private final HashSet<Integer> partition = new HashSet<>();
-    private final Set<Node> allNodes = new HashSet<>();
+@SuppressWarnings("WeakerAccess")
+public class Network<TN extends Node> {
+    public final PriorityQueue<Message> msgs = new PriorityQueue<>();
+    protected final Map<Integer, TN> allNodes = new HashMap<>();
 
     public final Random rd = new Random(0);
+    public final AtomicInteger ids = new AtomicInteger();
+
+    final HashSet<Integer> partition = new HashSet<>();
+
 
     // Distribution taken from: https://ethstats.net/
     private final int[] distribProp = {16, 18, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
@@ -22,22 +25,27 @@ public class Network {
     public long time = 0;
 
 
-    /**
-     * The node we use as an observer for the final stats
-     */
-    public final @NotNull Node observer;
+    public Network() {
+        setNetworkLatency(distribProp, distribVal);
+    }
+
+
+    public TN getNodeById(int id) {
+        return allNodes.get(id);
+    }
+
 
     /**
      * The generic message that goes on a network. Triggers an 'action' on reception.
      */
-    public abstract static class MessageContent {
-        public abstract void action(@NotNull Node from, @NotNull Node to);
+    public abstract static class MessageContent<TN extends Node> {
+        public abstract void action(@NotNull TN from, @NotNull TN to);
     }
 
     /**
      * Some protocols want some tasks to be executed at a given time
      */
-    public class Task extends MessageContent {
+    public class Task<TN extends Node> extends MessageContent<TN> {
         final @NotNull Runnable r;
 
         public Task(@NotNull Runnable r) {
@@ -45,9 +53,14 @@ public class Network {
         }
 
         @Override
-        public void action(@NotNull Node from, @NotNull Node to) {
+        public void action(@NotNull TN from, @NotNull TN to) {
             r.run();
         }
+    }
+
+
+    public interface Condition {
+        boolean cont();
     }
 
     /**
@@ -56,162 +69,27 @@ public class Network {
     public class PeriodicTask extends Task {
         final long period;
         final Node sender;
+        final Condition continuationCondition;
 
-        public PeriodicTask(@NotNull Runnable r, @NotNull Node fromNode, long period) {
+        public PeriodicTask(@NotNull Runnable r, @NotNull Node fromNode, long period, @NotNull Condition condition) {
             super(r);
             this.period = period;
             this.sender = fromNode;
+            this.continuationCondition = condition;
         }
+
+        public PeriodicTask(@NotNull Runnable r, @NotNull Node fromNode, long period) {
+            this(r, fromNode, period, () -> true);
+        }
+
 
         @Override
         public void action(@NotNull Node from, @NotNull Node to) {
             r.run();
-            msgs.add(new Message(this, sender, sender, time + period));
-        }
-    }
-
-    public static class SendBlock extends MessageContent {
-        final @NotNull Block toSend;
-
-        public SendBlock(@NotNull Block toSend) {
-            this.toSend = toSend;
-        }
-
-        @Override
-        public void action(@NotNull Node fromNode, @NotNull Node toNode) {
-            toNode.onBlock(toSend);
-        }
-
-        @Override
-        public String
-        toString() {
-            return "SendBlock{" +
-                    "toSend=" + toSend.id +
-                    '}';
-        }
-    }
-
-
-    public Network(@NotNull Node observer) {
-        this.observer = observer;
-        allNodes.add(observer);
-        setNetworkLatency(distribProp, distribVal);
-    }
-
-    public void setNetworkLatency(@NotNull int[] dP, @NotNull long[] dV) {
-        int li = 0;
-        int cur = 0;
-        int sum = 0;
-        for (int i = 0; i < dP.length; i++) {
-            sum += dP[i];
-            long step = (dV[i] - cur) / dP[i];
-            for (int ii = 0; ii < dP[i]; ii++) {
-                cur += step;
-                longDistrib[li++] = cur;
+            if (continuationCondition.cont()) {
+                msgs.add(new Message(this, sender, sender, time + period));
             }
         }
-
-        if (sum != 100) throw new IllegalArgumentException();
-        if (li != 100) throw new IllegalArgumentException();
-    }
-
-    /**
-     * Set the network latency to a min value. This allows
-     * to test the protocol independently of the network variability.
-     */
-    public void removeNetworkLatency() {
-        for (int i = 0; i < 100; i++) longDistrib[i] = 1;
-    }
-
-    public void printNetworkLatency() {
-        System.out.println("Network latency: time to receive a message:");
-
-        for (int s = 1, cur = 0, sum = 0; cur < 100; s++) {
-            int size = 0;
-            while (cur < longDistrib.length && longDistrib[cur] < s * 1000) {
-                size++;
-                cur++;
-            }
-            System.out.println(s + " second" + (s > 1 ? "s: " : ": ") + size + "%, cumulative=" + cur + "%");
-        }
-    }
-
-    private long getNetworkDelay() {
-        return longDistrib[rd.nextInt(longDistrib.length)];
-    }
-
-    /**
-     * Send a message to all nodes.
-     */
-    public void sendAll(@NotNull MessageContent m, long sendTime, @NotNull Node fromNode) {
-        send(m, sendTime, fromNode, allNodes);
-    }
-
-    public void send(@NotNull MessageContent m, long sendTime, @NotNull Node fromNode, @NotNull Set<? extends Node> dests) {
-        if (sendTime <= time) {
-            throw new IllegalStateException();
-        }
-        for (Node n : dests) {
-            if (n != fromNode) {
-                if ((partition.contains(fromNode.nodeId) && partition.contains(n.nodeId)) ||
-                        (!partition.contains(fromNode.nodeId) && !partition.contains(n.nodeId))) {
-                    fromNode.msgSent++;
-                    n.msgReceived++;
-                    msgs.add(new Message(m, fromNode, n, sendTime + getNetworkDelay()));
-                }
-            }
-        }
-    }
-
-    public void registerTask(@NotNull final Runnable task, long executionTime, @NotNull Node fromNode) {
-        Task sw = new Task(task);
-        msgs.add(new Message(sw, fromNode, fromNode, executionTime));
-    }
-
-    public void registerPeriodicTask(@NotNull final Runnable task, long executionTime, long period, @NotNull Node fromNode) {
-        PeriodicTask sw = new PeriodicTask(task, fromNode, period);
-        msgs.add(new Message(sw, fromNode, fromNode, executionTime));
-    }
-
-    void receiveUntil(long until) {
-        //noinspection ConstantConditions
-        while (!msgs.isEmpty() && msgs.peek().arrivalTime <= until) {
-            Message m = msgs.poll();
-            assert m != null;
-            if (time > m.arrivalTime) {
-                throw new IllegalStateException("time:" + time + ", m:" + m);
-            }
-            time = m.arrivalTime;
-            //if (! (m.messageContent instanceof StartWork))  System.out.println(m.fromNode+ "->" + m.toNode+": " + m.messageContent);
-            if ((partition.contains(m.fromNode.nodeId) && partition.contains(m.toNode.nodeId)) ||
-                    (!partition.contains(m.fromNode.nodeId) && !partition.contains(m.toNode.nodeId))) {
-                m.messageContent.action(m.fromNode, m.toNode);
-            }
-        }
-    }
-
-
-    public void partition(float part, @NotNull List<Set<? extends Node>> nodesPerType) {
-        for (Set<? extends Node> ln : nodesPerType) {
-            Iterator<? extends Node> it = ln.iterator();
-            for (int i = 0; i < (ln.size() * part); i++) {
-                partition.add(it.next().nodeId);
-            }
-        }
-    }
-
-    public void endPartition() {
-        partition.clear();
-
-        // On a p2p network all the blocks are exchanged all the time. We simulate this
-        //  with a full resent after each partition.
-        for (Node n : allNodes) {
-            sendAll(new SendBlock(n.head), time + 1, n);
-        }
-    }
-
-    public void addNode(@NotNull Node node) {
-        allNodes.add(node);
     }
 
     public static class Message implements Comparable<Message> {
@@ -243,56 +121,136 @@ public class Network {
         }
     }
 
-    public void run(long seconds) {
+    public long run(long seconds) {
         long endAt = time + seconds * 1000;
-        receiveUntil(endAt);
+        long finish = receiveUntil(endAt);
         time = endAt;
+        return finish;
     }
 
 
-    public void printStat(boolean small) {
-        HashMap<Integer, Set<Block>> productionCount = new HashMap<>();
-        Set<Node> blockProducers = new HashSet<>();
+    /**
+     * Send a message to all nodes.
+     */
+    public void sendAll(@NotNull MessageContent m, long sendTime, @NotNull TN fromNode) {
+        send(m, sendTime, fromNode, allNodes.values());
+    }
 
-        Block cur = observer.head;
-        int blocksCreated = 0;
-        while (cur != observer.genesis) {
-            if (!small) System.out.println("block: " + cur.toString());
-            blocksCreated++;
+    public void send(@NotNull MessageContent m, @NotNull TN fromNode, @NotNull Collection<TN> dests) {
+        send(m, time + 1, fromNode, dests);
+    }
 
-            productionCount.putIfAbsent(cur.producer.nodeId, new HashSet<>());
-            productionCount.get(cur.producer.nodeId).add(cur);
-            blockProducers.add(cur.producer);
-
-            cur = cur.parent;
+    public void send(@NotNull MessageContent m, long sendTime, @NotNull TN fromNode, @NotNull Collection<? extends Node> dests) {
+        if (sendTime <= time) {
+            throw new IllegalStateException("" + m + ", sendTime=" + sendTime + ", time=" + time);
         }
-
-        if (small) {
-            //System.out.println("node; block count; tx count; msg sent; msg received");
-        } else {
-            System.out.println("block count:" + blocksCreated + ", all tx: " + observer.head.lastTxId);
-        }
-        List<Node> bps = new ArrayList<>(blockProducers);
-        bps.sort(Comparator.comparingInt(o -> o.nodeId));
-
-        for (Node bp:bps) {
-            int bpTx = 0;
-            for (Block b : productionCount.get(bp.nodeId)) bpTx += b.txCount();
-            if (small) {
-                if (bp.byzantine)
-                    System.out.println(
-                            bp + "; " +
-                                    productionCount.get(bp.nodeId).size() + "; " +
-                                    bpTx + "; " +
-                                    bp.msgSent + "; " +
-                                    bp.msgReceived
-                    );
-
-            } else {
-                System.out.println(bp + ": " + productionCount.get(bp.nodeId).size() +
-                        ", tx count: " + bpTx +
-                        ", msg count:");
+        for (Node n : dests) {
+            if (n != fromNode) {
+                if ((partition.contains(fromNode.nodeId) && partition.contains(n.nodeId)) ||
+                        (!partition.contains(fromNode.nodeId) && !partition.contains(n.nodeId))) {
+                    fromNode.msgSent++;
+                    n.msgReceived++;
+                    msgs.add(new BlockChainNetwork.Message(m, fromNode, n, sendTime + getNetworkDelay()));
+                }
             }
         }
     }
+
+    public void registerTask(@NotNull final Runnable task, long executionTime, @NotNull TN fromNode) {
+        Task sw = new Task(task);
+        msgs.add(new Message(sw, fromNode, fromNode, executionTime));
+    }
+
+    public void registerPeriodicTask(@NotNull final Runnable task, long executionTime, long period, @NotNull TN fromNode) {
+        PeriodicTask sw = new PeriodicTask(task, fromNode, period);
+        msgs.add(new Message(sw, fromNode, fromNode, executionTime));
+    }
+
+    public void registerPeriodicTask(@NotNull final Runnable task, long executionTime, long period, @NotNull TN fromNode, Condition c) {
+        PeriodicTask sw = new PeriodicTask(task, fromNode, period, c);
+        msgs.add(new Message(sw, fromNode, fromNode, executionTime));
+    }
+
+
+    long receiveUntil(long until) {
+        //noinspection ConstantConditions
+        while (!msgs.isEmpty() && msgs.peek().arrivalTime <= until) {
+            Message m = msgs.poll();
+            assert m != null;
+            if (time > m.arrivalTime) {
+                throw new IllegalStateException("time:" + time + ", m:" + m);
+            }
+            time = m.arrivalTime;
+            //if (! (m.messageContent instanceof StartWork))  System.out.println(m.fromNode+ "->" + m.toNode+": " + m.messageContent);
+            if ((partition.contains(m.fromNode.nodeId) && partition.contains(m.toNode.nodeId)) ||
+                    (!partition.contains(m.fromNode.nodeId) && !partition.contains(m.toNode.nodeId))) {
+                m.messageContent.action(m.fromNode, m.toNode);
+            }
+        }
+        return time;
+    }
+
+
+    public void addNode(@NotNull TN node) {
+        allNodes.put(node.nodeId, node);
+    }
+
+
+    /**
+     * Set the network latency to a min value. This allows
+     * to test the protocol independently of the network variability.
+     */
+    public void removeNetworkLatency() {
+        for (int i = 0; i < 100; i++) longDistrib[i] = 1;
+    }
+
+
+    public void printNetworkLatency() {
+        System.out.println("BlockChainNetwork latency: time to receive a message:");
+
+        for (int s = 1, cur = 0; cur < 100; s++) {
+            int size = 0;
+            while (cur < longDistrib.length && longDistrib[cur] < s * 1000) {
+                size++;
+                cur++;
+            }
+            System.out.println(s + " second" + (s > 1 ? "s: " : ": ") + size + "%, cumulative=" + cur + "%");
+        }
+    }
+
+    long getNetworkDelay() {
+        return longDistrib[rd.nextInt(longDistrib.length)];
+    }
+
+    public void setNetworkLatency(@NotNull int[] dP, @NotNull long[] dV) {
+        int li = 0;
+        int cur = 0;
+        int sum = 0;
+        for (int i = 0; i < dP.length; i++) {
+            sum += dP[i];
+            long step = (dV[i] - cur) / dP[i];
+            for (int ii = 0; ii < dP[i]; ii++) {
+                cur += step;
+                longDistrib[li++] = cur;
+            }
+        }
+
+        if (sum != 100) throw new IllegalArgumentException();
+        if (li != 100) throw new IllegalArgumentException();
+    }
+
+
+    public void partition(float part, @NotNull List<Set<? extends Node>> nodesPerType) {
+        for (Set<? extends Node> ln : nodesPerType) {
+            Iterator<? extends Node> it = ln.iterator();
+            for (int i = 0; i < (ln.size() * part); i++) {
+                partition.add(it.next().nodeId);
+            }
+        }
+    }
+
+    public void endPartition() {
+        partition.clear();
+    }
+
 }

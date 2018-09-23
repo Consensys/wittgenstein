@@ -2,6 +2,7 @@ package net.consensys.wittgenstein.core;
 
 import org.jetbrains.annotations.NotNull;
 
+@SuppressWarnings("WeakerAccess")
 abstract public class Block<TB extends Block> {
 
     /**
@@ -15,7 +16,7 @@ abstract public class Block<TB extends Block> {
     public final long lastTxId;
     public final long id;
     public final TB parent;
-    public final Node producer;
+    public final BlockChainNode producer;
 
     public final boolean valid;
 
@@ -33,7 +34,7 @@ abstract public class Block<TB extends Block> {
     }
 
 
-    public Block(@NotNull Node producer, int height, @NotNull TB parent, boolean valid, long time) {
+    public Block(@NotNull BlockChainNode producer, int height, @NotNull TB parent, boolean valid, long time) {
         if (height <= 0) {
             throw new IllegalArgumentException("Only the genesis block has a special height");
         }

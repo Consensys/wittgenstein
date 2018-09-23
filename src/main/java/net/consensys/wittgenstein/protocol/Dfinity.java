@@ -1,9 +1,7 @@
 package net.consensys.wittgenstein.protocol;
 
 
-import net.consensys.wittgenstein.core.Block;
-import net.consensys.wittgenstein.core.Network;
-import net.consensys.wittgenstein.core.Node;
+import net.consensys.wittgenstein.core.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -49,11 +47,11 @@ public class Dfinity {
         this.attestationConstructionTime = attestationConstructionTime;
         this.percentageDeadAttester = percentageDeadAttester;
 
-        this.network = new Network(new DfinityNode(genesis) {
+        this.network.addObserver(new DfinityNode(genesis) {
         });
     }
 
-    final @NotNull Network network;
+    final @NotNull BlockChainNetwork network = new BlockChainNetwork();
     final @NotNull DfinityBlock genesis = DfinityBlock.createGenesis();
     final @NotNull DfinityBlockComparator blockComparator = new DfinityBlockComparator();
 
@@ -69,8 +67,8 @@ public class Dfinity {
         DfinityBlock() {
         }
 
-        public @NotNull
-        static DfinityBlock createGenesis() {
+
+        static public @NotNull DfinityBlock createGenesis() {
             return new DfinityBlock();
         }
     }
@@ -161,7 +159,7 @@ public class Dfinity {
     }
 
 
-    abstract class DfinityNode extends Node<DfinityBlock> {
+    abstract class DfinityNode extends BlockChainNode<DfinityBlock> {
         final Set<Long> committeeMajorityBlocks = new HashSet<>();
         final Set<Integer> committeeMajorityHeight = new HashSet<>();
         int lastRandomBeacon;
@@ -173,7 +171,7 @@ public class Dfinity {
         }
 
         DfinityNode(@NotNull DfinityBlock genesis) {
-            super(false, genesis);
+            super(network.ids, false, genesis);
         }
 
         public void onVote(@NotNull Node voter, @NotNull DfinityBlock voteFor) {
@@ -264,7 +262,7 @@ public class Dfinity {
             committeeMajorityBlocks.add(voteFor.id);
             committeeMajorityHeight.add(voteFor.height);
             voteForHeight = -1;
-            network.sendAll(new Network.SendBlock(voteFor), network.time, this);
+            network.sendAll(new BlockChainNetwork.SendBlock(voteFor), network.time, this);
         }
 
         /**
