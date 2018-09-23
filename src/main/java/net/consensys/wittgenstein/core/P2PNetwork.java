@@ -18,7 +18,11 @@ public class P2PNetwork extends Network<P2PNode> {
             int pp1 = rd.nextInt(todo.size());
             int pp2 = rd.nextInt(todo.size());
 
-            if (pp1 != pp2) {
+            P2PNode p1 = todo.get(pp1);
+            P2PNode p2 = todo.get(pp2);
+
+            // We consider that close nodes have a greater probability to be peers
+            if (pp1 != pp2 && rd.nextInt((int)(Node.MAX_DIST * 1.5)) > p1.dist(p2)) {
                 createLink(todo, pp1, pp2);
                 toCreate--;
             }

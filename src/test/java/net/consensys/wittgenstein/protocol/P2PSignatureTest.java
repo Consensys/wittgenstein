@@ -8,7 +8,7 @@ import org.junit.Test;
 import java.util.BitSet;
 
 public class P2PSignatureTest {
-    private P2PSignature ps = new P2PSignature();
+    private P2PSignature ps = new P2PSignature(100, 60,10,2,false);
     private P2PSignature.P2PSigNode n1;
     private P2PSignature.P2PSigNode n2;
 

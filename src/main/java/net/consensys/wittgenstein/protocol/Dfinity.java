@@ -26,6 +26,8 @@ public class Dfinity {
 
     final int majority;
 
+    final Node.NodeBuilder nb = new Node.NodeBuilder();
+
     public Dfinity() {
         this(20, 600, 200, 1000, 1, 0);
     }
@@ -171,7 +173,7 @@ public class Dfinity {
         }
 
         DfinityNode(@NotNull DfinityBlock genesis) {
-            super(network.ids, false, genesis);
+            super(nb, false, genesis);
         }
 
         public void onVote(@NotNull Node voter, @NotNull DfinityBlock voteFor) {

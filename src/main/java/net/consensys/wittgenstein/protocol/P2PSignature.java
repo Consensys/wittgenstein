@@ -1,6 +1,7 @@
 package net.consensys.wittgenstein.protocol;
 
 import net.consensys.wittgenstein.core.Network;
+import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.core.P2PNetwork;
 import net.consensys.wittgenstein.core.P2PNode;
 import org.jetbrains.annotations.NotNull;
@@ -10,12 +11,26 @@ import java.util.*;
 
 @SuppressWarnings("WeakerAccess")
 public class P2PSignature {
-    final int connectionCount = 20;
-    final int nodeCount = 5000;
-    final int threshold = nodeCount / 2 + 1;
-    final int pairingTime = 3;
+    final int nodeCount;
+    final int threshold;
+    final int connectionCount;
+    final int pairingTime;
+    final boolean doubleAggregateStrategy;
 
-    final P2PNetwork network = new P2PNetwork(connectionCount);
+
+    public P2PSignature(int nodeCount, int threshold, int connectionCount, int pairingTime, boolean doubleAggregateStrategy) {
+        this.nodeCount = nodeCount;
+        this.threshold = threshold;
+        this.connectionCount = connectionCount;
+        this.pairingTime = pairingTime;
+        this.doubleAggregateStrategy = doubleAggregateStrategy;
+
+        this.network = new P2PNetwork(connectionCount);
+        this.nb = new Node.NodeBuilderWithPosition(network.rd);
+    }
+
+    final P2PNetwork network;
+    final Node.NodeBuilder nb;
 
     static class State extends Network.MessageContent<P2PSigNode> {
         final BitSet desc;
@@ -57,13 +72,15 @@ public class P2PSignature {
         long doneAt = 0;
 
         P2PSigNode() {
-            super(network.ids);
+            super(nb);
             verifiedSignatures.set(nodeId, true);
         }
 
         void onPeerState(@NotNull State state) {
+            int newCard = state.desc.cardinality();
             State old = peersState.get(state.who.nodeId);
-            if (old == null || old.desc.cardinality() < state.desc.cardinality()) {
+
+            if (newCard < threshold && (old == null || old.desc.cardinality() < newCard)) {
                 peersState.put(state.who.nodeId, state);
             }
         }
@@ -79,6 +96,9 @@ public class P2PSignature {
                 if (!done && verifiedSignatures.cardinality() >= threshold) {
                     doneAt = network.time;
                     done = true;
+                    while (!peersState.isEmpty()) {
+                        sendSigs();
+                    }
                 }
             }
         }
@@ -119,12 +139,18 @@ public class P2PSignature {
             }
         }
 
+        public void checkSigs() {
+            if (doubleAggregateStrategy) checkSigs2();
+            else checkSigs1();
+        }
+
 
         /**
          * Strategy 1: we select the set of signatures which contains the most
-         * new signatures
+         * new signatures. As we send a message to all our peers each time our
+         * state change we send more messages with this strategy.
          */
-        public void checkSigs2() {
+        protected void checkSigs1() {
             BitSet best = null;
             int bestV = 0;
             Iterator<BitSet> it = toVerify.iterator();
@@ -147,9 +173,7 @@ public class P2PSignature {
             if (best != null) {
                 toVerify.remove(best);
                 final BitSet tBest = best;
-                network.registerTask(() -> {
-                            P2PSigNode.this.updateVerifiedSignatures(tBest);
-                        },
+                network.registerTask(() -> P2PSigNode.this.updateVerifiedSignatures(tBest),
                         network.time + pairingTime, P2PSigNode.this);
             }
         }
@@ -157,7 +181,7 @@ public class P2PSignature {
         /**
          * Strategy 2: we aggregate all signatures together
          */
-        public void checkSigs() {
+        protected void checkSigs2() {
             BitSet best = null;
             for (BitSet o1 : toVerify) {
                 if (best == null) {
@@ -176,9 +200,7 @@ public class P2PSignature {
                 if (v1 > 0) {
                     toVerify.remove(best);
                     final BitSet tBest = best;
-                    network.registerTask(() -> {
-                                P2PSigNode.this.updateVerifiedSignatures(tBest);
-                            },
+                    network.registerTask(() -> P2PSigNode.this.updateVerifiedSignatures(tBest),
                             network.time + pairingTime, P2PSigNode.this);
                 }
             }
@@ -202,7 +224,7 @@ public class P2PSignature {
             last = n;
             network.addNode(n);
             network.registerTask(n::sendStateToPeers, 1, n);
-            network.registerPeriodicTask(n::sendSigs, 2, 10, n, () -> !n.done);
+            network.registerPeriodicTask(n::sendSigs, 2, 20, n, () -> !n.done);
             network.registerPeriodicTask(n::checkSigs, 5, pairingTime, n, () -> !n.done);
         }
 
@@ -215,8 +237,10 @@ public class P2PSignature {
     public static final long[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
 
     public static void main(String... args) {
-        P2PSignature p2ps = new P2PSignature();
-        p2ps.network.setNetworkLatency(distribProp, distribVal);
+        P2PSignature p2ps = new P2PSignature(5000, 2501,
+                20, 3, true);
+        p2ps.network.setNetworkLatency(distribProp, distribVal).setMsgDiscardTime(1000);
+        //p2ps.network.removeNetworkLatency();
         P2PSigNode observer = p2ps.init();
         p2ps.network.run(100);
         System.out.println(observer);

@@ -14,7 +14,7 @@ public class Network<TN extends Node> {
     public final AtomicInteger ids = new AtomicInteger();
 
     final HashSet<Integer> partition = new HashSet<>();
-
+    long msgDiscardTime = Long.MAX_VALUE;
 
     // Distribution taken from: https://ethstats.net/
     private final int[] distribProp = {16, 18, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
@@ -32,6 +32,11 @@ public class Network<TN extends Node> {
 
     public TN getNodeById(int id) {
         return allNodes.get(id);
+    }
+
+    public Network<TN> setMsgDiscardTime(long l) {
+        this.msgDiscardTime = l;
+        return this;
     }
 
 
@@ -121,11 +126,10 @@ public class Network<TN extends Node> {
         }
     }
 
-    public long run(long seconds) {
+    public void run(long seconds) {
         long endAt = time + seconds * 1000;
-        long finish = receiveUntil(endAt);
+        receiveUntil(endAt);
         time = endAt;
-        return finish;
     }
 
 
@@ -149,8 +153,10 @@ public class Network<TN extends Node> {
                 if ((partition.contains(fromNode.nodeId) && partition.contains(n.nodeId)) ||
                         (!partition.contains(fromNode.nodeId) && !partition.contains(n.nodeId))) {
                     fromNode.msgSent++;
-                    n.msgReceived++;
-                    msgs.add(new BlockChainNetwork.Message(m, fromNode, n, sendTime + getNetworkDelay()));
+                    long nt = getNetworkDelay(fromNode, n);
+                    if (nt < msgDiscardTime) {
+                        msgs.add(new BlockChainNetwork.Message(m, fromNode, n, sendTime + nt));
+                    }
                 }
             }
         }
@@ -181,9 +187,9 @@ public class Network<TN extends Node> {
                 throw new IllegalStateException("time:" + time + ", m:" + m);
             }
             time = m.arrivalTime;
-            //if (! (m.messageContent instanceof StartWork))  System.out.println(m.fromNode+ "->" + m.toNode+": " + m.messageContent);
             if ((partition.contains(m.fromNode.nodeId) && partition.contains(m.toNode.nodeId)) ||
                     (!partition.contains(m.fromNode.nodeId) && !partition.contains(m.toNode.nodeId))) {
+                if (!(m.messageContent instanceof Task)) m.toNode.msgReceived++;
                 m.messageContent.action(m.fromNode, m.toNode);
             }
         }
@@ -200,8 +206,11 @@ public class Network<TN extends Node> {
      * Set the network latency to a min value. This allows
      * to test the protocol independently of the network variability.
      */
-    public void removeNetworkLatency() {
-        for (int i = 0; i < 100; i++) longDistrib[i] = 1;
+    public @NotNull Network<TN> removeNetworkLatency() {
+        for (int i = 0; i < 100; i++) {
+            longDistrib[i] = 1;
+        }
+        return this;
     }
 
 
@@ -218,11 +227,12 @@ public class Network<TN extends Node> {
         }
     }
 
-    long getNetworkDelay() {
-        return longDistrib[rd.nextInt(longDistrib.length)];
+    long getNetworkDelay(@NotNull Node fromNode, @NotNull Node n) {
+        long rawDelay = 10 + (200 * fromNode.dist(n)) / Node.MAX_DIST;
+        return rawDelay + longDistrib[rd.nextInt(longDistrib.length)];
     }
 
-    public void setNetworkLatency(@NotNull int[] dP, @NotNull long[] dV) {
+    public @NotNull Network<TN> setNetworkLatency(@NotNull int[] dP, @NotNull long[] dV) {
         int li = 0;
         int cur = 0;
         int sum = 0;
@@ -237,6 +247,7 @@ public class Network<TN extends Node> {
 
         if (sum != 100) throw new IllegalArgumentException();
         if (li != 100) throw new IllegalArgumentException();
+        return this;
     }
 
 

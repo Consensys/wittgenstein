@@ -76,21 +76,18 @@ public class BlockChainNetwork extends Network<BlockChainNode<? extends Block>> 
 
         for (BlockChainNode bp : bps) {
             int bpTx = 0;
-            for (Block b : productionCount.get(bp.nodeId)) bpTx += b.txCount();
-            if (small) {
-                if (bp.byzantine)
-                    System.out.println(
-                            bp + "; " +
-                                    productionCount.get(bp.nodeId).size() + "; " +
-                                    bpTx + "; " +
-                                    bp.msgSent + "; " +
-                                    bp.msgReceived
-                    );
+            for (Block b : productionCount.get(bp.nodeId)) {
+                bpTx += b.txCount();
+            }
+            if (!small | bp.byzantine) {
+                System.out.println(
+                        bp + "; " +
+                                productionCount.get(bp.nodeId).size() + "; " +
+                                bpTx + "; " +
+                                bp.msgSent + "; " +
+                                bp.msgReceived
+                );
 
-            } else {
-                System.out.println(bp + ": " + productionCount.get(bp.nodeId).size() +
-                        ", tx count: " + bpTx +
-                        ", msg count:");
             }
         }
     }

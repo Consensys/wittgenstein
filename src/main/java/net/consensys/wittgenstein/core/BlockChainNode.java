@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @SuppressWarnings("WeakerAccess")
 public abstract class BlockChainNode<TB extends Block> extends Node {
@@ -18,8 +17,8 @@ public abstract class BlockChainNode<TB extends Block> extends Node {
 
     public @NotNull TB head;
 
-    public BlockChainNode(@NotNull AtomicInteger ids, boolean byzantine, @NotNull TB genesis) {
-        super(ids, byzantine);
+    public BlockChainNode(@NotNull NodeBuilder nb, boolean byzantine, @NotNull TB genesis) {
+        super(nb, byzantine);
         this.genesis = genesis;
         this.head = genesis;
         this.blocksReceivedByBlockId.put(genesis.id, genesis);

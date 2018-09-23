@@ -68,6 +68,7 @@ public class CasperIMD {
 
 
     final BlockChainNetwork network = new BlockChainNetwork();
+    final Node.NodeBuilder nb = new Node.NodeBuilder();
     final CasperBlock genesis = new CasperBlock();
 
     final ArrayList<Attester> attesters = new ArrayList<>();
@@ -169,7 +170,7 @@ public class CasperIMD {
         final Set<CasperBlock> blocksRoRevaluate = new HashSet<>();
 
         CasperNode(boolean byzantine, @NotNull CasperBlock genesis) {
-            super(network.ids, byzantine, genesis);
+            super(nb, byzantine, genesis);
         }
 
         @Override
@@ -387,13 +388,12 @@ public class CasperIMD {
                 }
             }
 
-            CasperBlock newBlock = new CasperBlock(this, height, base, res, true, network.time);
-            return newBlock;
+            return new CasperBlock(this, height, base, res, true, network.time);
         }
 
         void createAndSendBlock(int height) {
             head = buildBlock(head, height);
-            network.sendAll(new BlockChainNetwork.SendBlock(head), network.time + blockConstructionTime, this);
+            network.sendAll(new BlockChainNetwork.SendBlock<CasperBlock, CasperNode>(head), network.time + blockConstructionTime, this);
         }
 
         @Override
@@ -639,7 +639,7 @@ public class CasperIMD {
                         public void run() {
                             head = buildBlock(b, th);
                             network.sendAll(
-                                    new BlockChainNetwork.SendBlock(head),
+                                    new BlockChainNetwork.SendBlock<CasperBlock, CasperNode>(head),
                                     network.time + blockConstructionTime, ByzBlockProducerWF.this);
                         }
                     };
