@@ -15,14 +15,16 @@ public class P2PSignature {
     final int threshold;
     final int connectionCount;
     final int pairingTime;
+    final int sigsSendPeriod;
     final boolean doubleAggregateStrategy;
 
 
-    public P2PSignature(int nodeCount, int threshold, int connectionCount, int pairingTime, boolean doubleAggregateStrategy) {
+    public P2PSignature(int nodeCount, int threshold, int connectionCount, int pairingTime, int sigsSendPeriod, boolean doubleAggregateStrategy) {
         this.nodeCount = nodeCount;
         this.threshold = threshold;
         this.connectionCount = connectionCount;
         this.pairingTime = pairingTime;
+        this.sigsSendPeriod = sigsSendPeriod;
         this.doubleAggregateStrategy = doubleAggregateStrategy;
 
         this.network = new P2PNetwork(connectionCount);
@@ -135,8 +137,12 @@ public class P2PSignature {
         void sendSigs() {
             SendSigs toSend = createSendSigs();
             if (toSend != null) {
-                network.send(toSend, this, Collections.singleton(toSend.dest));
+                network.send(toSend, delayToSend(toSend.sigs) , this, Collections.singleton(toSend.dest));
             }
+        }
+
+        long delayToSend(BitSet sigs) {
+            return network.time + 1 + sigs.cardinality() / 100;
         }
 
         public void checkSigs() {
@@ -206,13 +212,14 @@ public class P2PSignature {
             }
         }
 
-
         @Override
         public String toString() {
             return "P2PSigNode{" +
                     "nodeId=" + nodeId +
                     ", doneAt=" + doneAt +
                     ", sigs=" + verifiedSignatures.cardinality() +
+                    ", msgReceived=" + msgReceived +
+                    ", msgSent=" + msgSent +
                     '}';
         }
     }
@@ -224,8 +231,10 @@ public class P2PSignature {
             last = n;
             network.addNode(n);
             network.registerTask(n::sendStateToPeers, 1, n);
-            network.registerPeriodicTask(n::sendSigs, 2, 20, n, () -> !n.done);
-            network.registerPeriodicTask(n::checkSigs, 5, pairingTime, n, () -> !n.done);
+            //network.registerPeriodicTask(n::sendSigs, 1, 20, n, () -> !n.done);
+            network.registerConditionalTask(n::sendSigs, 1, sigsSendPeriod, n, () -> !(n.peersState.isEmpty()), () -> !n.done);
+            network.registerConditionalTask(n::checkSigs, 1, pairingTime, n, () -> !n.toVerify.isEmpty(), () -> !n.done);
+           // network.registerPeriodicTask(n::checkSigs, 1, pairingTime, n, () -> !n.done);
         }
 
         network.setPeers();
@@ -233,16 +242,17 @@ public class P2PSignature {
         return last;
     }
 
-    private static final int[] distribProp = {16, 18, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
-    public static final long[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
 
     public static void main(String... args) {
-        P2PSignature p2ps = new P2PSignature(5000, 2501,
-                20, 3, true);
-        p2ps.network.setNetworkLatency(distribProp, distribVal).setMsgDiscardTime(1000);
+        int[] distribProp = {16, 18, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
+        long[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
+
+        P2PSignature p2ps = new P2PSignature(10000, 5001,
+                25, 3, 20, false);
+        p2ps.network.setNetworkLatency(distribProp, distribVal);
         //p2ps.network.removeNetworkLatency();
         P2PSigNode observer = p2ps.init();
-        p2ps.network.run(100);
+        p2ps.network.run(5);
         System.out.println(observer);
     }
 

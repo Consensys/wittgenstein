@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @SuppressWarnings("WeakerAccess")
 public class Network<TN extends Node> {
     public final PriorityQueue<Message> msgs = new PriorityQueue<>();
+    public final List<ConditionalTask> conditionalTasks = new LinkedList<>();
     protected final Map<Integer, TN> allNodes = new HashMap<>();
 
     public final Random rd = new Random(0);
@@ -50,7 +51,7 @@ public class Network<TN extends Node> {
     /**
      * Some protocols want some tasks to be executed at a given time
      */
-    public class Task<TN extends Node> extends MessageContent<TN> {
+    public class Task extends MessageContent<TN> {
         final @NotNull Runnable r;
 
         public Task(@NotNull Runnable r) {
@@ -63,9 +64,38 @@ public class Network<TN extends Node> {
         }
     }
 
+    public class ConditionalTask extends Task {
+        final Condition startIf;
+        final Condition repeatIf;
+        final long duration;
+        final Node sender;
+        long minStartTime;
+
+        public ConditionalTask(Condition startIf, Condition repeatIf, Runnable r, long minStartTime, long duration, Node sender) {
+            super(r);
+            this.startIf = startIf;
+            this.repeatIf = repeatIf;
+            this.duration = duration;
+            this.sender = sender;
+            this.minStartTime = minStartTime;
+        }
+
+        @Override
+        public void action(@NotNull Node from, @NotNull Node to) {
+            if (!startIf.check()) {
+                conditionalTasks.add(this);
+            } else {
+                r.run();
+                if (repeatIf.check()) {
+                    msgs.add(new Message(this, sender, sender, time + duration));
+                }
+            }
+        }
+    }
+
 
     public interface Condition {
-        boolean cont();
+        boolean check();
     }
 
     /**
@@ -91,7 +121,7 @@ public class Network<TN extends Node> {
         @Override
         public void action(@NotNull Node from, @NotNull Node to) {
             r.run();
-            if (continuationCondition.cont()) {
+            if (continuationCondition.check()) {
                 msgs.add(new Message(this, sender, sender, time + period));
             }
         }
@@ -162,23 +192,29 @@ public class Network<TN extends Node> {
         }
     }
 
-    public void registerTask(@NotNull final Runnable task, long executionTime, @NotNull TN fromNode) {
+    public void registerTask(@NotNull final Runnable task, long startAt, @NotNull TN fromNode) {
         Task sw = new Task(task);
-        msgs.add(new Message(sw, fromNode, fromNode, executionTime));
+        msgs.add(new Message(sw, fromNode, fromNode, startAt));
     }
 
-    public void registerPeriodicTask(@NotNull final Runnable task, long executionTime, long period, @NotNull TN fromNode) {
+    public void registerPeriodicTask(@NotNull final Runnable task, long startAt, long period, @NotNull TN fromNode) {
         PeriodicTask sw = new PeriodicTask(task, fromNode, period);
-        msgs.add(new Message(sw, fromNode, fromNode, executionTime));
+        msgs.add(new Message(sw, fromNode, fromNode, startAt));
     }
 
-    public void registerPeriodicTask(@NotNull final Runnable task, long executionTime, long period, @NotNull TN fromNode, Condition c) {
+    public void registerPeriodicTask(@NotNull final Runnable task, long startAt, long period, @NotNull TN fromNode, @NotNull Condition c) {
         PeriodicTask sw = new PeriodicTask(task, fromNode, period, c);
-        msgs.add(new Message(sw, fromNode, fromNode, executionTime));
+        msgs.add(new Message(sw, fromNode, fromNode, startAt));
+    }
+
+    public void registerConditionalTask(@NotNull final Runnable task, long startAt, long duration,
+                                        @NotNull TN fromNode, @NotNull Condition startIf, @NotNull Condition repeatIf) {
+        ConditionalTask ct = new ConditionalTask(startIf, repeatIf, task, startAt, duration, fromNode);
+        conditionalTasks.add(ct);
     }
 
 
-    long receiveUntil(long until) {
+    void receiveUntil(long until) {
         //noinspection ConstantConditions
         while (!msgs.isEmpty() && msgs.peek().arrivalTime <= until) {
             Message m = msgs.poll();
@@ -186,14 +222,31 @@ public class Network<TN extends Node> {
             if (time > m.arrivalTime) {
                 throw new IllegalStateException("time:" + time + ", m:" + m);
             }
-            time = m.arrivalTime;
+            if (time != m.arrivalTime) {
+                time = m.arrivalTime;
+
+                Iterator<ConditionalTask> it = conditionalTasks.iterator();
+                while (it.hasNext()) {
+                    ConditionalTask ct = it.next();
+                    if (!ct.repeatIf.check()) {
+                        it.remove();
+                    } else {
+                        if (time >= ct.minStartTime && ct.startIf.check()) {
+                            ct.r.run();
+                            ct.minStartTime = time + ct.duration;
+                        }
+                    }
+                }
+            }
+
             if ((partition.contains(m.fromNode.nodeId) && partition.contains(m.toNode.nodeId)) ||
                     (!partition.contains(m.fromNode.nodeId) && !partition.contains(m.toNode.nodeId))) {
-                if (!(m.messageContent instanceof Task)) m.toNode.msgReceived++;
+                if (!(m.messageContent instanceof Network<?>.Task)) {
+                    m.toNode.msgReceived++;
+                }
                 m.messageContent.action(m.fromNode, m.toNode);
             }
         }
-        return time;
     }
 
 
