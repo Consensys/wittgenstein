@@ -5,6 +5,10 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
+/**
+ * Adds some concept to a standard network: it's about to send blocks between nodes.
+ * Blockchain nodes have a head, a method to choose between blocks and so on.
+ */
 @SuppressWarnings({"WeakerAccess", "SameParameterValue", "FieldCanBeLocal", "unused"})
 public class BlockChainNetwork extends Network<BlockChainNode<? extends Block>> {
     /**
@@ -37,12 +41,14 @@ public class BlockChainNetwork extends Network<BlockChainNode<? extends Block>> 
         }
     }
 
+    /**
+     *  On a blockchain network all the blocks are exchanged all the time. We simulate this
+     *  with a full resent after each partition.
+     */
     @Override
     public void endPartition() {
         super.endPartition();
 
-        // On a p2p network all the blocks are exchanged all the time. We simulate this
-        //  with a full resent after each partition.
         for (BlockChainNode<?> n : allNodes.values()) {
             SendBlock<?, ?> sb = new BlockChainNetwork.SendBlock<>(n.head);
             sendAll(sb, time + 1, n);

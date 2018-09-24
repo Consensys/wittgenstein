@@ -11,6 +11,9 @@ import java.util.Set;
 public abstract class BlockChainNode<TB extends Block> extends Node {
     protected final @NotNull TB genesis;
 
+    /**
+     * We keep some data that should be useful for all implementations
+     */
     protected final Map<Long, TB> blocksReceivedByBlockId = new HashMap<>();
     protected final Map<Long, Set<TB>> blocksReceivedByFatherId = new HashMap<>();
     protected final Map<Integer, TB> blocksReceivedByHeight = new HashMap<>();
@@ -42,5 +45,8 @@ public abstract class BlockChainNode<TB extends Block> extends Node {
         return true;
     }
 
+    /**
+     * This describes how to choose the head between two blocks.
+     */
     public abstract @NotNull TB best(@NotNull TB cur, @NotNull TB alt);
 }

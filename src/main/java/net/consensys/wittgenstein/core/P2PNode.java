@@ -15,7 +15,7 @@ public class P2PNode extends Node {
     }
 
 
-    protected P2PNode getRandomPeer(@NotNull Random rd) {
+    protected @NotNull  P2PNode getRandomPeer(@NotNull Random rd) {
         int size = peers.size();
         int item = rd.nextInt(size);
         int i = 0;

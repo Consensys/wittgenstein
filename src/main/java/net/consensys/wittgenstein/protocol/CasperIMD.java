@@ -167,7 +167,7 @@ public class CasperIMD {
 
     abstract class CasperNode extends BlockChainNode<CasperBlock> {
         final Map<Long, Set<Attestation>> attestationsByHead = new HashMap<>();
-        final Set<CasperBlock> blocksRoRevaluate = new HashSet<>();
+        final Set<CasperBlock> blocksToReevaluate = new HashSet<>();
 
         CasperNode(boolean byzantine, @NotNull CasperBlock genesis) {
             super(nb, byzantine, genesis);
@@ -275,8 +275,8 @@ public class CasperIMD {
             // computed by GENESIS_TIME + slot_number * SLOT_DURATION
             final long delta = network.time - genesis.proposalTime + b.height * SLOT_DURATION;
             if (delta >= 0) {
-                blocksRoRevaluate.add(head); // if head loose the race it may win later.
-                blocksRoRevaluate.add(b);
+                blocksToReevaluate.add(head); // if head loose the race it may win later.
+                blocksToReevaluate.add(b);
                 return super.onBlock(b);
             } else {
                 // Spec: If these conditions are not met, the client should delay processing the block until the
@@ -301,7 +301,7 @@ public class CasperIMD {
 
             // A new attestation => a possible change in the fork-choice-rule... If we have received the block!
             if (blocksReceivedByBlockId.containsKey(a.head.id)) {
-                blocksRoRevaluate.add(a.head);
+                blocksToReevaluate.add(a.head);
             }
         }
 
@@ -314,10 +314,10 @@ public class CasperIMD {
          * send the head, it may be less possible.
          */
         void reevaluateHead() {
-            for (CasperBlock b : blocksRoRevaluate) {
+            for (CasperBlock b : blocksToReevaluate) {
                 head = best(head, b);
             }
-            blocksRoRevaluate.clear();
+            blocksToReevaluate.clear();
         }
 
         @Override

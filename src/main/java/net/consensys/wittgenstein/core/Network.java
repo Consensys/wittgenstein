@@ -3,21 +3,44 @@ package net.consensys.wittgenstein.core;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * There is a single network for a simulation.
+ *
+ * Nothing is executed in parallel, so the code does not have to be multithread safe.
+ */
 @SuppressWarnings("WeakerAccess")
 public class Network<TN extends Node> {
+    /**
+     * The messages in transit. Sorted by their arrival time.
+     */
     public final PriorityQueue<Message> msgs = new PriorityQueue<>();
+
+    /**
+     * In parallel of the messages, we have tasks. It's mixed with messages (some tasks
+     * are managed as special messages). Conditional tasks are in a specific list.
+     */
     public final List<ConditionalTask> conditionalTasks = new LinkedList<>();
     protected final Map<Integer, TN> allNodes = new HashMap<>();
 
+    /**
+     * By using a single random generator, we have repeatable runs.
+     */
     public final Random rd = new Random(0);
-    public final AtomicInteger ids = new AtomicInteger();
 
     final HashSet<Integer> partition = new HashSet<>();
+
+    /**
+     * We can decide to discard messages that would take too long to arrive. This
+     * limit the memory consumption of the simulator as well.
+     */
     long msgDiscardTime = Long.MAX_VALUE;
 
-    // Distribution taken from: https://ethstats.net/
+    /**
+     * Distribution taken from: https://ethstats.net/
+     * It should be read like this:
+     * 16% of the messages will be received in 250ms or less
+     */
     private final int[] distribProp = {16, 18, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
     public final long[] distribVal = {250, 500, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750, 4500, 6000, 8500, 9750, 10000};
     private final long[] longDistrib = new long[100];
@@ -46,7 +69,14 @@ public class Network<TN extends Node> {
      */
     public abstract static class MessageContent<TN extends Node> {
         public abstract void action(@NotNull TN from, @NotNull TN to);
-        public int size(){ return 1; }
+
+        /**
+         * We track the total size of the messages exchanged. Subclasses should
+         * override this method if they want to measure the network usage.
+         */
+        public int size() {
+            return 1;
+        }
     }
 
     /**
@@ -60,7 +90,9 @@ public class Network<TN extends Node> {
         }
 
         @Override
-        public int size(){ return 0;}
+        public int size() {
+            return 0;
+        }
 
         @Override
         public void action(@NotNull TN from, @NotNull TN to) {
@@ -69,10 +101,25 @@ public class Network<TN extends Node> {
     }
 
     public class ConditionalTask extends Task {
+        /**
+         * Starts if this condition is met.
+         */
         final Condition startIf;
+
+        /**
+         * Will start again when the task is finished if this condition is met.
+         */
         final Condition repeatIf;
+
+        /**
+         * Time before next start.
+         */
         final long duration;
         final Node sender;
+
+        /**
+         * Will start after this time.
+         */
         long minStartTime;
 
         public ConditionalTask(Condition startIf, Condition repeatIf, Runnable r, long minStartTime, long duration, Node sender) {
@@ -82,18 +129,6 @@ public class Network<TN extends Node> {
             this.duration = duration;
             this.sender = sender;
             this.minStartTime = minStartTime;
-        }
-
-        @Override
-        public void action(@NotNull Node from, @NotNull Node to) {
-            if (!startIf.check()) {
-                conditionalTasks.add(this);
-            } else {
-                r.run();
-                if (repeatIf.check()) {
-                    msgs.add(new Message(this, sender, sender, time + duration));
-                }
-            }
         }
     }
 
@@ -160,6 +195,9 @@ public class Network<TN extends Node> {
         }
     }
 
+    /**
+     * Simulate for x seconds. Can be called multiple time.
+     */
     public void run(long seconds) {
         long endAt = time + seconds * 1000;
         receiveUntil(endAt);
@@ -288,11 +326,21 @@ public class Network<TN extends Node> {
         }
     }
 
+    /**
+     * We take into account:
+     * - a fix cost: 10ms
+     * - the distance between the nodes: max 200ms
+     * - the latency set.
+     */
     long getNetworkDelay(@NotNull Node fromNode, @NotNull Node n) {
         long rawDelay = 10 + (200 * fromNode.dist(n)) / Node.MAX_DIST;
         return rawDelay + longDistrib[rd.nextInt(longDistrib.length)];
     }
 
+    /**
+     * @see Network#distribProp
+     * @see Network#distribVal
+     */
     public @NotNull Network<TN> setNetworkLatency(@NotNull int[] dP, @NotNull long[] dV) {
         int li = 0;
         int cur = 0;

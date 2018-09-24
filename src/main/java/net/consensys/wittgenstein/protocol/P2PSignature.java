@@ -50,6 +50,8 @@ public class P2PSignature {
      */
     final boolean doubleAggregateStrategy;
 
+    final P2PNetwork network;
+    final Node.NodeBuilder nb;
 
     public P2PSignature(int nodeCount, int threshold, int connectionCount, int pairingTime, int sigsSendPeriod, boolean doubleAggregateStrategy) {
         this.nodeCount = nodeCount;
@@ -62,9 +64,6 @@ public class P2PSignature {
         this.network = new P2PNetwork(connectionCount);
         this.nb = new Node.NodeBuilderWithPosition(network.rd);
     }
-
-    final P2PNetwork network;
-    final Node.NodeBuilder nb;
 
     static class State extends Network.MessageContent<P2PSigNode> {
         final BitSet desc;
@@ -115,6 +114,9 @@ public class P2PSignature {
             verifiedSignatures.set(nodeId, true);
         }
 
+        /**
+         * Asynchronous, so when we receive a state it can be an old one.
+         */
         void onPeerState(@NotNull State state) {
             int newCard = state.desc.cardinality();
             State old = peersState.get(state.who.nodeId);
@@ -124,6 +126,10 @@ public class P2PSignature {
             }
         }
 
+        /**
+         * If the state has changed we send a message to all.
+         * If we're done, we updates all our peers.
+         */
         void updateVerifiedSignatures(@NotNull BitSet sigs) {
             int oldCard = verifiedSignatures.cardinality();
             verifiedSignatures.or(sigs);
@@ -147,6 +153,10 @@ public class P2PSignature {
             network.send(s, network.time + 1, this, peers);
         }
 
+        /**
+         * Nothing much to do when we receive a sig set: we just add it to our
+         *  toVerify list.
+         */
         void onNewSig(@NotNull BitSet sigs) {
             toVerify.add(sigs);
         }
@@ -182,13 +192,21 @@ public class P2PSignature {
             }
         }
 
+        /**
+         * We add a small delay to take into account the message size. This should likely
+         *  be moved to the framework.
+         */
         long delayToSend(BitSet sigs) {
             return network.time + 1 + sigs.cardinality() / 100;
         }
 
+
         public void checkSigs() {
-            if (doubleAggregateStrategy) checkSigs2();
-            else checkSigs1();
+            if (doubleAggregateStrategy){
+                checkSigs2();
+            } else {
+                checkSigs1();
+            }
         }
 
 
@@ -229,24 +247,23 @@ public class P2PSignature {
          * Strategy 2: we aggregate all signatures together
          */
         protected void checkSigs2() {
-            BitSet best = null;
+            BitSet agg = null;
             for (BitSet o1 : toVerify) {
-                if (best == null) {
-                    best = o1;
+                if (agg == null) {
+                    agg = o1;
                 } else {
-                    best.or(o1);
+                    agg.or(o1);
                 }
             }
             toVerify.clear();
 
-            if (best != null) {
-                BitSet oo1 = ((BitSet) best.clone());
+            if (agg != null) {
+                BitSet oo1 = ((BitSet) agg.clone());
                 oo1.andNot(verifiedSignatures);
-                int v1 = oo1.cardinality();
 
-                if (v1 > 0) {
-                    toVerify.remove(best);
-                    final BitSet tBest = best;
+                if (oo1.cardinality() > 0) {
+                    // There is at least one signature we don't have yet
+                    final BitSet tBest = agg;
                     network.registerTask(() -> P2PSigNode.this.updateVerifiedSignatures(tBest),
                             network.time + pairingTime, P2PSigNode.this);
                 }
@@ -291,7 +308,7 @@ public class P2PSignature {
         int[] distribProp = {1, 33, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
         long[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
 
-        P2PSignature p2ps = new P2PSignature(100, 51,
+        P2PSignature p2ps = new P2PSignature(10000, 5001,
                 25, 3, 20, true);
         p2ps.network.setNetworkLatency(distribProp, distribVal);
         //p2ps.network.removeNetworkLatency();
