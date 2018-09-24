@@ -50,6 +50,8 @@ public class Node {
 
     protected long msgReceived = 0;
     protected long msgSent = 0;
+    protected long bytesSent = 0;
+    protected long bytesReceived = 0;
 
 
     public Node(@NotNull NodeBuilder nb, boolean byzantine) {

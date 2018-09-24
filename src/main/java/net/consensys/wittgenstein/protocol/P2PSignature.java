@@ -44,6 +44,9 @@ public class P2PSignature {
         }
 
         @Override
+        public int size(){ return desc.size() / 8; }
+
+        @Override
         public void action(@NotNull P2PSigNode from, @NotNull P2PSigNode to) {
             to.onPeerState(this);
         }
@@ -53,11 +56,13 @@ public class P2PSignature {
         final BitSet sigs;
         final P2PSigNode dest;
 
-
         public SendSigs(@NotNull BitSet sigs, @NotNull P2PSigNode dest) {
             this.sigs = sigs;
             this.dest = dest;
         }
+
+        @Override
+        public int size(){ return sigs.cardinality() * 48; }
 
         @Override
         public void action(@NotNull P2PSigNode from, @NotNull P2PSigNode to) {
@@ -212,6 +217,7 @@ public class P2PSignature {
             }
         }
 
+
         @Override
         public String toString() {
             return "P2PSigNode{" +
@@ -220,6 +226,8 @@ public class P2PSignature {
                     ", sigs=" + verifiedSignatures.cardinality() +
                     ", msgReceived=" + msgReceived +
                     ", msgSent=" + msgSent +
+                    ", KBytesSent=" + bytesSent/1024 +
+                    ", KBytesReceived=" + bytesReceived/1024 +
                     '}';
         }
     }

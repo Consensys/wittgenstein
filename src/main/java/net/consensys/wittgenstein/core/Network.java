@@ -46,6 +46,7 @@ public class Network<TN extends Node> {
      */
     public abstract static class MessageContent<TN extends Node> {
         public abstract void action(@NotNull TN from, @NotNull TN to);
+        public int size(){ return 1; }
     }
 
     /**
@@ -183,6 +184,7 @@ public class Network<TN extends Node> {
                 if ((partition.contains(fromNode.nodeId) && partition.contains(n.nodeId)) ||
                         (!partition.contains(fromNode.nodeId) && !partition.contains(n.nodeId))) {
                     fromNode.msgSent++;
+                    fromNode.bytesSent += m.size();
                     long nt = getNetworkDelay(fromNode, n);
                     if (nt < msgDiscardTime) {
                         msgs.add(new BlockChainNetwork.Message(m, fromNode, n, sendTime + nt));
@@ -243,6 +245,7 @@ public class Network<TN extends Node> {
                     (!partition.contains(m.fromNode.nodeId) && !partition.contains(m.toNode.nodeId))) {
                 if (!(m.messageContent instanceof Network<?>.Task)) {
                     m.toNode.msgReceived++;
+                    m.toNode.bytesReceived += m.messageContent.size();
                 }
                 m.messageContent.action(m.fromNode, m.toNode);
             }
