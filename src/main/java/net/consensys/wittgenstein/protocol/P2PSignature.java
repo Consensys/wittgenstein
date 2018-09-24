@@ -9,13 +9,45 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
+/**
+ * A p2p protocol for BLS signature aggregation.
+ *
+ * A node:
+ *  Sends it states to all its direct peers whenever it changes
+ *  Keeps the list of the states of its direct peers
+ *  Sends every x millisecond to one of its peers a set of missing signatures
+ *  Runs in parallel a task to validate the signatures set it received.
+ */
 @SuppressWarnings("WeakerAccess")
 public class P2PSignature {
+    /**
+     * The nuumber of nodes in the network
+     */
     final int nodeCount;
+
+    /**
+     * The number of signatures to reach to finish the protocol.
+     */
     final int threshold;
+
+    /**
+     * The typical number of peers a peer has. It can be less (but at least 3) or more.
+     */
     final int connectionCount;
+
+    /**
+     * The time it takes to do a pairing for a node.
+     */
     final int pairingTime;
+
+    /**
+     * The protocol sends a set of sigs every 'sigsSendPeriod' milliseconds
+     */
     final int sigsSendPeriod;
+
+    /**
+     * @see P2PSigNode#sendSigs for the two strategies.
+     */
     final boolean doubleAggregateStrategy;
 
 
@@ -119,6 +151,10 @@ public class P2PSignature {
             toVerify.add(sigs);
         }
 
+        /**
+         * We select a peer which needs some signatures we have.
+         * We also remove it from out list once we sent it a signature set.
+         */
         @Nullable SendSigs createSendSigs() {
             State found = null;
             BitSet toSend = null;
@@ -252,11 +288,11 @@ public class P2PSignature {
 
 
     public static void main(String... args) {
-        int[] distribProp = {16, 18, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
+        int[] distribProp = {1, 33, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
         long[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
 
-        P2PSignature p2ps = new P2PSignature(10000, 5001,
-                25, 3, 20, false);
+        P2PSignature p2ps = new P2PSignature(100, 51,
+                25, 3, 20, true);
         p2ps.network.setNetworkLatency(distribProp, distribVal);
         //p2ps.network.removeNetworkLatency();
         P2PSigNode observer = p2ps.init();

@@ -60,6 +60,9 @@ public class Network<TN extends Node> {
         }
 
         @Override
+        public int size(){ return 0;}
+
+        @Override
         public void action(@NotNull TN from, @NotNull TN to) {
             r.run();
         }
@@ -183,6 +186,7 @@ public class Network<TN extends Node> {
             if (n != fromNode) {
                 if ((partition.contains(fromNode.nodeId) && partition.contains(n.nodeId)) ||
                         (!partition.contains(fromNode.nodeId) && !partition.contains(n.nodeId))) {
+                    if (m.size() == 0) throw new IllegalStateException();
                     fromNode.msgSent++;
                     fromNode.bytesSent += m.size();
                     long nt = getNetworkDelay(fromNode, n);
@@ -244,6 +248,7 @@ public class Network<TN extends Node> {
             if ((partition.contains(m.fromNode.nodeId) && partition.contains(m.toNode.nodeId)) ||
                     (!partition.contains(m.fromNode.nodeId) && !partition.contains(m.toNode.nodeId))) {
                 if (!(m.messageContent instanceof Network<?>.Task)) {
+                    if (m.messageContent.size() == 0) throw new IllegalStateException();
                     m.toNode.msgReceived++;
                     m.toNode.bytesReceived += m.messageContent.size();
                 }
