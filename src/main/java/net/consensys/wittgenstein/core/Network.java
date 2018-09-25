@@ -62,7 +62,6 @@ public class Network<TN extends Node> {
     }
 
 
-
     public TN getNodeById(int id) {
         return allNodes.get(id);
     }
@@ -359,8 +358,23 @@ public class Network<TN extends Node> {
         send(m, time + 1, fromNode, allNodes.values());
     }
 
+    /**
+     * Send a message to a collection of nodes. The message is considered as sent immediately, and
+     *  will arrive at a time depending on the network latency.
+     */
     public void send(@NotNull MessageContent m, @NotNull TN fromNode, @NotNull Collection<TN> dests) {
         send(m, time + 1, fromNode, dests);
+    }
+
+    public void send(@NotNull MessageContent m, @NotNull TN fromNode, @NotNull TN toNode) {
+        send(m, time + 1, fromNode, Collections.singleton(toNode));
+    }
+
+    /**
+     * Send a message to a single node.
+     */
+    public void send(@NotNull MessageContent m, long sendTime, @NotNull TN fromNode, @NotNull TN toNode) {
+        send(m, sendTime, fromNode, Collections.singleton(toNode));
     }
 
     public void send(@NotNull MessageContent m, long sendTime, @NotNull TN fromNode, @NotNull Collection<? extends Node> dests) {
