@@ -5,7 +5,6 @@ import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.core.P2PNetwork;
 import net.consensys.wittgenstein.core.P2PNode;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -87,11 +86,9 @@ public class P2PSignature {
 
     static class SendSigs extends Network.MessageContent<P2PSigNode> {
         final BitSet sigs;
-        final P2PSigNode dest;
 
-        public SendSigs(@NotNull BitSet sigs, @NotNull P2PSigNode dest) {
+        public SendSigs(@NotNull BitSet sigs) {
             this.sigs = sigs;
-            this.dest = dest;
         }
 
         @Override
@@ -101,7 +98,7 @@ public class P2PSignature {
 
         @Override
         public void action(@NotNull P2PSigNode from, @NotNull P2PSigNode to) {
-            dest.onNewSig(sigs);
+            to.onNewSig(sigs);
         }
     }
 
@@ -169,7 +166,7 @@ public class P2PSignature {
          * We select a peer which needs some signatures we have.
          * We also remove it from out list once we sent it a signature set.
          */
-        @Nullable SendSigs createSendSigs() {
+        void sendSigs() {
             State found = null;
             BitSet toSend = null;
             Iterator<State> it = peersState.values().iterator();
@@ -186,13 +183,9 @@ public class P2PSignature {
                 }
             }
 
-            return found == null ? null : new SendSigs(toSend, found.who);
-        }
-
-        void sendSigs() {
-            SendSigs toSend = createSendSigs();
-            if (toSend != null) {
-                network.send(toSend, delayToSend(toSend.sigs), this, Collections.singleton(toSend.dest));
+            if (found != null) {
+                SendSigs ss = new SendSigs(toSend);
+                network.send(ss, delayToSend(ss.sigs), this, Collections.singleton(found.who));
             }
         }
 

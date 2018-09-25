@@ -1,5 +1,6 @@
 package net.consensys.wittgenstein.protocol;
 
+import net.consensys.wittgenstein.core.Network;
 import net.consensys.wittgenstein.core.Node;
 import org.junit.Assert;
 import org.junit.Before;
@@ -33,7 +34,12 @@ public class P2PSignatureTest {
     public void testSendSigs(){
         n1.peersState.put(n2.nodeId, new P2PSignature.State(n2));
 
-        P2PSignature.SendSigs ss = n1.createSendSigs();
+        ps.network.msgs.clear();
+        n1.sendSigs();
+        Network.Message nm = ps.network.msgs.peekFirst();
+        Assert.assertNotNull(nm);
+
+        P2PSignature.SendSigs ss = (P2PSignature.SendSigs)nm.messageContent;
         Assert.assertNotNull(ss);
         Assert.assertEquals(1, ss.sigs.cardinality());
         Assert.assertTrue(ss.sigs.get(n1.nodeId));

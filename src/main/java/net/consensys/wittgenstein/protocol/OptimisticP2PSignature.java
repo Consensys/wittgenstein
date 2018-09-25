@@ -15,18 +15,20 @@ import java.util.Set;
  * The simplest protocol: just send the signatures, and do an aggregation at the end.
  * <p>
  * Protocol: forward the message to all your peers if you have not done it already.
- *
+ * <p>
  * That's the optimistic case. If the aggregated signature fails, the agregator needs
- *  to test the sub bases to find the culprit: that's a log N time.
- *  For 1000 nodes there would be a total of 2 + 10 * 2 + 2 pairing (~50 ms)
- *  Of course, if more nodes are byzantine then it will take longer, the worse case being 2*N pairings if 49% of the
- *   nodes are byzantine.
+ * to test the sub bases to find the culprit: that's a log N time.
+ * For 1000 nodes there would be a total of 2 + 10 * 2 + 2 pairing (~50 ms)
+ * Of course, if more nodes are byzantine then it will take longer, the worse case being 2*N pairings if 49% of the
+ * nodes are byzantine.
  *
  * <p>
- * Sends a lot of message (20K per node) so uses a lot of memory. We can't try more than 1K nodes
+ * Sends a lot of message (20K per node) so uses a lot of memory. We can't try more than 2K nodes
  * <p>
  * P2PSigNode{nodeId=999, doneAt=218, sigs=501, msgReceived=19465, msgSent=20041, KBytesSent=1017, KBytesReceived=988}
  * P2PSigNode{nodeId=999, doneAt=314, sigs=1000, msgReceived=39049, msgSent=40001, KBytesSent=2031, KBytesReceived=1982}
+ * P2PSigNode{nodeId=1999, doneAt=226, sigs=1001, msgReceived=56539, msgSent=59060, KBytesSent=2999, KBytesReceived=2871}
+ * P2PSigNode{nodeId=2999, doneAt=230, sigs=1501, msgReceived=68177, msgSent=72049, KBytesSent=3658, KBytesReceived=3462}
  */
 @SuppressWarnings("WeakerAccess")
 public class OptimisticP2PSignature {
@@ -142,7 +144,7 @@ public class OptimisticP2PSignature {
         int[] distribProp = {1, 33, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
         long[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
 
-        OptimisticP2PSignature p2ps = new OptimisticP2PSignature(100, 51,
+        OptimisticP2PSignature p2ps = new OptimisticP2PSignature(2500, 1251,
                 25, 3);
         p2ps.network.setNetworkLatency(distribProp, distribVal).setMsgDiscardTime(1000);
         //p2ps.network.removeNetworkLatency();

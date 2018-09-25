@@ -2,7 +2,9 @@ package net.consensys.wittgenstein.core;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 public class P2PNode extends Node {
     public final List<P2PNode> peers = new ArrayList<>();

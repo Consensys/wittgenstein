@@ -69,11 +69,11 @@ public class Network<TN extends Node> {
 
     /**
      * A desperate attempt to have something less memory consuming than a PriorityQueue or
-     *  a guava multimap, by using raw array. The idea is to optimize the case when there are
-     *  multiple messages in the same millisecond, but the time range is limited.
-     *
+     * a guava multimap, by using raw array. The idea is to optimize the case when there are
+     * multiple messages in the same millisecond, but the time range is limited.
+     * <p>
      * The second idea is to have a repeatable run when there are multiple messages arriving
-     *  at the same millisecond.
+     * at the same millisecond.
      */
     private static class MsgsSlot {
         final long startTime;
@@ -126,6 +126,16 @@ public class Network<TN extends Node> {
             }
             return size;
         }
+
+        public @Nullable Message peekFirst() {
+            for (int i = 0; i < duration; i++) {
+                if (msgsByMs[i] != null && !msgsByMs[i].isEmpty()) {
+                    return msgsByMs[i].peekFirst();
+                }
+            }
+            return null;
+        }
+
     }
 
     public class MessageStorage {
@@ -176,6 +186,17 @@ public class Network<TN extends Node> {
         public void clear() {
             msgsBySlot.clear();
             cleanup();
+        }
+
+        /**
+         * @return the first message in the queue, null if the queue is empty.
+         */
+        public @Nullable Message peekFirst() {
+            for (MsgsSlot ms : msgsBySlot) {
+                Message m = ms.peekFirst();
+                if (m != null) return m;
+            }
+            return null;
         }
     }
 
@@ -283,10 +304,10 @@ public class Network<TN extends Node> {
     }
 
     public static class Message implements Comparable<Message> {
-        final @NotNull MessageContent messageContent;
-        final @NotNull Node fromNode;
-        final @NotNull Node toNode;
-        final long arrivalTime;
+        public final @NotNull MessageContent messageContent;
+        public final @NotNull Node fromNode;
+        public final @NotNull Node toNode;
+        public final long arrivalTime;
 
         public Message(@NotNull MessageContent messageContent, @NotNull Node fromNode, @NotNull Node toNode, long arrivalTime) {
             this.messageContent = messageContent;
@@ -326,6 +347,10 @@ public class Network<TN extends Node> {
      */
     public void sendAll(@NotNull MessageContent m, long sendTime, @NotNull TN fromNode) {
         send(m, sendTime, fromNode, allNodes.values());
+    }
+
+    public void sendAll(@NotNull MessageContent m, @NotNull TN fromNode) {
+        send(m, time + 1, fromNode, allNodes.values());
     }
 
     public void send(@NotNull MessageContent m, @NotNull TN fromNode, @NotNull Collection<TN> dests) {
