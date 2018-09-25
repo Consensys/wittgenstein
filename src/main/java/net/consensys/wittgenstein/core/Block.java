@@ -41,7 +41,7 @@ abstract public class Block<TB extends Block> {
         if (time < parent.proposalTime) {
             throw new IllegalArgumentException("bad time: parent is (" + parent + "), our time:" + time);
         }
-        if (parent != null && parent.height >= height) {
+        if (parent.height >= height) {
             throw new IllegalArgumentException("Bad parent. me:" + this + ", parent:" + parent);
         }
 
@@ -52,7 +52,6 @@ abstract public class Block<TB extends Block> {
         this.valid = valid;
         this.lastTxId = time;
         this.proposalTime = time;
-
     }
 
 
@@ -108,13 +107,10 @@ abstract public class Block<TB extends Block> {
         assert producer != null;
         assert parent != null;
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("h:").append(height).append(", id=").append(id);
-        sb.append(", creationTime:").append(proposalTime);
-        sb.append(", producer=").append(producer.nodeId);
-        sb.append(", parent:").append(parent.id);
-
-        return sb.toString();
+        return  "h:" + height + ", id=" + id +
+                ", creationTime:" + proposalTime +
+                ", producer=" + producer.nodeId +
+                ", parent:" + parent.id;
     }
 
 }

@@ -29,7 +29,7 @@ public class Dfinity {
     final Node.NodeBuilder nb = new Node.NodeBuilder();
 
     public Dfinity() {
-        this(20, 600, 200, 1000, 1, 0);
+        this(10, 300, 100, 1000, 1, 0);
     }
 
     public Dfinity(int blockProducersCount, int attestersCount, int attestersPerRound,
@@ -264,7 +264,7 @@ public class Dfinity {
             committeeMajorityBlocks.add(voteFor.id);
             committeeMajorityHeight.add(voteFor.height);
             voteForHeight = -1;
-            network.sendAll(new BlockChainNetwork.SendBlock(voteFor), network.time, this);
+            network.sendAll(new BlockChainNetwork.SendBlock<DfinityBlock, DfinityNode>(voteFor), this);
         }
 
         /**
@@ -389,7 +389,6 @@ public class Dfinity {
 
 
     void init() {
-        int nodeId = 1;
         for (int i = 0; i < attestersCount; i++) {
             AttesterNode n = new AttesterNode(i % attestersRound, genesis);
             attesters.add(n);

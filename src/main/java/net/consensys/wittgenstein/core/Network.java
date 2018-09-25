@@ -29,7 +29,7 @@ public class Network<TN extends Node> {
     /**
      * By using a single random generator, we have repeatable runs.
      */
-    public final Random rd = new Random(0);
+    public final Random rd;
 
     final HashSet<Integer> partition = new HashSet<>();
 
@@ -53,8 +53,14 @@ public class Network<TN extends Node> {
 
 
     public Network() {
+        this(0);
+    }
+
+    public Network(long randomSeed) {
+        this.rd = new Random(randomSeed);
         setNetworkLatency(distribProp, distribVal);
     }
+
 
 
     public TN getNodeById(int id) {

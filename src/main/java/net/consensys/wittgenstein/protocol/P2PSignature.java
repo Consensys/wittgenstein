@@ -300,6 +300,7 @@ public class P2PSignature {
         return last;
     }
 
+// P2PSigNode{nodeId=999, doneAt=616, sigs=541, msgReceived=591, msgSent=284, KBytesSent=1008, KBytesReceived=1098}
 
     public static void main(String... args) {
         int[] distribProp = {1, 33, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
