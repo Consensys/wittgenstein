@@ -42,8 +42,8 @@ public class BlockChainNetwork extends Network<BlockChainNode<? extends Block>> 
     }
 
     /**
-     *  On a blockchain network all the blocks are exchanged all the time. We simulate this
-     *  with a full resent after each partition.
+     * On a blockchain network all the blocks are exchanged all the time. We simulate this
+     * with a full resent after each partition.
      */
     @Override
     public void endPartition() {

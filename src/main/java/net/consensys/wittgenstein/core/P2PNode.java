@@ -2,12 +2,10 @@ package net.consensys.wittgenstein.core;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.util.HashSet;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 public class P2PNode extends Node {
-    public final Set<P2PNode> peers = new HashSet<>();
+    public final List<P2PNode> peers = new ArrayList<>();
 
 
     public P2PNode(@NotNull NodeBuilder nb) {
@@ -15,7 +13,7 @@ public class P2PNode extends Node {
     }
 
 
-    protected @NotNull  P2PNode getRandomPeer(@NotNull Random rd) {
+    protected @NotNull P2PNode getRandomPeer(@NotNull Random rd) {
         int size = peers.size();
         int item = rd.nextInt(size);
         int i = 0;

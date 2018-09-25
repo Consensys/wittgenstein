@@ -11,14 +11,13 @@ public class Node {
     public final static int MAX_DIST = (int) Math.sqrt((MAX_X / 2) * (MAX_X / 2) + (MAX_Y / 2) * (MAX_Y / 2));
 
 
-
     public final int nodeId;
 
     /**
      * The position. There is a clear weakness here: the nodes
-     *  are randomly distributed, but in real life we have oceans, so some
-     *  subset of nodes are really isolated. We should have a builder that takes
-     *  a map as in input.
+     * are randomly distributed, but in real life we have oceans, so some
+     * subset of nodes are really isolated. We should have a builder that takes
+     * a map as in input.
      */
     public final int x;
     public final int y;
@@ -61,7 +60,6 @@ public class Node {
             return rd.nextInt(MAX_Y) + 1;
         }
     }
-
 
 
     public Node(@NotNull NodeBuilder nb, boolean byzantine) {
