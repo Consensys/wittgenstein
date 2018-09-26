@@ -27,7 +27,7 @@ import java.util.List;
  * <p>
  * P2PSigNode{nodeId=999, doneAt=218, sigs=501, msgReceived=19465, msgSent=20041, KBytesSent=1017, KBytesReceived=988}
  * P2PSigNode{nodeId=999, doneAt=220, sigs=501, msgReceived=19501, msgSent=20041, KBytesSent=1017, KBytesReceived=990}
- * P2PSigNode{nodeId=999, doneAt=314, sigs=1000, msgReceived=39049, msgSent=40001, KBytesSent=2031, KBytesReceived=1982}
+ * P2PSigNode{nodeId=999, doneAt=219, sigs=501, msgReceived=20478, msgSent=21012, KBytesSent=1067, KBytesReceived=1039}
  * P2PSigNode{nodeId=1499, doneAt=227, sigs=751, msgReceived=34754, msgSent=36007, KBytesSent=1828, KBytesReceived=1764}
  * P2PSigNode{nodeId=1999, doneAt=226, sigs=1001, msgReceived=56539, msgSent=59060, KBytesSent=2999, KBytesReceived=2871}
  * P2PSigNode{nodeId=2499, doneAt=240, sigs=1251, msgReceived=53712, msgSent=55045, KBytesSent=2795, KBytesReceived=2727}
@@ -155,7 +155,7 @@ public class OptimisticP2PSignature {
         int[] distribProp = {1, 33, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
         int[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
 
-        OptimisticP2PSignature p2ps = new OptimisticP2PSignature(1500, 751,
+        OptimisticP2PSignature p2ps = new OptimisticP2PSignature(1000, 501,
                 25, 3);
         p2ps.network.setNetworkLatency(distribProp, distribVal).setMsgDiscardTime(1000);
         //p2ps.network.removeNetworkLatency();

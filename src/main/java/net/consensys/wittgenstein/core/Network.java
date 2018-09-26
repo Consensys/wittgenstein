@@ -545,7 +545,7 @@ public class Network<TN extends Node> {
         }
     }
 
-    public MessageArrival createMessageArrival(@NotNull MessageContent<?> m, @NotNull Node fromNode, @NotNull Node toNode, int sendTime) {
+    private MessageArrival createMessageArrival(@NotNull MessageContent<?> m, @NotNull Node fromNode, @NotNull Node toNode, int sendTime) {
         if (sendTime <= time) {
             throw new IllegalStateException("" + m + ", sendTime=" + sendTime + ", time=" + time);
         }
