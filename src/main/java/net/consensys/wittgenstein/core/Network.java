@@ -337,13 +337,6 @@ public class Network<TN extends Node> {
         private int curPos = 0;
         private @Nullable Message nextSameTime = null;
 
-
-        public MultipleDestMessage(@NotNull MessageContent messageContent, @NotNull Node fromNode, @NotNull Node toNode, int arrivalTime) {
-            this.messageContent = messageContent;
-            this.fromNode = fromNode;
-            this.dests = Collections.singletonList(new MessageArrival(toNode, arrivalTime));
-        }
-
         public MultipleDestMessage(@NotNull MessageContent m, @NotNull Node fromNode, @NotNull List<MessageArrival> dests) {
             this.messageContent = m;
             this.fromNode = fromNode;
@@ -500,7 +493,7 @@ public class Network<TN extends Node> {
         final Node dest;
         final int arrival;
 
-        public MessageArrival(Node dest, int arrival) {
+        public MessageArrival(@NotNull Node dest, int arrival) {
             this.dest = dest;
             this.arrival = arrival;
         }
@@ -512,11 +505,7 @@ public class Network<TN extends Node> {
     }
 
     public void send(@NotNull MessageContent m, int sendTime, @NotNull TN fromNode, @NotNull Collection<? extends Node> dests) {
-        if (sendTime <= time) {
-            throw new IllegalStateException("" + m + ", sendTime=" + sendTime + ", time=" + time);
-        }
-
-        ArrayList<MessageArrival> da = new ArrayList<>();
+        ArrayList<MessageArrival> da = new ArrayList<>(dests.size());
         for (Node n : dests) {
             MessageArrival ma = createMessageArrival(m, fromNode, n, sendTime);
             if (ma != null) {
@@ -524,9 +513,17 @@ public class Network<TN extends Node> {
             }
         }
 
-        Collections.sort(da);
-        Message msg = new MultipleDestMessage(m, fromNode, da);
-        msgs.addMsg(msg);
+        if (!da.isEmpty()) {
+            if (da.size() == 1) {
+                MessageArrival ms = da.get(0);
+                Message msg = new SingeDestMessage(m, fromNode, ms.dest, ms.arrival);
+                msgs.addMsg(msg);
+            } else {
+                Collections.sort(da);
+                Message msg = new MultipleDestMessage(m, fromNode, da);
+                msgs.addMsg(msg);
+            }
+        }
     }
 
     public MessageArrival createMessageArrival(@NotNull MessageContent<?> m, @NotNull Node fromNode, @NotNull Node toNode, int sendTime) {
