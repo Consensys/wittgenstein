@@ -26,10 +26,12 @@ import java.util.Set;
  * Sends a lot of message (20K per node) so uses a lot of memory. We can't try more than 3K nodes
  * <p>
  * P2PSigNode{nodeId=999, doneAt=218, sigs=501, msgReceived=19465, msgSent=20041, KBytesSent=1017, KBytesReceived=988}
+ * P2PSigNode{nodeId=999, doneAt=220, sigs=501, msgReceived=19501, msgSent=20041, KBytesSent=1017, KBytesReceived=990}
  * P2PSigNode{nodeId=999, doneAt=314, sigs=1000, msgReceived=39049, msgSent=40001, KBytesSent=2031, KBytesReceived=1982}
  * P2PSigNode{nodeId=1999, doneAt=226, sigs=1001, msgReceived=56539, msgSent=59060, KBytesSent=2999, KBytesReceived=2871}
  * P2PSigNode{nodeId=2499, doneAt=240, sigs=1251, msgReceived=53712, msgSent=55045, KBytesSent=2795, KBytesReceived=2727}
  * P2PSigNode{nodeId=2999, doneAt=230, sigs=1501, msgReceived=68177, msgSent=72049, KBytesSent=3658, KBytesReceived=3462}
+ * P2PSigNode{nodeId=3999, doneAt=244, sigs=2001, msgReceived=116390, msgSent=120060, KBytesSent=6096, KBytesReceived=5910}
  */
 @SuppressWarnings("WeakerAccess")
 public class OptimisticP2PSignature {
@@ -143,9 +145,9 @@ public class OptimisticP2PSignature {
 
     public static void main(String... args) {
         int[] distribProp = {1, 33, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
-        long[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
+        int[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
 
-        OptimisticP2PSignature p2ps = new OptimisticP2PSignature(1500, 1351,
+        OptimisticP2PSignature p2ps = new OptimisticP2PSignature(5000, 2501,
                 25, 3);
         p2ps.network.setNetworkLatency(distribProp, distribVal).setMsgDiscardTime(1000);
         //p2ps.network.removeNetworkLatency();

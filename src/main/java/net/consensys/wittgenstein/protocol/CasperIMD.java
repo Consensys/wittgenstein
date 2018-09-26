@@ -10,7 +10,7 @@ import java.util.*;
 
 @SuppressWarnings({"WeakerAccess", "SameParameterValue", "unused"})
 public class CasperIMD {
-    final long SLOT_DURATION = 8000;
+    final int SLOT_DURATION = 8000;
 
     /**
      * Number of rounds per cycle. 64 in the spec
@@ -40,20 +40,20 @@ public class CasperIMD {
     /**
      * Time to build a block. Same for all blocks & all block producers.
      */
-    final long blockConstructionTime;
+    final int blockConstructionTime;
 
     /**
      * Time to build an attestation. Same for all.
      */
-    final long attestationConstructionTime;
+    final int attestationConstructionTime;
 
     public CasperIMD() {
         this(5, true, 5, 80, 1000, 1);
     }
 
     public CasperIMD(int cycleLength, boolean randomOnTies, int blockProducersCount, int attestersPerRound,
-                     long blockConstructionTime,
-                     long attestationConstructionTime) {
+                     int blockConstructionTime,
+                     int attestationConstructionTime) {
         this.cycleLength = cycleLength;
         this.randomOnTies = randomOnTies;
         this.blockProducersCount = blockProducersCount;
@@ -128,7 +128,7 @@ public class CasperIMD {
         public CasperBlock(@NotNull BlockProducer blockProducer,
                            int height, @NotNull CasperBlock father,
                            @NotNull Map<Integer, @NotNull Set<Attestation>> attestationsByHeight,
-                           boolean valid, long time) {
+                           boolean valid, int time) {
             super(blockProducer, height, father, valid, time);
             this.attestationsByHeight = attestationsByHeight;
         }
@@ -273,7 +273,7 @@ public class CasperIMD {
         public boolean onBlock(@NotNull final CasperBlock b) {
             // Spec: The node’s local clock time is greater than or equal to the minimum timestamp as
             // computed by GENESIS_TIME + slot_number * SLOT_DURATION
-            final long delta = network.time - genesis.proposalTime + b.height * SLOT_DURATION;
+            final int delta = network.time - genesis.proposalTime + b.height * SLOT_DURATION;
             if (delta >= 0) {
                 blocksToReevaluate.add(head); // if head loose the race it may win later.
                 blocksToReevaluate.add(b);
@@ -467,12 +467,12 @@ public class CasperIMD {
     class ByzBlockProducer extends BlockProducer {
         int toSend = 1;
         int h;
-        final long delay;
+        final int delay;
         int onDirectFather = 0;
         int onOlderAncestor = 0;
         int incNotTheBestFather = 0;
 
-        ByzBlockProducer(long delay, @NotNull CasperBlock genesis) {
+        ByzBlockProducer(int delay, @NotNull CasperBlock genesis) {
             super(true, genesis);
             this.delay = delay;
         }
@@ -483,7 +483,7 @@ public class CasperIMD {
          * Moreover, the current head may be off, because of the latest attestations.
          * So we need to recalculate all this: actual head & actual heights
          */
-        public void reevaluateH(long time) {
+        public void reevaluateH(int time) {
             reevaluateHead();
 
             // There is a delay, so may be our current head is 'newer' than us. It's not
@@ -492,7 +492,7 @@ public class CasperIMD {
                 head = head.parent;
             }
 
-            long slotTime = time - delay;
+            int slotTime = time - delay;
             h = (int) (slotTime / SLOT_DURATION);
 
             if (h != toSend) throw new IllegalStateException("h=" + h + ", toSend=" + toSend);
@@ -536,7 +536,7 @@ public class CasperIMD {
      * Idea: it can them include the transactions of its father.
      */
     class ByzBlockProducerSF extends ByzBlockProducer {
-        ByzBlockProducerSF(int nodeId, long delay, @NotNull CasperBlock genesis) {
+        ByzBlockProducerSF(int nodeId, int delay, @NotNull CasperBlock genesis) {
             super(delay, genesis);
         }
 
@@ -564,7 +564,7 @@ public class CasperIMD {
      * the fight with the grand father.
      */
     class ByzBlockProducerNS extends ByzBlockProducer {
-        ByzBlockProducerNS(int nodeId, long delay, @NotNull CasperBlock genesis) {
+        ByzBlockProducerNS(int nodeId, int delay, @NotNull CasperBlock genesis) {
             super(delay, genesis);
         }
 
@@ -609,7 +609,7 @@ public class CasperIMD {
         int late = 0;
         int onTime = 0;
 
-        ByzBlockProducerWF(long delay, @NotNull CasperBlock genesis) {
+        ByzBlockProducerWF(int delay, @NotNull CasperBlock genesis) {
             super(delay, genesis);
         }
 
@@ -630,7 +630,7 @@ public class CasperIMD {
             if (super.onBlock(b)) {
                 if (b.height == toSend - 1) {
 
-                    long perfectDate = SLOT_DURATION * toSend + delay;
+                    int perfectDate = SLOT_DURATION * toSend + delay;
 
                     Runnable r = new Runnable() {
                         final int th = toSend;

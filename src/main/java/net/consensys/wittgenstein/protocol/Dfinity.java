@@ -20,8 +20,8 @@ public class Dfinity {
 
     final int randomBeaconCount;
 
-    final long blockConstructionTime;
-    final long attestationConstructionTime;
+    final int blockConstructionTime;
+    final int attestationConstructionTime;
     final int percentageDeadAttester;
 
     final int majority;
@@ -33,8 +33,8 @@ public class Dfinity {
     }
 
     public Dfinity(int blockProducersCount, int attestersCount, int attestersPerRound,
-                   long blockConstructionTime,
-                   long attestationConstructionTime, int percentageDeadAttester) {
+                   int blockConstructionTime,
+                   int attestationConstructionTime, int percentageDeadAttester) {
         this.blockProducersCount = blockProducersCount;
         this.blockProducersRound = blockProducersCount / blockProducersPerRound;
 
@@ -62,7 +62,7 @@ public class Dfinity {
     final @NotNull Set<RandomBeaconNode> rds = new HashSet<>();
 
     static class DfinityBlock extends Block<DfinityBlock> {
-        public DfinityBlock(@NotNull BlockProducerNode blockProducerNode, int height, @NotNull DfinityBlock head, boolean b, long time) {
+        public DfinityBlock(@NotNull BlockProducerNode blockProducerNode, int height, @NotNull DfinityBlock head, boolean b, int time) {
             super(blockProducerNode, height, head, b, time);
         }
 
@@ -364,7 +364,7 @@ public class Dfinity {
                     sendRB();
                 } else {
                     assert head.parent != null;
-                    long wt = head.parent.proposalTime + roundTime * 2;
+                    int wt = head.parent.proposalTime + roundTime * 2;
                     if (wt <= network.time) wt = network.time + attestationConstructionTime;
                     RandomBeaconExchange rbe = new RandomBeaconExchange(height);
                     network.send(rbe, wt, this, rds);

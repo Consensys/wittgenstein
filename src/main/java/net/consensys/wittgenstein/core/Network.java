@@ -37,7 +37,7 @@ public class Network<TN extends Node> {
      * We can decide to discard messages that would take too long to arrive. This
      * limit the memory consumption of the simulator as well.
      */
-    long msgDiscardTime = Long.MAX_VALUE;
+    int msgDiscardTime = Integer.MAX_VALUE;
 
     /**
      * Distribution taken from: https://ethstats.net/
@@ -45,11 +45,15 @@ public class Network<TN extends Node> {
      * 16% of the messages will be received in 250ms or less
      */
     private final int[] distribProp = {16, 18, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
-    public final long[] distribVal = {250, 500, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750, 4500, 6000, 8500, 9750, 10000};
-    private final long[] longDistrib = new long[100];
+    public final int[] distribVal = {250, 500, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750, 4500, 6000, 8500, 9750, 10000};
+    private final int[] longDistrib = new int[100];
 
 
-    public long time = 0;
+    /**
+     * Time in ms. Using an int limits us to ~555 hours of simulation, it's acceptable, and
+     *  as we have billions of dated objects it saves some memory...
+     */
+    public int time = 0;
 
 
     public Network() {
@@ -67,7 +71,7 @@ public class Network<TN extends Node> {
     }
 
     @SuppressWarnings("UnusedReturnValue")
-    public Network<TN> setMsgDiscardTime(long l) {
+    public Network<TN> setMsgDiscardTime(int l) {
         this.msgDiscardTime = l;
         return this;
     }
@@ -76,45 +80,45 @@ public class Network<TN extends Node> {
     /**
      * A desperate attempt to have something less memory consuming than a PriorityQueue or
      * a guava multimap, by using raw array. The idea is to optimize the case when there are
-     * multiple messages in the same millisecond, but the time range is limited.
+     * multiple messages in the same millisecond, but the global time range for all messages is limited.
      * <p>
      * The second idea is to have a repeatable run when there are multiple messages arriving
      * at the same millisecond.
      */
-    private static class MsgsSlot {
-        final long startTime;
-        final long endTime;
+    private final static class MsgsSlot {
+        final int startTime;
+        final int endTime;
         @SuppressWarnings("unchecked")
         final Message[] msgsByMs = new Message[duration];
 
-        public MsgsSlot(long startTime) {
+        public MsgsSlot(int startTime) {
             this.startTime = startTime - (startTime % duration);
             this.endTime = startTime + duration;
         }
 
-        private int getPos(long aTime) {
+        private int getPos(int aTime) {
             if (aTime < startTime || aTime >= startTime + duration) {
                 throw new IllegalArgumentException();
             }
-            return (int) (aTime % duration);
+            return  (aTime % duration);
         }
 
         public void addMsg(@NotNull Message m) {
-            int pos = getPos(m.arrivalTime);
-            m.nextSameTime = msgsByMs[pos];
-                msgsByMs[pos] = m;
+            int pos = getPos(m.nextArrivalTime());
+            m.setNextSameTime(msgsByMs[pos]);
+            msgsByMs[pos] = m;
         }
 
-        public @Nullable Message peek(long time) {
+        public @Nullable Message peek(int time) {
             int pos = getPos(time);
             return msgsByMs[pos];
         }
 
-        public @Nullable Message poll(long time) {
+        public @Nullable Message poll(int time) {
             int pos = getPos(time);
             Message m = msgsByMs[pos];
             if (m != null) {
-                msgsByMs[pos] = m.nextSameTime;
+                msgsByMs[pos] = m.getNextSameTime();
             }
             return m;
         }
@@ -126,7 +130,7 @@ public class Network<TN extends Node> {
                 Message m = msgsByMs[i];
                 while (m != null) {
                     ss++;
-                    m = m.nextSameTime;
+                    m = m.getNextSameTime();
                 }
                 size += ss;
             }
@@ -144,7 +148,7 @@ public class Network<TN extends Node> {
 
     }
 
-    public class MessageStorage {
+    public final class MessageStorage {
         public final ArrayList<MsgsSlot> msgsBySlot = new ArrayList<>();
 
         public int size() {
@@ -164,28 +168,28 @@ public class Network<TN extends Node> {
             }
         }
 
-        void ensureSize(long aTime) {
+        void ensureSize(int aTime) {
             while (msgsBySlot.get(msgsBySlot.size() - 1).endTime <= aTime) {
                 msgsBySlot.add(new MsgsSlot(msgsBySlot.get(msgsBySlot.size() - 1).endTime));
             }
         }
 
-        private @NotNull MsgsSlot findSlot(long aTime) {
+        private @NotNull MsgsSlot findSlot(int aTime) {
             cleanup();
             ensureSize(aTime);
-            int pos = (int) (aTime - msgsBySlot.get(0).startTime) / duration;
+            int pos = (aTime - msgsBySlot.get(0).startTime) / duration;
             return msgsBySlot.get(pos);
         }
 
         public void addMsg(@NotNull Message m) {
-            findSlot(m.arrivalTime).addMsg(m);
+            findSlot(m.nextArrivalTime()).addMsg(m);
         }
 
-        public @Nullable Message peek(long time) {
+        public @Nullable Message peek(int time) {
             return findSlot(time).peek(time);
         }
 
-        public @Nullable Message poll(long time) {
+        public @Nullable Message poll(int time) {
             return findSlot(time).poll(time);
         }
 
@@ -243,7 +247,7 @@ public class Network<TN extends Node> {
         }
     }
 
-    public class ConditionalTask extends Task {
+    public final class ConditionalTask extends Task {
         /**
          * Starts if this condition is met.
          */
@@ -257,15 +261,15 @@ public class Network<TN extends Node> {
         /**
          * Time before next start.
          */
-        final long duration;
+        final int duration;
         final Node sender;
 
         /**
          * Will start after this time.
          */
-        long minStartTime;
+        int minStartTime;
 
-        public ConditionalTask(Condition startIf, Condition repeatIf, Runnable r, long minStartTime, long duration, Node sender) {
+        public ConditionalTask(Condition startIf, Condition repeatIf, Runnable r, int minStartTime, int duration, Node sender) {
             super(r);
             this.startIf = startIf;
             this.repeatIf = repeatIf;
@@ -284,53 +288,66 @@ public class Network<TN extends Node> {
      * Some protocols want some tasks to be executed periodically
      */
     public class PeriodicTask extends Task {
-        final long period;
+        final int period;
         final Node sender;
         final Condition continuationCondition;
 
-        public PeriodicTask(@NotNull Runnable r, @NotNull Node fromNode, long period, @NotNull Condition condition) {
+        public PeriodicTask(@NotNull Runnable r, @NotNull Node fromNode, int period, @NotNull Condition condition) {
             super(r);
             this.period = period;
             this.sender = fromNode;
             this.continuationCondition = condition;
         }
 
-        public PeriodicTask(@NotNull Runnable r, @NotNull Node fromNode, long period) {
+        public PeriodicTask(@NotNull Runnable r, @NotNull Node fromNode, int period) {
             this(r, fromNode, period, () -> true);
         }
-
 
         @Override
         public void action(@NotNull Node from, @NotNull Node to) {
             r.run();
             if (continuationCondition.check()) {
-                msgs.addMsg(new Message(this, sender, sender, time + period));
+                msgs.addMsg(new SingeDestMessage(this, sender, sender, time + period));
             }
         }
     }
 
     // public for tests
-    public static class Message implements Comparable<Message> {
+    public interface Message {
+        @NotNull MessageContent getMessageContent();
+
+        @NotNull Node getNextDest();
+
+        int nextArrivalTime();
+
+        @Nullable Message getNextSameTime();
+
+        void setNextSameTime(@Nullable Message m);
+
+        void markRead();
+
+        boolean hasNextReader();
+    }
+
+    final public static class MultipleDestMessage implements Message {
         public final @NotNull MessageContent messageContent;
         private final @NotNull Node fromNode;
-        private final @NotNull Node toNode;
-        private final long arrivalTime;
-        private Message nextSameTime = null;
 
-        public Message(@NotNull MessageContent messageContent, @NotNull Node fromNode, @NotNull Node toNode, long arrivalTime) {
+        private final List<MessageArrival> dests;
+        private int curPos = 0;
+        private  @Nullable Message nextSameTime = null;
+
+
+        public MultipleDestMessage(@NotNull MessageContent messageContent, @NotNull Node fromNode, @NotNull Node toNode, int arrivalTime) {
             this.messageContent = messageContent;
             this.fromNode = fromNode;
-            this.toNode = toNode;
-            this.arrivalTime = arrivalTime;
+            this.dests = Collections.singletonList(new MessageArrival(toNode, arrivalTime));
         }
 
-        long getArrivalTime(){
-            return arrivalTime;
-        }
-
-        @Override
-        public int compareTo(@NotNull Message o) {
-            return Long.compare(arrivalTime, o.arrivalTime);
+        public MultipleDestMessage(@NotNull MessageContent m, @NotNull Node fromNode, @NotNull List<MessageArrival> dests) {
+            this.messageContent = m;
+            this.fromNode = fromNode;
+            this.dests = dests;
         }
 
         @Override
@@ -338,17 +355,108 @@ public class Network<TN extends Node> {
             return "Message{" +
                     "messageContent=" + messageContent +
                     ", fromNode=" + fromNode +
-                    ", toNode=" + toNode +
-                    ", arrivalTime=" + arrivalTime +
+                    ", dests=" + dests +
+                    ", curPos=" + curPos +
                     '}';
         }
+
+        @Override
+        public @NotNull MessageContent getMessageContent() {
+            return messageContent;
+        }
+
+        public @NotNull Node getNextDest() {
+            return dests.get(curPos).dest;
+        }
+
+        public int nextArrivalTime() {
+            return dests.get(curPos).arrival;
+        }
+
+        @Override
+        public @Nullable Message getNextSameTime() {
+            return nextSameTime;
+        }
+
+        @Override
+        public void setNextSameTime(@Nullable Message m) {
+            this.nextSameTime = m;
+        }
+
+        public void markRead() {
+            curPos++;
+        }
+
+        public boolean hasNextReader() {
+            return curPos < dests.size();
+        }
     }
+
+    final public static class SingeDestMessage implements Message {
+        public final @NotNull MessageContent messageContent;
+        private final @NotNull Node fromNode;
+        private final @NotNull Node toNode;
+        private final int arrivalTime;
+        private @Nullable Message nextSameTime = null;
+
+
+        @Override
+        public @Nullable Network.Message getNextSameTime() {
+            return nextSameTime;
+        }
+
+        @Override
+        public void setNextSameTime(@Nullable Message nextSameTime) {
+            this.nextSameTime = nextSameTime;
+        }
+
+        public SingeDestMessage(@NotNull MessageContent messageContent, @NotNull Node fromNode, @NotNull Node toNode, int arrivalTime) {
+            this.messageContent = messageContent;
+            this.fromNode = fromNode;
+            this.toNode = toNode;
+            this.arrivalTime = arrivalTime;
+        }
+
+        @Override
+        public String toString() {
+            return "Message{" +
+                    "messageContent=" + messageContent +
+                    ", fromNode=" + fromNode +
+                    ", dests=" + toNode +
+                    '}';
+        }
+
+        @Override
+        public @NotNull MessageContent getMessageContent() {
+            return messageContent;
+        }
+
+        public @NotNull Node getNextDest() {
+            return toNode;
+        }
+
+        public int nextArrivalTime() {
+            return arrivalTime;
+        }
+
+        public void markRead() {
+        }
+
+        public boolean hasNextReader() {
+            return false;
+        }
+    }
+
 
     /**
      * Simulate for x seconds. Can be called multiple time.
      */
-    public void run(long seconds) {
-        long endAt = time + seconds * 1000;
+    public void run(int seconds) {
+        runMs(seconds * 1000);
+    }
+
+    public void runMs(int ms) {
+        int endAt = time + ms;
         receiveUntil(endAt);
         time = endAt;
     }
@@ -357,7 +465,7 @@ public class Network<TN extends Node> {
     /**
      * Send a message to all nodes.
      */
-    public void sendAll(@NotNull MessageContent m, long sendTime, @NotNull TN fromNode) {
+    public void sendAll(@NotNull MessageContent m, int sendTime, @NotNull TN fromNode) {
         send(m, sendTime, fromNode, allNodes.values());
     }
 
@@ -367,66 +475,101 @@ public class Network<TN extends Node> {
 
     /**
      * Send a message to a collection of nodes. The message is considered as sent immediately, and
-     *  will arrive at a time depending on the network latency.
+     * will arrive at a time depending on the network latency.
      */
     public void send(@NotNull MessageContent m, @NotNull TN fromNode, @NotNull Collection<TN> dests) {
         send(m, time + 1, fromNode, dests);
     }
 
     public void send(@NotNull MessageContent m, @NotNull TN fromNode, @NotNull TN toNode) {
-        send(m, time + 1, fromNode, Collections.singleton(toNode));
+        send(m, time + 1, fromNode, toNode);
     }
 
     /**
      * Send a message to a single node.
      */
-    public void send(@NotNull MessageContent m, long sendTime, @NotNull TN fromNode, @NotNull TN toNode) {
-        send(m, sendTime, fromNode, Collections.singleton(toNode));
+    public void send(@NotNull MessageContent mc, int sendTime, @NotNull TN fromNode, @NotNull TN toNode) {
+        MessageArrival ms = createMessageArrival(mc, fromNode, toNode, sendTime);
+        if (ms != null) {
+            Message m = new SingeDestMessage(mc, fromNode, toNode, ms.arrival);
+            msgs.addMsg(m);
+        }
     }
 
-    public void send(@NotNull MessageContent m, long sendTime, @NotNull TN fromNode, @NotNull Collection<? extends Node> dests) {
+    final static class MessageArrival implements Comparable<MessageArrival> {
+        final Node dest;
+        final int arrival;
+
+        public MessageArrival(Node dest, int arrival) {
+            this.dest = dest;
+            this.arrival = arrival;
+        }
+
+        @Override
+        public int compareTo(@NotNull Network.MessageArrival o) {
+            return Long.compare(arrival, o.arrival);
+        }
+    }
+
+    public void send(@NotNull MessageContent m, int sendTime, @NotNull TN fromNode, @NotNull Collection<? extends Node> dests) {
         if (sendTime <= time) {
             throw new IllegalStateException("" + m + ", sendTime=" + sendTime + ", time=" + time);
         }
+
+        ArrayList<MessageArrival> da = new ArrayList<>();
         for (Node n : dests) {
-            if (n != fromNode) {
-                if ((partition.contains(fromNode.nodeId) && partition.contains(n.nodeId)) ||
-                        (!partition.contains(fromNode.nodeId) && !partition.contains(n.nodeId))) {
-                    if (m.size() == 0) throw new IllegalStateException();
-                    fromNode.msgSent++;
-                    fromNode.bytesSent += m.size();
-                    long nt = getNetworkDelay(fromNode, n);
-                    if (nt < msgDiscardTime) {
-                        msgs.addMsg(new Message(m, fromNode, n, sendTime + nt));
-                    }
-                }
+            MessageArrival ma = createMessageArrival(m, fromNode, n, sendTime);
+            if (ma != null) {
+                da.add(ma);
             }
         }
+
+        Collections.sort(da);
+        Message msg = new MultipleDestMessage(m, fromNode, da);
+        msgs.addMsg(msg);
+    }
+
+    public MessageArrival createMessageArrival(@NotNull MessageContent<?> m, @NotNull Node fromNode, @NotNull Node toNode, int sendTime) {
+        if (sendTime <= time) {
+            throw new IllegalStateException("" + m + ", sendTime=" + sendTime + ", time=" + time);
+        }
+
+        if ((partition.contains(fromNode.nodeId) && partition.contains(toNode.nodeId)) ||
+                (!partition.contains(fromNode.nodeId) && !partition.contains(toNode.nodeId))) {
+            fromNode.msgSent++;
+            fromNode.bytesSent += m.size();
+            int nt = getNetworkDelay(fromNode, toNode);
+            if (nt < msgDiscardTime) {
+                return new MessageArrival(toNode, sendTime + nt);
+            }
+        }
+
+        return null;
     }
 
 
-    public void registerTask(@NotNull final Runnable task, long startAt, @NotNull TN fromNode) {
+    public void registerTask(@NotNull final Runnable task, int startAt, @NotNull TN fromNode) {
         Task sw = new Task(task);
-        msgs.addMsg(new Message(sw, fromNode, fromNode, startAt));
+        msgs.addMsg(new SingeDestMessage(sw, fromNode, fromNode, startAt));
     }
 
-    public void registerPeriodicTask(@NotNull final Runnable task, long startAt, long period, @NotNull TN fromNode) {
+    public void registerPeriodicTask(@NotNull final Runnable task, int startAt, int period, @NotNull TN fromNode) {
         PeriodicTask sw = new PeriodicTask(task, fromNode, period);
-        msgs.addMsg(new Message(sw, fromNode, fromNode, startAt));
+        msgs.addMsg(new SingeDestMessage(sw, fromNode, fromNode, startAt));
     }
 
-    public void registerPeriodicTask(@NotNull final Runnable task, long startAt, long period, @NotNull TN fromNode, @NotNull Condition c) {
+    public void registerPeriodicTask(@NotNull final Runnable task, int startAt, int period, @NotNull TN fromNode, @NotNull Condition c) {
         PeriodicTask sw = new PeriodicTask(task, fromNode, period, c);
-        msgs.addMsg(new Message(sw, fromNode, fromNode, startAt));
+        msgs.addMsg(new SingeDestMessage(sw, fromNode, fromNode, startAt));
     }
 
-    public void registerConditionalTask(@NotNull final Runnable task, long startAt, long duration,
+    public void registerConditionalTask(@NotNull final Runnable task, int startAt, int duration,
                                         @NotNull TN fromNode, @NotNull Condition startIf, @NotNull Condition repeatIf) {
         ConditionalTask ct = new ConditionalTask(startIf, repeatIf, task, startAt, duration, fromNode);
         conditionalTasks.add(ct);
     }
 
-    private @Nullable Message nextMessage(long until) {
+    private @Nullable Message nextMessage(int until) {
         while (time <= until) {
             Message m = msgs.poll(time);
             if (m != null) {
@@ -438,16 +581,17 @@ public class Network<TN extends Node> {
         return null;
     }
 
-    void receiveUntil(long until) {
+    void receiveUntil(int until) {
         //noinspection ConstantConditions
-        long previousTime = time;
+        int previousTime = time;
         Message next = nextMessage(until);
         while (next != null) {
             Message m = next;
-            if (m.arrivalTime != previousTime) {
-                if (time > m.arrivalTime) {
+            if (m.nextArrivalTime() != previousTime) {
+                if (time > m.nextArrivalTime()) {
                     throw new IllegalStateException("time:" + time + ", m:" + m);
                 }
+
                 Iterator<ConditionalTask> it = conditionalTasks.iterator();
                 while (it.hasNext()) {
                     ConditionalTask ct = it.next();
@@ -462,16 +606,20 @@ public class Network<TN extends Node> {
                 }
             }
 
-            if ((partition.contains(m.fromNode.nodeId) && partition.contains(m.toNode.nodeId)) ||
-                    (!partition.contains(m.fromNode.nodeId) && !partition.contains(m.toNode.nodeId))) {
-                if (!(m.messageContent instanceof Network<?>.Task)) {
-                    if (m.messageContent.size() == 0) throw new IllegalStateException();
-                    m.toNode.msgReceived++;
-                    m.toNode.bytesReceived += m.messageContent.size();
+            if ((partition.contains(m.getNextDest().nodeId) && partition.contains(m.getNextDest().nodeId)) ||
+                    (!partition.contains(m.getNextDest().nodeId) && !partition.contains(m.getNextDest().nodeId))) {
+                if (!(m.getMessageContent() instanceof Network<?>.Task)) {
+                    if (m.getMessageContent().size() == 0) throw new IllegalStateException();
+                    m.getNextDest().msgReceived++;
+                    m.getNextDest().bytesReceived += m.getMessageContent().size();
                 }
-                m.messageContent.action(m.fromNode, m.toNode);
+                m.getMessageContent().action(m.getNextDest(), m.getNextDest());
             }
 
+            m.markRead();
+            if (m.hasNextReader()) {
+                msgs.addMsg(m);
+            }
             previousTime = time;
             next = nextMessage(until);
         }
@@ -515,8 +663,8 @@ public class Network<TN extends Node> {
      * - the distance between the nodes: max 200ms
      * - the latency set.
      */
-    long getNetworkDelay(@NotNull Node fromNode, @NotNull Node n) {
-        long rawDelay = 10 + (200 * fromNode.dist(n)) / Node.MAX_DIST;
+    int getNetworkDelay(@NotNull Node fromNode, @NotNull Node n) {
+        int rawDelay = 10 + (200 * fromNode.dist(n)) / Node.MAX_DIST;
         return rawDelay + longDistrib[rd.nextInt(longDistrib.length)];
     }
 
@@ -524,13 +672,13 @@ public class Network<TN extends Node> {
      * @see Network#distribProp
      * @see Network#distribVal
      */
-    public @NotNull Network<TN> setNetworkLatency(@NotNull int[] dP, @NotNull long[] dV) {
+    public @NotNull Network<TN> setNetworkLatency(@NotNull int[] dP, @NotNull int[] dV) {
         int li = 0;
         int cur = 0;
         int sum = 0;
         for (int i = 0; i < dP.length; i++) {
             sum += dP[i];
-            long step = (dV[i] - cur) / dP[i];
+            int step = (dV[i] - cur) / dP[i];
             for (int ii = 0; ii < dP[i]; ii++) {
                 cur += step;
                 longDistrib[li++] = cur;
