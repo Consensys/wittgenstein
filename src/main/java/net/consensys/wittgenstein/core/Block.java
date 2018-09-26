@@ -107,7 +107,7 @@ abstract public class Block<TB extends Block> {
         assert producer != null;
         assert parent != null;
 
-        return  "h:" + height + ", id=" + id +
+        return "h:" + height + ", id=" + id +
                 ", creationTime:" + proposalTime +
                 ", producer=" + producer.nodeId +
                 ", parent:" + parent.id;

@@ -51,7 +51,7 @@ public class Network<TN extends Node> {
 
     /**
      * Time in ms. Using an int limits us to ~555 hours of simulation, it's acceptable, and
-     *  as we have billions of dated objects it saves some memory...
+     * as we have billions of dated objects it saves some memory...
      */
     public int time = 0;
 
@@ -100,7 +100,7 @@ public class Network<TN extends Node> {
             if (aTime < startTime || aTime >= startTime + duration) {
                 throw new IllegalArgumentException();
             }
-            return  (aTime % duration);
+            return (aTime % duration);
         }
 
         public void addMsg(@NotNull Message m) {
@@ -335,7 +335,7 @@ public class Network<TN extends Node> {
 
         private final List<MessageArrival> dests;
         private int curPos = 0;
-        private  @Nullable Message nextSameTime = null;
+        private @Nullable Message nextSameTime = null;
 
 
         public MultipleDestMessage(@NotNull MessageContent messageContent, @NotNull Node fromNode, @NotNull Node toNode, int arrivalTime) {
