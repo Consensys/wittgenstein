@@ -145,7 +145,7 @@ public class OptimisticP2PSignature {
         int[] distribProp = {1, 33, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
         long[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
 
-        OptimisticP2PSignature p2ps = new OptimisticP2PSignature(1500, 751,
+        OptimisticP2PSignature p2ps = new OptimisticP2PSignature(1500, 1351,
                 25, 3);
         p2ps.network.setNetworkLatency(distribProp, distribVal).setMsgDiscardTime(1000);
         //p2ps.network.removeNetworkLatency();

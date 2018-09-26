@@ -10,7 +10,7 @@ import java.util.*;
  * <p>
  * Nothing is executed in parallel, so the code does not have to be multithread safe.
  */
-@SuppressWarnings("WeakerAccess")
+@SuppressWarnings({"WeakerAccess", "unused"})
 public class Network<TN extends Node> {
     final static int duration = 60 * 1000;
 
@@ -66,6 +66,7 @@ public class Network<TN extends Node> {
         return allNodes.get(id);
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     public Network<TN> setMsgDiscardTime(long l) {
         this.msgDiscardTime = l;
         return this;
@@ -84,7 +85,7 @@ public class Network<TN extends Node> {
         final long startTime;
         final long endTime;
         @SuppressWarnings("unchecked")
-        final LinkedList<Message>[] msgsByMs = new LinkedList[duration];
+        final Message[] msgsByMs = new Message[duration];
 
         public MsgsSlot(long startTime) {
             this.startTime = startTime - (startTime % duration);
@@ -100,42 +101,42 @@ public class Network<TN extends Node> {
 
         public void addMsg(@NotNull Message m) {
             int pos = getPos(m.arrivalTime);
-            if (msgsByMs[pos] == null) {
-                msgsByMs[pos] = new LinkedList<>();
-            }
-            msgsByMs[pos].addFirst(m);
+            m.nextSameTime = msgsByMs[pos];
+                msgsByMs[pos] = m;
         }
 
         public @Nullable Message peek(long time) {
             int pos = getPos(time);
-            if (msgsByMs[pos] == null || msgsByMs[pos].isEmpty()) {
-                return null;
-            }
-            return msgsByMs[pos].peekFirst();
+            return msgsByMs[pos];
         }
 
         public @Nullable Message poll(long time) {
             int pos = getPos(time);
-            if (msgsByMs[pos] == null || msgsByMs[pos].isEmpty()) {
-                return null;
+            Message m = msgsByMs[pos];
+            if (m != null) {
+                msgsByMs[pos] = m.nextSameTime;
             }
-            return msgsByMs[pos].pollFirst();
+            return m;
         }
 
         public int size() {
             int size = 0;
             for (int i = 0; i < duration; i++) {
-                if (msgsByMs[i] != null) {
-                    size += msgsByMs[i].size();
+                int ss = 0;
+                Message m = msgsByMs[i];
+                while (m != null) {
+                    ss++;
+                    m = m.nextSameTime;
                 }
+                size += ss;
             }
             return size;
         }
 
         public @Nullable Message peekFirst() {
             for (int i = 0; i < duration; i++) {
-                if (msgsByMs[i] != null && !msgsByMs[i].isEmpty()) {
-                    return msgsByMs[i].peekFirst();
+                if (msgsByMs[i] != null) {
+                    return msgsByMs[i];
                 }
             }
             return null;
@@ -308,17 +309,23 @@ public class Network<TN extends Node> {
         }
     }
 
+    // public for tests
     public static class Message implements Comparable<Message> {
         public final @NotNull MessageContent messageContent;
-        public final @NotNull Node fromNode;
-        public final @NotNull Node toNode;
-        public final long arrivalTime;
+        private final @NotNull Node fromNode;
+        private final @NotNull Node toNode;
+        private final long arrivalTime;
+        private Message nextSameTime = null;
 
         public Message(@NotNull MessageContent messageContent, @NotNull Node fromNode, @NotNull Node toNode, long arrivalTime) {
             this.messageContent = messageContent;
             this.fromNode = fromNode;
             this.toNode = toNode;
             this.arrivalTime = arrivalTime;
+        }
+
+        long getArrivalTime(){
+            return arrivalTime;
         }
 
         @Override
@@ -390,7 +397,7 @@ public class Network<TN extends Node> {
                     fromNode.bytesSent += m.size();
                     long nt = getNetworkDelay(fromNode, n);
                     if (nt < msgDiscardTime) {
-                        msgs.addMsg(new BlockChainNetwork.Message(m, fromNode, n, sendTime + nt));
+                        msgs.addMsg(new Message(m, fromNode, n, sendTime + nt));
                     }
                 }
             }
