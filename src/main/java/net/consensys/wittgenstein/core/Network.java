@@ -24,7 +24,12 @@ public class Network<TN extends Node> {
      * are managed as special messages). Conditional tasks are in a specific list.
      */
     public final List<ConditionalTask> conditionalTasks = new LinkedList<>();
-    protected final Map<Integer, TN> allNodes = new HashMap<>();
+
+
+    /**
+     * Internal variable. Nodes id are sequential & start at zero, so we can we index them in an array.
+     */
+    protected final List<TN> allNodes = new ArrayList<>(2048);
 
     /**
      * By using a single random generator, we have repeatable runs.
@@ -316,7 +321,7 @@ public class Network<TN extends Node> {
     public interface Message {
         @NotNull MessageContent getMessageContent();
 
-        @NotNull Node getNextDest();
+        @NotNull int getNextDestId();
 
         int nextArrivalTime();
 
@@ -327,11 +332,13 @@ public class Network<TN extends Node> {
         void markRead();
 
         boolean hasNextReader();
+
+        int getFromId();
     }
 
     final public static class MultipleDestMessage implements Message {
         public final @NotNull MessageContent messageContent;
-        private final @NotNull Node fromNode;
+        private final int fromNodeId;
 
         private final List<MessageArrival> dests;
         private int curPos = 0;
@@ -339,7 +346,7 @@ public class Network<TN extends Node> {
 
         public MultipleDestMessage(@NotNull MessageContent m, @NotNull Node fromNode, @NotNull List<MessageArrival> dests) {
             this.messageContent = m;
-            this.fromNode = fromNode;
+            this.fromNodeId = fromNode.nodeId;
             this.dests = dests;
         }
 
@@ -347,7 +354,7 @@ public class Network<TN extends Node> {
         public String toString() {
             return "Message{" +
                     "messageContent=" + messageContent +
-                    ", fromNode=" + fromNode +
+                    ", fromNode=" + fromNodeId +
                     ", dests=" + dests +
                     ", curPos=" + curPos +
                     '}';
@@ -358,8 +365,9 @@ public class Network<TN extends Node> {
             return messageContent;
         }
 
-        public @NotNull Node getNextDest() {
-            return dests.get(curPos).dest;
+        @Override
+        public int getNextDestId() {
+            return dests.get(curPos).dest.nodeId;
         }
 
         public int nextArrivalTime() {
@@ -383,12 +391,17 @@ public class Network<TN extends Node> {
         public boolean hasNextReader() {
             return curPos < dests.size();
         }
+
+        @Override
+        public int getFromId() {
+            return fromNodeId;
+        }
     }
 
     final public static class SingeDestMessage implements Message {
         public final @NotNull MessageContent messageContent;
-        private final @NotNull Node fromNode;
-        private final @NotNull Node toNode;
+        private final int fromNodeId;
+        private final int toNodeId;
         private final int arrivalTime;
         private @Nullable Message nextSameTime = null;
 
@@ -405,8 +418,8 @@ public class Network<TN extends Node> {
 
         public SingeDestMessage(@NotNull MessageContent messageContent, @NotNull Node fromNode, @NotNull Node toNode, int arrivalTime) {
             this.messageContent = messageContent;
-            this.fromNode = fromNode;
-            this.toNode = toNode;
+            this.fromNodeId = fromNode.nodeId;
+            this.toNodeId = toNode.nodeId;
             this.arrivalTime = arrivalTime;
         }
 
@@ -414,8 +427,8 @@ public class Network<TN extends Node> {
         public String toString() {
             return "Message{" +
                     "messageContent=" + messageContent +
-                    ", fromNode=" + fromNode +
-                    ", dests=" + toNode +
+                    ", fromNode=" + fromNodeId +
+                    ", dests=" + toNodeId +
                     '}';
         }
 
@@ -424,8 +437,9 @@ public class Network<TN extends Node> {
             return messageContent;
         }
 
-        public @NotNull Node getNextDest() {
-            return toNode;
+        @Override
+        public int getNextDestId() {
+            return toNodeId;
         }
 
         public int nextArrivalTime() {
@@ -437,6 +451,11 @@ public class Network<TN extends Node> {
 
         public boolean hasNextReader() {
             return false;
+        }
+
+        @Override
+        public int getFromId() {
+            return fromNodeId;
         }
     }
 
@@ -459,11 +478,11 @@ public class Network<TN extends Node> {
      * Send a message to all nodes.
      */
     public void sendAll(@NotNull MessageContent m, int sendTime, @NotNull TN fromNode) {
-        send(m, sendTime, fromNode, allNodes.values());
+        send(m, sendTime, fromNode, allNodes);
     }
 
     public void sendAll(@NotNull MessageContent m, @NotNull TN fromNode) {
-        send(m, time + 1, fromNode, allNodes.values());
+        send(m, time + 1, fromNode, allNodes);
     }
 
     /**
@@ -603,14 +622,14 @@ public class Network<TN extends Node> {
                 }
             }
 
-            if ((partition.contains(m.getNextDest().nodeId) && partition.contains(m.getNextDest().nodeId)) ||
-                    (!partition.contains(m.getNextDest().nodeId) && !partition.contains(m.getNextDest().nodeId))) {
+            if ((partition.contains(m.getNextDestId()) && partition.contains(m.getNextDestId())) ||
+                    (!partition.contains(m.getFromId()) && !partition.contains(m.getNextDestId()))) {
                 if (!(m.getMessageContent() instanceof Network<?>.Task)) {
                     if (m.getMessageContent().size() == 0) throw new IllegalStateException();
-                    m.getNextDest().msgReceived++;
-                    m.getNextDest().bytesReceived += m.getMessageContent().size();
+                    allNodes.get(m.getNextDestId()).msgReceived++;
+                    allNodes.get(m.getNextDestId()).bytesReceived += m.getMessageContent().size();
                 }
-                m.getMessageContent().action(m.getNextDest(), m.getNextDest());
+                m.getMessageContent().action(allNodes.get(m.getFromId()), allNodes.get(m.getNextDestId()));
             }
 
             m.markRead();
@@ -624,7 +643,10 @@ public class Network<TN extends Node> {
 
 
     public void addNode(@NotNull TN node) {
-        allNodes.put(node.nodeId, node);
+        while (allNodes.size() <= node.nodeId) {
+            allNodes.add(null);
+        }
+        allNodes.set(node.nodeId, node);
     }
 
 

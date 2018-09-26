@@ -28,7 +28,7 @@ import java.util.List;
  * P2PSigNode{nodeId=999, doneAt=218, sigs=501, msgReceived=19465, msgSent=20041, KBytesSent=1017, KBytesReceived=988}
  * P2PSigNode{nodeId=999, doneAt=220, sigs=501, msgReceived=19501, msgSent=20041, KBytesSent=1017, KBytesReceived=990}
  * P2PSigNode{nodeId=999, doneAt=314, sigs=1000, msgReceived=39049, msgSent=40001, KBytesSent=2031, KBytesReceived=1982}
- * P2PSigNode{nodeId=1499, doneAt=225, sigs=751, msgReceived=35648, msgSent=36799, KBytesSent=1868, KBytesReceived=1810}
+ * P2PSigNode{nodeId=1499, doneAt=227, sigs=751, msgReceived=34754, msgSent=36007, KBytesSent=1828, KBytesReceived=1764}
  * P2PSigNode{nodeId=1999, doneAt=226, sigs=1001, msgReceived=56539, msgSent=59060, KBytesSent=2999, KBytesReceived=2871}
  * P2PSigNode{nodeId=2499, doneAt=240, sigs=1251, msgReceived=53712, msgSent=55045, KBytesSent=2795, KBytesReceived=2727}
  * P2PSigNode{nodeId=2999, doneAt=230, sigs=1501, msgReceived=68177, msgSent=72049, KBytesSent=3658, KBytesReceived=3462}
