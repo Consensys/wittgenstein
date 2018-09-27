@@ -4,6 +4,7 @@ import net.consensys.wittgenstein.core.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 /**
@@ -56,6 +57,16 @@ public class SanFerminBis {
     boolean verbose;
 
     /**
+     * Should we shuffle the list of the candidate sets at each peers
+     */
+    boolean shuffledLists;
+
+    /**
+     * how many candidate do we try to reach at the same time for a given level
+     */
+    int candidateCount;
+
+    /**
      * allNodes represent the full list of nodes present in the system.
      * NOTE: This assumption that a node gets access to the full list can
      * be dismissed, as they do in late sections in the paper. For a first
@@ -72,13 +83,15 @@ public class SanFerminBis {
 
     public SanFerminBis(int totalCount,int powerOfTwo, int threshold,
                               int pairingTime,int signatureSize,
-                        int replyTimeout) {
+                        int replyTimeout,int candidateCount, boolean shuffledLists) {
         this.totalCount = totalCount;
         this.powerOfTwo = powerOfTwo;
         this.threshold = threshold;
         this.pairingTime = pairingTime;
         this.signatureSize = signatureSize;
         this.replyTimeout = replyTimeout;
+        this.candidateCount = candidateCount;
+        this.shuffledLists = shuffledLists;
 
         this.network = new Network<SanFerminNode>();
         this.nb = new Node.NodeBuilderWithPosition(network.rd);
@@ -149,9 +162,6 @@ public class SanFerminBis {
 
     /**
      * Simply pads the binary string id to the exact length = n where N = 2^n
-     * @param originalString
-     * @param length
-     * @return
      */
     public static String leftPadWithZeroes(String originalString, int length) {
         StringBuilder sb = new StringBuilder();
@@ -206,7 +216,7 @@ public class SanFerminBis {
         Set<Integer> pendingNodes;
 
         /**
-         * canSwap indicates whether we are in a state where we can swap at
+         * isSwapping indicates whether we are in a state where we can swap at
          * the current level or not. This is acting as a Lock, since between
          * the time we receive a valid swap and the time we aggregate it, we
          * need to verify it. In the meantime, another valid swap can come
@@ -242,12 +252,6 @@ public class SanFerminBis {
          */
         boolean done;
 
-        /**
-         * outdatedSwaps indicates the number of times a node received a Swap
-         * message for a previous invitation/reply flow at a different level.
-         * The node simply skip it.
-         */
-        int outdatedSwaps;
 
         public SanFerminNode(@NotNull NodeBuilder nb) {
             super(nb);
@@ -275,7 +279,7 @@ public class SanFerminBis {
          */
        public void onSwapRequest(@NotNull SanFerminNode node,
                                  @NotNull SwapRequest request) {
-            if (request.level != this.currentPrefixLength) {
+            if (done || request.level != this.currentPrefixLength) {
                if (this.signatureCache.containsKey(request.level)) {
                    print("sending back CACHED signature at level " +
                            request.level + " to node "+ node.binaryId);
@@ -287,8 +291,6 @@ public class SanFerminBis {
                }
                return;
             }
-            // stop if we already finished protocol
-            if (done) return;
 
             // stop if we are currently verifiying a signature and don't want
            // to aggregate twice
@@ -369,19 +371,23 @@ public class SanFerminBis {
                         "nodes to pick)");
                 return;
             }
-            SanFerminNode next = candidates.get(0);
-            this.pendingNodes.add(next.nodeId);
-            SwapRequest r = new SwapRequest(this.currentPrefixLength,
-                    this.aggValue);
-            print(" send SwapRequest to " + next.binaryId);
-            network.send(r,this,Collections.singleton(next));
 
+            // add ids to the set of pending nodes
+            this.pendingNodes.addAll(candidates.stream().map(n -> n.nodeId).collect(Collectors.toList()));
+
+            SwapRequest r = new SwapRequest(this.currentPrefixLength,
+                        this.aggValue);
+            print(" send SwapRequest to " + String.join(" - ",
+                    candidates.stream().map(n -> n.binaryId).collect(Collectors.toList())));
+            network.send(r,this,candidates);
+
+            int currLevel = this.currentPrefixLength;
             network.registerTask(() -> {
-                // only if we are still waiting on an answer from this node
-                // we try a new one. It can happen that we receive a NO
-                // answer so we already switched to a new one.
-                if (!done && SanFerminNode.this.pendingNodes.contains(next.nodeId)) {
-                    print("TIMEOUT of SwapRequest to " + next.binaryId);
+                // If we are still waiting on an answer for this level, we
+                // try a new one.
+                if (!SanFerminNode.this.done &&
+                        SanFerminNode.this.currentPrefixLength == currLevel) {
+                    print("TIMEOUT of SwapRequest at level " + currLevel);
                     // that means we haven't got a successful reply for that
                     // level so we try another node
                     tryNextNode();
@@ -456,6 +462,12 @@ public class SanFerminBis {
                 list.add(node);
                 candidateSets.put(length,list);
             }
+            if (shuffledLists)
+                candidateSets.replaceAll((k,v) -> {
+                    Collections.shuffle(v,network.rd);
+                    return v;
+                });
+
             for(Map.Entry<Integer,List<SanFerminNode>> entry :
                     candidateSets.entrySet()) {
                 int size = entry.getValue().size();
@@ -491,12 +503,15 @@ public class SanFerminBis {
             // iterate over bitset to find non-asked node yet
             BitSet set = usedCandidates.getOrDefault(currentPrefixLength,
                     new BitSet(0));
-            int i = 0;
+            // we expect to choose candidateCount number of candidates
+            List<SanFerminNode> selectedCandidates = new ArrayList<>(candidateCount);
             boolean found = false;
-            for(i = 0; i < list.size(); i++){
+            for(int i = 0; i < list.size() && selectedCandidates.size() <= candidateCount; i++){
                 if (set.get(i))
                     continue;
                 found = true;
+                selectedCandidates.add(list.get(i));
+                set.set(i);
                 break;
             }
             if (!found) {
@@ -505,12 +520,8 @@ public class SanFerminBis {
                 // contact all of his eligible peers already
                 return Collections.EMPTY_LIST;
             }
-            //Collections.shuffle(list);
-            // set it as a used node
-            set.set(i);
             usedCandidates.put(currentPrefixLength,set);
-            SanFerminNode node = list.get(i);
-            return Collections.singletonList(node);
+            return selectedCandidates;
         }
 
         /**
@@ -543,7 +554,7 @@ public class SanFerminBis {
          */
         private void print(String s) {
             if (verbose)
-                System.out.println("t=" + network.time + ", id=" + this.binaryId +
+                System.out.println("t=" + network.time + ", id=" + this.nodeId +
                         ", lvl=" + this.currentPrefixLength + ", sent=" + this.msgSent +
                         " -> " + s);
         }
@@ -559,7 +570,6 @@ public class SanFerminBis {
                     ", msgSent=" + msgSent +
                     ", KBytesSent=" + bytesSent / 1024 +
                     ", KBytesReceived=" + bytesReceived / 1024 +
-                    ", outdatedSwaps=" + outdatedSwaps +
                     '}';
         }
     }
@@ -625,13 +635,15 @@ public class SanFerminBis {
         long[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
 
         SanFerminBis p2ps;
-        //p2ps = new SanFerminBis(1024, 10,1024/2, 2,48,300);
-        p2ps = new SanFerminBis(8, 3,4, 2,48,300);
+        p2ps = new SanFerminBis(1024, 10,512, 2,48,300,1,false);
+        //p2ps = new SanFerminBis(512, 9,256, 2,48,300,1,false);
+
+        //p2ps = new SanFerminBis(8, 3,4, 2,48,300,3,true);
         p2ps.StartAll();
         p2ps.verbose = true;
         p2ps.network.setNetworkLatency(distribProp, distribVal).setMsgDiscardTime(1000);
         //p2ps.network.removeNetworkLatency();
-        p2ps.network.run(15);
+        p2ps.network.run(30);
         Collections.sort(p2ps.finishedNodes,
                 (n1,n2) -> {  return Long.compare(n1.thresholdAt,n2.thresholdAt);});
         int max = p2ps.finishedNodes.size() < 10 ? p2ps.finishedNodes.size()
@@ -640,3 +652,23 @@ public class SanFerminBis {
             System.out.println(n);
     }
 }
+
+/*
+*
+* ONE NODE WITHOUT SHUFFLING
+SanFerminNode{nodeId=110, thresholdAt=311, doneAt=1085, sigs=8, msgReceived=6, msgSent=6, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
+SanFerminNode{nodeId=100, thresholdAt=345, doneAt=475, sigs=8, msgReceived=7, msgSent=4, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
+SanFerminNode{nodeId=000, thresholdAt=346, doneAt=486, sigs=8, msgReceived=8, msgSent=4, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
+SanFerminNode{nodeId=010, thresholdAt=400, doneAt=1021, sigs=8, msgReceived=6, msgSent=6, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
+SanFerminNode{nodeId=101, thresholdAt=514, doneAt=888, sigs=8, msgReceived=4, msgSent=5, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
+SanFerminNode{nodeId=011, thresholdAt=691, doneAt=1553, sigs=8, msgReceived=3, msgSent=6, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
+SanFerminNode{nodeId=001, thresholdAt=739, doneAt=905, sigs=8, msgReceived=4, msgSent=4, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
+ * ONE NODE WITH SHUFFLING
+ SanFerminNode{nodeId=111, thresholdAt=283, doneAt=751, sigs=8, msgReceived=5, msgSent=4, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
+SanFerminNode{nodeId=101, thresholdAt=286, doneAt=588, sigs=8, msgReceived=5, msgSent=4, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
+SanFerminNode{nodeId=110, thresholdAt=329, doneAt=465, sigs=8, msgReceived=7, msgSent=3, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
+SanFerminNode{nodeId=100, thresholdAt=378, doneAt=805, sigs=8, msgReceived=4, msgSent=4, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
+SanFerminNode{nodeId=011, thresholdAt=685, doneAt=754, sigs=8, msgReceived=6, msgSent=7, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
+SanFerminNode{nodeId=001, thresholdAt=739, doneAt=847, sigs=8, msgReceived=6, msgSent=5, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
+
+ */
