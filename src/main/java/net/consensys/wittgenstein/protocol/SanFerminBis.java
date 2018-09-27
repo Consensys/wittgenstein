@@ -222,7 +222,7 @@ public class SanFerminBis {
          * need to verify it. In the meantime, another valid swap can come
          * and thus we would end up swapping twice at a given level.
          */
-        boolean canSwap;
+        boolean isSwapping;
 
         /**
          *  ----- STATS INFORMATION -----
@@ -283,6 +283,7 @@ public class SanFerminBis {
                if (this.signatureCache.containsKey(request.level)) {
                    print("sending back CACHED signature at level " +
                            request.level + " to node "+ node.binaryId);
+                   // OPTIMISTIC REPLY
                    this.sendSwapReply(node,Status.OK,
                            request.level,
                            this.signatureCache.get(request.level));
@@ -292,12 +293,25 @@ public class SanFerminBis {
                return;
             }
 
-            // stop if we are currently verifiying a signature and don't want
-           // to aggregate twice
-            if (!canSwap) return;
+            // just send the value but dont aggregate it
+           // OPTIMISTIC reply
+            if (isSwapping) {
+                this.sendSwapReply(node,Status.OK,request.level,this.aggValue);
+                return;
+            }
 
-            transition("valid swap REQUEST",node.binaryId,request.level,
-                    request.aggValue);
+           // accept if it is a valid swap !
+           boolean isCandidate =
+                   candidateSets.get(currentPrefixLength).contains(node);
+           boolean goodLevel = request.level == currentPrefixLength;
+           boolean isValidSig = true; // as always :)
+           if (isCandidate && goodLevel && isValidSig) {
+               transition("valid swap REQUEST", node.binaryId, request.level,
+                       request.aggValue);
+           } else {
+               print(" received  INVALID Swap" +
+                       "from " + node.binaryId + " at level " + request.level);
+           }
 
        }
 
@@ -308,7 +322,7 @@ public class SanFerminBis {
                 // future usage if it can be useful and is valid
                 return;
             }
-            if (!canSwap) return;
+            if (isSwapping) return;
 
             switch (reply.status) {
                 case OK:
@@ -430,7 +444,7 @@ public class SanFerminBis {
             }
             this.currentPrefixLength--;
             this.signatureCache.put(this.currentPrefixLength,this.aggValue);
-            this.canSwap = true;
+            this.isSwapping = false;
             this.pendingNodes = new HashSet<>();
             this.tryNextNode();
         }
@@ -531,7 +545,7 @@ public class SanFerminBis {
          */
         private void transition(String type, String fromId, int level,
                                 int toAggregate) {
-            this.canSwap = false;
+            this.isSwapping = true;
             network.registerTask(() -> {
                 int before = this.aggValue;
                 this.aggValue += toAggregate;
@@ -638,14 +652,15 @@ public class SanFerminBis {
 
 
         SanFerminBis p2ps;
-        p2ps = new SanFerminBis(1024, 10,512, 2,48,300,1,false);
+        //p2ps = new SanFerminBis(1024, 10,512, 2,48,300,1,false);
         //p2ps = new SanFerminBis(512, 9,256, 2,48,300,1,false);
 
-        //p2ps = new SanFerminBis(8, 3,4, 2,48,300,3,true);
-        p2ps.StartAll();
+        p2ps = new SanFerminBis(8, 3,4, 2,48,300,3,false);
         p2ps.verbose = true;
-        p2ps.network.setNetworkLatency(distribProp, distribVal).setMsgDiscardTime(1000);
+        p2ps.network.setNetworkLatency(distribProp, distribVal);
         //p2ps.network.removeNetworkLatency();
+
+        p2ps.StartAll();
         p2ps.network.run(30);
         Collections.sort(p2ps.finishedNodes,
                 (n1,n2) -> {  return Long.compare(n1.thresholdAt,n2.thresholdAt);});
@@ -653,6 +668,8 @@ public class SanFerminBis {
                 : 10;
         for(SanFerminNode n: p2ps.finishedNodes.subList(0,max))
             System.out.println(n);
+
+        p2ps.network.printNetworkLatency();
     }
 }
 
