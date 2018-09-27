@@ -1,9 +1,6 @@
 package net.consensys.wittgenstein.protocol;
 
-import net.consensys.wittgenstein.core.Network;
-import net.consensys.wittgenstein.core.Node;
-import net.consensys.wittgenstein.core.P2PNetwork;
-import net.consensys.wittgenstein.core.P2PNode;
+import net.consensys.wittgenstein.core.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -151,7 +148,7 @@ public class P2PSignature {
 
         void sendStateToPeers() {
             State s = new State(this);
-            network.send(s, network.time + 1, this, peers);
+            network.send(s, this, peers);
         }
 
         /**
@@ -236,7 +233,7 @@ public class P2PSignature {
                 toVerify.remove(best);
                 final BitSet tBest = best;
                 network.registerTask(() -> P2PSigNode.this.updateVerifiedSignatures(tBest),
-                        network.time + pairingTime, P2PSigNode.this);
+                        network.time + pairingTime * 2, P2PSigNode.this);
             }
         }
 
@@ -262,7 +259,8 @@ public class P2PSignature {
                     // There is at least one signature we don't have yet
                     final BitSet tBest = agg;
                     network.registerTask(() -> P2PSigNode.this.updateVerifiedSignatures(tBest),
-                            network.time + pairingTime, P2PSigNode.this);
+                            network.time + pairingTime * 2,
+                            P2PSigNode.this);
                 }
             }
         }
@@ -289,10 +287,8 @@ public class P2PSignature {
             last = n;
             network.addNode(n);
             network.registerTask(n::sendStateToPeers, 1, n);
-            //network.registerPeriodicTask(n::sendSigs, 1, 20, n, () -> !n.done);
             network.registerConditionalTask(n::sendSigs, 1, sigsSendPeriod, n, () -> !(n.peersState.isEmpty()), () -> !n.done);
             network.registerConditionalTask(n::checkSigs, 1, pairingTime, n, () -> !n.toVerify.isEmpty(), () -> !n.done);
-            // network.registerPeriodicTask(n::checkSigs, 1, pairingTime, n, () -> !n.done);
         }
 
         network.setPeers();
@@ -303,16 +299,22 @@ public class P2PSignature {
 // P2PSigNode{nodeId=999, doneAt=616, sigs=541, msgReceived=591, msgSent=284, KBytesSent=1008, KBytesReceived=1098}
 
     public static void main(String... args) {
-        int[] distribProp = {1, 33, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
-        int[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
 
-        P2PSignature p2ps = new P2PSignature(1000, 501,
-                25, 3, 20, true);
-        p2ps.network.setNetworkLatency(distribProp, distribVal);
-        //p2ps.network.removeNetworkLatency();
-        P2PSigNode observer = p2ps.init();
-        p2ps.network.run(5);
-        System.out.println(observer);
+        NetworkLatency nl = new NetworkLatency.NetworkLatencyByDistance();
+        System.out.println("" + nl);
+
+        for (int cnt = 10; cnt < 30; cnt += 5) {
+            for (int sendPeriod = 20; sendPeriod < 100; sendPeriod += 20) {
+                for (int nodeCt = 500; nodeCt < 15100; nodeCt += 500) {
+                    P2PSignature p2ps = new P2PSignature(nodeCt, nodeCt / 2 + 1,
+                            cnt, 3, sendPeriod, true);
+                    p2ps.network.setNetworkLatency(nl);
+                    P2PSigNode observer = p2ps.init();
+                    p2ps.network.run(5);
+                    System.out.println("cnt=" + cnt + ", sendPeriod=" + sendPeriod + " " + observer);
+                }
+            }
+        }
     }
 
 }

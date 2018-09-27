@@ -1,10 +1,7 @@
 package net.consensys.wittgenstein.protocol;
 
 
-import net.consensys.wittgenstein.core.Network;
-import net.consensys.wittgenstein.core.Node;
-import net.consensys.wittgenstein.core.P2PNetwork;
-import net.consensys.wittgenstein.core.P2PNode;
+import net.consensys.wittgenstein.core.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -25,6 +22,14 @@ import java.util.List;
  * <p>
  * Sends a lot of message (20K per node) so uses a lot of memory. We can't try more than 4K nodes
  * <p>
+ *
+ * NetworkLatencyByDistance{fix=10, max=200, spread=50%}
+ * P2PSigNode{nodeId=999, doneAt=137, sigs=501, msgReceived=21200, msgSent=21023, KBytesSent=1067, KBytesReceived=1076}
+ * P2PSigNode{nodeId=1999, doneAt=140, sigs=1001, msgReceived=59406, msgSent=59978, KBytesSent=3045, KBytesReceived=3016}
+ * P2PSigNode{nodeId=2999, doneAt=140, sigs=1501, msgReceived=70113, msgSent=72049, KBytesSent=3658, KBytesReceived=3560}
+ * P2PSigNode{nodeId=3999, doneAt=149, sigs=2001, msgReceived=114855, msgSent=118060, KBytesSent=5995, KBytesReceived=5832}
+ * P2PSigNode{nodeId=4999, doneAt=150, sigs=2501, msgReceived=148088, msgSent=149994, KBytesSent=7616, KBytesReceived=7520}
+ *
  * P2PSigNode{nodeId=999, doneAt=218, sigs=501, msgReceived=19465, msgSent=20041, KBytesSent=1017, KBytesReceived=988}
  * P2PSigNode{nodeId=999, doneAt=220, sigs=501, msgReceived=19501, msgSent=20041, KBytesSent=1017, KBytesReceived=990}
  * P2PSigNode{nodeId=999, doneAt=219, sigs=501, msgReceived=20478, msgSent=21012, KBytesSent=1067, KBytesReceived=1039}
@@ -157,15 +162,12 @@ public class OptimisticP2PSignature {
         for (int i = 0; i < distribVal.length; i++)
             distribVal[i] += 50; // more or less the latency we had before the refactoring
 
-        OptimisticP2PSignature p2ps = new OptimisticP2PSignature(1000, 501, 25, 3);
-        p2ps.network.setNetworkLatency(distribProp, distribVal).setMsgDiscardTime(1000);
-        p2ps.network.printNetworkLatency();
-
+        NetworkLatency nl = new NetworkLatency.NetworkLatencyByDistance();
+        System.out.println(""+nl);
 
         for (int i = 1000; i < 8000; i += 1000) {
-            p2ps = new OptimisticP2PSignature(i, i / 2 + 1, 25, 3);
-            p2ps.network.setNetworkLatency(distribProp, distribVal).setMsgDiscardTime(1000);
-            //p2ps.network.removeNetworkLatency();
+            OptimisticP2PSignature p2ps = new OptimisticP2PSignature(i, i / 2 + 1, 25, 3);
+            p2ps.network.setNetworkLatency(nl);
             P2PSigNode observer = p2ps.init();
             p2ps.network.run(5);
             System.out.println(observer);

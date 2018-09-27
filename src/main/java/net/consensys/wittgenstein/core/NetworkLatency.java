@@ -19,13 +19,35 @@ public abstract class NetworkLatency {
      * Latency with: max distance = (10ms + 200ms) +/- 50%, linear
      */
     public static class NetworkLatencyByDistance extends NetworkLatency {
+        public final int fix;
+        public final int max;
+        public final int spread = 50;
+
         @Override
         public int getDelay(@NotNull Node from, @NotNull Node to, int delta) {
             if (delta < 0 || delta > 99) {
                 throw new IllegalArgumentException("delta=" + delta);
             }
-            int rawDelay = 10 + (200 * from.dist(to)) / Node.MAX_DIST;
-            return (int) (rawDelay * (150 - delta) / 100.0);
+            int rawDelay = fix + (max * from.dist(to)) / Node.MAX_DIST;
+            return (int) (rawDelay * (100 + spread - delta) / 100.0);
+        }
+
+        public NetworkLatencyByDistance() {
+            this(10, 200);
+        }
+
+        public NetworkLatencyByDistance(int fix, int max) {
+            this.fix = fix;
+            this.max = max;
+        }
+
+        @Override
+        public String toString() {
+            return "NetworkLatencyByDistance{" +
+                    "fix=" + fix +
+                    ", max=" + max +
+                    ", spread=" + spread +
+                    "%}";
         }
     }
 

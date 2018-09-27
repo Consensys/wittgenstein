@@ -10,7 +10,7 @@ import java.util.*;
  * <p>
  * Nothing is executed in parallel, so the code does not have to be multithread safe.
  */
-@SuppressWarnings({"WeakerAccess", "unused"})
+@SuppressWarnings({"WeakerAccess", "unused", "UnusedReturnValue"})
 public class Network<TN extends Node> {
     final static int duration = 60 * 1000;
 
@@ -565,7 +565,6 @@ public class Network<TN extends Node> {
      * Set the network latency to a min value. This allows
      * to test the protocol independently of the network variability.
      */
-    @SuppressWarnings("UnusedReturnValue")
     public @NotNull Network<TN> removeNetworkLatency() {
         networkLatency = new NetworkLatency.NetworkNoLatency();
         return setNetworkLatency(new NetworkLatency.NetworkNoLatency());
