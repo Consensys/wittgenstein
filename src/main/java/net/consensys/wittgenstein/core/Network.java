@@ -51,8 +51,7 @@ public class Network<TN extends Node> {
      */
     private final int[] distribProp = {16, 18, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
     public final int[] distribVal = {250, 500, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750, 4500, 6000, 8500, 9750, 10000};
-    private final int[] longDistrib = new int[100];
-
+    private NetworkLatency networkLatency = new NetworkLatency.MeasuredNetworkLatency(distribProp, distribVal);
 
     /**
      * Time in ms. Using an int limits us to ~555 hours of simulation, it's acceptable, and
@@ -67,7 +66,6 @@ public class Network<TN extends Node> {
 
     public Network(long randomSeed) {
         this.rd = new Random(randomSeed);
-        setNetworkLatency(distribProp, distribVal);
     }
 
 
@@ -312,7 +310,7 @@ public class Network<TN extends Node> {
         public void action(@NotNull Node from, @NotNull Node to) {
             r.run();
             if (continuationCondition.check()) {
-                msgs.addMsg(new SingeDestMessage(this, sender, sender, time + period));
+                msgs.addMsg(new SingleDestMessage(this, sender, sender, time + period));
             }
         }
     }
@@ -321,7 +319,7 @@ public class Network<TN extends Node> {
     public interface Message {
         @NotNull MessageContent getMessageContent();
 
-        @NotNull int getNextDestId();
+        int getNextDestId();
 
         int nextArrivalTime();
 
@@ -398,7 +396,7 @@ public class Network<TN extends Node> {
         }
     }
 
-    final public static class SingeDestMessage implements Message {
+    final public static class SingleDestMessage implements Message {
         public final @NotNull MessageContent messageContent;
         private final int fromNodeId;
         private final int toNodeId;
@@ -416,7 +414,7 @@ public class Network<TN extends Node> {
             this.nextSameTime = nextSameTime;
         }
 
-        public SingeDestMessage(@NotNull MessageContent messageContent, @NotNull Node fromNode, @NotNull Node toNode, int arrivalTime) {
+        public SingleDestMessage(@NotNull MessageContent messageContent, @NotNull Node fromNode, @NotNull Node toNode, int arrivalTime) {
             this.messageContent = messageContent;
             this.fromNodeId = fromNode.nodeId;
             this.toNodeId = toNode.nodeId;
@@ -503,7 +501,7 @@ public class Network<TN extends Node> {
     public void send(@NotNull MessageContent mc, int sendTime, @NotNull TN fromNode, @NotNull TN toNode) {
         MessageArrival ms = createMessageArrival(mc, fromNode, toNode, sendTime);
         if (ms != null) {
-            Message m = new SingeDestMessage(mc, fromNode, toNode, ms.arrival);
+            Message m = new SingleDestMessage(mc, fromNode, toNode, ms.arrival);
             msgs.addMsg(m);
         }
     }
@@ -535,7 +533,7 @@ public class Network<TN extends Node> {
         if (!da.isEmpty()) {
             if (da.size() == 1) {
                 MessageArrival ms = da.get(0);
-                Message msg = new SingeDestMessage(m, fromNode, ms.dest, ms.arrival);
+                Message msg = new SingleDestMessage(m, fromNode, ms.dest, ms.arrival);
                 msgs.addMsg(msg);
             } else {
                 Collections.sort(da);
@@ -554,7 +552,7 @@ public class Network<TN extends Node> {
                 (!partition.contains(fromNode.nodeId) && !partition.contains(toNode.nodeId))) {
             fromNode.msgSent++;
             fromNode.bytesSent += m.size();
-            int nt = getNetworkDelay(fromNode, toNode);
+            int nt = networkLatency.getDelay(fromNode, toNode, rd.nextInt(100));
             if (nt < msgDiscardTime) {
                 return new MessageArrival(toNode, sendTime + nt);
             }
@@ -563,20 +561,19 @@ public class Network<TN extends Node> {
         return null;
     }
 
-
     public void registerTask(@NotNull final Runnable task, int startAt, @NotNull TN fromNode) {
         Task sw = new Task(task);
-        msgs.addMsg(new SingeDestMessage(sw, fromNode, fromNode, startAt));
+        msgs.addMsg(new SingleDestMessage(sw, fromNode, fromNode, startAt));
     }
 
     public void registerPeriodicTask(@NotNull final Runnable task, int startAt, int period, @NotNull TN fromNode) {
         PeriodicTask sw = new PeriodicTask(task, fromNode, period);
-        msgs.addMsg(new SingeDestMessage(sw, fromNode, fromNode, startAt));
+        msgs.addMsg(new SingleDestMessage(sw, fromNode, fromNode, startAt));
     }
 
     public void registerPeriodicTask(@NotNull final Runnable task, int startAt, int period, @NotNull TN fromNode, @NotNull Condition c) {
         PeriodicTask sw = new PeriodicTask(task, fromNode, period, c);
-        msgs.addMsg(new SingeDestMessage(sw, fromNode, fromNode, startAt));
+        msgs.addMsg(new SingleDestMessage(sw, fromNode, fromNode, startAt));
     }
 
     public void registerConditionalTask(@NotNull final Runnable task, int startAt, int duration,
@@ -656,57 +653,22 @@ public class Network<TN extends Node> {
      */
     @SuppressWarnings("UnusedReturnValue")
     public @NotNull Network<TN> removeNetworkLatency() {
-        for (int i = 0; i < 100; i++) {
-            longDistrib[i] = 1;
-        }
+        networkLatency = new NetworkLatency.NetworkNoLatency();
         return this;
     }
 
+    public @NotNull Network<TN> setNetworkLatency(int[] distribProp, int[] distribVal) {
+        networkLatency = new NetworkLatency.MeasuredNetworkLatency(distribProp, distribVal);
+        return this;
+    }
+
+    public @NotNull Network<TN> setNetworkLatency(@NotNull NetworkLatency networkLatency) {
+        this.networkLatency = networkLatency;
+        return this;
+    }
 
     public void printNetworkLatency() {
-        System.out.println("BlockChainNetwork latency: time to receive a message:");
-
-        for (int s = 1, cur = 0; cur < 100; s++) {
-            int size = 0;
-            while (cur < longDistrib.length && longDistrib[cur] < s * 1000) {
-                size++;
-                cur++;
-            }
-            System.out.println(s + " second" + (s > 1 ? "s: " : ": ") + size + "%, cumulative=" + cur + "%");
-        }
-    }
-
-    /**
-     * We take into account:
-     * - a fix cost: 10ms
-     * - the distance between the nodes: max 200ms
-     * - the latency set.
-     */
-    int getNetworkDelay(@NotNull Node fromNode, @NotNull Node n) {
-        int rawDelay = 10 + (200 * fromNode.dist(n)) / Node.MAX_DIST;
-        return rawDelay + longDistrib[rd.nextInt(longDistrib.length)];
-    }
-
-    /**
-     * @see Network#distribProp
-     * @see Network#distribVal
-     */
-    public @NotNull Network<TN> setNetworkLatency(@NotNull int[] dP, @NotNull int[] dV) {
-        int li = 0;
-        int cur = 0;
-        int sum = 0;
-        for (int i = 0; i < dP.length; i++) {
-            sum += dP[i];
-            int step = (dV[i] - cur) / dP[i];
-            for (int ii = 0; ii < dP[i]; ii++) {
-                cur += step;
-                longDistrib[li++] = cur;
-            }
-        }
-
-        if (sum != 100) throw new IllegalArgumentException();
-        if (li != 100) throw new IllegalArgumentException();
-        return this;
+        System.out.println("" + networkLatency);
     }
 
 
