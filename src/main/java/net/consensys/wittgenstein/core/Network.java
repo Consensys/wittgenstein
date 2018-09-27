@@ -49,8 +49,8 @@ public class Network<TN extends Node> {
      * It should be read like this:
      * 16% of the messages will be received in 250ms or less
      */
-    private final int[] distribProp = {16, 18, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
-    public final int[] distribVal = {250, 500, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750, 4500, 6000, 8500, 9750, 10000};
+    public static final int[] distribProp = {16, 18, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
+    public static final int[] distribVal = {250, 500, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750, 4500, 6000, 8500, 9750, 10000};
     private NetworkLatency networkLatency = new NetworkLatency.MeasuredNetworkLatency(distribProp, distribVal);
 
     /**
@@ -88,7 +88,7 @@ public class Network<TN extends Node> {
      * The second idea is to have a repeatable run when there are multiple messages arriving
      * at the same millisecond.
      */
-    private final static class MsgsSlot {
+    private final class MsgsSlot {
         final int startTime;
         final int endTime;
         @SuppressWarnings("unchecked")
@@ -107,7 +107,7 @@ public class Network<TN extends Node> {
         }
 
         public void addMsg(@NotNull Message m) {
-            int pos = getPos(m.nextArrivalTime());
+            int pos = getPos(m.nextArrivalTime(Network.this));
             m.setNextSameTime(msgsByMs[pos]);
             msgsByMs[pos] = m;
         }
@@ -185,7 +185,7 @@ public class Network<TN extends Node> {
         }
 
         public void addMsg(@NotNull Message m) {
-            findSlot(m.nextArrivalTime()).addMsg(m);
+            findSlot(m.nextArrivalTime(Network.this)).addMsg(m);
         }
 
         public @Nullable Message peek(int time) {
@@ -211,11 +211,22 @@ public class Network<TN extends Node> {
             }
             return null;
         }
+
+        /**
+         * @return the first message in the queue, null if the queue is empty.
+         */
+        public @Nullable Message pollFirst() {
+            Message m = peekFirst();
+            return m == null ? null : poll(m.nextArrivalTime(Network.this));
+        }
     }
 
 
     /**
      * The generic message that goes on a network. Triggers an 'action' on reception.
+     * <p>
+     * Object of this class must be immutable. Especially, MessageContent is shared between
+     * the messages for messages sent to multiple nodes.
      */
     public abstract static class MessageContent<TN extends Node> {
         public abstract void action(@NotNull TN from, @NotNull TN to);
@@ -321,7 +332,7 @@ public class Network<TN extends Node> {
 
         int getNextDestId();
 
-        int nextArrivalTime();
+        int nextArrivalTime(@NotNull Network network);
 
         @Nullable Message getNextSameTime();
 
@@ -338,14 +349,20 @@ public class Network<TN extends Node> {
         public final @NotNull MessageContent messageContent;
         private final int fromNodeId;
 
-        private final List<MessageArrival> dests;
+        private final int[] destIds;
+        private int sendTime;
         private int curPos = 0;
         private @Nullable Message nextSameTime = null;
 
-        public MultipleDestMessage(@NotNull MessageContent m, @NotNull Node fromNode, @NotNull List<MessageArrival> dests) {
+        public MultipleDestMessage(@NotNull MessageContent m, @NotNull Node fromNode, @NotNull List<MessageArrival> dests, int sendTime) {
             this.messageContent = m;
             this.fromNodeId = fromNode.nodeId;
-            this.dests = dests;
+            this.destIds = new int[dests.size()];
+
+            for (int i = 0; i < destIds.length; i++) {
+                destIds[i] = dests.get(i).dest.nodeId;
+            }
+            this.sendTime = sendTime;
         }
 
         @Override
@@ -353,7 +370,7 @@ public class Network<TN extends Node> {
             return "Message{" +
                     "messageContent=" + messageContent +
                     ", fromNode=" + fromNodeId +
-                    ", dests=" + dests +
+                    ", dests=" + Arrays.toString(destIds) +
                     ", curPos=" + curPos +
                     '}';
         }
@@ -365,11 +382,15 @@ public class Network<TN extends Node> {
 
         @Override
         public int getNextDestId() {
-            return dests.get(curPos).dest.nodeId;
+            return destIds[curPos];
         }
 
-        public int nextArrivalTime() {
-            return dests.get(curPos).arrival;
+        public int nextArrivalTime(@NotNull Network network) {
+            return sendTime + network.networkLatency.getDelay(
+                    (Node) network.allNodes.get(this.fromNodeId),
+                    (Node) network.allNodes.get(this.getNextDestId()),
+                    network.getPseudoRandom(this.getNextDestId(), sendTime)
+            );
         }
 
         @Override
@@ -387,7 +408,7 @@ public class Network<TN extends Node> {
         }
 
         public boolean hasNextReader() {
-            return curPos < dests.size();
+            return curPos < destIds.length;
         }
 
         @Override
@@ -426,7 +447,7 @@ public class Network<TN extends Node> {
             return "Message{" +
                     "messageContent=" + messageContent +
                     ", fromNode=" + fromNodeId +
-                    ", dests=" + toNodeId +
+                    ", dest=" + toNodeId +
                     '}';
         }
 
@@ -440,7 +461,7 @@ public class Network<TN extends Node> {
             return toNodeId;
         }
 
-        public int nextArrivalTime() {
+        public int nextArrivalTime(@NotNull Network network) {
             return arrivalTime;
         }
 
@@ -522,13 +543,7 @@ public class Network<TN extends Node> {
     }
 
     public void send(@NotNull MessageContent m, int sendTime, @NotNull TN fromNode, @NotNull Collection<? extends Node> dests) {
-        ArrayList<MessageArrival> da = new ArrayList<>(dests.size());
-        for (Node n : dests) {
-            MessageArrival ma = createMessageArrival(m, fromNode, n, sendTime);
-            if (ma != null) {
-                da.add(ma);
-            }
-        }
+       List<MessageArrival> da = createMessageArrivals(m, sendTime, fromNode, dests);
 
         if (!da.isEmpty()) {
             if (da.size() == 1) {
@@ -536,12 +551,25 @@ public class Network<TN extends Node> {
                 Message msg = new SingleDestMessage(m, fromNode, ms.dest, ms.arrival);
                 msgs.addMsg(msg);
             } else {
-                Collections.sort(da);
-                Message msg = new MultipleDestMessage(m, fromNode, da);
+                Message msg = new MultipleDestMessage(m, fromNode, da, sendTime);
                 msgs.addMsg(msg);
             }
         }
     }
+
+    List<MessageArrival> createMessageArrivals(@NotNull MessageContent m, int sendTime, @NotNull TN fromNode, @NotNull Collection<? extends Node> dests) {
+        ArrayList<MessageArrival> da = new ArrayList<>(dests.size());
+        for (Node n : dests) {
+            MessageArrival ma = createMessageArrival(m, fromNode, n, sendTime);
+            if (ma != null) {
+                da.add(ma);
+            }
+        }
+        Collections.sort(da);
+
+        return da;
+    }
+
 
     private MessageArrival createMessageArrival(@NotNull MessageContent<?> m, @NotNull Node fromNode, @NotNull Node toNode, int sendTime) {
         if (sendTime <= time) {
@@ -552,13 +580,28 @@ public class Network<TN extends Node> {
                 (!partition.contains(fromNode.nodeId) && !partition.contains(toNode.nodeId))) {
             fromNode.msgSent++;
             fromNode.bytesSent += m.size();
-            int nt = networkLatency.getDelay(fromNode, toNode, rd.nextInt(100));
+            int nt = networkLatency.getDelay(fromNode, toNode, getPseudoRandom(toNode.nodeId, sendTime));
             if (nt < msgDiscardTime) {
                 return new MessageArrival(toNode, sendTime + nt);
             }
         }
 
         return null;
+    }
+
+    /**
+     * @return always the same number, between 0 and 99, uniformly distributed.
+     */
+    private int getPseudoRandom(int nodeId, int sendTime) {
+        int x = hash(nodeId) ^ hash(sendTime);
+        return Math.abs(x % 100);
+    }
+
+    private static int hash(int a) {
+        a ^= (a << 13);
+        a ^= (a >>> 17);
+        a ^= (a << 5);
+        return a;
     }
 
     public void registerTask(@NotNull final Runnable task, int startAt, @NotNull TN fromNode) {
@@ -600,9 +643,9 @@ public class Network<TN extends Node> {
         Message next = nextMessage(until);
         while (next != null) {
             Message m = next;
-            if (m.nextArrivalTime() != previousTime) {
-                if (time > m.nextArrivalTime()) {
-                    throw new IllegalStateException("time:" + time + ", m:" + m);
+            if (m.nextArrivalTime(this) != previousTime) {
+                if (time > m.nextArrivalTime(this)) {
+                    throw new IllegalStateException("time:" + time + ", arrival=" + m.nextArrivalTime(this) + ", m:" + m);
                 }
 
                 Iterator<ConditionalTask> it = conditionalTasks.iterator();
@@ -654,15 +697,18 @@ public class Network<TN extends Node> {
     @SuppressWarnings("UnusedReturnValue")
     public @NotNull Network<TN> removeNetworkLatency() {
         networkLatency = new NetworkLatency.NetworkNoLatency();
-        return this;
+        return setNetworkLatency(new NetworkLatency.NetworkNoLatency());
     }
 
     public @NotNull Network<TN> setNetworkLatency(int[] distribProp, int[] distribVal) {
-        networkLatency = new NetworkLatency.MeasuredNetworkLatency(distribProp, distribVal);
-        return this;
+        return setNetworkLatency(new NetworkLatency.MeasuredNetworkLatency(distribProp, distribVal));
     }
 
     public @NotNull Network<TN> setNetworkLatency(@NotNull NetworkLatency networkLatency) {
+        if (msgs.size() != 0) {
+            throw new IllegalStateException("You can't change the latency while the system as on going messages");
+        }
+
         this.networkLatency = networkLatency;
         return this;
     }

@@ -6,6 +6,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -88,5 +90,80 @@ public class TestNetwork {
         Assert.assertEquals(0, network.msgs.size());
         Assert.assertEquals(6, a1.get());
         Assert.assertEquals(14, a2.get());
+    }
+
+
+    @Test
+    public void testMultipleMessage() {
+        AtomicInteger ab = new AtomicInteger(0);
+        Network.MessageContent<Node> act = new Network.MessageContent<Node>() {
+            @Override
+            public void action(@NotNull Node from, @NotNull Node to) {
+                ab.incrementAndGet();
+            }
+        };
+
+        network.removeNetworkLatency();
+        network.send(act, 1, n0, Arrays.asList(n1, n2, n3));
+
+        network.runMs(2);
+        Assert.assertEquals(3, ab.get());
+
+        Assert.assertEquals(0, network.msgs.size());
+    }
+
+    @Test
+    public void testSortedArrivals() {
+        Network.MessageContent<Node> act = new Network.MessageContent<Node>() {
+            @Override
+            public void action(@NotNull Node from, @NotNull Node to) {
+            }
+        };
+
+        network.send(act, 1, n0, Arrays.asList(n1, n2, n3));
+
+        Network.Message m = network.msgs.peekFirst();
+        Assert.assertNotNull(m);
+
+        HashSet<Integer> dests = new HashSet<>(Arrays.asList(1, 2, 3));
+
+        int l = m.nextArrivalTime(network);
+        Assert.assertTrue(dests.contains(m.getNextDestId()));
+        dests.remove(m.getNextDestId());
+
+        m.markRead();
+        Assert.assertTrue(m.hasNextReader());
+        Assert.assertTrue(m.nextArrivalTime(network) >= l);
+        Assert.assertTrue(dests.contains(m.getNextDestId()));
+        dests.remove(m.getNextDestId());
+        l = m.nextArrivalTime(network);
+
+        m.markRead();
+        Assert.assertTrue(m.hasNextReader());
+        Assert.assertTrue(m.nextArrivalTime(network) >= l);
+        Assert.assertTrue(dests.contains(m.getNextDestId()));
+
+        m.markRead();
+        Assert.assertFalse(m.hasNextReader());
+    }
+
+    @Test
+    public void testDelays() {
+        network.setNetworkLatency(Network.distribProp, Network.distribVal);
+        Network.MessageContent<Node> act = new Network.MessageContent<Node>() {
+            @Override
+            public void action(@NotNull Node from, @NotNull Node to) {
+            }
+        };
+
+        network.send(act, 1, n0, Arrays.asList(n1, n2, n3));
+        List<Network.MessageArrival> mas = network.createMessageArrivals(act, 1, n0, Arrays.asList(n1, n2, n3));
+
+        Network.Message m = network.msgs.pollFirst();
+        for (Network.MessageArrival ma : mas) {
+            Assert.assertNotNull(m);
+            Assert.assertEquals(ma.arrival, m.nextArrivalTime(network));
+            m.markRead();
+        }
     }
 }

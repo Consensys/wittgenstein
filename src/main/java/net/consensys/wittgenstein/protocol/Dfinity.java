@@ -406,6 +406,10 @@ public class Dfinity {
             rds.add(n);
             network.addNode(n);
         }
+
+        for (RandomBeaconNode n : rds) {
+            n.sendRB();
+        }
     }
 
 
@@ -414,7 +418,6 @@ public class Dfinity {
         bc.init();
         //bc.network.removeNetworkLatency();
 
-        for (RandomBeaconNode n : bc.rds) n.sendRB();
         bc.network.run(50);
 
         List<Set<? extends Node>> lns = new ArrayList<>();
