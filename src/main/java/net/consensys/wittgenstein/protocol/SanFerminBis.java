@@ -107,7 +107,7 @@ public class SanFerminBis {
      */
     public void StartAll() {
         for (SanFerminNode n : allNodes)
-            network.registerTask(n::swapNextLevel, 1, n);
+            network.registerTask(n::goNextLevel, 1, n);
     }
 
     /**
@@ -188,23 +188,51 @@ public class SanFerminBis {
          * through different prefix length.
          */
         HashMap<Integer, List<SanFerminNode>> candidateSets;
+        /**
+         * BitSet to save which node have we sent swaprequest so far
+         */
+        HashMap<Integer, BitSet> usedCandidates;
 
         /**
-         * Id of the node we have sent a SwapRequest to. Only one node at a
-         * time is asked to swap.
+         * Set of aggregated signatures saved. Since it's only a logarithmic
+         * number it's not much to save (log_2(20k) = 15)
          */
-        int pendingNode;
+        HashMap<Integer,Integer> signatureCache;
+
+        /**
+         * Ids of the nodes we have sent a SwapRequest to. Different
+         * strategies to pick the nodes are detailled in `pickNextNodes`
+         */
+        Set<Integer> pendingNodes;
+
+        /**
+         * canSwap indicates whether we are in a state where we can swap at
+         * the current level or not. This is acting as a Lock, since between
+         * the time we receive a valid swap and the time we aggregate it, we
+         * need to verify it. In the meantime, another valid swap can come
+         * and thus we would end up swapping twice at a given level.
+         */
+        boolean canSwap;
 
         /**
          *  ----- STATS INFORMATION -----
          */
         /**
-         * Toy field that keeps increasing as the node do more swaps. It
+         * Integer field that simulate an aggregated signature badly. It keeps
+         * increasing as the node do more swaps. It
          * assumes each node has the value "1" and the aggregation operation
          * is the addition.
          */
         int aggValue;
 
+        /**
+         * time when threshold of signature is reached
+         */
+        long thresholdAt;
+        /**
+         * have we reached the threshold or not
+         */
+        boolean thresholdDone;
         /**
          * time when this node has finished the protocol entirely
          */
@@ -227,11 +255,14 @@ public class SanFerminBis {
                     leftPadWithZeroes(Integer.toBinaryString(this.nodeId),
                             powerOfTwo);
             this.candidateSets = new HashMap<>();
+            this.usedCandidates = new HashMap<>();
             this.done = false;
+            this.thresholdDone = false;
             this.aggValue = 1;
             // node should start at n-1 with N = 2^n
-            // this counter gets decreased with `swapNextLevel`.
+            // this counter gets decreased with `goNextLevel`.
             this.currentPrefixLength = powerOfTwo;
+            this.signatureCache = new HashMap<>();
         }
 
         /**
@@ -244,56 +275,74 @@ public class SanFerminBis {
          */
        public void onSwapRequest(@NotNull SanFerminNode node,
                                  @NotNull SwapRequest request) {
-
-            if (request.level != this.currentPrefixLength || done) {
-                this.sendSwapReply(node,Status.NO);
-                return;
+            if (request.level != this.currentPrefixLength) {
+               if (this.signatureCache.containsKey(request.level)) {
+                   print("sending back CACHED signature at level " +
+                           request.level + " to node "+ node.binaryId);
+                   this.sendSwapReply(node,Status.OK,
+                           request.level,
+                           this.signatureCache.get(request.level));
+               } else {
+                   this.sendSwapReply(node,Status.NO,0);
+               }
+               return;
             }
-            // indication that we should not accept replies anymore for this
-           // round since we are doing already the aggregation + pairing
-            this.pendingNode = -1;
-            // performs the swap , reply with our own agg value and move on
-           network.registerTask( () -> {
-               SanFerminNode.this.sendSwapReply(node,Status.OK);
-               int before = SanFerminNode.this.aggValue;
-               SanFerminNode.this.aggValue += request.aggValue;
-               print(" received valid swap request lvl="+request.level + " from "
-                       + node.binaryId +
-                       " aggValue " + before + " -> " + SanFerminNode.this.aggValue);
-               this.swapNextLevel();
-           },network.time + pairingTime, SanFerminNode.this);
+            // stop if we already finished protocol
+            if (done) return;
+
+            // stop if we are currently verifiying a signature and don't want
+           // to aggregate twice
+            if (!canSwap) return;
+
+            transition("valid swap REQUEST",node.binaryId,request.level,
+                    request.aggValue);
+
        }
 
         public void onSwapReply(@NotNull SanFerminNode from,
                             @NotNull SwapReply reply) {
             if (reply.level != this.currentPrefixLength || done ) {
-                // invalid or outdated request
+                // TODO optimization here to potentially save the value for
+                // future usage if it can be useful and is valid
                 return;
             }
+            if (!canSwap) return;
+
             switch (reply.status) {
                 case OK:
-                    if (this.pendingNode != from.nodeId) {
-                        // even though we could swap, it may result in
-                        // invalid aggregated data etc, since we can already
-                        // swap upon a request. So we SKIP.
+                    // We must verify it contains a valid
+                    // aggregated signature, that it comes from a peer
+                    // present in your candidate set at this prefix level,
+                    // and that the prefix level is the same as this node's.
+                    // we dont want to aggregate twice so we have to check
+                    // pendingNode (acts like a lock).
+                    if (!this.pendingNodes.contains(from.nodeId)) {
+                        boolean isCandidate =
+                                candidateSets.get(currentPrefixLength).contains(from);
+                        boolean goodLevel = reply.level == currentPrefixLength;
+                        boolean isValidSig = true; // as always :)
+                        if (isCandidate && goodLevel && isValidSig) {
+                            transition("UNEXPECTED swap REPLY",from.binaryId,
+                                    reply.level,reply.aggValue);
+                        } else {
+                            print(" received UNEXPECTED - WRONG swap reply " +
+                                    "from " + from.binaryId + " at level " + reply.level);
+                        }
                         return;
                     }
-                    this.pendingNode = -1; // tricks to say we don't accept
-                    // anymore aggregation now.
-                    network.registerTask(() -> {
-                        int before = this.aggValue;
-                        this.aggValue += reply.aggValue;
-                        print( " received valid swap REPLY lvl="+reply.level+
-                                        " from " + from.binaryId
-                                + " aggValue " + before + " -> " + this.aggValue);
-                        this.swapNextLevel();
-                    },network.time + pairingTime, SanFerminNode.this);
+                    // good valid honest answer !
+                    transition("valid swap REPLY",from.binaryId,reply.level,
+                            reply.aggValue);
+
                     break;
                 case NO:
                     print(" received SwapReply NO from " + from.binaryId);
                     // only try the next one if this is an expected reply
-                    if (this.pendingNode == from.nodeId)
+                    if (this.pendingNodes.contains(from.nodeId)) {
                         tryNextNode();
+                    } else {
+                        print(" UNEXPECTED NO reply from " + from.binaryId);
+                    }
                     break;
                 default:
                     throw new Error("That should never happen");
@@ -307,33 +356,43 @@ public class SanFerminBis {
          * tryNextNode() will be called again.
          */
         private void tryNextNode() {
-            SanFerminNode next = this.pickNextNode();
-            if (next == null) {
+            // TODO move to fully multiple node mode ! but git commit before
+            List<SanFerminNode> candidates = this.pickNextNodes();
+            if (candidates.size() == 0) {
+                // when malicious actors are introduced or some nodes are
+                // failing this case can happen. In that case, the node
+                // should go to the next level since he has nothing better to
+                // do. The final aggregated signature will miss this level
+                // but it may still reach the threshold and can be completed
+                // later on, through the help of a bit field.
                 print(" is OUT (no more " +
                         "nodes to pick)");
                 return;
             }
-            this.pendingNode = next.nodeId;
+            SanFerminNode next = candidates.get(0);
+            this.pendingNodes.add(next.nodeId);
             SwapRequest r = new SwapRequest(this.currentPrefixLength,
                     this.aggValue);
+            print(" send SwapRequest to " + next.binaryId);
+            network.send(r,this,Collections.singleton(next));
+
             network.registerTask(() -> {
                 // only if we are still waiting on an answer from this node
                 // we try a new one. It can happen that we receive a NO
                 // answer so we already switched to a new one.
-                if (!done && SanFerminNode.this.pendingNode == next.nodeId) {
+                if (!done && SanFerminNode.this.pendingNodes.contains(next.nodeId)) {
                     print("TIMEOUT of SwapRequest to " + next.binaryId);
                     // that means we haven't got a successful reply for that
                     // level so we try another node
                     tryNextNode();
                 }
             },network.time + replyTimeout, SanFerminNode.this);
-            print(" send SwapRequest to " + next.binaryId);
-            network.send(r,this,Collections.singleton(next));
+
         }
 
 
         /**
-         * swapNextLevel reduces the required length of common prefix of one,
+         * goNextLevel reduces the required length of common prefix of one,
          * computes the new set of potential nodes and sends an invitation to
          * the "next" one. There are many ways to select the order of which
          * node to choose. In case the number of nodes is 2^n, there is a
@@ -343,25 +402,40 @@ public class SanFerminBis {
          * "chosen" node will likely already have swapped. See
          * `pickNextNode` for more information.
          */
-        private void swapNextLevel() {
+        private void goNextLevel() {
+
             if (done) {return;}
+
             boolean enoughSigs = this.aggValue >= threshold;
             boolean noMoreSwap = this.currentPrefixLength == 0;
-            if (enoughSigs || noMoreSwap) {
+
+            if (enoughSigs && !thresholdDone) {
+                print(" --- THRESHOLD REACHED --- ");
+                thresholdDone = true;
+                thresholdAt = network.time + pairingTime *2;
+            }
+
+            if (noMoreSwap && !done) {
                 print(" --- FINISHED ---- protocol");
-                // we have finished
                 doneAt = network.time + pairingTime * 2;
                 finishedNodes.add(this);
-                if (noMoreSwap) done = true;
+                done = true;
                 return;
             }
             this.currentPrefixLength--;
+            this.signatureCache.put(this.currentPrefixLength,this.aggValue);
+            this.canSwap = true;
+            this.pendingNodes = new HashSet<>();
             this.tryNextNode();
         }
 
-        private void sendSwapReply(@NotNull SanFerminNode n, Status s) {
-            SwapReply r = new SwapReply(s,this.currentPrefixLength,
-                    this.aggValue);
+        private void sendSwapReply(@NotNull SanFerminNode n, Status s,
+                                   int value) {
+            sendSwapReply(n,s,this.currentPrefixLength,value);
+        }
+        private void sendSwapReply(@NotNull SanFerminNode n, Status s,
+                                   int level, int value) {
+            SwapReply r = new SwapReply(s,level,value);
             network.send(r,SanFerminNode.this,Collections.singleton(n));
         }
 
@@ -378,9 +452,14 @@ public class SanFerminBis {
                 }
                 int length = LengthLCP(this,node);
                 List<SanFerminNode> list = candidateSets.getOrDefault(length,
-                        new LinkedList<SanFerminNode>());
+                        new LinkedList<>());
                 list.add(node);
                 candidateSets.put(length,list);
+            }
+            for(Map.Entry<Integer,List<SanFerminNode>> entry :
+                    candidateSets.entrySet()) {
+                int size = entry.getValue().size();
+                usedCandidates.put(entry.getKey(),new BitSet(size));
             }
         }
 
@@ -388,32 +467,68 @@ public class SanFerminBis {
          * One big question is which node
          * to chose amongst the list so that it minimizes the number of "NO"
          * replies,ie. so that it minimizes the number of nodes who contact
-         * another node who already swapped at this level. This
+         * another node who already swapped at this level.
+         */
+        private List<SanFerminNode> pickNextNodes() {
+            return pickNextNode1();
+        }
+
+        /**
+         * This
          * implementation randomly shuffle the list and pick the first one,
          * and perform the same steps for further nodes if the first one does
          * not work. There are tons of ways to perform this decision-making,
          * some which brings better guarantees probably. This PoC chooses to
          * use a random assignement, as most often, uniformity performs
          * better in computer science.
+         * @return
          */
-        private SanFerminNode pickNextNode() {
+        private List<SanFerminNode> pickNextNode1(){
             List<SanFerminNode> list =
                     candidateSets.getOrDefault(currentPrefixLength,
                             new ArrayList<>());
-            if (list.size() == 0) {
-                // TODO This can and will happen if the number of nodes is not
-                // a power of two, as there will be some nodes without a
-                // potentical swappable candidate
-                //throw new IllegalStateException("an empty list should not " +
-                //        "happen in a simulation, where everything is
-                // perfect");
-                return null;
-            }
 
+            // iterate over bitset to find non-asked node yet
+            BitSet set = usedCandidates.getOrDefault(currentPrefixLength,
+                    new BitSet(0));
+            int i = 0;
+            boolean found = false;
+            for(i = 0; i < list.size(); i++){
+                if (set.get(i))
+                    continue;
+                found = true;
+                break;
+            }
+            if (!found) {
+                // This may happen in case the number of nodes is not a power
+                // of two, or more generally if the node already tried to
+                // contact all of his eligible peers already
+                return Collections.EMPTY_LIST;
+            }
             //Collections.shuffle(list);
-            SanFerminNode node = list.remove(0);
-            candidateSets.put(currentPrefixLength,list);
-            return node;
+            // set it as a used node
+            set.set(i);
+            usedCandidates.put(currentPrefixLength,set);
+            SanFerminNode node = list.get(i);
+            return Collections.singletonList(node);
+        }
+
+        /**
+         * Transition prevents any more aggregation at this level, and launch
+         * the "verification routine" and move on to the next level.
+         * The first three parameters are only here for logging purposes.
+         */
+        private void transition(String type, String fromId, int level,
+                                int toAggregate) {
+            this.canSwap = false;
+            network.registerTask(() -> {
+                int before = this.aggValue;
+                this.aggValue += toAggregate;
+                print(" received "+ type +" lvl=" + level +
+                        " from " + fromId
+                        + " aggValue " + before + " -> " + this.aggValue);
+                this.goNextLevel();
+            },network.time + pairingTime,this);
         }
 
         private void timeout(int level) {
@@ -429,13 +544,15 @@ public class SanFerminBis {
         private void print(String s) {
             if (verbose)
                 System.out.println("t=" + network.time + ", id=" + this.binaryId +
-                        ", lvl=" + this.currentPrefixLength + " -> " + s);
+                        ", lvl=" + this.currentPrefixLength + ", sent=" + this.msgSent +
+                        " -> " + s);
         }
 
         @Override
         public String toString() {
             return "SanFerminNode{" +
                     "nodeId=" + binaryId +
+                    ", thresholdAt=" + thresholdAt +
                     ", doneAt=" + doneAt +
                     ", sigs=" + aggValue +
                     ", msgReceived=" + msgReceived +
@@ -508,15 +625,15 @@ public class SanFerminBis {
         long[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
 
         SanFerminBis p2ps;
-        //p2ps = new SanFerminBis(1024, 10,1024/2, 2,48,100);
-       p2ps = new SanFerminBis(8, 3,4, 2,48,150);
+        //p2ps = new SanFerminBis(1024, 10,1024/2, 2,48,300);
+        p2ps = new SanFerminBis(8, 3,4, 2,48,300);
         p2ps.StartAll();
         p2ps.verbose = true;
         p2ps.network.setNetworkLatency(distribProp, distribVal).setMsgDiscardTime(1000);
         //p2ps.network.removeNetworkLatency();
         p2ps.network.run(15);
         Collections.sort(p2ps.finishedNodes,
-                (n1,n2) -> {  return Long.compare(n1.doneAt,n2.doneAt);});
+                (n1,n2) -> {  return Long.compare(n1.thresholdAt,n2.thresholdAt);});
         int max = p2ps.finishedNodes.size() < 10 ? p2ps.finishedNodes.size()
                 : 10;
         for(SanFerminNode n: p2ps.finishedNodes.subList(0,max))
