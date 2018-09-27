@@ -66,6 +66,10 @@ public class SanFerminOptimistic {
      */
     int candidateCount;
 
+    public List<SanFerminNode> getAllNodes() {
+        return allNodes;
+    }
+
     /**
      * allNodes represent the full list of nodes present in the system.
      * NOTE: This assumption that a node gets access to the full list can
@@ -76,9 +80,9 @@ public class SanFerminOptimistic {
      * This technique works because it uses Pastry ID allocation mechanism.
      * Here no underlying DHT or p2p special structure is assumed.
      */
-    public final List<SanFerminNode> allNodes;
+    public  List<SanFerminNode> allNodes;
 
-    public final List<SanFerminNode> finishedNodes;
+    public  List<SanFerminNode> finishedNodes;
 
 
     public SanFerminOptimistic(int totalCount,int powerOfTwo, int threshold,
@@ -215,6 +219,8 @@ public class SanFerminOptimistic {
          */
         Set<Integer> pendingNodes;
 
+        HashMap<Integer,Integer> futurSigs;
+
         /**
          * isSwapping indicates whether we are in a state where we can swap at
          * the current level or not. This is acting as a Lock, since between
@@ -268,6 +274,7 @@ public class SanFerminOptimistic {
             // this counter gets decreased with `goNextLevel`.
             this.currentPrefixLength = powerOfTwo;
             this.signatureCache = new HashMap<>();
+            this.futurSigs = new HashMap<>();
         }
 
         /**
@@ -290,8 +297,14 @@ public class SanFerminOptimistic {
                         this.sendSwap(Collections.singletonList(from),swap.level,
                                 this.signatureCache.get(swap.level), false);
                 } else {
-                   // TODO check if it is a valid value and save it for later
-                   //this.sendSwap(from,Status.NO,0,0);
+                    // it's a value we might want to keep for later!
+                    boolean isCandidate =
+                            candidateSets.get(swap.level).contains(from);
+                    boolean isValidSig = true; // as always :)
+                    if (isCandidate && isValidSig) {
+                        // it is a good request we can save for later!
+                        this.signatureCache.put(swap.level,swap.aggValue);
+                    }
                }
                return;
             }
@@ -399,6 +412,15 @@ public class SanFerminOptimistic {
             this.signatureCache.put(this.currentPrefixLength,this.aggValue);
             this.isSwapping = false;
             this.pendingNodes = new HashSet<>();
+
+            if (futurSigs.containsKey(currentPrefixLength)) {
+                print(" FUTURe value at new level" + currentPrefixLength + " " +
+                        "saved. Moving on directly !");
+                this.aggValue += futurSigs.get(currentPrefixLength);
+                // directly go to the next level !
+                goNextLevel();
+                return;
+            }
             this.tryNextNode();
         }
 
@@ -567,6 +589,8 @@ public class SanFerminOptimistic {
     }
 
 
+
+
     public static void main(String... args) {
         int[] distribProp = {1, 33, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
         int[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
@@ -574,10 +598,12 @@ public class SanFerminOptimistic {
             distribVal[i] += 50; // more or less the latency we had before the refactoring
 
         SanFerminOptimistic p2ps;
-        //p2ps = new SanFerminOptimistic(1024, 10,512, 2,48,300,1,false);
+        //p2ps = new SanFerminOptimistic(1024, 10,512, 2,48,300,3,true);
         //p2ps = new SanFerminOptimistic(512, 9,256, 2,48,300,1,false);
 
         p2ps = new SanFerminOptimistic(8, 3,4, 2,48,300,3,true);
+
+
         p2ps.verbose = true;
         p2ps.network.setNetworkLatency(distribProp, distribVal).setMsgDiscardTime(1000);
         //p2ps.network.removeNetworkLatency();

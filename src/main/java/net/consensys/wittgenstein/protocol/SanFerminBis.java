@@ -67,6 +67,12 @@ public class SanFerminBis {
     int candidateCount;
 
     /**
+     * useCnadidateTree tells whether we should use the tree way of selecting
+     * the new nodes.
+     */
+    boolean useCandidateTree;
+
+    /**
      * allNodes represent the full list of nodes present in the system.
      * NOTE: This assumption that a node gets access to the full list can
      * be dismissed, as they do in late sections in the paper. For a first
@@ -193,6 +199,7 @@ public class SanFerminBis {
          */
         public int currentPrefixLength;
 
+        CandidateTree candidateTree;
         /**
          * List of nodes that are candidates to swap with this node sorted
          * through different prefix length.
@@ -214,6 +221,9 @@ public class SanFerminBis {
          * strategies to pick the nodes are detailled in `pickNextNodes`
          */
         Set<Integer> pendingNodes;
+
+        HashMap<Integer,Integer> futurSigs;
+
 
         /**
          * isSwapping indicates whether we are in a state where we can swap at
@@ -267,6 +277,8 @@ public class SanFerminBis {
             // this counter gets decreased with `goNextLevel`.
             this.currentPrefixLength = powerOfTwo;
             this.signatureCache = new HashMap<>();
+            this.futurSigs = new HashMap<>();
+            this.candidateTree = new CandidateTree(allNodes, this);
         }
 
         /**
@@ -289,6 +301,14 @@ public class SanFerminBis {
                            this.signatureCache.get(request.level));
                } else {
                    this.sendSwapReply(node,Status.NO,0);
+                   // it's a value we might want to keep for later!
+                   boolean isCandidate =
+                           candidateSets.get(request.level).contains(node);
+                   boolean isValidSig = true; // as always :)
+                   if (isCandidate && isValidSig) {
+                       // it is a good request we can save for later!
+                       this.signatureCache.put(request.level,request.aggValue);
+                   }
                }
                return;
             }
@@ -349,7 +369,8 @@ public class SanFerminBis {
                     // good valid honest answer !
                     transition("valid swap REPLY",from.binaryId,reply.level,
                             reply.aggValue);
-
+// 1946, doneAt=2545, sigs=1024, msgReceived=27
+// doneAt=219, sigs=527, msgReceived=283, msgSent=134,
                     break;
                 case NO:
                     print(" received SwapReply NO from " + from.binaryId);
@@ -446,6 +467,14 @@ public class SanFerminBis {
             this.signatureCache.put(this.currentPrefixLength,this.aggValue);
             this.isSwapping = false;
             this.pendingNodes = new HashSet<>();
+            if (futurSigs.containsKey(currentPrefixLength)) {
+                print(" FUTURe value at new level" + currentPrefixLength + " " +
+                        "saved. Moving on directly !");
+                this.aggValue += futurSigs.get(currentPrefixLength);
+                // directly go to the next level !
+                goNextLevel();
+                return;
+            }
             this.tryNextNode();
         }
 
@@ -496,6 +525,9 @@ public class SanFerminBis {
          * another node who already swapped at this level.
          */
         private List<SanFerminNode> pickNextNodes() {
+            if (useCandidateTree)
+                return candidateTree.pickNextNodes(this.currentPrefixLength,
+                        candidateCount);
             return pickNextNode1();
         }
 
@@ -643,6 +675,100 @@ public class SanFerminBis {
         }
     }
 
+    static class CandidateTree {
+        /**
+         * nodeId of the node managing this candidate tree
+         */
+        SanFerminNode node;
+        String binaryId;
+        List<SanFerminNode> allNodes;
+        HashMap<Integer, BitSet> usedNodes;
+
+        public CandidateTree(List<SanFerminNode> nodes,
+                             SanFerminNode node) {
+            this.node = node;
+            this.binaryId = node.binaryId;
+            this.allNodes = nodes;
+            this.usedNodes = new HashMap<>();
+        }
+
+        public List<SanFerminNode> getOwnSet(int level) {
+            int min = 0;
+            int max = allNodes.size();
+            int currLevel = 0;
+            for(currLevel = 0; currLevel <= level && min <= max; currLevel++) {
+                int m = Math.floorDiv((max + min),2);
+                if (binaryId.charAt(currLevel) == '0') {
+                    // reduce the interval to the left
+                    max = m ;
+                } else if (binaryId.charAt(currLevel) == '1'){
+                    // reduce interval to the right
+                    min = m ;
+                }
+                if (max == min)
+                    break;
+
+                if (max-1 == 0 || min == allNodes.size())
+                    break;
+            }
+
+            return allNodes.subList(min,max);
+        }
+
+        public List<SanFerminNode>  getCandidateSet(int level) {
+            int min = 0;
+            int max = allNodes.size();
+            int currLevel = 0;
+            for(currLevel = 0; currLevel <= level && min <= max; currLevel++) {
+                int m = Math.floorDiv((max + min),2);
+                if (binaryId.charAt(currLevel) == '0') {
+                    if (currLevel == level) {
+                        // when we are at the right level, swap the order
+                        min = m;
+                    } else {
+                        max = m ;
+                    }
+
+                } else if (binaryId.charAt(currLevel) == '1'){
+                    if (currLevel == level) {
+                        // when we are at the right level, swap the order
+                        max = m;
+                    } else {
+                        min = m ;
+                    }
+                }
+                if (max == min)
+                    break;
+
+                if (max-1 == 0 || min == allNodes.size())
+                    break;
+            }
+            return allNodes.subList(min,max);
+        }
+
+        public SanFerminNode getExactCandidateNode(int level) {
+            List<SanFerminNode> own = this.getOwnSet(level);
+            int idx = own.indexOf(this.node);
+            if (idx == -1)
+                throw new IllegalStateException("that should not happen");
+
+            List<SanFerminNode> candidates = this.getCandidateSet(level);
+            if (idx >= candidates.size())
+                // well it can happen for N != 2^n
+                throw new IllegalStateException("that also should not happen");
+
+            return candidates.get(idx);
+        }
+
+        public List<SanFerminNode> pickNextNodes(int level,int howMany) {
+            if (howMany > 1)
+                throw new Error("can't handle that at the moment");
+
+            return Collections.singletonList(getExactCandidateNode(level));
+        }
+    }
+
+
 
     public static void main(String... args) {
         int[] distribProp = {1, 33, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
@@ -652,10 +778,13 @@ public class SanFerminBis {
 
 
         SanFerminBis p2ps;
-        //p2ps = new SanFerminBis(1024, 10,512, 2,48,300,1,false);
+        p2ps = new SanFerminBis(1024, 10,512, 2,48,300,1,false);
         //p2ps = new SanFerminBis(512, 9,256, 2,48,300,1,false);
 
-        p2ps = new SanFerminBis(8, 3,4, 2,48,300,3,false);
+        //p2ps = new SanFerminBis(8, 3,4, 2,48,300,1,false);
+
+        p2ps.useCandidateTree = true;
+
         p2ps.verbose = true;
         p2ps.network.setNetworkLatency(distribProp, distribVal);
         //p2ps.network.removeNetworkLatency();
