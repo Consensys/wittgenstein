@@ -26,7 +26,7 @@ public class Dfinity {
 
     final int majority;
 
-    final Node.NodeBuilder nb = new Node.NodeBuilder();
+    final Node.NodeBuilder nb;
 
     public Dfinity() {
         this(10, 300, 100, 1000, 1, 0);
@@ -49,6 +49,7 @@ public class Dfinity {
         this.attestationConstructionTime = attestationConstructionTime;
         this.percentageDeadAttester = percentageDeadAttester;
 
+        this.nb = new Node.NodeBuilderWithPosition(network.rd);
         this.network.addObserver(new DfinityNode(genesis) {
         });
     }
@@ -420,12 +421,7 @@ public class Dfinity {
 
         bc.network.run(50);
 
-        List<Set<? extends Node>> lns = new ArrayList<>();
-        lns.add(bc.bps);
-        lns.add(bc.attesters);
-        lns.add(bc.rds);
-
-        bc.network.partition(.20f, lns);
+        bc.network.partition(.20f);
         bc.network.run(2_000);
         bc.network.endPartition();
 

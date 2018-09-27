@@ -170,4 +170,73 @@ public class TestNetwork {
             m.markRead();
         }
     }
+
+    @Test
+    public void testPartition(){
+        Network<Node> net = new Network<>();
+        AtomicInteger ai = new AtomicInteger(0);
+        Node.NodeBuilder nb = new Node.NodeBuilder(){
+            int getX(){
+                return ai.addAndGet(Node.MAX_X / 10);
+            }
+        };
+        Node n0 = new Node(nb);
+        Node n1 = new Node(nb);
+        Node n2 = new Node(nb);
+        Node n3 = new Node(nb);
+
+        AtomicInteger ab = new AtomicInteger(0);
+        Network.MessageContent<Node> act = new Network.MessageContent<Node>() {
+            @Override
+            public void action(@NotNull Node from, @NotNull Node to) {
+                ab.incrementAndGet();
+            }
+        };
+
+        net.partition(0.25f);
+        int bound = (int)(0.25f * Node.MAX_X);
+        Assert.assertTrue(net.partitionsInX.contains(bound));
+
+        Assert.assertEquals(0, net.partitionId(n0));
+        Assert.assertEquals(0, net.partitionId(n1));
+        Assert.assertEquals(1, net.partitionId(n2));
+        Assert.assertEquals(1, net.partitionId(n3));
+
+        net.send(act, n0, n1);
+        Assert.assertNotNull(net.msgs.peekFirst());
+        net.msgs.clear();
+
+        net.send(act, n1, n2);
+        Assert.assertNull(net.msgs.peekFirst());
+
+        net.send(act, n2, n3);
+        Assert.assertNotNull(net.msgs.peekFirst());
+        net.msgs.clear();
+
+        // As above but with another partition
+        net.partition(0.35f);
+        int bound2 = (int)(0.35f * Node.MAX_X);
+        Assert.assertTrue(net.partitionsInX.contains(bound));
+        Assert.assertTrue(net.partitionsInX.contains(bound2));
+
+        Assert.assertEquals(0, net.partitionId(n0));
+        Assert.assertEquals(0, net.partitionId(n1));
+        Assert.assertEquals(1, net.partitionId(n2));
+        Assert.assertEquals(2, net.partitionId(n3));
+
+        net.send(act, n0, n1);
+        Assert.assertNotNull(net.msgs.peekFirst());
+        net.msgs.clear();
+
+        net.send(act, n1, n2);
+        Assert.assertNull(net.msgs.peekFirst());
+
+        net.send(act, n2, n3);
+        Assert.assertNull(net.msgs.peekFirst());
+        net.msgs.clear();
+
+        net.send(act, n3, n0);
+        Assert.assertNull(net.msgs.peekFirst());
+        net.msgs.clear();
+    }
 }

@@ -36,7 +36,7 @@ public class Network<TN extends Node> {
      */
     public final Random rd;
 
-    final HashSet<Integer> partition = new HashSet<>();
+    final List<Integer> partitionsInX = new ArrayList<>();
 
     /**
      * We can decide to discard messages that would take too long to arrive. This
@@ -59,7 +59,6 @@ public class Network<TN extends Node> {
      */
     public int time = 0;
 
-
     public Network() {
         this(0);
     }
@@ -67,7 +66,6 @@ public class Network<TN extends Node> {
     public Network(long randomSeed) {
         this.rd = new Random(randomSeed);
     }
-
 
     public TN getNodeById(int id) {
         return allNodes.get(id);
@@ -415,7 +413,7 @@ public class Network<TN extends Node> {
         }
     }
 
-    List<MessageArrival> createMessageArrivals(@NotNull MessageContent m, int sendTime, @NotNull TN fromNode, @NotNull Collection<? extends Node> dests, int randomSeed) {
+    @NotNull List<MessageArrival> createMessageArrivals(@NotNull MessageContent m, int sendTime, @NotNull TN fromNode, @NotNull Collection<? extends Node> dests, int randomSeed) {
         ArrayList<MessageArrival> da = new ArrayList<>(dests.size());
         for (Node n : dests) {
             MessageArrival ma = createMessageArrival(m, fromNode, n, sendTime, randomSeed);
@@ -429,15 +427,15 @@ public class Network<TN extends Node> {
     }
 
 
-    private MessageArrival createMessageArrival(@NotNull MessageContent<?> m,
+    private @Nullable MessageArrival createMessageArrival(@NotNull MessageContent<?> m,
                                                 @NotNull Node fromNode, @NotNull Node toNode, int sendTime,
                                                 int randomSeed) {
         if (sendTime <= time) {
             throw new IllegalStateException("" + m + ", sendTime=" + sendTime + ", time=" + time);
         }
 
-        if ((partition.contains(fromNode.nodeId) && partition.contains(toNode.nodeId)) ||
-                (!partition.contains(fromNode.nodeId) && !partition.contains(toNode.nodeId))) {
+        if (partitionId(fromNode) == partitionId(toNode)) {
+            assert !(m instanceof Network.Task);
             fromNode.msgSent++;
             fromNode.bytesSent += m.size();
             int nt = networkLatency.getDelay(fromNode, toNode, getPseudoRandom(toNode.nodeId, randomSeed));
@@ -522,14 +520,15 @@ public class Network<TN extends Node> {
                 }
             }
 
-            if ((partition.contains(m.getNextDestId()) && partition.contains(m.getNextDestId())) ||
-                    (!partition.contains(m.getFromId()) && !partition.contains(m.getNextDestId()))) {
+            Node from = allNodes.get(m.getFromId());
+            Node to = allNodes.get(m.getNextDestId());
+            if (partitionId(from) == partitionId(to)) {
                 if (!(m.getMessageContent() instanceof Network<?>.Task)) {
                     if (m.getMessageContent().size() == 0) throw new IllegalStateException();
-                    allNodes.get(m.getNextDestId()).msgReceived++;
-                    allNodes.get(m.getNextDestId()).bytesReceived += m.getMessageContent().size();
+                    to.msgReceived++;
+                    to.bytesReceived += m.getMessageContent().size();
                 }
-                m.getMessageContent().action(allNodes.get(m.getFromId()), allNodes.get(m.getNextDestId()));
+                m.getMessageContent().action(from, to);
             }
 
             m.markRead();
@@ -539,6 +538,18 @@ public class Network<TN extends Node> {
             previousTime = time;
             next = nextMessage(until);
         }
+    }
+
+    int partitionId(@NotNull Node to) {
+        int pId = 0;
+        for (Integer x:partitionsInX) {
+            if (x > to.x) {
+                return pId;
+            } else {
+                pId++;
+            }
+        }
+        return pId;
     }
 
 
@@ -577,18 +588,20 @@ public class Network<TN extends Node> {
         System.out.println("" + networkLatency);
     }
 
-
-    public void partition(float part, @NotNull List<Set<? extends Node>> nodesPerType) {
-        for (Set<? extends Node> ln : nodesPerType) {
-            Iterator<? extends Node> it = ln.iterator();
-            for (int i = 0; i < (ln.size() * part); i++) {
-                partition.add(it.next().nodeId);
-            }
+    public void partition(float part) {
+        if (part <= 0 || part >= 1) {
+            throw   new IllegalArgumentException("part needs to be a percentage between 0 & 100");
         }
+        int xPoint = (int)(Node.MAX_X * part);
+        if (partitionsInX.contains(xPoint)) {
+            throw new IllegalArgumentException("this partition exists already");
+        }
+        partitionsInX.add(xPoint);
+        Collections.sort(partitionsInX);
     }
 
     public void endPartition() {
-        partition.clear();
+        partitionsInX.clear();
     }
 
 }

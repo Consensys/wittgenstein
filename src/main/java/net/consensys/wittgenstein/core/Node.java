@@ -6,8 +6,8 @@ import java.util.Random;
 
 @SuppressWarnings("WeakerAccess")
 public class Node {
-    private final static int MAX_X = 1000;
-    private final static int MAX_Y = 1000;
+    public final static int MAX_X = 1000;
+    public final static int MAX_Y = 1000;
     public final static int MAX_DIST = (int) Math.sqrt((MAX_X / 2) * (MAX_X / 2) + (MAX_Y / 2) * (MAX_Y / 2));
 
 
