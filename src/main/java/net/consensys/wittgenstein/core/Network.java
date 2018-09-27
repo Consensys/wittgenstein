@@ -428,8 +428,8 @@ public class Network<TN extends Node> {
 
 
     private @Nullable MessageArrival createMessageArrival(@NotNull MessageContent<?> m,
-                                                @NotNull Node fromNode, @NotNull Node toNode, int sendTime,
-                                                int randomSeed) {
+                                                          @NotNull Node fromNode, @NotNull Node toNode, int sendTime,
+                                                          int randomSeed) {
         if (sendTime <= time) {
             throw new IllegalStateException("" + m + ", sendTime=" + sendTime + ", time=" + time);
         }
@@ -542,7 +542,7 @@ public class Network<TN extends Node> {
 
     int partitionId(@NotNull Node to) {
         int pId = 0;
-        for (Integer x:partitionsInX) {
+        for (Integer x : partitionsInX) {
             if (x > to.x) {
                 return pId;
             } else {
@@ -588,11 +588,19 @@ public class Network<TN extends Node> {
         System.out.println("" + networkLatency);
     }
 
+    /**
+     * It's possible to cut the network in multiple points.
+     * The partition takes the node positions into account
+     * On a map, a partition is a vertical cut on the X axe (eg. the earth is not
+     * round for these partitions)
+     *
+     * @param part - the x point (in %) where we cut.
+     */
     public void partition(float part) {
         if (part <= 0 || part >= 1) {
-            throw   new IllegalArgumentException("part needs to be a percentage between 0 & 100");
+            throw new IllegalArgumentException("part needs to be a percentage between 0 & 100");
         }
-        int xPoint = (int)(Node.MAX_X * part);
+        int xPoint = (int) (Node.MAX_X * part);
         if (partitionsInX.contains(xPoint)) {
             throw new IllegalArgumentException("this partition exists already");
         }

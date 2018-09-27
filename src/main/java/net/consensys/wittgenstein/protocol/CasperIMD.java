@@ -347,7 +347,7 @@ public class CasperIMD {
         protected Runnable getPeriodicTask() {
             return () -> {
                 reevaluateHead();
-                createAndSendBlock((int) (network.time / SLOT_DURATION));
+                createAndSendBlock(network.time / SLOT_DURATION);
             };
         }
 
@@ -413,7 +413,7 @@ public class CasperIMD {
 
         @Override
         protected Runnable getPeriodicTask() {
-            return () -> vote((int) (network.time / SLOT_DURATION));
+            return () -> vote(network.time / SLOT_DURATION);
         }
 
         void vote(int height) {
@@ -493,7 +493,7 @@ public class CasperIMD {
             }
 
             int slotTime = time - delay;
-            h = (int) (slotTime / SLOT_DURATION);
+            h = slotTime / SLOT_DURATION;
 
             if (h != toSend) throw new IllegalStateException("h=" + h + ", toSend=" + toSend);
         }
@@ -680,20 +680,17 @@ public class CasperIMD {
             // bc.init(bc.new BlockProducer(BlockChainNetwork.BYZANTINE_NODE_ID, bc.genesis));
             //bc.network.removeNetworkLatency();
 
-            List<List<? extends BlockChainNode>> lns = new ArrayList<>();
-            lns.add(bc.bps);
-            lns.add(bc.attesters);
 
             bc.network.run(30);
 
-            //   bc.network.partition(.5f, lns);
+            //   bc.network.partition(.5f);
             bc.network.run(3600 * 5); // 5 hours is a minimum if you want something statistically reasonable
             //   bc.network.endPartition();
 
             bc.network.run(30);
 
             // System.out.println("");
-            bc.network.printStat(false);
+            bc.network.printStat(true);
         }
     }
 }

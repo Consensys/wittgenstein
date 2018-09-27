@@ -160,7 +160,7 @@ public class TestNetwork {
         Message m = network.msgs.pollFirst();
         Assert.assertNotNull(m);
         Assert.assertTrue(m instanceof Message.MultipleDestMessage);
-        Message.MultipleDestMessage mm = (Message.MultipleDestMessage)m;
+        Message.MultipleDestMessage mm = (Message.MultipleDestMessage) m;
 
 
         List<Network.MessageArrival> mas = network.createMessageArrivals(act, 1, n0, Arrays.asList(n1, n2, n3), mm.randomSeed);
@@ -172,11 +172,11 @@ public class TestNetwork {
     }
 
     @Test
-    public void testPartition(){
+    public void testPartition() {
         Network<Node> net = new Network<>();
         AtomicInteger ai = new AtomicInteger(0);
-        Node.NodeBuilder nb = new Node.NodeBuilder(){
-            int getX(){
+        Node.NodeBuilder nb = new Node.NodeBuilder() {
+            int getX() {
                 return ai.addAndGet(Node.MAX_X / 10);
             }
         };
@@ -194,7 +194,7 @@ public class TestNetwork {
         };
 
         net.partition(0.25f);
-        int bound = (int)(0.25f * Node.MAX_X);
+        int bound = (int) (0.25f * Node.MAX_X);
         Assert.assertTrue(net.partitionsInX.contains(bound));
 
         Assert.assertEquals(0, net.partitionId(n0));
@@ -215,7 +215,7 @@ public class TestNetwork {
 
         // As above but with another partition
         net.partition(0.35f);
-        int bound2 = (int)(0.35f * Node.MAX_X);
+        int bound2 = (int) (0.35f * Node.MAX_X);
         Assert.assertTrue(net.partitionsInX.contains(bound));
         Assert.assertTrue(net.partitionsInX.contains(bound2));
 
