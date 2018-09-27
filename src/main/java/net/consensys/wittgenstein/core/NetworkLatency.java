@@ -16,13 +16,16 @@ public abstract class NetworkLatency {
 
 
     /**
-     * Latency with: max distance = 200ms +/- 50%, linear
+     * Latency with: max distance = (10ms + 200ms) +/- 50%, linear
      */
     public static class NetworkLatencyByDistance extends NetworkLatency {
         @Override
         public int getDelay(@NotNull Node from, @NotNull Node to, int delta) {
+            if (delta < 0 || delta > 99) {
+                throw new IllegalArgumentException("delta=" + delta);
+            }
             int rawDelay = 10 + (200 * from.dist(to)) / Node.MAX_DIST;
-            return rawDelay * (50 - delta);
+            return (int) (rawDelay * (150 - delta) / 100.0);
         }
     }
 
@@ -63,6 +66,9 @@ public abstract class NetworkLatency {
 
         @Override
         public int getDelay(@NotNull Node from, @NotNull Node to, int delta) {
+            if (delta < 0 || delta > 99) {
+                throw new IllegalArgumentException("delta=" + delta);
+            }
             return longDistrib[delta];
         }
 
