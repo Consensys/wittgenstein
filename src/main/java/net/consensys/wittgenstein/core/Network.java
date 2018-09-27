@@ -345,18 +345,36 @@ public class Network<TN extends Node> {
         int getFromId();
     }
 
+    /**
+     * The implementation idea here is the following:
+     * - we expect that messages are the bottleneck
+     * - we expect that we have a lot of single messages sent to multiple nodes, many thousands
+     * - this has been confirmed by looking at the behavior with youkit 95% of the memory is messages
+     * - so we want to optimize this case.
+     * - we have a single MultipleDestMessage for all nodes
+     * - we don't keep the list of the network latency to save memory
+     *
+     * To avoid storing the network latencies, we do:
+     * - generate the randomness from a unique per MultipleDestMessage + the node id
+     * - sort the nodes with the calculated latency (hence the first node is the first to receive the message)
+     * - recalculate them on the fly as the nodeId & the randomSeed are kept.
+     * - this also allows on disk serialization
+     */
     final public static class MultipleDestMessage implements Message {
         public final @NotNull MessageContent messageContent;
         private final int fromNodeId;
 
+        private final int sendTime;
+        protected final int randomSeed;
         private final int[] destIds;
-        private int sendTime;
         private int curPos = 0;
         private @Nullable Message nextSameTime = null;
 
-        public MultipleDestMessage(@NotNull MessageContent m, @NotNull Node fromNode, @NotNull List<MessageArrival> dests, int sendTime) {
+        public MultipleDestMessage(@NotNull MessageContent m, @NotNull Node fromNode,
+                                   @NotNull List<MessageArrival> dests, int sendTime, int randomSeed) {
             this.messageContent = m;
             this.fromNodeId = fromNode.nodeId;
+            this.randomSeed = randomSeed;
             this.destIds = new int[dests.size()];
 
             for (int i = 0; i < destIds.length; i++) {
@@ -389,7 +407,7 @@ public class Network<TN extends Node> {
             return sendTime + network.networkLatency.getDelay(
                     (Node) network.allNodes.get(this.fromNodeId),
                     (Node) network.allNodes.get(this.getNextDestId()),
-                    network.getPseudoRandom(this.getNextDestId(), sendTime)
+                    network.getPseudoRandom(this.getNextDestId(), randomSeed)
             );
         }
 
@@ -520,7 +538,7 @@ public class Network<TN extends Node> {
      * Send a message to a single node.
      */
     public void send(@NotNull MessageContent mc, int sendTime, @NotNull TN fromNode, @NotNull TN toNode) {
-        MessageArrival ms = createMessageArrival(mc, fromNode, toNode, sendTime);
+        MessageArrival ms = createMessageArrival(mc, fromNode, toNode, sendTime, rd.nextInt());
         if (ms != null) {
             Message m = new SingleDestMessage(mc, fromNode, toNode, ms.arrival);
             msgs.addMsg(m);
@@ -543,7 +561,9 @@ public class Network<TN extends Node> {
     }
 
     public void send(@NotNull MessageContent m, int sendTime, @NotNull TN fromNode, @NotNull Collection<? extends Node> dests) {
-       List<MessageArrival> da = createMessageArrivals(m, sendTime, fromNode, dests);
+        int randomSeed = rd.nextInt();
+
+        List<MessageArrival> da = createMessageArrivals(m, sendTime, fromNode, dests, randomSeed);
 
         if (!da.isEmpty()) {
             if (da.size() == 1) {
@@ -551,16 +571,16 @@ public class Network<TN extends Node> {
                 Message msg = new SingleDestMessage(m, fromNode, ms.dest, ms.arrival);
                 msgs.addMsg(msg);
             } else {
-                Message msg = new MultipleDestMessage(m, fromNode, da, sendTime);
+                Message msg = new MultipleDestMessage(m, fromNode, da, sendTime, randomSeed);
                 msgs.addMsg(msg);
             }
         }
     }
 
-    List<MessageArrival> createMessageArrivals(@NotNull MessageContent m, int sendTime, @NotNull TN fromNode, @NotNull Collection<? extends Node> dests) {
+    List<MessageArrival> createMessageArrivals(@NotNull MessageContent m, int sendTime, @NotNull TN fromNode, @NotNull Collection<? extends Node> dests, int randomSeed) {
         ArrayList<MessageArrival> da = new ArrayList<>(dests.size());
         for (Node n : dests) {
-            MessageArrival ma = createMessageArrival(m, fromNode, n, sendTime);
+            MessageArrival ma = createMessageArrival(m, fromNode, n, sendTime, randomSeed);
             if (ma != null) {
                 da.add(ma);
             }
@@ -571,7 +591,9 @@ public class Network<TN extends Node> {
     }
 
 
-    private MessageArrival createMessageArrival(@NotNull MessageContent<?> m, @NotNull Node fromNode, @NotNull Node toNode, int sendTime) {
+    private MessageArrival createMessageArrival(@NotNull MessageContent<?> m,
+                                                @NotNull Node fromNode, @NotNull Node toNode, int sendTime,
+                                                int randomSeed) {
         if (sendTime <= time) {
             throw new IllegalStateException("" + m + ", sendTime=" + sendTime + ", time=" + time);
         }
@@ -580,7 +602,7 @@ public class Network<TN extends Node> {
                 (!partition.contains(fromNode.nodeId) && !partition.contains(toNode.nodeId))) {
             fromNode.msgSent++;
             fromNode.bytesSent += m.size();
-            int nt = networkLatency.getDelay(fromNode, toNode, getPseudoRandom(toNode.nodeId, sendTime));
+            int nt = networkLatency.getDelay(fromNode, toNode, getPseudoRandom(toNode.nodeId, randomSeed));
             if (nt < msgDiscardTime) {
                 return new MessageArrival(toNode, sendTime + nt);
             }
@@ -592,8 +614,8 @@ public class Network<TN extends Node> {
     /**
      * @return always the same number, between 0 and 99, uniformly distributed.
      */
-    private int getPseudoRandom(int nodeId, int sendTime) {
-        int x = hash(nodeId) ^ hash(sendTime);
+    private int getPseudoRandom(int nodeId, int randomSeed) {
+        int x = hash(nodeId) ^ randomSeed;
         return Math.abs(x % 100);
     }
 

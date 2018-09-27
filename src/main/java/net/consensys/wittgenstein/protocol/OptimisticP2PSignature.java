@@ -33,6 +33,7 @@ import java.util.List;
  * P2PSigNode{nodeId=2499, doneAt=240, sigs=1251, msgReceived=53712, msgSent=55045, KBytesSent=2795, KBytesReceived=2727}
  * P2PSigNode{nodeId=2999, doneAt=230, sigs=1501, msgReceived=68177, msgSent=72049, KBytesSent=3658, KBytesReceived=3462}
  * P2PSigNode{nodeId=3999, doneAt=244, sigs=2001, msgReceived=116390, msgSent=120060, KBytesSent=6096, KBytesReceived=5910}
+ * P2PSigNode{nodeId=9999, doneAt=201, sigs=5001, msgReceived=273298, msgSent=285058, KBytesSent=14475, KBytesReceived=13878}
  */
 @SuppressWarnings("WeakerAccess")
 public class OptimisticP2PSignature {
@@ -154,9 +155,10 @@ public class OptimisticP2PSignature {
     public static void main(String... args) {
         int[] distribProp = {1, 33, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
         int[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
-        for (int i=0; i<distribVal.length; i++) distribVal[i] += 50; // more or less the latency we had before the refactoring
+        for (int i = 0; i < distribVal.length; i++)
+            distribVal[i] += 50; // more or less the latency we had before the refactoring
 
-        OptimisticP2PSignature p2ps = new OptimisticP2PSignature(10000, 5001,
+        OptimisticP2PSignature p2ps = new OptimisticP2PSignature(1000, 501,
                 25, 3);
         p2ps.network.setNetworkLatency(distribProp, distribVal).setMsgDiscardTime(1000);
         //p2ps.network.removeNetworkLatency();

@@ -157,11 +157,15 @@ public class TestNetwork {
         };
 
         network.send(act, 1, n0, Arrays.asList(n1, n2, n3));
-        List<Network.MessageArrival> mas = network.createMessageArrivals(act, 1, n0, Arrays.asList(n1, n2, n3));
-
         Network.Message m = network.msgs.pollFirst();
+        Assert.assertNotNull(m);
+        Assert.assertTrue(m instanceof Network.MultipleDestMessage);
+        Network.MultipleDestMessage mm = (Network.MultipleDestMessage)m;
+
+
+        List<Network.MessageArrival> mas = network.createMessageArrivals(act, 1, n0, Arrays.asList(n1, n2, n3), mm.randomSeed);
+
         for (Network.MessageArrival ma : mas) {
-            Assert.assertNotNull(m);
             Assert.assertEquals(ma.arrival, m.nextArrivalTime(network));
             m.markRead();
         }

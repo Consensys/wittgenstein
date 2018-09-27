@@ -68,9 +68,9 @@ public abstract class NetworkLatency {
 
         /**
          * Print the latency distribution:
-         *  - the first 50ms, 10ms by 10ms
-         *  - then, until 500ms: each 100ms
-         *  - then each second
+         * - the first 50ms, 10ms by 10ms
+         * - then, until 500ms: each 100ms
+         * - then each second
          */
         @Override
         public String toString() {
@@ -89,11 +89,11 @@ public abstract class NetworkLatency {
 
             for (int s = 1; cur < 100; s++) {
                 int size = 0;
-                    while (cur < longDistrib.length && longDistrib[cur] < s * 1000) {
-                        size++;
-                        cur++;
-                    }
-                    sb.append(s).append(" second").append(s > 1 ? "s: " : ": ").append(size).append("%, cumulative ");
+                while (cur < longDistrib.length && longDistrib[cur] < s * 1000) {
+                    size++;
+                    cur++;
+                }
+                sb.append(s).append(" second").append(s > 1 ? "s: " : ": ").append(size).append("%, cumulative ");
 
                 sb.append(cur).append("%\n");
             }

@@ -8,7 +8,7 @@ public class CasperByzantineTest {
             1000, 1);
 
     @Test
-    public void testByzantineWF(){
+    public void testByzantineWF() {
         ci.network.removeNetworkLatency();
 
         CasperIMD.ByzBlockProducerWF byz = ci.new ByzBlockProducerWF(0, ci.genesis);
@@ -34,7 +34,7 @@ public class CasperByzantineTest {
     }
 
     @Test
-    public void testByzantineWFWithDelay(){
+    public void testByzantineWFWithDelay() {
         ci.network.removeNetworkLatency();
 
         CasperIMD.ByzBlockProducerWF byz = ci.new ByzBlockProducerWF(-2000, ci.genesis);
