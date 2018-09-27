@@ -36,10 +36,10 @@ public class P2PSignatureTest {
 
         ps.network.msgs.clear();
         n1.sendSigs();
-        Network.Message nm = ps.network.msgs.peekFirst();
-        Assert.assertNotNull(nm);
+        Network.MessageContent<?> mc = ps.network.msgs.peekFirstMessageContent();
+        Assert.assertNotNull(mc);
 
-        P2PSignature.SendSigs ss = (P2PSignature.SendSigs) nm.getMessageContent();
+        P2PSignature.SendSigs ss = (P2PSignature.SendSigs) mc;
         Assert.assertNotNull(ss);
         Assert.assertEquals(1, ss.sigs.cardinality());
         Assert.assertTrue(ss.sigs.get(n1.nodeId));

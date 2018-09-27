@@ -32,8 +32,8 @@ public class TestMessageStorage {
 
     @Test
     public void testWorkflow() {
-        Network.Message m1 = new Network.SingleDestMessage(dummy, n0, n1, 1);
-        Network.Message m2 = new Network.SingleDestMessage(dummy, n0, n1, 1);
+        Message m1 = new Message.SingleDestMessage(dummy, n0, n1, 1);
+        Message m2 = new Message.SingleDestMessage(dummy, n0, n1, 1);
 
         network.msgs.addMsg(m1);
         network.msgs.addMsg(m2);
@@ -44,7 +44,7 @@ public class TestMessageStorage {
         Assert.assertEquals(m1, network.msgs.poll(1));
         Assert.assertNull(network.msgs.peek(1));
 
-        Network.Message m3 = new Network.SingleDestMessage(dummy, n0, n1, Network.duration + 1);
+        Message m3 = new Message.SingleDestMessage(dummy, n0, n1, Network.duration + 1);
         network.msgs.addMsg(m3);
         Assert.assertEquals(2, network.msgs.msgsBySlot.size());
 
@@ -66,7 +66,7 @@ public class TestMessageStorage {
             }
         };
 
-        Network.Message m = new Network.SingleDestMessage(act, n0, n1, 7 * 1000 + 1);
+        Message m = new Message.SingleDestMessage(act, n0, n1, 7 * 1000 + 1);
         network.msgs.addMsg(m);
         network.run(7);
         Assert.assertFalse(ab.get());
@@ -75,7 +75,7 @@ public class TestMessageStorage {
         Assert.assertTrue(ab.get());
 
         ab.set(false);
-        network.msgs.addMsg(new Network.SingleDestMessage(act, n0, n1, 8 * 1000));
+        network.msgs.addMsg(new Message.SingleDestMessage(act, n0, n1, 8 * 1000));
         network.run(1);
         Assert.assertTrue(ab.get());
     }
@@ -91,7 +91,7 @@ public class TestMessageStorage {
             }
         };
 
-        Network.Message m = new Network.SingleDestMessage(act, n0, n1, 5);
+        Message m = new Message.SingleDestMessage(act, n0, n1, 5);
 
         network.msgs.addMsg(m);
         network.run(1);
@@ -104,7 +104,7 @@ public class TestMessageStorage {
     public void testEdgeCase1() {
         Assert.assertNull(network.msgs.peek(0));
         Assert.assertNull(network.msgs.peek(10 * 60 * 1000 + 1));
-        Network.Message m1 = new Network.SingleDestMessage(dummy, n0, n1, 10 * 60 * 1000 + 1);
+        Message m1 = new Message.SingleDestMessage(dummy, n0, n1, 10 * 60 * 1000 + 1);
         network.msgs.addMsg(m1);
         Assert.assertNotNull(network.msgs.peek(10 * 60 * 1000 + 1));
     }
@@ -112,7 +112,7 @@ public class TestMessageStorage {
     @Test
     public void testEdgeCase2() {
         Assert.assertNull(network.msgs.peek(Network.duration));
-        Network.Message m1 = new Network.SingleDestMessage(dummy, n0, n1, Network.duration);
+        Message m1 = new Message.SingleDestMessage(dummy, n0, n1, Network.duration);
         network.msgs.addMsg(m1);
         Assert.assertNotNull(network.msgs.peek(Network.duration));
         Assert.assertEquals(2, network.msgs.msgsBySlot.size());

@@ -51,7 +51,7 @@ public class Network<TN extends Node> {
      */
     public static final int[] distribProp = {16, 18, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
     public static final int[] distribVal = {250, 500, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750, 4500, 6000, 8500, 9750, 10000};
-    private NetworkLatency networkLatency = new NetworkLatency.MeasuredNetworkLatency(distribProp, distribVal);
+    NetworkLatency networkLatency = new NetworkLatency.MeasuredNetworkLatency(distribProp, distribVal);
 
     /**
      * Time in ms. Using an int limits us to ~555 hours of simulation, it's acceptable, and
@@ -140,7 +140,7 @@ public class Network<TN extends Node> {
             return size;
         }
 
-        public @Nullable Message peekFirst() {
+        @Nullable Message peekFirst() {
             for (int i = 0; i < duration; i++) {
                 if (msgsByMs[i] != null) {
                     return msgsByMs[i];
@@ -148,7 +148,6 @@ public class Network<TN extends Node> {
             }
             return null;
         }
-
     }
 
     public final class MessageStorage {
@@ -177,22 +176,22 @@ public class Network<TN extends Node> {
             }
         }
 
-        private @NotNull MsgsSlot findSlot(int aTime) {
+        @NotNull MsgsSlot findSlot(int aTime) {
             cleanup();
             ensureSize(aTime);
             int pos = (aTime - msgsBySlot.get(0).startTime) / duration;
             return msgsBySlot.get(pos);
         }
 
-        public void addMsg(@NotNull Message m) {
+        void addMsg(@NotNull Message m) {
             findSlot(m.nextArrivalTime(Network.this)).addMsg(m);
         }
 
-        public @Nullable Message peek(int time) {
+        @Nullable Message peek(int time) {
             return findSlot(time).peek(time);
         }
 
-        public @Nullable Message poll(int time) {
+        @Nullable Message poll(int time) {
             return findSlot(time).poll(time);
         }
 
@@ -204,12 +203,21 @@ public class Network<TN extends Node> {
         /**
          * @return the first message in the queue, null if the queue is empty.
          */
-        public @Nullable Message peekFirst() {
+        @Nullable Message peekFirst() {
             for (MsgsSlot ms : msgsBySlot) {
                 Message m = ms.peekFirst();
                 if (m != null) return m;
             }
             return null;
+        }
+
+
+        /**
+         * For tests: they can find their message content.
+         */
+        public @Nullable MessageContent<TN> peekFirstMessageContent() {
+            Message m = peekFirst();
+            return m == null ? null : m.getMessageContent();
         }
 
         /**
@@ -321,178 +329,8 @@ public class Network<TN extends Node> {
         public void action(@NotNull Node from, @NotNull Node to) {
             r.run();
             if (continuationCondition.check()) {
-                msgs.addMsg(new SingleDestMessage(this, sender, sender, time + period));
+                msgs.addMsg(new Message.SingleDestMessage(this, sender, sender, time + period));
             }
-        }
-    }
-
-    // public for tests
-    public interface Message {
-        @NotNull MessageContent getMessageContent();
-
-        int getNextDestId();
-
-        int nextArrivalTime(@NotNull Network network);
-
-        @Nullable Message getNextSameTime();
-
-        void setNextSameTime(@Nullable Message m);
-
-        void markRead();
-
-        boolean hasNextReader();
-
-        int getFromId();
-    }
-
-    /**
-     * The implementation idea here is the following:
-     * - we expect that messages are the bottleneck
-     * - we expect that we have a lot of single messages sent to multiple nodes, many thousands
-     * - this has been confirmed by looking at the behavior with youkit 95% of the memory is messages
-     * - so we want to optimize this case.
-     * - we have a single MultipleDestMessage for all nodes
-     * - we don't keep the list of the network latency to save memory
-     *
-     * To avoid storing the network latencies, we do:
-     * - generate the randomness from a unique per MultipleDestMessage + the node id
-     * - sort the nodes with the calculated latency (hence the first node is the first to receive the message)
-     * - recalculate them on the fly as the nodeId & the randomSeed are kept.
-     * - this also allows on disk serialization
-     */
-    final public static class MultipleDestMessage implements Message {
-        public final @NotNull MessageContent messageContent;
-        private final int fromNodeId;
-
-        private final int sendTime;
-        protected final int randomSeed;
-        private final int[] destIds;
-        private int curPos = 0;
-        private @Nullable Message nextSameTime = null;
-
-        public MultipleDestMessage(@NotNull MessageContent m, @NotNull Node fromNode,
-                                   @NotNull List<MessageArrival> dests, int sendTime, int randomSeed) {
-            this.messageContent = m;
-            this.fromNodeId = fromNode.nodeId;
-            this.randomSeed = randomSeed;
-            this.destIds = new int[dests.size()];
-
-            for (int i = 0; i < destIds.length; i++) {
-                destIds[i] = dests.get(i).dest.nodeId;
-            }
-            this.sendTime = sendTime;
-        }
-
-        @Override
-        public String toString() {
-            return "Message{" +
-                    "messageContent=" + messageContent +
-                    ", fromNode=" + fromNodeId +
-                    ", dests=" + Arrays.toString(destIds) +
-                    ", curPos=" + curPos +
-                    '}';
-        }
-
-        @Override
-        public @NotNull MessageContent getMessageContent() {
-            return messageContent;
-        }
-
-        @Override
-        public int getNextDestId() {
-            return destIds[curPos];
-        }
-
-        public int nextArrivalTime(@NotNull Network network) {
-            return sendTime + network.networkLatency.getDelay(
-                    (Node) network.allNodes.get(this.fromNodeId),
-                    (Node) network.allNodes.get(this.getNextDestId()),
-                    network.getPseudoRandom(this.getNextDestId(), randomSeed)
-            );
-        }
-
-        @Override
-        public @Nullable Message getNextSameTime() {
-            return nextSameTime;
-        }
-
-        @Override
-        public void setNextSameTime(@Nullable Message m) {
-            this.nextSameTime = m;
-        }
-
-        public void markRead() {
-            curPos++;
-        }
-
-        public boolean hasNextReader() {
-            return curPos < destIds.length;
-        }
-
-        @Override
-        public int getFromId() {
-            return fromNodeId;
-        }
-    }
-
-    final public static class SingleDestMessage implements Message {
-        public final @NotNull MessageContent messageContent;
-        private final int fromNodeId;
-        private final int toNodeId;
-        private final int arrivalTime;
-        private @Nullable Message nextSameTime = null;
-
-
-        @Override
-        public @Nullable Network.Message getNextSameTime() {
-            return nextSameTime;
-        }
-
-        @Override
-        public void setNextSameTime(@Nullable Message nextSameTime) {
-            this.nextSameTime = nextSameTime;
-        }
-
-        public SingleDestMessage(@NotNull MessageContent messageContent, @NotNull Node fromNode, @NotNull Node toNode, int arrivalTime) {
-            this.messageContent = messageContent;
-            this.fromNodeId = fromNode.nodeId;
-            this.toNodeId = toNode.nodeId;
-            this.arrivalTime = arrivalTime;
-        }
-
-        @Override
-        public String toString() {
-            return "Message{" +
-                    "messageContent=" + messageContent +
-                    ", fromNode=" + fromNodeId +
-                    ", dest=" + toNodeId +
-                    '}';
-        }
-
-        @Override
-        public @NotNull MessageContent getMessageContent() {
-            return messageContent;
-        }
-
-        @Override
-        public int getNextDestId() {
-            return toNodeId;
-        }
-
-        public int nextArrivalTime(@NotNull Network network) {
-            return arrivalTime;
-        }
-
-        public void markRead() {
-        }
-
-        public boolean hasNextReader() {
-            return false;
-        }
-
-        @Override
-        public int getFromId() {
-            return fromNodeId;
         }
     }
 
@@ -540,7 +378,7 @@ public class Network<TN extends Node> {
     public void send(@NotNull MessageContent mc, int sendTime, @NotNull TN fromNode, @NotNull TN toNode) {
         MessageArrival ms = createMessageArrival(mc, fromNode, toNode, sendTime, rd.nextInt());
         if (ms != null) {
-            Message m = new SingleDestMessage(mc, fromNode, toNode, ms.arrival);
+            Message m = new Message.SingleDestMessage(mc, fromNode, toNode, ms.arrival);
             msgs.addMsg(m);
         }
     }
@@ -568,10 +406,10 @@ public class Network<TN extends Node> {
         if (!da.isEmpty()) {
             if (da.size() == 1) {
                 MessageArrival ms = da.get(0);
-                Message msg = new SingleDestMessage(m, fromNode, ms.dest, ms.arrival);
+                Message msg = new Message.SingleDestMessage(m, fromNode, ms.dest, ms.arrival);
                 msgs.addMsg(msg);
             } else {
-                Message msg = new MultipleDestMessage(m, fromNode, da, sendTime, randomSeed);
+                Message msg = new Message.MultipleDestMessage(m, fromNode, da, sendTime, randomSeed);
                 msgs.addMsg(msg);
             }
         }
@@ -614,7 +452,7 @@ public class Network<TN extends Node> {
     /**
      * @return always the same number, between 0 and 99, uniformly distributed.
      */
-    private int getPseudoRandom(int nodeId, int randomSeed) {
+    public static int getPseudoRandom(int nodeId, int randomSeed) {
         int x = hash(nodeId) ^ randomSeed;
         return Math.abs(x % 100);
     }
@@ -628,17 +466,17 @@ public class Network<TN extends Node> {
 
     public void registerTask(@NotNull final Runnable task, int startAt, @NotNull TN fromNode) {
         Task sw = new Task(task);
-        msgs.addMsg(new SingleDestMessage(sw, fromNode, fromNode, startAt));
+        msgs.addMsg(new Message.SingleDestMessage(sw, fromNode, fromNode, startAt));
     }
 
     public void registerPeriodicTask(@NotNull final Runnable task, int startAt, int period, @NotNull TN fromNode) {
         PeriodicTask sw = new PeriodicTask(task, fromNode, period);
-        msgs.addMsg(new SingleDestMessage(sw, fromNode, fromNode, startAt));
+        msgs.addMsg(new Message.SingleDestMessage(sw, fromNode, fromNode, startAt));
     }
 
     public void registerPeriodicTask(@NotNull final Runnable task, int startAt, int period, @NotNull TN fromNode, @NotNull Condition c) {
         PeriodicTask sw = new PeriodicTask(task, fromNode, period, c);
-        msgs.addMsg(new SingleDestMessage(sw, fromNode, fromNode, startAt));
+        msgs.addMsg(new Message.SingleDestMessage(sw, fromNode, fromNode, startAt));
     }
 
     public void registerConditionalTask(@NotNull final Runnable task, int startAt, int duration,
