@@ -151,20 +151,24 @@ public class OptimisticP2PSignature {
         return last;
     }
 
-
     public static void main(String... args) {
         int[] distribProp = {1, 33, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
         int[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
         for (int i = 0; i < distribVal.length; i++)
             distribVal[i] += 50; // more or less the latency we had before the refactoring
 
-        OptimisticP2PSignature p2ps = new OptimisticP2PSignature(1000, 501,
-                25, 3);
+        OptimisticP2PSignature p2ps = new OptimisticP2PSignature(1000, 501, 25, 3);
         p2ps.network.setNetworkLatency(distribProp, distribVal).setMsgDiscardTime(1000);
-        //p2ps.network.removeNetworkLatency();
         p2ps.network.printNetworkLatency();
-        P2PSigNode observer = p2ps.init();
-        p2ps.network.run(5);
-        System.out.println(observer);
+
+
+        for (int i = 1000; i < 8000; i += 1000) {
+            p2ps = new OptimisticP2PSignature(i, i / 2 + 1, 25, 3);
+            p2ps.network.setNetworkLatency(distribProp, distribVal).setMsgDiscardTime(1000);
+            //p2ps.network.removeNetworkLatency();
+            P2PSigNode observer = p2ps.init();
+            p2ps.network.run(5);
+            System.out.println(observer);
+        }
     }
 }

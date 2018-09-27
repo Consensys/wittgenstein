@@ -4,7 +4,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Random;
 
-@SuppressWarnings("WeakerAccess")
+@SuppressWarnings({"WeakerAccess", "unused"})
 public class Node {
     public final static int MAX_X = 1000;
     public final static int MAX_Y = 1000;
@@ -28,6 +28,21 @@ public class Node {
     protected long bytesSent = 0;
     protected long bytesReceived = 0;
 
+    public long getMsgReceived() {
+        return msgReceived;
+    }
+
+    public long getMsgSent() {
+        return msgSent;
+    }
+
+    public long getBytesSent() {
+        return bytesSent;
+    }
+
+    public long getBytesReceived() {
+        return bytesReceived;
+    }
 
     public static class NodeBuilder {
         int nodeIds = 0;
