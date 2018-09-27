@@ -632,7 +632,10 @@ public class SanFerminBis {
 
     public static void main(String... args) {
         int[] distribProp = {1, 33, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
-        long[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
+        int[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
+        for (int i = 0; i < distribVal.length; i++)
+            distribVal[i] += 50; // more or less the latency we had before the refactoring
+
 
         SanFerminBis p2ps;
         p2ps = new SanFerminBis(1024, 10,512, 2,48,300,1,false);

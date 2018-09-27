@@ -569,18 +569,23 @@ public class SanFerminOptimistic {
 
     public static void main(String... args) {
         int[] distribProp = {1, 33, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
-        long[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
+        int[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
+        for (int i = 0; i < distribVal.length; i++)
+            distribVal[i] += 50; // more or less the latency we had before the refactoring
 
         SanFerminOptimistic p2ps;
         //p2ps = new SanFerminOptimistic(1024, 10,512, 2,48,300,1,false);
         //p2ps = new SanFerminOptimistic(512, 9,256, 2,48,300,1,false);
 
         p2ps = new SanFerminOptimistic(8, 3,4, 2,48,300,3,true);
-        p2ps.StartAll();
         p2ps.verbose = true;
         p2ps.network.setNetworkLatency(distribProp, distribVal).setMsgDiscardTime(1000);
         //p2ps.network.removeNetworkLatency();
+
+        p2ps.StartAll();
         p2ps.network.run(30);
+
+        // print results
         Collections.sort(p2ps.finishedNodes,
                 (n1,n2) -> {  return Long.compare(n1.thresholdAt,n2.thresholdAt);});
         int max = p2ps.finishedNodes.size() < 10 ? p2ps.finishedNodes.size()

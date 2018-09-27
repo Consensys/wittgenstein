@@ -548,13 +548,15 @@ public class SanFerminSignature {
 
     public static void main(String... args) {
         int[] distribProp = {1, 33, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
-        long[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
+        int[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
+        for (int i = 0; i < distribVal.length; i++)
+            distribVal[i] += 50; // more or less the latency we had before the refactoring
 
         SanFerminSignature p2ps;
         p2ps = new SanFerminSignature(8, 3,
                 1024/2, 3,48);
+        p2ps.network.setNetworkLatency(distribProp, distribVal);
         p2ps.StartAll();
-        p2ps.network.setNetworkLatency(distribProp, distribVal).setMsgDiscardTime(1000);
         //p2ps.network.removeNetworkLatency();
         p2ps.network.run(15);
         System.out.println(p2ps.finishedNodes);
