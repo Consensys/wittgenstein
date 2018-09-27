@@ -20,21 +20,21 @@ public class Dfinity {
 
     final int randomBeaconCount;
 
-    final long blockConstructionTime;
-    final long attestationConstructionTime;
+    final int blockConstructionTime;
+    final int attestationConstructionTime;
     final int percentageDeadAttester;
 
     final int majority;
 
-    final Node.NodeBuilder nb = new Node.NodeBuilder();
+    final Node.NodeBuilder nb;
 
     public Dfinity() {
         this(10, 300, 100, 1000, 1, 0);
     }
 
     public Dfinity(int blockProducersCount, int attestersCount, int attestersPerRound,
-                   long blockConstructionTime,
-                   long attestationConstructionTime, int percentageDeadAttester) {
+                   int blockConstructionTime,
+                   int attestationConstructionTime, int percentageDeadAttester) {
         this.blockProducersCount = blockProducersCount;
         this.blockProducersRound = blockProducersCount / blockProducersPerRound;
 
@@ -49,6 +49,7 @@ public class Dfinity {
         this.attestationConstructionTime = attestationConstructionTime;
         this.percentageDeadAttester = percentageDeadAttester;
 
+        this.nb = new Node.NodeBuilderWithPosition(network.rd);
         this.network.addObserver(new DfinityNode(genesis) {
         });
     }
@@ -62,7 +63,7 @@ public class Dfinity {
     final @NotNull Set<RandomBeaconNode> rds = new HashSet<>();
 
     static class DfinityBlock extends Block<DfinityBlock> {
-        public DfinityBlock(@NotNull BlockProducerNode blockProducerNode, int height, @NotNull DfinityBlock head, boolean b, long time) {
+        public DfinityBlock(@NotNull BlockProducerNode blockProducerNode, int height, @NotNull DfinityBlock head, boolean b, int time) {
             super(blockProducerNode, height, head, b, time);
         }
 
@@ -364,7 +365,7 @@ public class Dfinity {
                     sendRB();
                 } else {
                     assert head.parent != null;
-                    long wt = head.parent.proposalTime + roundTime * 2;
+                    int wt = head.parent.proposalTime + roundTime * 2;
                     if (wt <= network.time) wt = network.time + attestationConstructionTime;
                     RandomBeaconExchange rbe = new RandomBeaconExchange(height);
                     network.send(rbe, wt, this, rds);
@@ -406,6 +407,10 @@ public class Dfinity {
             rds.add(n);
             network.addNode(n);
         }
+
+        for (RandomBeaconNode n : rds) {
+            n.sendRB();
+        }
     }
 
 
@@ -414,15 +419,9 @@ public class Dfinity {
         bc.init();
         //bc.network.removeNetworkLatency();
 
-        for (RandomBeaconNode n : bc.rds) n.sendRB();
         bc.network.run(50);
 
-        List<Set<? extends Node>> lns = new ArrayList<>();
-        lns.add(bc.bps);
-        lns.add(bc.attesters);
-        lns.add(bc.rds);
-
-        bc.network.partition(.20f, lns);
+        bc.network.partition(.20f);
         bc.network.run(2_000);
         bc.network.endPartition();
 

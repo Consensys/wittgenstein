@@ -10,7 +10,7 @@ public class P2PNetwork extends Network<P2PNode> {
     }
 
     public void setPeers() {
-        final ArrayList<P2PNode> todo = new ArrayList<>(allNodes.values());
+        final ArrayList<P2PNode> todo = new ArrayList<>(allNodes);
 
         int toCreate = todo.size() * connectionCount;
 

@@ -10,7 +10,7 @@ import java.util.*;
  * <p>
  * Nothing is executed in parallel, so the code does not have to be multithread safe.
  */
-@SuppressWarnings("WeakerAccess")
+@SuppressWarnings({"WeakerAccess", "unused"})
 public class Network<TN extends Node> {
     final static int duration = 60 * 1000;
 
@@ -24,33 +24,40 @@ public class Network<TN extends Node> {
      * are managed as special messages). Conditional tasks are in a specific list.
      */
     public final List<ConditionalTask> conditionalTasks = new LinkedList<>();
-    protected final Map<Integer, TN> allNodes = new HashMap<>();
+
+
+    /**
+     * Internal variable. Nodes id are sequential & start at zero, so we can we index them in an array.
+     */
+    protected final List<TN> allNodes = new ArrayList<>(2048);
 
     /**
      * By using a single random generator, we have repeatable runs.
      */
     public final Random rd;
 
-    final HashSet<Integer> partition = new HashSet<>();
+    final List<Integer> partitionsInX = new ArrayList<>();
 
     /**
      * We can decide to discard messages that would take too long to arrive. This
      * limit the memory consumption of the simulator as well.
      */
-    long msgDiscardTime = Long.MAX_VALUE;
+    int msgDiscardTime = Integer.MAX_VALUE;
 
     /**
      * Distribution taken from: https://ethstats.net/
      * It should be read like this:
      * 16% of the messages will be received in 250ms or less
      */
-    private final int[] distribProp = {16, 18, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
-    public final long[] distribVal = {250, 500, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750, 4500, 6000, 8500, 9750, 10000};
-    private final long[] longDistrib = new long[100];
+    public static final int[] distribProp = {16, 18, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
+    public static final int[] distribVal = {250, 500, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750, 4500, 6000, 8500, 9750, 10000};
+    NetworkLatency networkLatency = new NetworkLatency.MeasuredNetworkLatency(distribProp, distribVal);
 
-
-    public long time = 0;
-
+    /**
+     * Time in ms. Using an int limits us to ~555 hours of simulation, it's acceptable, and
+     * as we have billions of dated objects it saves some memory...
+     */
+    public int time = 0;
 
     public Network() {
         this(0);
@@ -58,16 +65,14 @@ public class Network<TN extends Node> {
 
     public Network(long randomSeed) {
         this.rd = new Random(randomSeed);
-        setNetworkLatency(distribProp, distribVal);
     }
-
-
 
     public TN getNodeById(int id) {
         return allNodes.get(id);
     }
 
-    public Network<TN> setMsgDiscardTime(long l) {
+    @SuppressWarnings("UnusedReturnValue")
+    public Network<TN> setMsgDiscardTime(int l) {
         this.msgDiscardTime = l;
         return this;
     }
@@ -76,75 +81,74 @@ public class Network<TN extends Node> {
     /**
      * A desperate attempt to have something less memory consuming than a PriorityQueue or
      * a guava multimap, by using raw array. The idea is to optimize the case when there are
-     * multiple messages in the same millisecond, but the time range is limited.
+     * multiple messages in the same millisecond, but the global time range for all messages is limited.
      * <p>
      * The second idea is to have a repeatable run when there are multiple messages arriving
      * at the same millisecond.
      */
-    private static class MsgsSlot {
-        final long startTime;
-        final long endTime;
+    private final class MsgsSlot {
+        final int startTime;
+        final int endTime;
         @SuppressWarnings("unchecked")
-        final LinkedList<Message>[] msgsByMs = new LinkedList[duration];
+        final Message[] msgsByMs = new Message[duration];
 
-        public MsgsSlot(long startTime) {
+        public MsgsSlot(int startTime) {
             this.startTime = startTime - (startTime % duration);
             this.endTime = startTime + duration;
         }
 
-        private int getPos(long aTime) {
+        private int getPos(int aTime) {
             if (aTime < startTime || aTime >= startTime + duration) {
                 throw new IllegalArgumentException();
             }
-            return (int) (aTime % duration);
+            return (aTime % duration);
         }
 
         public void addMsg(@NotNull Message m) {
-            int pos = getPos(m.arrivalTime);
-            if (msgsByMs[pos] == null) {
-                msgsByMs[pos] = new LinkedList<>();
-            }
-            msgsByMs[pos].addFirst(m);
+            int pos = getPos(m.nextArrivalTime(Network.this));
+            m.setNextSameTime(msgsByMs[pos]);
+            msgsByMs[pos] = m;
         }
 
-        public @Nullable Message peek(long time) {
+        public @Nullable Message peek(int time) {
             int pos = getPos(time);
-            if (msgsByMs[pos] == null || msgsByMs[pos].isEmpty()) {
-                return null;
-            }
-            return msgsByMs[pos].peekFirst();
+            return msgsByMs[pos];
         }
 
-        public @Nullable Message poll(long time) {
+        public @Nullable Message poll(int time) {
             int pos = getPos(time);
-            if (msgsByMs[pos] == null || msgsByMs[pos].isEmpty()) {
-                return null;
+            Message m = msgsByMs[pos];
+            if (m != null) {
+                msgsByMs[pos] = m.getNextSameTime();
             }
-            return msgsByMs[pos].pollFirst();
+            return m;
         }
 
         public int size() {
             int size = 0;
             for (int i = 0; i < duration; i++) {
-                if (msgsByMs[i] != null) {
-                    size += msgsByMs[i].size();
+                int ss = 0;
+                Message m = msgsByMs[i];
+                while (m != null) {
+                    ss++;
+                    m = m.getNextSameTime();
                 }
+                size += ss;
             }
             return size;
         }
 
-        public @Nullable Message peekFirst() {
+        @Nullable Message peekFirst() {
             for (int i = 0; i < duration; i++) {
-                if (msgsByMs[i] != null && !msgsByMs[i].isEmpty()) {
-                    return msgsByMs[i].peekFirst();
+                if (msgsByMs[i] != null) {
+                    return msgsByMs[i];
                 }
             }
             return null;
         }
-
     }
 
-    public class MessageStorage {
+    public final class MessageStorage {
         public final ArrayList<MsgsSlot> msgsBySlot = new ArrayList<>();
 
         public int size() {
@@ -164,28 +168,28 @@ public class Network<TN extends Node> {
             }
         }
 
-        void ensureSize(long aTime) {
+        void ensureSize(int aTime) {
             while (msgsBySlot.get(msgsBySlot.size() - 1).endTime <= aTime) {
                 msgsBySlot.add(new MsgsSlot(msgsBySlot.get(msgsBySlot.size() - 1).endTime));
             }
         }
 
-        private @NotNull MsgsSlot findSlot(long aTime) {
+        @NotNull MsgsSlot findSlot(int aTime) {
             cleanup();
             ensureSize(aTime);
-            int pos = (int) (aTime - msgsBySlot.get(0).startTime) / duration;
+            int pos = (aTime - msgsBySlot.get(0).startTime) / duration;
             return msgsBySlot.get(pos);
         }
 
-        public void addMsg(@NotNull Message m) {
-            findSlot(m.arrivalTime).addMsg(m);
+        void addMsg(@NotNull Message m) {
+            findSlot(m.nextArrivalTime(Network.this)).addMsg(m);
         }
 
-        public @Nullable Message peek(long time) {
+        @Nullable Message peek(int time) {
             return findSlot(time).peek(time);
         }
 
-        public @Nullable Message poll(long time) {
+        @Nullable Message poll(int time) {
             return findSlot(time).poll(time);
         }
 
@@ -197,18 +201,38 @@ public class Network<TN extends Node> {
         /**
          * @return the first message in the queue, null if the queue is empty.
          */
-        public @Nullable Message peekFirst() {
+        @Nullable Message peekFirst() {
             for (MsgsSlot ms : msgsBySlot) {
                 Message m = ms.peekFirst();
                 if (m != null) return m;
             }
             return null;
         }
+
+
+        /**
+         * For tests: they can find their message content.
+         */
+        public @Nullable MessageContent<TN> peekFirstMessageContent() {
+            Message m = peekFirst();
+            return m == null ? null : m.getMessageContent();
+        }
+
+        /**
+         * @return the first message in the queue, null if the queue is empty.
+         */
+        public @Nullable Message pollFirst() {
+            Message m = peekFirst();
+            return m == null ? null : poll(m.nextArrivalTime(Network.this));
+        }
     }
 
 
     /**
      * The generic message that goes on a network. Triggers an 'action' on reception.
+     * <p>
+     * Object of this class must be immutable. Especially, MessageContent is shared between
+     * the messages for messages sent to multiple nodes.
      */
     public abstract static class MessageContent<TN extends Node> {
         public abstract void action(@NotNull TN from, @NotNull TN to);
@@ -243,7 +267,7 @@ public class Network<TN extends Node> {
         }
     }
 
-    public class ConditionalTask extends Task {
+    public final class ConditionalTask extends Task {
         /**
          * Starts if this condition is met.
          */
@@ -257,15 +281,15 @@ public class Network<TN extends Node> {
         /**
          * Time before next start.
          */
-        final long duration;
+        final int duration;
         final Node sender;
 
         /**
          * Will start after this time.
          */
-        long minStartTime;
+        int minStartTime;
 
-        public ConditionalTask(Condition startIf, Condition repeatIf, Runnable r, long minStartTime, long duration, Node sender) {
+        public ConditionalTask(Condition startIf, Condition repeatIf, Runnable r, int minStartTime, int duration, Node sender) {
             super(r);
             this.startIf = startIf;
             this.repeatIf = repeatIf;
@@ -284,65 +308,40 @@ public class Network<TN extends Node> {
      * Some protocols want some tasks to be executed periodically
      */
     public class PeriodicTask extends Task {
-        final long period;
+        final int period;
         final Node sender;
         final Condition continuationCondition;
 
-        public PeriodicTask(@NotNull Runnable r, @NotNull Node fromNode, long period, @NotNull Condition condition) {
+        public PeriodicTask(@NotNull Runnable r, @NotNull Node fromNode, int period, @NotNull Condition condition) {
             super(r);
             this.period = period;
             this.sender = fromNode;
             this.continuationCondition = condition;
         }
 
-        public PeriodicTask(@NotNull Runnable r, @NotNull Node fromNode, long period) {
+        public PeriodicTask(@NotNull Runnable r, @NotNull Node fromNode, int period) {
             this(r, fromNode, period, () -> true);
         }
-
 
         @Override
         public void action(@NotNull Node from, @NotNull Node to) {
             r.run();
             if (continuationCondition.check()) {
-                msgs.addMsg(new Message(this, sender, sender, time + period));
+                msgs.addMsg(new Message.SingleDestMessage(this, sender, sender, time + period));
             }
         }
     }
 
-    public static class Message implements Comparable<Message> {
-        public final @NotNull MessageContent messageContent;
-        public final @NotNull Node fromNode;
-        public final @NotNull Node toNode;
-        public final long arrivalTime;
-
-        public Message(@NotNull MessageContent messageContent, @NotNull Node fromNode, @NotNull Node toNode, long arrivalTime) {
-            this.messageContent = messageContent;
-            this.fromNode = fromNode;
-            this.toNode = toNode;
-            this.arrivalTime = arrivalTime;
-        }
-
-        @Override
-        public int compareTo(@NotNull Message o) {
-            return Long.compare(arrivalTime, o.arrivalTime);
-        }
-
-        @Override
-        public String toString() {
-            return "Message{" +
-                    "messageContent=" + messageContent +
-                    ", fromNode=" + fromNode +
-                    ", toNode=" + toNode +
-                    ", arrivalTime=" + arrivalTime +
-                    '}';
-        }
-    }
 
     /**
      * Simulate for x seconds. Can be called multiple time.
      */
-    public void run(long seconds) {
-        long endAt = time + seconds * 1000;
+    public void run(int seconds) {
+        runMs(seconds * 1000);
+    }
+
+    public void runMs(int ms) {
+        int endAt = time + ms;
         receiveUntil(endAt);
         time = endAt;
     }
@@ -351,61 +350,140 @@ public class Network<TN extends Node> {
     /**
      * Send a message to all nodes.
      */
-    public void sendAll(@NotNull MessageContent m, long sendTime, @NotNull TN fromNode) {
-        send(m, sendTime, fromNode, allNodes.values());
+    public void sendAll(@NotNull MessageContent m, int sendTime, @NotNull TN fromNode) {
+        send(m, sendTime, fromNode, allNodes);
     }
 
     public void sendAll(@NotNull MessageContent m, @NotNull TN fromNode) {
-        send(m, time + 1, fromNode, allNodes.values());
+        send(m, time + 1, fromNode, allNodes);
     }
 
+    /**
+     * Send a message to a collection of nodes. The message is considered as sent immediately, and
+     * will arrive at a time depending on the network latency.
+     */
     public void send(@NotNull MessageContent m, @NotNull TN fromNode, @NotNull Collection<TN> dests) {
         send(m, time + 1, fromNode, dests);
     }
 
-    public void send(@NotNull MessageContent m, long sendTime, @NotNull TN fromNode, @NotNull Collection<? extends Node> dests) {
-        if (sendTime <= time) {
-            throw new IllegalStateException("" + m + ", sendTime=" + sendTime + ", time=" + time);
+    public void send(@NotNull MessageContent m, @NotNull TN fromNode, @NotNull TN toNode) {
+        send(m, time + 1, fromNode, toNode);
+    }
+
+    /**
+     * Send a message to a single node.
+     */
+    public void send(@NotNull MessageContent mc, int sendTime, @NotNull TN fromNode, @NotNull TN toNode) {
+        MessageArrival ms = createMessageArrival(mc, fromNode, toNode, sendTime, rd.nextInt());
+        if (ms != null) {
+            Message m = new Message.SingleDestMessage(mc, fromNode, toNode, ms.arrival);
+            msgs.addMsg(m);
         }
-        for (Node n : dests) {
-            if (n != fromNode) {
-                if ((partition.contains(fromNode.nodeId) && partition.contains(n.nodeId)) ||
-                        (!partition.contains(fromNode.nodeId) && !partition.contains(n.nodeId))) {
-                    if (m.size() == 0) throw new IllegalStateException();
-                    fromNode.msgSent++;
-                    fromNode.bytesSent += m.size();
-                    long nt = getNetworkDelay(fromNode, n);
-                    if (nt < msgDiscardTime) {
-                        msgs.addMsg(new BlockChainNetwork.Message(m, fromNode, n, sendTime + nt));
-                    }
-                }
+    }
+
+    final static class MessageArrival implements Comparable<MessageArrival> {
+        final Node dest;
+        final int arrival;
+
+        public MessageArrival(@NotNull Node dest, int arrival) {
+            this.dest = dest;
+            this.arrival = arrival;
+        }
+
+        @Override
+        public int compareTo(@NotNull Network.MessageArrival o) {
+            return Long.compare(arrival, o.arrival);
+        }
+    }
+
+    public void send(@NotNull MessageContent m, int sendTime, @NotNull TN fromNode, @NotNull Collection<? extends Node> dests) {
+        int randomSeed = rd.nextInt();
+
+        List<MessageArrival> da = createMessageArrivals(m, sendTime, fromNode, dests, randomSeed);
+
+        if (!da.isEmpty()) {
+            if (da.size() == 1) {
+                MessageArrival ms = da.get(0);
+                Message msg = new Message.SingleDestMessage(m, fromNode, ms.dest, ms.arrival);
+                msgs.addMsg(msg);
+            } else {
+                Message msg = new Message.MultipleDestMessage(m, fromNode, da, sendTime, randomSeed);
+                msgs.addMsg(msg);
             }
         }
     }
 
+    @NotNull List<MessageArrival> createMessageArrivals(@NotNull MessageContent m, int sendTime, @NotNull TN fromNode, @NotNull Collection<? extends Node> dests, int randomSeed) {
+        ArrayList<MessageArrival> da = new ArrayList<>(dests.size());
+        for (Node n : dests) {
+            MessageArrival ma = createMessageArrival(m, fromNode, n, sendTime, randomSeed);
+            if (ma != null) {
+                da.add(ma);
+            }
+        }
+        Collections.sort(da);
 
-    public void registerTask(@NotNull final Runnable task, long startAt, @NotNull TN fromNode) {
+        return da;
+    }
+
+
+    private @Nullable MessageArrival createMessageArrival(@NotNull MessageContent<?> m,
+                                                          @NotNull Node fromNode, @NotNull Node toNode, int sendTime,
+                                                          int randomSeed) {
+        if (sendTime <= time) {
+            throw new IllegalStateException("" + m + ", sendTime=" + sendTime + ", time=" + time);
+        }
+
+        if (partitionId(fromNode) == partitionId(toNode)) {
+            assert !(m instanceof Network.Task);
+            fromNode.msgSent++;
+            fromNode.bytesSent += m.size();
+            int nt = networkLatency.getDelay(fromNode, toNode, getPseudoRandom(toNode.nodeId, randomSeed));
+            if (nt < msgDiscardTime) {
+                return new MessageArrival(toNode, sendTime + nt);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return always the same number, between 0 and 99, uniformly distributed.
+     */
+    public static int getPseudoRandom(int nodeId, int randomSeed) {
+        int x = hash(nodeId) ^ randomSeed;
+        return Math.abs(x % 100);
+    }
+
+    private static int hash(int a) {
+        a ^= (a << 13);
+        a ^= (a >>> 17);
+        a ^= (a << 5);
+        return a;
+    }
+
+    public void registerTask(@NotNull final Runnable task, int startAt, @NotNull TN fromNode) {
         Task sw = new Task(task);
-        msgs.addMsg(new Message(sw, fromNode, fromNode, startAt));
+        msgs.addMsg(new Message.SingleDestMessage(sw, fromNode, fromNode, startAt));
     }
 
-    public void registerPeriodicTask(@NotNull final Runnable task, long startAt, long period, @NotNull TN fromNode) {
+    public void registerPeriodicTask(@NotNull final Runnable task, int startAt, int period, @NotNull TN fromNode) {
         PeriodicTask sw = new PeriodicTask(task, fromNode, period);
-        msgs.addMsg(new Message(sw, fromNode, fromNode, startAt));
+        msgs.addMsg(new Message.SingleDestMessage(sw, fromNode, fromNode, startAt));
     }
 
-    public void registerPeriodicTask(@NotNull final Runnable task, long startAt, long period, @NotNull TN fromNode, @NotNull Condition c) {
+    public void registerPeriodicTask(@NotNull final Runnable task, int startAt, int period, @NotNull TN fromNode, @NotNull Condition c) {
         PeriodicTask sw = new PeriodicTask(task, fromNode, period, c);
-        msgs.addMsg(new Message(sw, fromNode, fromNode, startAt));
+        msgs.addMsg(new Message.SingleDestMessage(sw, fromNode, fromNode, startAt));
     }
 
-    public void registerConditionalTask(@NotNull final Runnable task, long startAt, long duration,
+    public void registerConditionalTask(@NotNull final Runnable task, int startAt, int duration,
                                         @NotNull TN fromNode, @NotNull Condition startIf, @NotNull Condition repeatIf) {
         ConditionalTask ct = new ConditionalTask(startIf, repeatIf, task, startAt, duration, fromNode);
         conditionalTasks.add(ct);
     }
 
-    private @Nullable Message nextMessage(long until) {
+    private @Nullable Message nextMessage(int until) {
         while (time <= until) {
             Message m = msgs.poll(time);
             if (m != null) {
@@ -417,16 +495,17 @@ public class Network<TN extends Node> {
         return null;
     }
 
-    void receiveUntil(long until) {
+    void receiveUntil(int until) {
         //noinspection ConstantConditions
-        long previousTime = time;
+        int previousTime = time;
         Message next = nextMessage(until);
         while (next != null) {
             Message m = next;
-            if (m.arrivalTime != previousTime) {
-                if (time > m.arrivalTime) {
-                    throw new IllegalStateException("time:" + time + ", m:" + m);
+            if (m.nextArrivalTime(this) != previousTime) {
+                if (time > m.nextArrivalTime(this)) {
+                    throw new IllegalStateException("time:" + time + ", arrival=" + m.nextArrivalTime(this) + ", m:" + m);
                 }
+
                 Iterator<ConditionalTask> it = conditionalTasks.iterator();
                 while (it.hasNext()) {
                     ConditionalTask ct = it.next();
@@ -441,24 +520,44 @@ public class Network<TN extends Node> {
                 }
             }
 
-            if ((partition.contains(m.fromNode.nodeId) && partition.contains(m.toNode.nodeId)) ||
-                    (!partition.contains(m.fromNode.nodeId) && !partition.contains(m.toNode.nodeId))) {
-                if (!(m.messageContent instanceof Network<?>.Task)) {
-                    if (m.messageContent.size() == 0) throw new IllegalStateException();
-                    m.toNode.msgReceived++;
-                    m.toNode.bytesReceived += m.messageContent.size();
+            Node from = allNodes.get(m.getFromId());
+            Node to = allNodes.get(m.getNextDestId());
+            if (partitionId(from) == partitionId(to)) {
+                if (!(m.getMessageContent() instanceof Network<?>.Task)) {
+                    if (m.getMessageContent().size() == 0) throw new IllegalStateException();
+                    to.msgReceived++;
+                    to.bytesReceived += m.getMessageContent().size();
                 }
-                m.messageContent.action(m.fromNode, m.toNode);
+                m.getMessageContent().action(from, to);
             }
 
+            m.markRead();
+            if (m.hasNextReader()) {
+                msgs.addMsg(m);
+            }
             previousTime = time;
             next = nextMessage(until);
         }
     }
 
+    int partitionId(@NotNull Node to) {
+        int pId = 0;
+        for (Integer x : partitionsInX) {
+            if (x > to.x) {
+                return pId;
+            } else {
+                pId++;
+            }
+        }
+        return pId;
+    }
+
 
     public void addNode(@NotNull TN node) {
-        allNodes.put(node.nodeId, node);
+        while (allNodes.size() <= node.nodeId) {
+            allNodes.add(null);
+        }
+        allNodes.set(node.nodeId, node);
     }
 
 
@@ -468,71 +567,49 @@ public class Network<TN extends Node> {
      */
     @SuppressWarnings("UnusedReturnValue")
     public @NotNull Network<TN> removeNetworkLatency() {
-        for (int i = 0; i < 100; i++) {
-            longDistrib[i] = 1;
-        }
-        return this;
+        networkLatency = new NetworkLatency.NetworkNoLatency();
+        return setNetworkLatency(new NetworkLatency.NetworkNoLatency());
     }
 
+    public @NotNull Network<TN> setNetworkLatency(int[] distribProp, int[] distribVal) {
+        return setNetworkLatency(new NetworkLatency.MeasuredNetworkLatency(distribProp, distribVal));
+    }
+
+    public @NotNull Network<TN> setNetworkLatency(@NotNull NetworkLatency networkLatency) {
+        if (msgs.size() != 0) {
+            throw new IllegalStateException("You can't change the latency while the system as on going messages");
+        }
+
+        this.networkLatency = networkLatency;
+        return this;
+    }
 
     public void printNetworkLatency() {
-        System.out.println("BlockChainNetwork latency: time to receive a message:");
-
-        for (int s = 1, cur = 0; cur < 100; s++) {
-            int size = 0;
-            while (cur < longDistrib.length && longDistrib[cur] < s * 1000) {
-                size++;
-                cur++;
-            }
-            System.out.println(s + " second" + (s > 1 ? "s: " : ": ") + size + "%, cumulative=" + cur + "%");
-        }
+        System.out.println("" + networkLatency);
     }
 
     /**
-     * We take into account:
-     * - a fix cost: 10ms
-     * - the distance between the nodes: max 200ms
-     * - the latency set.
+     * It's possible to cut the network in multiple points.
+     * The partition takes the node positions into account
+     * On a map, a partition is a vertical cut on the X axe (eg. the earth is not
+     * round for these partitions)
+     *
+     * @param part - the x point (in %) where we cut.
      */
-    long getNetworkDelay(@NotNull Node fromNode, @NotNull Node n) {
-        long rawDelay = 10 + (200 * fromNode.dist(n)) / Node.MAX_DIST;
-        return rawDelay + longDistrib[rd.nextInt(longDistrib.length)];
-    }
-
-    /**
-     * @see Network#distribProp
-     * @see Network#distribVal
-     */
-    public @NotNull Network<TN> setNetworkLatency(@NotNull int[] dP, @NotNull long[] dV) {
-        int li = 0;
-        int cur = 0;
-        int sum = 0;
-        for (int i = 0; i < dP.length; i++) {
-            sum += dP[i];
-            long step = (dV[i] - cur) / dP[i];
-            for (int ii = 0; ii < dP[i]; ii++) {
-                cur += step;
-                longDistrib[li++] = cur;
-            }
+    public void partition(float part) {
+        if (part <= 0 || part >= 1) {
+            throw new IllegalArgumentException("part needs to be a percentage between 0 & 100");
         }
-
-        if (sum != 100) throw new IllegalArgumentException();
-        if (li != 100) throw new IllegalArgumentException();
-        return this;
-    }
-
-
-    public void partition(float part, @NotNull List<Set<? extends Node>> nodesPerType) {
-        for (Set<? extends Node> ln : nodesPerType) {
-            Iterator<? extends Node> it = ln.iterator();
-            for (int i = 0; i < (ln.size() * part); i++) {
-                partition.add(it.next().nodeId);
-            }
+        int xPoint = (int) (Node.MAX_X * part);
+        if (partitionsInX.contains(xPoint)) {
+            throw new IllegalArgumentException("this partition exists already");
         }
+        partitionsInX.add(xPoint);
+        Collections.sort(partitionsInX);
     }
 
     public void endPartition() {
-        partition.clear();
+        partitionsInX.clear();
     }
 
 }

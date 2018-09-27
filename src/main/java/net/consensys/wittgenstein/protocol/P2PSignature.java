@@ -193,7 +193,7 @@ public class P2PSignature {
          * We add a small delay to take into account the message size. This should likely
          * be moved to the framework.
          */
-        long delayToSend(BitSet sigs) {
+        int delayToSend(BitSet sigs) {
             return network.time + 1 + sigs.cardinality() / 100;
         }
 
@@ -304,7 +304,7 @@ public class P2PSignature {
 
     public static void main(String... args) {
         int[] distribProp = {1, 33, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
-        long[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
+        int[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
 
         P2PSignature p2ps = new P2PSignature(1000, 501,
                 25, 3, 20, true);

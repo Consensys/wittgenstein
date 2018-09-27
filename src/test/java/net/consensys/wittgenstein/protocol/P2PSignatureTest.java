@@ -9,37 +9,37 @@ import org.junit.Test;
 import java.util.BitSet;
 
 public class P2PSignatureTest {
-    private P2PSignature ps = new P2PSignature(100, 60,10,2, 20,false);
+    private P2PSignature ps = new P2PSignature(100, 60, 10, 2, 20, false);
     private P2PSignature.P2PSigNode n1;
     private P2PSignature.P2PSigNode n2;
 
     @Before
-    public void before(){
+    public void before() {
         ps.init();
-        n1 = (P2PSignature.P2PSigNode)ps.network.getNodeById(1);
-        n2 = (P2PSignature.P2PSigNode)ps.network.getNodeById(2);
+        n1 = (P2PSignature.P2PSigNode) ps.network.getNodeById(1);
+        n2 = (P2PSignature.P2PSigNode) ps.network.getNodeById(2);
     }
 
     @Test
-    public void testSetup(){
+    public void testSetup() {
         Assert.assertEquals(1, n1.verifiedSignatures.cardinality());
         Assert.assertTrue(n1.verifiedSignatures.get(n1.nodeId));
-        Assert.assertTrue( n1.peers.size() >= 3);
-        for (Node n: n1.peers) {
+        Assert.assertTrue(n1.peers.size() >= 3);
+        for (Node n : n1.peers) {
             Assert.assertNotEquals(n, ps);
         }
     }
 
     @Test
-    public void testSendSigs(){
+    public void testSendSigs() {
         n1.peersState.put(n2.nodeId, new P2PSignature.State(n2));
 
         ps.network.msgs.clear();
         n1.sendSigs();
-        Network.Message nm = ps.network.msgs.peekFirst();
-        Assert.assertNotNull(nm);
+        Network.MessageContent<?> mc = ps.network.msgs.peekFirstMessageContent();
+        Assert.assertNotNull(mc);
 
-        P2PSignature.SendSigs ss = (P2PSignature.SendSigs)nm.messageContent;
+        P2PSignature.SendSigs ss = (P2PSignature.SendSigs) mc;
         Assert.assertNotNull(ss);
         Assert.assertEquals(1, ss.sigs.cardinality());
         Assert.assertTrue(ss.sigs.get(n1.nodeId));
@@ -47,7 +47,7 @@ public class P2PSignatureTest {
     }
 
     @Test
-    public void testCheckSigs(){
+    public void testCheckSigs() {
         BitSet sigs = new BitSet(ps.nodeCount);
         sigs.set(n1.nodeId);
         sigs.set(0);
@@ -61,7 +61,7 @@ public class P2PSignatureTest {
     }
 
     @Test
-    public void testSigUpdate(){
+    public void testSigUpdate() {
         BitSet sigs = new BitSet(ps.nodeCount);
         sigs.set(n1.nodeId);
         sigs.set(0);

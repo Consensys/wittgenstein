@@ -49,9 +49,9 @@ public class BlockChainNetwork extends Network<BlockChainNode<? extends Block>> 
     public void endPartition() {
         super.endPartition();
 
-        for (BlockChainNode<?> n : allNodes.values()) {
+        for (BlockChainNode<?> n : allNodes) {
             SendBlock<?, ?> sb = new BlockChainNetwork.SendBlock<>(n.head);
-            sendAll(sb, time + 1, n);
+            sendAll(sb, n);
         }
     }
 

@@ -7,9 +7,9 @@ import net.consensys.wittgenstein.core.P2PNetwork;
 import net.consensys.wittgenstein.core.P2PNode;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.BitSet;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.List;
 
 /**
  * The simplest protocol: just send the signatures, and do an aggregation at the end.
@@ -23,13 +23,17 @@ import java.util.Set;
  * nodes are byzantine.
  *
  * <p>
- * Sends a lot of message (20K per node) so uses a lot of memory. We can't try more than 3K nodes
+ * Sends a lot of message (20K per node) so uses a lot of memory. We can't try more than 4K nodes
  * <p>
  * P2PSigNode{nodeId=999, doneAt=218, sigs=501, msgReceived=19465, msgSent=20041, KBytesSent=1017, KBytesReceived=988}
- * P2PSigNode{nodeId=999, doneAt=314, sigs=1000, msgReceived=39049, msgSent=40001, KBytesSent=2031, KBytesReceived=1982}
+ * P2PSigNode{nodeId=999, doneAt=220, sigs=501, msgReceived=19501, msgSent=20041, KBytesSent=1017, KBytesReceived=990}
+ * P2PSigNode{nodeId=999, doneAt=219, sigs=501, msgReceived=20478, msgSent=21012, KBytesSent=1067, KBytesReceived=1039}
+ * P2PSigNode{nodeId=1499, doneAt=227, sigs=751, msgReceived=34754, msgSent=36007, KBytesSent=1828, KBytesReceived=1764}
  * P2PSigNode{nodeId=1999, doneAt=226, sigs=1001, msgReceived=56539, msgSent=59060, KBytesSent=2999, KBytesReceived=2871}
  * P2PSigNode{nodeId=2499, doneAt=240, sigs=1251, msgReceived=53712, msgSent=55045, KBytesSent=2795, KBytesReceived=2727}
  * P2PSigNode{nodeId=2999, doneAt=230, sigs=1501, msgReceived=68177, msgSent=72049, KBytesSent=3658, KBytesReceived=3462}
+ * P2PSigNode{nodeId=3999, doneAt=244, sigs=2001, msgReceived=116390, msgSent=120060, KBytesSent=6096, KBytesReceived=5910}
+ * P2PSigNode{nodeId=9999, doneAt=201, sigs=5001, msgReceived=273298, msgSent=285058, KBytesSent=14475, KBytesReceived=13878}
  */
 @SuppressWarnings("WeakerAccess")
 public class OptimisticP2PSignature {
@@ -100,9 +104,16 @@ public class OptimisticP2PSignature {
         void onSig(@NotNull P2PSigNode from, @NotNull SendSig ss) {
             if (!done && !verifiedSignatures.get(ss.sig)) {
                 verifiedSignatures.set(ss.sig);
-                Set<Node> dest = new HashSet<>(peers);
-                dest.remove(from);
-                network.send(ss, network.time + 1, this, dest);
+
+                // It's better to use a list than a set here, because it makes the simulation
+                //  repeatable: there's no order in a set.
+                List<Node> dests = new ArrayList<>(peers.size() - 1);
+                for (Node n : peers) {
+                    if (n != from) {
+                        dests.add(n);
+                    }
+                }
+                network.send(ss, network.time + 1, this, dests);
 
                 if (verifiedSignatures.cardinality() >= threshold) {
                     done = true;
@@ -143,15 +154,17 @@ public class OptimisticP2PSignature {
 
     public static void main(String... args) {
         int[] distribProp = {1, 33, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
-        long[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
+        int[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
+        for (int i = 0; i < distribVal.length; i++)
+            distribVal[i] += 50; // more or less the latency we had before the refactoring
 
-        OptimisticP2PSignature p2ps = new OptimisticP2PSignature(1500, 751,
+        OptimisticP2PSignature p2ps = new OptimisticP2PSignature(1000, 501,
                 25, 3);
         p2ps.network.setNetworkLatency(distribProp, distribVal).setMsgDiscardTime(1000);
         //p2ps.network.removeNetworkLatency();
+        p2ps.network.printNetworkLatency();
         P2PSigNode observer = p2ps.init();
         p2ps.network.run(5);
         System.out.println(observer);
     }
-
 }
