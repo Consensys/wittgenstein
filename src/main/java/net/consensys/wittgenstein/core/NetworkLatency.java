@@ -5,7 +5,7 @@ import org.jetbrains.annotations.NotNull;
 @SuppressWarnings("WeakerAccess")
 public abstract class NetworkLatency {
     /**
-     * @param delta - a number between 0 & 99. Used to randomize the result
+     * @param delta - a random number between 0 & 99. Used to randomize the result
      */
     public abstract int getDelay(@NotNull Node from, @NotNull Node to, int delta);
 
@@ -14,42 +14,71 @@ public abstract class NetworkLatency {
         return this.getClass().getSimpleName();
     }
 
+    protected void checkDelta(int delta) {
+        if (delta < 0 || delta > 99) {
+            throw new IllegalArgumentException("delta=" + delta);
+        }
+    }
 
     /**
-     * Latency with: max distance = (10ms + 200ms) +/- 50%, linear
+     * Latency
+     *
+     * @see <a href="https://pdfs.semanticscholar.org/ff13/5d221678e6b542391c831e87fca56e830a73.pdf"/>
+     * Latency vs. distance: y = 0.022x + 4.862
+     * @see <a href="https://www.jstage.jst.go.jp/article/ipsjjip/22/3/22_435/_pdf"/>
+     * variance with ARIMA
+     * @see <a href="https://core.ac.uk/download/pdf/19439477.pdf"/>
+     * generalized Pareto distribution:
+     * - μ [ms] = −0,3
+     * - σ [ms] = 0.35
+     * - ξ[-]   = 1.4
+     * <p>
+     * TODO: we should take the size into account....
      */
     public static class NetworkLatencyByDistance extends NetworkLatency {
         public final int fix;
         public final int max;
-        public final int spread = 50;
+
+        private double distToMile(int dist) {
+            final double earthPerimeter = 24_860;
+            double pointValue = earthPerimeter / Node.MAX_DIST;
+            return pointValue * dist;
+        }
 
         @Override
         public int getDelay(@NotNull Node from, @NotNull Node to, int delta) {
-            if (delta < 0 || delta > 99) {
-                throw new IllegalArgumentException("delta=" + delta);
-            }
-            int rawDelay = fix + (max * from.dist(to)) / Node.MAX_DIST;
-            return (int) (rawDelay * (100 + spread - delta) / 100.0);
+            checkDelta(delta);
+            double rawDelay = fix + distToMile(from.dist(to)) * 0.022 + 5;
+            return Math.max(fix, (int) (rawDelay));
         }
 
         public NetworkLatencyByDistance() {
-            this(10, 200);
+            this(10, 150);
         }
 
-        public NetworkLatencyByDistance(int fix, int max) {
-            this.fix = fix;
-            this.max = max;
+        public NetworkLatencyByDistance(int fixDelay, int maxLatency) {
+            this.fix = fixDelay;
+            this.max = maxLatency;
         }
+
 
         @Override
         public String toString() {
             return "NetworkLatencyByDistance{" +
                     "fix=" + fix +
                     ", max=" + max +
-                    ", spread=" + spread +
                     "%}";
         }
     }
+
+    /*
+    cnt=10, sendPeriod=20 P2PSigNode{nodeId=499, doneAt=550, sigs=405, msgReceived=133, msgSent=145, KBytesSent=148, KBytesReceived=161}
+cnt=10, sendPeriod=20 P2PSigNode{nodeId=999, doneAt=637, sigs=515, msgReceived=228, msgSent=69, KBytesSent=210, KBytesReceived=221}
+cnt=10, sendPeriod=20 P2PSigNode{nodeId=1499, doneAt=663, sigs=953, msgReceived=153, msgSent=146, KBytesSent=448, KBytesReceived=649}
+cnt=10, sendPeriod=20 P2PSigNode{nodeId=1999, doneAt=689, sigs=1295, msgReceived=438, msgSent=142, KBytesSent=1173, KBytesReceived=1281}
+cnt=10, sendPeriod=20 P2PSigNode{nodeId=2499, doneAt=793, sigs=1402, msgReceived=289, msgSent=478, KBytesSent=1212, KBytesReceived=908}
+
+     */
 
     public static class NetworkNoLatency extends NetworkLatency {
         public int getDelay(@NotNull Node from, @NotNull Node to, int delta) {
@@ -88,9 +117,7 @@ public abstract class NetworkLatency {
 
         @Override
         public int getDelay(@NotNull Node from, @NotNull Node to, int delta) {
-            if (delta < 0 || delta > 99) {
-                throw new IllegalArgumentException("delta=" + delta);
-            }
+            checkDelta(delta);
             return longDistrib[delta];
         }
 

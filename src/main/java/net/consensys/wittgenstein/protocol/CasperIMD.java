@@ -83,7 +83,7 @@ public class CasperIMD {
     // EF team repo:
     // https://github.com/ethereum/beacon_chain/blob/master/beacon_chain/state/attestation_record.py
     // It contains a field referencing the block hash: 'shard_block_hash': 'hash32'
-    class Attestation extends BlockChainNetwork.MessageContent {
+    class Attestation extends BlockChainNetwork.MessageContent<CasperNode> {
         final Attester attester;
         final int height;
         final Set<Long> hs = new HashSet<>(); // technically, we put them in a set for efficiency
@@ -103,8 +103,8 @@ public class CasperIMD {
         }
 
         @Override
-        public void action(@NotNull Node from, @NotNull Node to) {
-            ((CasperNode) to).onAttestation(this);
+        public void action(@NotNull CasperNode from, @NotNull CasperNode to) {
+            to.onAttestation(this);
         }
 
         boolean attests(@NotNull CasperBlock cb) {

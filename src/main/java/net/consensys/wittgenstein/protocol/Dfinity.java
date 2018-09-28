@@ -102,22 +102,21 @@ public class Dfinity {
         }
     }
 
-    static class BlockProposal extends Network.MessageContent {
-        @NotNull
-        final DfinityBlock block;
+    static class BlockProposal extends Network.MessageContent<DfinityNode> {
+        final @NotNull DfinityBlock block;
 
         public BlockProposal(@NotNull DfinityBlock block) {
             this.block = block;
         }
 
         @Override
-        public void action(@NotNull Node from, @NotNull Node to) {
+        public void action(@NotNull DfinityNode from, @NotNull DfinityNode to) {
             AttesterNode n = (AttesterNode) to;
             n.onProposal(block);
         }
     }
 
-    static class Vote extends Network.MessageContent {
+    static class Vote extends Network.MessageContent<DfinityNode> {
         final DfinityBlock voteFor;
 
         public Vote(@NotNull DfinityBlock voteFor) {
@@ -125,13 +124,13 @@ public class Dfinity {
         }
 
         @Override
-        public void action(@NotNull Node fromNode, @NotNull Node toNode) {
-            ((DfinityNode) toNode).onVote(fromNode, voteFor);
+        public void action(@NotNull DfinityNode fromNode, @NotNull DfinityNode toNode) {
+            toNode.onVote(fromNode, voteFor);
         }
     }
 
 
-    static class RandomBeaconExchange extends Network.MessageContent {
+    static class RandomBeaconExchange extends Network.MessageContent<RandomBeaconNode> {
         final int height;
 
         public RandomBeaconExchange(int height) {
@@ -139,13 +138,12 @@ public class Dfinity {
         }
 
         @Override
-        public void action(@NotNull Node from, @NotNull Node to) {
-            RandomBeaconNode rbn = (RandomBeaconNode) to;
-            rbn.onRandomBeaconExchange((RandomBeaconNode) from, height);
+        public void action(@NotNull RandomBeaconNode from, @NotNull RandomBeaconNode to) {
+            to.onRandomBeaconExchange(from, height);
         }
     }
 
-    static class RandomBeaconResult extends Network.MessageContent {
+    static class RandomBeaconResult extends Network.MessageContent<DfinityNode> {
         final int height;
         final long rd;
 
@@ -155,9 +153,8 @@ public class Dfinity {
         }
 
         @Override
-        public void action(@NotNull Node from, @NotNull Node to) {
-            DfinityNode n = (DfinityNode) to;
-            n.onRandomBeacon(height, rd);
+        public void action(@NotNull DfinityNode from, @NotNull DfinityNode to) {
+            to.onRandomBeacon(height, rd);
         }
     }
 

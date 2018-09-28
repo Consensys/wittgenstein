@@ -22,7 +22,7 @@ public class TestNetwork {
 
     @Before
     public void before() {
-        network.removeNetworkLatency();
+        network.setNetworkLatency(new NetworkLatency.NetworkNoLatency());
         network.addNode(n0);
         network.addNode(n1);
         network.addNode(n2);
@@ -110,6 +110,39 @@ public class TestNetwork {
         Assert.assertEquals(3, ab.get());
 
         Assert.assertEquals(0, network.msgs.size());
+    }
+
+    @Test
+    public void testStats() {
+        Network.MessageContent<Node> act = new Network.MessageContent<Node>() {
+            @Override
+            public void action(@NotNull Node from, @NotNull Node to) {
+            }
+        };
+
+        network.send(act, n0, Arrays.asList(n1, n2, n3));
+        network.send(act, n0, n1);
+        network.runMs(2);
+
+        Assert.assertEquals(0, n0.getMsgReceived());
+        Assert.assertEquals(0, n0.getBytesReceived());
+        Assert.assertEquals(4, n0.getMsgSent());
+        Assert.assertEquals(4, n0.getBytesSent());
+
+        Assert.assertEquals(2, n1.getMsgReceived());
+        Assert.assertEquals(2, n1.getBytesReceived());
+        Assert.assertEquals(0, n1.getMsgSent());
+        Assert.assertEquals(0, n1.getBytesSent());
+
+        Assert.assertEquals(1, n2.getMsgReceived());
+        Assert.assertEquals(1, n2.getBytesReceived());
+        Assert.assertEquals(0, n2.getMsgSent());
+        Assert.assertEquals(0, n2.getBytesSent());
+
+        Assert.assertEquals(1, n3.getMsgReceived());
+        Assert.assertEquals(1, n3.getBytesReceived());
+        Assert.assertEquals(0, n3.getMsgSent());
+        Assert.assertEquals(0, n3.getBytesSent());
     }
 
     @Test
