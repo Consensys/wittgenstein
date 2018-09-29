@@ -8,6 +8,10 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
+/**
+ * Cqsper IMD - Beacon chain stage 1 (no justification, no dynasty changes)
+ * https://ethresear.ch/t/beacon-chain-casper-ffg-rpj-mini-spec/2760
+ */
 @SuppressWarnings({"WeakerAccess", "SameParameterValue", "unused"})
 public class CasperIMD {
     final int SLOT_DURATION = 8000;
@@ -96,7 +100,7 @@ public class CasperIMD {
 
             // Note that's not the head, but the head's parent. As a son, we're going to be selected
             //  from the attestations to our parents, so that makes sense. But it means that the attestation
-            //  is valid for all sons of the same parent (hence the need to add 'head'.
+            //  is valid for all sons of the same parent (hence the need to add 'head'.)
             for (Block cur = attester.head.parent; cur != null && cur.height >= attester.head.height - cycleLength; cur = cur.parent) {
                 hs.add(cur.id);
             }
@@ -291,7 +295,7 @@ public class CasperIMD {
             // Spec: publish a (signed) attestation, [current_slot,h1,h2....h64], where h1...h64 are the hashes
             //   of the ancestors of the head up to 64 slots and current_slot is the current slot number.
             //   (if a chain has missing slots between heights a and b, then use the hash of the block at
-            //   heigh a for heights a+1....b−1), and current_slot is the current slot number.
+            //   height a for heights a+1....b−1), and current_slot is the current slot number.
             //
             // We don't reuse the attestationsByBlock between branches
             //  if A1 voted for B2 --> B1, the vote for B1 should not be reused in another branch like (B3 --> B1) for fork rules

@@ -45,13 +45,10 @@ public class Network<TN extends Node> {
     int msgDiscardTime = Integer.MAX_VALUE;
 
     /**
-     * Distribution taken from: https://ethstats.net/
-     * It should be read like this:
-     * 16% of the messages will be received in 250ms or less
+     * The network latency. The default one is quite pessimistic, you
+     * may want to use another one.
      */
-    public static final int[] distribProp = {16, 18, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
-    public static final int[] distribVal = {250, 500, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750, 4500, 6000, 8500, 9750, 10000};
-    NetworkLatency networkLatency = new NetworkLatency.MeasuredNetworkLatency(distribProp, distribVal);
+    NetworkLatency networkLatency = new NetworkLatency.EthScanNetworkLatency();
 
     /**
      * Time in ms. Using an int limits us to ~555 hours of simulation, it's acceptable, and
@@ -438,7 +435,7 @@ public class Network<TN extends Node> {
             assert !(m instanceof Network.Task);
             fromNode.msgSent++;
             fromNode.bytesSent += m.size();
-            int nt = networkLatency.getDelay(fromNode, toNode, getPseudoRandom(toNode.nodeId, randomSeed));
+            int nt = networkLatency.getLatency(fromNode, toNode, getPseudoRandom(toNode.nodeId, randomSeed));
             if (nt < msgDiscardTime) {
                 return new MessageArrival(toNode, sendTime + nt);
             }
@@ -599,7 +596,7 @@ public class Network<TN extends Node> {
      */
     public void partition(float part) {
         if (part <= 0 || part >= 1) {
-            throw new IllegalArgumentException("part needs to be a percentage between 0 & 100");
+            throw new IllegalArgumentException("part needs to be a percentage between 0 & 100 excluded");
         }
         int xPoint = (int) (Node.MAX_X * part);
         if (partitionsInX.contains(xPoint)) {

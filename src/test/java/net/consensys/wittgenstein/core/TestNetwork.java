@@ -182,7 +182,7 @@ public class TestNetwork {
 
     @Test
     public void testDelays() {
-        network.setNetworkLatency(Network.distribProp, Network.distribVal);
+        network.setNetworkLatency(new NetworkLatency.EthScanNetworkLatency());
         Network.MessageContent<Node> act = new Network.MessageContent<Node>() {
             @Override
             public void action(@NotNull Node from, @NotNull Node to) {

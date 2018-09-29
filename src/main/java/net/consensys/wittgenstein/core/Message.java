@@ -85,7 +85,7 @@ abstract class Message<TN extends Node> {
         }
 
         int nextArrivalTime(@NotNull Network network) {
-            return sendTime + network.networkLatency.getDelay(
+            return sendTime + network.networkLatency.getLatency(
                     (Node) network.allNodes.get(this.fromNodeId),
                     (Node) network.allNodes.get(this.getNextDestId()),
                     Network.getPseudoRandom(this.getNextDestId(), randomSeed)

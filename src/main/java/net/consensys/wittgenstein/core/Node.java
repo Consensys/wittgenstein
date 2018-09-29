@@ -52,11 +52,11 @@ public class Node {
         }
 
         int getX() {
-            return 0;
+            return 1;
         }
 
         int getY() {
-            return 0;
+            return 1;
         }
     }
 
@@ -84,11 +84,11 @@ public class Node {
         }
         this.x = nb.getX();
         this.y = nb.getY();
-        if (this.x < 0 || this.x >= MAX_X) {
-            throw new IllegalArgumentException("bad x:" + x);
+        if (this.x <= 0 || this.x > MAX_X) {
+            throw new IllegalArgumentException("bad x=" + x);
         }
-        if (this.y < 0 || this.y >= MAX_Y) {
-            throw new IllegalArgumentException("bad y:" + y);
+        if (this.y <= 0 || this.y > MAX_Y) {
+            throw new IllegalArgumentException("bad y=" + y);
         }
         this.byzantine = byzantine;
     }

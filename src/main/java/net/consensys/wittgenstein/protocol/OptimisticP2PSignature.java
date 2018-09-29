@@ -13,14 +13,14 @@ import java.util.List;
  * <p>
  * Protocol: forward the message to all your peers if you have not done it already.
  * <p>
- * That's the optimistic case. If the aggregated signature fails, the agregator needs
+ * That's the optimistic case. If the aggregated signature fails, the aggregator needs
  * to test the sub bases to find the culprit: that's a log N time.
  * For 1000 nodes there would be a total of 2 + 10 * 2 + 2 pairing (~50 ms)
  * Of course, if more nodes are byzantine then it will take longer, the worse case being 2*N pairings if 49% of the
  * nodes are byzantine.
  *
  * <p>
- * Sends a lot of message (20K per node) so uses a lot of memory. We can't try more than 4K nodes
+ * Sends a lot of messages so uses a lot of memory and slow to test.
  * <p>
  * <p>
  * NetworkLatencyByDistance{fix=10, max=200, spread=50%}
@@ -159,11 +159,19 @@ public class OptimisticP2PSignature {
     public static void main(String... args) {
         NetworkLatency nl = new NetworkLatency.NetworkLatencyByDistance();
         System.out.println("" + nl);
+        boolean printLat = false;
 
         for (int i = 1000; i < 8000; i += 1000) {
             OptimisticP2PSignature p2ps = new OptimisticP2PSignature(i, i / 2 + 1, 25, 3);
             p2ps.network.setNetworkLatency(nl);
             P2PSigNode observer = p2ps.init();
+
+            if (!printLat) {
+                System.out.println("NON P2P " + NetworkLatency.estimateLatency(p2ps.network, 100000));
+                System.out.println("\nP2P " + NetworkLatency.estimateP2PLatency(p2ps.network, 100000));
+                printLat = true;
+            }
+
             p2ps.network.run(5);
             System.out.println(observer);
         }
