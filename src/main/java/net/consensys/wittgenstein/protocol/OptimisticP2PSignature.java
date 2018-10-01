@@ -1,10 +1,7 @@
 package net.consensys.wittgenstein.protocol;
 
 
-import net.consensys.wittgenstein.core.Network;
-import net.consensys.wittgenstein.core.Node;
-import net.consensys.wittgenstein.core.P2PNetwork;
-import net.consensys.wittgenstein.core.P2PNode;
+import net.consensys.wittgenstein.core.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -16,14 +13,22 @@ import java.util.List;
  * <p>
  * Protocol: forward the message to all your peers if you have not done it already.
  * <p>
- * That's the optimistic case. If the aggregated signature fails, the agregator needs
+ * That's the optimistic case. If the aggregated signature fails, the aggregator needs
  * to test the sub bases to find the culprit: that's a log N time.
  * For 1000 nodes there would be a total of 2 + 10 * 2 + 2 pairing (~50 ms)
  * Of course, if more nodes are byzantine then it will take longer, the worse case being 2*N pairings if 49% of the
  * nodes are byzantine.
  *
  * <p>
- * Sends a lot of message (20K per node) so uses a lot of memory. We can't try more than 4K nodes
+ * Sends a lot of messages so uses a lot of memory and slow to test.
+ * <p>
+ * <p>
+ * NetworkLatencyByDistance{fix=10, max=200, spread=50%}
+ * P2PSigNode{nodeId=999, doneAt=137, sigs=501, msgReceived=21200, msgSent=21023, KBytesSent=1067, KBytesReceived=1076}
+ * P2PSigNode{nodeId=1999, doneAt=140, sigs=1001, msgReceived=59406, msgSent=59978, KBytesSent=3045, KBytesReceived=3016}
+ * P2PSigNode{nodeId=2999, doneAt=140, sigs=1501, msgReceived=70113, msgSent=72049, KBytesSent=3658, KBytesReceived=3560}
+ * P2PSigNode{nodeId=3999, doneAt=149, sigs=2001, msgReceived=114855, msgSent=118060, KBytesSent=5995, KBytesReceived=5832}
+ * P2PSigNode{nodeId=4999, doneAt=150, sigs=2501, msgReceived=148088, msgSent=149994, KBytesSent=7616, KBytesReceived=7520}
  * <p>
  * P2PSigNode{nodeId=999, doneAt=218, sigs=501, msgReceived=19465, msgSent=20041, KBytesSent=1017, KBytesReceived=988}
  * P2PSigNode{nodeId=999, doneAt=220, sigs=501, msgReceived=19501, msgSent=20041, KBytesSent=1017, KBytesReceived=990}
@@ -151,20 +156,24 @@ public class OptimisticP2PSignature {
         return last;
     }
 
-
     public static void main(String... args) {
-        int[] distribProp = {1, 33, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
-        int[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
-        for (int i = 0; i < distribVal.length; i++)
-            distribVal[i] += 50; // more or less the latency we had before the refactoring
+        NetworkLatency nl = new NetworkLatency.NetworkLatencyByDistance();
+        System.out.println("" + nl);
+        boolean printLat = false;
 
-        OptimisticP2PSignature p2ps = new OptimisticP2PSignature(1000, 501,
-                25, 3);
-        p2ps.network.setNetworkLatency(distribProp, distribVal).setMsgDiscardTime(1000);
-        //p2ps.network.removeNetworkLatency();
-        p2ps.network.printNetworkLatency();
-        P2PSigNode observer = p2ps.init();
-        p2ps.network.run(5);
-        System.out.println(observer);
+        for (int i = 1000; i < 8000; i += 1000) {
+            OptimisticP2PSignature p2ps = new OptimisticP2PSignature(i, i / 2 + 1, 25, 3);
+            p2ps.network.setNetworkLatency(nl);
+            P2PSigNode observer = p2ps.init();
+
+            if (!printLat) {
+                System.out.println("NON P2P " + NetworkLatency.estimateLatency(p2ps.network, 100000));
+                System.out.println("\nP2P " + NetworkLatency.estimateP2PLatency(p2ps.network, 100000));
+                printLat = true;
+            }
+
+            p2ps.network.run(5);
+            System.out.println(observer);
+        }
     }
 }

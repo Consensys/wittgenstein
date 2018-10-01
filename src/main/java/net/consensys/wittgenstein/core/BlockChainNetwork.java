@@ -14,9 +14,9 @@ public class BlockChainNetwork extends Network<BlockChainNode<? extends Block>> 
     /**
      * The node we use as an observer for the final stats
      */
-    public BlockChainNode observer;
+    public BlockChainNode<? extends Block> observer;
 
-    public void addObserver(@NotNull BlockChainNode<?> observer) {
+    public void addObserver(@NotNull BlockChainNode<? extends Block> observer) {
         this.observer = observer;
         addNode(observer);
     }
@@ -49,8 +49,8 @@ public class BlockChainNetwork extends Network<BlockChainNode<? extends Block>> 
     public void endPartition() {
         super.endPartition();
 
-        for (BlockChainNode<?> n : allNodes) {
-            SendBlock<?, ?> sb = new BlockChainNetwork.SendBlock<>(n.head);
+        for (BlockChainNode<? extends Block> n : allNodes) {
+            SendBlock<Block, BlockChainNode<Block>> sb = new BlockChainNetwork.SendBlock<>(n.head);
             sendAll(sb, n);
         }
     }
@@ -60,8 +60,11 @@ public class BlockChainNetwork extends Network<BlockChainNode<? extends Block>> 
         Set<BlockChainNode> blockProducers = new HashSet<>();
 
         Block cur = observer.head;
+
         int blocksCreated = 0;
         while (cur != observer.genesis) {
+            assert cur != null;
+            assert cur.producer != null;
             if (!small) System.out.println("block: " + cur.toString());
             blocksCreated++;
 
@@ -72,9 +75,7 @@ public class BlockChainNetwork extends Network<BlockChainNode<? extends Block>> 
             cur = cur.parent;
         }
 
-        if (small) {
-            //System.out.println("node; block count; tx count; msg sent; msg received");
-        } else {
+        if (!small) {
             System.out.println("block count:" + blocksCreated + ", all tx: " + observer.head.lastTxId);
         }
         List<BlockChainNode> bps = new ArrayList<>(blockProducers);

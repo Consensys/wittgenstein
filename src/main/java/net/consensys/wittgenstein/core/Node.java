@@ -4,7 +4,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Random;
 
-@SuppressWarnings("WeakerAccess")
+@SuppressWarnings({"WeakerAccess"})
 public class Node {
     public final static int MAX_X = 1000;
     public final static int MAX_Y = 1000;
@@ -17,7 +17,7 @@ public class Node {
      * The position. There is a clear weakness here: the nodes
      * are randomly distributed, but in real life we have oceans, so some
      * subset of nodes are really isolated. We should have a builder that takes
-     * a map as in input.
+     * a map as an input.
      */
     public final int x;
     public final int y;
@@ -28,6 +28,21 @@ public class Node {
     protected long bytesSent = 0;
     protected long bytesReceived = 0;
 
+    public long getMsgReceived() {
+        return msgReceived;
+    }
+
+    public long getMsgSent() {
+        return msgSent;
+    }
+
+    public long getBytesSent() {
+        return bytesSent;
+    }
+
+    public long getBytesReceived() {
+        return bytesReceived;
+    }
 
     public static class NodeBuilder {
         int nodeIds = 0;
@@ -37,18 +52,18 @@ public class Node {
         }
 
         int getX() {
-            return 0;
+            return 1;
         }
 
         int getY() {
-            return 0;
+            return 1;
         }
     }
 
     public static class NodeBuilderWithPosition extends NodeBuilder {
         final Random rd;
 
-        public NodeBuilderWithPosition(Random rd) {
+        public NodeBuilderWithPosition(@NotNull Random rd) {
             this.rd = rd;
         }
 
@@ -64,8 +79,17 @@ public class Node {
 
     public Node(@NotNull NodeBuilder nb, boolean byzantine) {
         this.nodeId = nb.allocateNodeId();
+        if (this.nodeId < 0) {
+            throw new IllegalArgumentException("bad nodeId:" + nodeId);
+        }
         this.x = nb.getX();
         this.y = nb.getY();
+        if (this.x <= 0 || this.x > MAX_X) {
+            throw new IllegalArgumentException("bad x=" + x);
+        }
+        if (this.y <= 0 || this.y > MAX_Y) {
+            throw new IllegalArgumentException("bad y=" + y);
+        }
         this.byzantine = byzantine;
     }
 
