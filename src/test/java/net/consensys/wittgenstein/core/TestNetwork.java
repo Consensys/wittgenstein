@@ -209,7 +209,7 @@ public class TestNetwork {
         Network<Node> net = new Network<>();
         AtomicInteger ai = new AtomicInteger(0);
         Node.NodeBuilder nb = new Node.NodeBuilder() {
-            int getX() {
+            protected int getX() {
                 return ai.addAndGet(Node.MAX_X / 10);
             }
         };

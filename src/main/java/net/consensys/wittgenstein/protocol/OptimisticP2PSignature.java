@@ -161,8 +161,8 @@ public class OptimisticP2PSignature {
         System.out.println("" + nl);
         boolean printLat = false;
 
-        for (int i = 1000; i < 8000; i += 1000) {
-            OptimisticP2PSignature p2ps = new OptimisticP2PSignature(i, i / 2 + 1, 25, 3);
+        for (int i = 1000; i < 2000; i += 1000) {
+            OptimisticP2PSignature p2ps = new OptimisticP2PSignature(i, i / 2 + 1, 13, 3);
             p2ps.network.setNetworkLatency(nl);
             P2PSigNode observer = p2ps.init();
 

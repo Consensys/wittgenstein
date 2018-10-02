@@ -80,7 +80,7 @@ public abstract class NetworkLatency {
      * 99 157.18933612004804
      *
      * <p>
-     * TODO: we should take the size into account....
+     * TODO: we could take the message size into account....
      */
     public static class NetworkLatencyByDistance extends NetworkLatency {
         final GeneralizedParetoDistribution gpd = new GeneralizedParetoDistribution(1.4, -0.3, 0.35);

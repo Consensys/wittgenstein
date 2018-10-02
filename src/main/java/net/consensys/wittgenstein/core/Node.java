@@ -2,6 +2,9 @@ package net.consensys.wittgenstein.core;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.nio.ByteBuffer;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Random;
 
 @SuppressWarnings({"WeakerAccess"})
@@ -12,9 +15,10 @@ public class Node {
 
 
     public final int nodeId;
+    public final byte[] hash256;
 
     /**
-     * The position. There is a clear weakness here: the nodes
+     * The position, from 1 to MAX_X / MAX_Y, included. There is a clear weakness here: the nodes
      * are randomly distributed, but in real life we have oceans, so some
      * subset of nodes are really isolated. We should have a builder that takes
      * a map as an input.
@@ -45,18 +49,35 @@ public class Node {
     }
 
     public static class NodeBuilder {
-        int nodeIds = 0;
+        protected int nodeIds = 0;
+        protected final MessageDigest digest;
 
-        int allocateNodeId() {
+        public NodeBuilder() {
+            try {
+                digest = MessageDigest.getInstance("SHA-256");
+            } catch (NoSuchAlgorithmException e) {
+                throw new IllegalStateException();
+            }
+        }
+
+        protected int allocateNodeId() {
             return nodeIds++;
         }
 
-        int getX() {
+        protected int getX() {
             return 1;
         }
 
-        int getY() {
+        protected int getY() {
             return 1;
+        }
+
+        /**
+         * Many algo will want a hash of the node id. Be careful: sha-3 is
+         *  not the ethereum v1 hash.
+         */
+        protected @NotNull byte[] getHash(int nodeId) {
+            return digest.digest(ByteBuffer.allocate(4).putInt(nodeId).array());
         }
     }
 
@@ -67,11 +88,11 @@ public class Node {
             this.rd = rd;
         }
 
-        int getX() {
+        public int getX() {
             return rd.nextInt(MAX_X) + 1;
         }
 
-        int getY() {
+        public int getY() {
             return rd.nextInt(MAX_Y) + 1;
         }
     }
@@ -91,6 +112,7 @@ public class Node {
             throw new IllegalArgumentException("bad y=" + y);
         }
         this.byzantine = byzantine;
+        this.hash256 = nb.getHash(nodeId);
     }
 
     public Node(@NotNull NodeBuilder nb) {

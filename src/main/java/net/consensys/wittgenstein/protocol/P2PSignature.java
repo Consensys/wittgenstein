@@ -300,13 +300,21 @@ public class P2PSignature {
         NetworkLatency nl = new NetworkLatency.NetworkLatencyByDistance();
         System.out.println("" + nl);
 
-        for (int cnt = 10; cnt < 30; cnt += 5) {
+        boolean printLat = false;
+        for (int cnt = 8; cnt < 25; cnt += 5) {
             for (int sendPeriod = 20; sendPeriod < 100; sendPeriod += 20) {
                 for (int nodeCt = 500; nodeCt < 15100; nodeCt += 500) {
                     P2PSignature p2ps = new P2PSignature(nodeCt, nodeCt / 2 + 1,
                             cnt, 3, sendPeriod, true);
                     p2ps.network.setNetworkLatency(nl);
                     P2PSigNode observer = p2ps.init();
+
+                    if (!printLat) {
+                        System.out.println("NON P2P " + NetworkLatency.estimateLatency(p2ps.network, 100000));
+                        System.out.println("\nP2P " + NetworkLatency.estimateP2PLatency(p2ps.network, 100000));
+                        printLat = true;
+                    }
+
                     p2ps.network.run(5);
                     System.out.println("cnt=" + cnt + ", sendPeriod=" + sendPeriod + " " + observer);
                 }
