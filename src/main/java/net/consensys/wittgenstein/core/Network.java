@@ -1,8 +1,5 @@
 package net.consensys.wittgenstein.core;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
 import java.util.*;
 
 /**
@@ -101,18 +98,18 @@ public class Network<TN extends Node> {
             return (aTime % duration);
         }
 
-        public void addMsg(@NotNull Message<?> m) {
+        public void addMsg(Message<?> m) {
             int pos = getPos(m.nextArrivalTime(Network.this));
             m.setNextSameTime(msgsByMs[pos]);
             msgsByMs[pos] = m;
         }
 
-        public @Nullable Message<?> peek(int time) {
+        public Message<?> peek(int time) {
             int pos = getPos(time);
             return msgsByMs[pos];
         }
 
-        public @Nullable Message<?> poll(int time) {
+        public Message<?> poll(int time) {
             int pos = getPos(time);
             Message<?> m = msgsByMs[pos];
             if (m != null) {
@@ -135,7 +132,7 @@ public class Network<TN extends Node> {
             return size;
         }
 
-        @Nullable Message<?> peekFirst() {
+        Message<?> peekFirst() {
             for (int i = 0; i < duration; i++) {
                 if (msgsByMs[i] != null) {
                     return msgsByMs[i];
@@ -171,22 +168,22 @@ public class Network<TN extends Node> {
             }
         }
 
-        @NotNull MsgsSlot findSlot(int aTime) {
+        MsgsSlot findSlot(int aTime) {
             cleanup();
             ensureSize(aTime);
             int pos = (aTime - msgsBySlot.get(0).startTime) / duration;
             return msgsBySlot.get(pos);
         }
 
-        void addMsg(@NotNull Message<?> m) {
+        void addMsg(Message<?> m) {
             findSlot(m.nextArrivalTime(Network.this)).addMsg(m);
         }
 
-        @Nullable Message<?> peek(int time) {
+        Message<?> peek(int time) {
             return findSlot(time).peek(time);
         }
 
-        @Nullable Message<?> poll(int time) {
+        Message<?> poll(int time) {
             return findSlot(time).poll(time);
         }
 
@@ -198,7 +195,7 @@ public class Network<TN extends Node> {
         /**
          * @return the first message in the queue, null if the queue is empty.
          */
-        @Nullable Message<?> peekFirst() {
+        Message<?> peekFirst() {
             for (MsgsSlot ms : msgsBySlot) {
                 Message<?> m = ms.peekFirst();
                 if (m != null) return m;
@@ -210,7 +207,7 @@ public class Network<TN extends Node> {
         /**
          * For tests: they can find their message content.
          */
-        public @Nullable MessageContent<?> peekFirstMessageContent() {
+        public MessageContent<?> peekFirstMessageContent() {
             Message<?> m = peekFirst();
             return m == null ? null : m.getMessageContent();
         }
@@ -218,7 +215,7 @@ public class Network<TN extends Node> {
         /**
          * @return the first message in the queue, null if the queue is empty.
          */
-        public @Nullable Message<?> pollFirst() {
+        public Message<?> pollFirst() {
             Message<?> m = peekFirst();
             return m == null ? null : poll(m.nextArrivalTime(Network.this));
         }
@@ -232,7 +229,7 @@ public class Network<TN extends Node> {
      * the messages for messages sent to multiple nodes.
      */
     public static abstract class MessageContent<TN extends Node> {
-        public abstract void action(@NotNull TN from, @NotNull TN to);
+        public abstract void action(TN from, TN to);
 
         /**
          * We track the total size of the messages exchanged. Subclasses should
@@ -247,9 +244,9 @@ public class Network<TN extends Node> {
      * Some protocols want some tasks to be executed at a given time
      */
     public class Task extends MessageContent<TN> {
-        final @NotNull Runnable r;
+        final Runnable r;
 
-        public Task(@NotNull Runnable r) {
+        public Task(Runnable r) {
             this.r = r;
         }
 
@@ -259,7 +256,7 @@ public class Network<TN extends Node> {
         }
 
         @Override
-        public void action(@NotNull TN from, @NotNull TN to) {
+        public void action(TN from, TN to) {
             r.run();
         }
     }
@@ -309,19 +306,19 @@ public class Network<TN extends Node> {
         final Node sender;
         final Condition continuationCondition;
 
-        public PeriodicTask(@NotNull Runnable r, @NotNull Node fromNode, int period, @NotNull Condition condition) {
+        public PeriodicTask(Runnable r, Node fromNode, int period, Condition condition) {
             super(r);
             this.period = period;
             this.sender = fromNode;
             this.continuationCondition = condition;
         }
 
-        public PeriodicTask(@NotNull Runnable r, @NotNull Node fromNode, int period) {
+        public PeriodicTask(Runnable r, Node fromNode, int period) {
             this(r, fromNode, period, () -> true);
         }
 
         @Override
-        public void action(@NotNull Node from, @NotNull Node to) {
+        public void action(Node from, Node to) {
             r.run();
             if (continuationCondition.check()) {
                 msgs.addMsg(new Message.SingleDestMessage<>(this, sender, sender, time + period));
@@ -347,11 +344,11 @@ public class Network<TN extends Node> {
     /**
      * Send a message to all nodes.
      */
-    public void sendAll(@NotNull MessageContent<? extends TN> m, int sendTime, @NotNull TN fromNode) {
+    public void sendAll(MessageContent<? extends TN> m, int sendTime, TN fromNode) {
         send(m, sendTime, fromNode, allNodes);
     }
 
-    public void sendAll(@NotNull MessageContent<? extends TN> m, @NotNull TN fromNode) {
+    public void sendAll(MessageContent<? extends TN> m, TN fromNode) {
         send(m, time + 1, fromNode, allNodes);
     }
 
@@ -359,18 +356,18 @@ public class Network<TN extends Node> {
      * Send a message to a collection of nodes. The message is considered as sent immediately, and
      * will arrive at a time depending on the network latency.
      */
-    public void send(@NotNull MessageContent<? extends TN> m, @NotNull TN fromNode, @NotNull Collection<TN> dests) {
+    public void send(MessageContent<? extends TN> m, TN fromNode, Collection<TN> dests) {
         send(m, time + 1, fromNode, dests);
     }
 
-    public void send(@NotNull MessageContent<? extends TN> m, @NotNull TN fromNode, @NotNull TN toNode) {
+    public void send(MessageContent<? extends TN> m, TN fromNode, TN toNode) {
         send(m, time + 1, fromNode, toNode);
     }
 
     /**
      * Send a message to a single node.
      */
-    public void send(@NotNull MessageContent<? extends TN> mc, int sendTime, @NotNull TN fromNode, @NotNull TN toNode) {
+    public void send(MessageContent<? extends TN> mc, int sendTime, TN fromNode, TN toNode) {
         MessageArrival ms = createMessageArrival(mc, fromNode, toNode, sendTime, rd.nextInt());
         if (ms != null) {
             Message<?> m = new Message.SingleDestMessage<>(mc, fromNode, toNode, ms.arrival);
@@ -382,18 +379,18 @@ public class Network<TN extends Node> {
         final Node dest;
         final int arrival;
 
-        public MessageArrival(@NotNull Node dest, int arrival) {
+        public MessageArrival(Node dest, int arrival) {
             this.dest = dest;
             this.arrival = arrival;
         }
 
         @Override
-        public int compareTo(@NotNull Network.MessageArrival o) {
+        public int compareTo(Network.MessageArrival o) {
             return Long.compare(arrival, o.arrival);
         }
     }
 
-    public void send(@NotNull MessageContent<? extends TN> m, int sendTime, @NotNull TN fromNode, @NotNull Collection<? extends Node> dests) {
+    public void send(MessageContent<? extends TN> m, int sendTime, TN fromNode, Collection<? extends Node> dests) {
         int randomSeed = rd.nextInt();
 
         List<MessageArrival> da = createMessageArrivals(m, sendTime, fromNode, dests, randomSeed);
@@ -410,7 +407,7 @@ public class Network<TN extends Node> {
         }
     }
 
-    @NotNull List<MessageArrival> createMessageArrivals(@NotNull MessageContent<? extends TN> m, int sendTime, @NotNull TN fromNode, @NotNull Collection<? extends Node> dests, int randomSeed) {
+    List<MessageArrival> createMessageArrivals(MessageContent<? extends TN> m, int sendTime, TN fromNode, Collection<? extends Node> dests, int randomSeed) {
         ArrayList<MessageArrival> da = new ArrayList<>(dests.size());
         for (Node n : dests) {
             MessageArrival ma = createMessageArrival(m, fromNode, n, sendTime, randomSeed);
@@ -424,9 +421,9 @@ public class Network<TN extends Node> {
     }
 
 
-    private @Nullable MessageArrival createMessageArrival(@NotNull MessageContent<?> m,
-                                                          @NotNull Node fromNode, @NotNull Node toNode, int sendTime,
-                                                          int randomSeed) {
+    private MessageArrival createMessageArrival(MessageContent<?> m,
+                                                Node fromNode, Node toNode, int sendTime,
+                                                int randomSeed) {
         if (sendTime <= time) {
             throw new IllegalStateException("" + m + ", sendTime=" + sendTime + ", time=" + time);
         }
@@ -459,28 +456,28 @@ public class Network<TN extends Node> {
         return a;
     }
 
-    public void registerTask(@NotNull final Runnable task, int startAt, @NotNull TN fromNode) {
+    public void registerTask(final Runnable task, int startAt, TN fromNode) {
         Task sw = new Task(task);
         msgs.addMsg(new Message.SingleDestMessage<>(sw, fromNode, fromNode, startAt));
     }
 
-    public void registerPeriodicTask(@NotNull final Runnable task, int startAt, int period, @NotNull TN fromNode) {
+    public void registerPeriodicTask(final Runnable task, int startAt, int period, TN fromNode) {
         PeriodicTask sw = new PeriodicTask(task, fromNode, period);
         msgs.addMsg(new Message.SingleDestMessage<>(sw, fromNode, fromNode, startAt));
     }
 
-    public void registerPeriodicTask(@NotNull final Runnable task, int startAt, int period, @NotNull TN fromNode, @NotNull Condition c) {
+    public void registerPeriodicTask(final Runnable task, int startAt, int period, TN fromNode, Condition c) {
         PeriodicTask sw = new PeriodicTask(task, fromNode, period, c);
         msgs.addMsg(new Message.SingleDestMessage<>(sw, fromNode, fromNode, startAt));
     }
 
-    public void registerConditionalTask(@NotNull final Runnable task, int startAt, int duration,
-                                        @NotNull TN fromNode, @NotNull Condition startIf, @NotNull Condition repeatIf) {
+    public void registerConditionalTask(final Runnable task, int startAt, int duration,
+                                        TN fromNode, Condition startIf, Condition repeatIf) {
         ConditionalTask ct = new ConditionalTask(startIf, repeatIf, task, startAt, duration, fromNode);
         conditionalTasks.add(ct);
     }
 
-    private @Nullable Message<?> nextMessage(int until) {
+    private Message<?> nextMessage(int until) {
         while (time <= until) {
             Message<?> m = msgs.poll(time);
             if (m != null) {
@@ -539,7 +536,7 @@ public class Network<TN extends Node> {
         }
     }
 
-    int partitionId(@NotNull Node to) {
+    int partitionId(Node to) {
         int pId = 0;
         for (Integer x : partitionsInX) {
             if (x > to.x) {
@@ -552,7 +549,7 @@ public class Network<TN extends Node> {
     }
 
 
-    public void addNode(@NotNull TN node) {
+    public void addNode(TN node) {
         while (allNodes.size() <= node.nodeId) {
             allNodes.add(null);
         }
@@ -564,16 +561,16 @@ public class Network<TN extends Node> {
      * Set the network latency to a min value. This allows
      * to test the protocol independently of the network variability.
      */
-    public @NotNull Network<TN> removeNetworkLatency() {
+    public Network<TN> removeNetworkLatency() {
         networkLatency = new NetworkLatency.NetworkNoLatency();
         return setNetworkLatency(new NetworkLatency.NetworkNoLatency());
     }
 
-    public @NotNull Network<TN> setNetworkLatency(int[] distribProp, int[] distribVal) {
+    public Network<TN> setNetworkLatency(int[] distribProp, int[] distribVal) {
         return setNetworkLatency(new NetworkLatency.MeasuredNetworkLatency(distribProp, distribVal));
     }
 
-    public @NotNull Network<TN> setNetworkLatency(@NotNull NetworkLatency networkLatency) {
+    public Network<TN> setNetworkLatency(NetworkLatency networkLatency) {
         if (msgs.size() != 0) {
             throw new IllegalStateException("You can't change the latency while the system as on going messages");
         }

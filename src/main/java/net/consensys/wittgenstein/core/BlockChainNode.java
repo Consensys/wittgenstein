@@ -1,7 +1,5 @@
 package net.consensys.wittgenstein.core;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -9,7 +7,7 @@ import java.util.Set;
 
 @SuppressWarnings("WeakerAccess")
 public abstract class BlockChainNode<TB extends Block> extends Node {
-    protected final @NotNull TB genesis;
+    protected final TB genesis;
 
     /**
      * We keep some data that should be useful for all implementations
@@ -18,9 +16,9 @@ public abstract class BlockChainNode<TB extends Block> extends Node {
     protected final Map<Long, Set<TB>> blocksReceivedByFatherId = new HashMap<>();
     protected final Map<Integer, TB> blocksReceivedByHeight = new HashMap<>();
 
-    public @NotNull TB head;
+    public TB head;
 
-    public BlockChainNode(@NotNull NodeBuilder nb, boolean byzantine, @NotNull TB genesis) {
+    public BlockChainNode(NodeBuilder nb, boolean byzantine, TB genesis) {
         super(nb, byzantine);
         this.genesis = genesis;
         this.head = genesis;
@@ -30,7 +28,7 @@ public abstract class BlockChainNode<TB extends Block> extends Node {
     /**
      * @return true if it's a new block, false if the block in invalid or if we have already received it.
      */
-    public boolean onBlock(@NotNull TB b) {
+    public boolean onBlock(TB b) {
         if (!b.valid) return false;
 
         if (this.blocksReceivedByBlockId.put(b.id, b) != null) {
@@ -48,5 +46,5 @@ public abstract class BlockChainNode<TB extends Block> extends Node {
     /**
      * This describes how to choose the head between two blocks.
      */
-    public abstract @NotNull TB best(@NotNull TB cur, @NotNull TB alt);
+    public abstract TB best(TB cur, TB alt);
 }

@@ -1,7 +1,5 @@
 package net.consensys.wittgenstein.core;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.util.ArrayList;
 
 public class P2PNetwork extends Network<P2PNode> {
@@ -42,7 +40,7 @@ public class P2PNetwork extends Network<P2PNode> {
     }
 
 
-    private void createLink(@NotNull ArrayList<P2PNode> todo, int pp1, int pp2) {
+    private void createLink(ArrayList<P2PNode> todo, int pp1, int pp2) {
         P2PNode p1 = todo.get(pp1);
         P2PNode p2 = todo.get(pp2);
 

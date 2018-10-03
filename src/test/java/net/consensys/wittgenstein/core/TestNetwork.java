@@ -36,7 +36,7 @@ public class TestNetwork {
 
         Network.MessageContent<Node> act = new Network.MessageContent<Node>() {
             @Override
-            public void action(@NotNull Node from, @NotNull Node to) {
+            public void action( Node from,  Node to) {
                 a1.set(from.nodeId);
                 a2.set(to.nodeId);
             }
@@ -71,7 +71,7 @@ public class TestNetwork {
 
         Network.MessageContent<Node> act = new Network.MessageContent<Node>() {
             @Override
-            public void action(@NotNull Node from, @NotNull Node to) {
+            public void action( Node from,  Node to) {
                 a1.addAndGet(from.nodeId);
                 a2.addAndGet(to.nodeId);
             }
@@ -98,7 +98,7 @@ public class TestNetwork {
         AtomicInteger ab = new AtomicInteger(0);
         Network.MessageContent<Node> act = new Network.MessageContent<Node>() {
             @Override
-            public void action(@NotNull Node from, @NotNull Node to) {
+            public void action( Node from,  Node to) {
                 ab.incrementAndGet();
             }
         };
@@ -116,7 +116,7 @@ public class TestNetwork {
     public void testStats() {
         Network.MessageContent<Node> act = new Network.MessageContent<Node>() {
             @Override
-            public void action(@NotNull Node from, @NotNull Node to) {
+            public void action( Node from,  Node to) {
             }
         };
 
@@ -149,7 +149,7 @@ public class TestNetwork {
     public void testSortedArrivals() {
         Network.MessageContent<Node> act = new Network.MessageContent<Node>() {
             @Override
-            public void action(@NotNull Node from, @NotNull Node to) {
+            public void action( Node from,  Node to) {
             }
         };
 
@@ -185,7 +185,7 @@ public class TestNetwork {
         network.setNetworkLatency(new NetworkLatency.EthScanNetworkLatency());
         Network.MessageContent<Node> act = new Network.MessageContent<Node>() {
             @Override
-            public void action(@NotNull Node from, @NotNull Node to) {
+            public void action( Node from,  Node to) {
             }
         };
 
@@ -221,7 +221,7 @@ public class TestNetwork {
         AtomicInteger ab = new AtomicInteger(0);
         Network.MessageContent<Node> act = new Network.MessageContent<Node>() {
             @Override
-            public void action(@NotNull Node from, @NotNull Node to) {
+            public void action( Node from,  Node to) {
                 ab.incrementAndGet();
             }
         };

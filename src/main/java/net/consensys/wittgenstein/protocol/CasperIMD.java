@@ -4,7 +4,6 @@ import net.consensys.wittgenstein.core.Block;
 import net.consensys.wittgenstein.core.BlockChainNetwork;
 import net.consensys.wittgenstein.core.BlockChainNode;
 import net.consensys.wittgenstein.core.Node;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
@@ -93,7 +92,7 @@ public class CasperIMD {
         final Set<Long> hs = new HashSet<>(); // technically, we put them in a set for efficiency
         final CasperBlock head; // It's not in the spec, but we need this to be sure we're not confusing the attestations from different branches
 
-        public Attestation(@NotNull Attester attester, int height) {
+        public Attestation(Attester attester, int height) {
             this.attester = attester;
             this.height = height;
             this.head = attester.head;
@@ -107,11 +106,11 @@ public class CasperIMD {
         }
 
         @Override
-        public void action(@NotNull CasperNode from, @NotNull CasperNode to) {
+        public void action(CasperNode from, CasperNode to) {
             to.onAttestation(this);
         }
 
-        boolean attests(@NotNull CasperBlock cb) {
+        boolean attests(CasperBlock cb) {
             return (hs.contains(cb.id));
         }
 
@@ -129,9 +128,9 @@ public class CasperIMD {
     static class CasperBlock extends Block<CasperBlock> {
         final Map<Integer, Set<Attestation>> attestationsByHeight;
 
-        public CasperBlock(@NotNull BlockProducer blockProducer,
-                           int height, @NotNull CasperBlock father,
-                           @NotNull Map<Integer, @NotNull Set<Attestation>> attestationsByHeight,
+        public CasperBlock(BlockProducer blockProducer,
+                           int height, CasperBlock father,
+                           Map<Integer, Set<Attestation>> attestationsByHeight,
                            boolean valid, int time) {
             super(blockProducer, height, father, valid, time);
             this.attestationsByHeight = attestationsByHeight;
@@ -173,12 +172,12 @@ public class CasperIMD {
         final Map<Long, Set<Attestation>> attestationsByHead = new HashMap<>();
         final Set<CasperBlock> blocksToReevaluate = new HashSet<>();
 
-        CasperNode(boolean byzantine, @NotNull CasperBlock genesis) {
+        CasperNode(boolean byzantine, CasperBlock genesis) {
             super(nb, byzantine, genesis);
         }
 
         @Override
-        public @NotNull CasperBlock best(@NotNull CasperBlock o1, @NotNull CasperBlock o2) {
+        public CasperBlock best(CasperBlock o1, CasperBlock o2) {
             if (o1 == o2) return o1;
 
             if (!o2.valid) return o1;
@@ -235,7 +234,7 @@ public class CasperIMD {
         /**
          * Count the number of attestations we have for block 'h' for the branch ending on block 'start'
          */
-        protected int countAttestations(@NotNull CasperBlock start, @NotNull CasperBlock h) {
+        protected int countAttestations(CasperBlock start, CasperBlock h) {
             // We can have attestations we received directly and attestations contained in the blocks.
             //  We obviously need to count them only once
             // Also, we cannot reuse attestations that are for other branches.
@@ -264,7 +263,7 @@ public class CasperIMD {
             return a1.size();
         }
 
-        private @NotNull Set<Long> attestsFor(int height) {
+        private Set<Long> attestsFor(int height) {
             Set<Long> as = new HashSet<>();
             for (Block c = head; c != genesis && height - cycleLength >= c.height; c = c.parent) {
                 as.add(c.id);
@@ -274,7 +273,7 @@ public class CasperIMD {
 
 
         @Override
-        public boolean onBlock(@NotNull final CasperBlock b) {
+        public boolean onBlock(final CasperBlock b) {
             // Spec: The node’s local clock time is greater than or equal to the minimum timestamp as
             // computed by GENESIS_TIME + slot_number * SLOT_DURATION
             final int delta = network.time - genesis.proposalTime + b.height * SLOT_DURATION;
@@ -290,7 +289,7 @@ public class CasperIMD {
             }
         }
 
-        void onAttestation(@NotNull Attestation a) {
+        void onAttestation(Attestation a) {
             // A vote for a block is a vote for all its parents.
             // Spec: publish a (signed) attestation, [current_slot,h1,h2....h64], where h1...h64 are the hashes
             //   of the ancestors of the head up to 64 slots and current_slot is the current slot number.
@@ -339,11 +338,11 @@ public class CasperIMD {
 
     class BlockProducer extends CasperNode {
 
-        BlockProducer(@NotNull CasperBlock genesis) {
+        BlockProducer(CasperBlock genesis) {
             super(false, genesis);
         }
 
-        protected BlockProducer(boolean byzantine, @NotNull CasperBlock genesis) {
+        protected BlockProducer(boolean byzantine, CasperBlock genesis) {
             super(byzantine, genesis);
         }
 
@@ -411,7 +410,7 @@ public class CasperIMD {
 
     class Attester extends CasperNode {
 
-        Attester(@NotNull CasperBlock genesis) {
+        Attester(CasperBlock genesis) {
             super(false, genesis);
         }
 
@@ -440,7 +439,7 @@ public class CasperIMD {
     }
 
 
-    void init(@NotNull CasperIMD.ByzBlockProducer byzantineNode) {
+    void init(CasperIMD.ByzBlockProducer byzantineNode) {
         bps.add(byzantineNode);
         network.addNode(byzantineNode);
         network.registerPeriodicTask(byzantineNode.getPeriodicTask(),
@@ -476,7 +475,7 @@ public class CasperIMD {
         int onOlderAncestor = 0;
         int incNotTheBestFather = 0;
 
-        ByzBlockProducer(int delay, @NotNull CasperBlock genesis) {
+        ByzBlockProducer(int delay, CasperBlock genesis) {
             super(true, genesis);
             this.delay = delay;
         }
@@ -540,7 +539,7 @@ public class CasperIMD {
      * Idea: it can them include the transactions of its father.
      */
     class ByzBlockProducerSF extends ByzBlockProducer {
-        ByzBlockProducerSF(int nodeId, int delay, @NotNull CasperBlock genesis) {
+        ByzBlockProducerSF(int nodeId, int delay, CasperBlock genesis) {
             super(delay, genesis);
         }
 
@@ -568,7 +567,7 @@ public class CasperIMD {
      * the fight with the grand father.
      */
     class ByzBlockProducerNS extends ByzBlockProducer {
-        ByzBlockProducerNS(int nodeId, int delay, @NotNull CasperBlock genesis) {
+        ByzBlockProducerNS(int nodeId, int delay, CasperBlock genesis) {
             super(delay, genesis);
         }
 
@@ -613,7 +612,7 @@ public class CasperIMD {
         int late = 0;
         int onTime = 0;
 
-        ByzBlockProducerWF(int delay, @NotNull CasperBlock genesis) {
+        ByzBlockProducerWF(int delay, CasperBlock genesis) {
             super(delay, genesis);
         }
 
@@ -630,7 +629,7 @@ public class CasperIMD {
         }
 
         @Override
-        public boolean onBlock(@NotNull final CasperBlock b) {
+        public boolean onBlock(final CasperBlock b) {
             if (super.onBlock(b)) {
                 if (b.height == toSend - 1) {
 

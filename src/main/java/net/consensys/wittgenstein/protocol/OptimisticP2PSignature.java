@@ -2,7 +2,6 @@ package net.consensys.wittgenstein.protocol;
 
 
 import net.consensys.wittgenstein.core.*;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -79,7 +78,7 @@ public class OptimisticP2PSignature {
     static class SendSig extends Network.MessageContent<P2PSigNode> {
         final int sig;
 
-        public SendSig(@NotNull P2PSigNode who) {
+        public SendSig(P2PSigNode who) {
             this.sig = who.nodeId;
         }
 
@@ -90,7 +89,7 @@ public class OptimisticP2PSignature {
         }
 
         @Override
-        public void action(@NotNull P2PSigNode from, @NotNull P2PSigNode to) {
+        public void action(P2PSigNode from, P2PSigNode to) {
             to.onSig(from, this);
         }
     }
@@ -106,7 +105,7 @@ public class OptimisticP2PSignature {
             super(nb);
         }
 
-        void onSig(@NotNull P2PSigNode from, @NotNull SendSig ss) {
+        void onSig(P2PSigNode from, SendSig ss) {
             if (!done && !verifiedSignatures.get(ss.sig)) {
                 verifiedSignatures.set(ss.sig);
 

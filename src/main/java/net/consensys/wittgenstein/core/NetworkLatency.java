@@ -1,14 +1,13 @@
 package net.consensys.wittgenstein.core;
 
 import net.consensys.wittgenstein.core.utils.GeneralizedParetoDistribution;
-import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("WeakerAccess")
 public abstract class NetworkLatency {
     /**
      * @param delta - a random number between 0 & 99. Used to randomize the result
      */
-    public abstract int getLatency(@NotNull Node from, @NotNull Node to, int delta);
+    public abstract int getLatency(Node from, Node to, int delta);
 
     @Override
     public String toString() {
@@ -103,7 +102,7 @@ public abstract class NetworkLatency {
         }
 
         @Override
-        public int getLatency(@NotNull Node from, @NotNull Node to, int delta) {
+        public int getLatency(Node from, Node to, int delta) {
             checkDelta(delta);
             double raw = getFixedLatency(from.dist(to)) + getVariableLatency(delta);
 
@@ -112,7 +111,7 @@ public abstract class NetworkLatency {
     }
 
     public static class NetworkNoLatency extends NetworkLatency {
-        public int getLatency(@NotNull Node from, @NotNull Node to, int delta) {
+        public int getLatency(Node from, Node to, int delta) {
             return 1;
         }
     }
@@ -124,7 +123,7 @@ public abstract class NetworkLatency {
          * @param proportions - the proportions in percentage. Must sumup to 100
          * @param values      - the value for the corresponding index in the proportion table.
          */
-        private void setLatency(@NotNull int[] proportions, @NotNull int[] values) {
+        private void setLatency(int[] proportions, int[] values) {
             int li = 0;
             int cur = 0;
             int sum = 0;
@@ -146,12 +145,12 @@ public abstract class NetworkLatency {
         }
 
 
-        public MeasuredNetworkLatency(@NotNull int[] distribProp, @NotNull int[] distribVal) {
+        public MeasuredNetworkLatency(int[] distribProp, int[] distribVal) {
             setLatency(distribProp, distribVal);
         }
 
         @Override
-        public int getLatency(@NotNull Node from, @NotNull Node to, int delta) {
+        public int getLatency(Node from, Node to, int delta) {
             checkDelta(delta);
             return longDistrib[delta];
         }
@@ -206,7 +205,7 @@ public abstract class NetworkLatency {
         final MeasuredNetworkLatency networkLatency = new NetworkLatency.MeasuredNetworkLatency(distribProp, distribVal);
 
         @Override
-        public int getLatency(@NotNull Node from, @NotNull Node to, int delta) {
+        public int getLatency(Node from, Node to, int delta) {
             return networkLatency.getLatency(from, to, delta);
         }
 
@@ -231,10 +230,10 @@ public abstract class NetworkLatency {
         /**
          * @return a peer of node n that should be used to measure the latency
          */
-        @NotNull Node peer(@NotNull Node n);
+        Node peer(Node n);
     }
 
-    public static @NotNull MeasuredNetworkLatency estimateLatency(@NotNull Network net, final int rounds) {
+    public static MeasuredNetworkLatency estimateLatency(Network net, final int rounds) {
         return estimateLatency(net, n -> {
             Node res = n;
             while (res == n) {
@@ -247,7 +246,7 @@ public abstract class NetworkLatency {
     /**
      * Estimation for a p2p network, we only look at direct peers
      */
-    public static @NotNull MeasuredNetworkLatency estimateP2PLatency(@NotNull P2PNetwork net, final int rounds) {
+    public static MeasuredNetworkLatency estimateP2PLatency(P2PNetwork net, final int rounds) {
         return estimateLatency(net, n -> {
             P2PNode pn = (P2PNode) n;
             Node res = n;
@@ -264,7 +263,7 @@ public abstract class NetworkLatency {
      *
      * @param rounds - the number of messages to send, should be more than 100K
      */
-    public static @NotNull MeasuredNetworkLatency estimateLatency(@NotNull Network net, @NotNull PeerGetter pg, final int rounds) {
+    public static MeasuredNetworkLatency estimateLatency(Network net, PeerGetter pg, final int rounds) {
         int[] props = new int[50];
         int[] vals = new int[50];
 

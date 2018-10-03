@@ -2,7 +2,6 @@ package net.consensys.wittgenstein.protocol;
 
 
 import net.consensys.wittgenstein.core.*;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
@@ -54,16 +53,16 @@ public class Dfinity {
         });
     }
 
-    final @NotNull BlockChainNetwork network = new BlockChainNetwork();
-    final @NotNull DfinityBlock genesis = DfinityBlock.createGenesis();
-    final @NotNull DfinityBlockComparator blockComparator = new DfinityBlockComparator();
+    final BlockChainNetwork network = new BlockChainNetwork();
+    final DfinityBlock genesis = DfinityBlock.createGenesis();
+    final DfinityBlockComparator blockComparator = new DfinityBlockComparator();
 
-    final @NotNull Set<AttesterNode> attesters = new HashSet<>();
-    final @NotNull Set<BlockProducerNode> bps = new HashSet<>();
-    final @NotNull Set<RandomBeaconNode> rds = new HashSet<>();
+    final Set<AttesterNode> attesters = new HashSet<>();
+    final Set<BlockProducerNode> bps = new HashSet<>();
+    final Set<RandomBeaconNode> rds = new HashSet<>();
 
     static class DfinityBlock extends Block<DfinityBlock> {
-        public DfinityBlock(@NotNull BlockProducerNode blockProducerNode, int height, @NotNull DfinityBlock head, boolean b, int time) {
+        public DfinityBlock(BlockProducerNode blockProducerNode, int height, DfinityBlock head, boolean b, int time) {
             super(blockProducerNode, height, head, b, time);
         }
 
@@ -71,7 +70,7 @@ public class Dfinity {
         }
 
 
-        static public @NotNull DfinityBlock createGenesis() {
+        static public DfinityBlock createGenesis() {
             return new DfinityBlock();
         }
     }
@@ -82,7 +81,7 @@ public class Dfinity {
          * @return -1 if o1 is lower than o2,
          */
         @Override
-        public int compare(@NotNull DfinityBlock o1, @NotNull DfinityBlock o2) {
+        public int compare(DfinityBlock o1, DfinityBlock o2) {
             if (o1 == o2) return 0;
 
             if (!o2.valid) return 1;
@@ -103,14 +102,14 @@ public class Dfinity {
     }
 
     static class BlockProposal extends Network.MessageContent<DfinityNode> {
-        final @NotNull DfinityBlock block;
+        final DfinityBlock block;
 
-        public BlockProposal(@NotNull DfinityBlock block) {
+        public BlockProposal(DfinityBlock block) {
             this.block = block;
         }
 
         @Override
-        public void action(@NotNull DfinityNode from, @NotNull DfinityNode to) {
+        public void action(DfinityNode from, DfinityNode to) {
             AttesterNode n = (AttesterNode) to;
             n.onProposal(block);
         }
@@ -119,12 +118,12 @@ public class Dfinity {
     static class Vote extends Network.MessageContent<DfinityNode> {
         final DfinityBlock voteFor;
 
-        public Vote(@NotNull DfinityBlock voteFor) {
+        public Vote(DfinityBlock voteFor) {
             this.voteFor = voteFor;
         }
 
         @Override
-        public void action(@NotNull DfinityNode fromNode, @NotNull DfinityNode toNode) {
+        public void action(DfinityNode fromNode, DfinityNode toNode) {
             toNode.onVote(fromNode, voteFor);
         }
     }
@@ -138,7 +137,7 @@ public class Dfinity {
         }
 
         @Override
-        public void action(@NotNull RandomBeaconNode from, @NotNull RandomBeaconNode to) {
+        public void action(RandomBeaconNode from, RandomBeaconNode to) {
             to.onRandomBeaconExchange(from, height);
         }
     }
@@ -153,7 +152,7 @@ public class Dfinity {
         }
 
         @Override
-        public void action(@NotNull DfinityNode from, @NotNull DfinityNode to) {
+        public void action(DfinityNode from, DfinityNode to) {
             to.onRandomBeacon(height, rd);
         }
     }
@@ -166,15 +165,15 @@ public class Dfinity {
 
 
         @Override
-        public @NotNull DfinityBlock best(@NotNull DfinityBlock o1, @NotNull DfinityBlock o2) {
+        public DfinityBlock best(DfinityBlock o1, DfinityBlock o2) {
             return blockComparator.compare(o1, o2) >= 0 ? o1 : o2;
         }
 
-        DfinityNode(@NotNull DfinityBlock genesis) {
+        DfinityNode(DfinityBlock genesis) {
             super(nb, false, genesis);
         }
 
-        public void onVote(@NotNull Node voter, @NotNull DfinityBlock voteFor) {
+        public void onVote(Node voter, DfinityBlock voteFor) {
         }
 
         /**
@@ -196,7 +195,7 @@ public class Dfinity {
         final int myRound;
         int waitForBlockHeight; // If we're supposed to create a block but we don"t have the parent yet
 
-        BlockProducerNode(final int myRound, @NotNull DfinityBlock genesis) {
+        BlockProducerNode(final int myRound, DfinityBlock genesis) {
             super(genesis);
             this.myRound = myRound;
             this.waitForBlockHeight = -1;
@@ -214,7 +213,7 @@ public class Dfinity {
         }
 
         @Override
-        public boolean onBlock(@NotNull DfinityBlock b) {
+        public boolean onBlock(DfinityBlock b) {
             if (!super.onBlock(b)) return false;
             if (head.height == waitForBlockHeight) {
                 createProposal(waitForBlockHeight + 1);
@@ -243,13 +242,13 @@ public class Dfinity {
         final int myRound;
         int voteForHeight = -1;
 
-        AttesterNode(int myRound, @NotNull DfinityBlock genesis) {
+        AttesterNode(int myRound, DfinityBlock genesis) {
             super(genesis);
             this.myRound = myRound;
         }
 
         @Override
-        public void onVote(@NotNull Node voter, @NotNull DfinityBlock voteFor) {
+        public void onVote(Node voter, DfinityBlock voteFor) {
             Set<Integer> voters = votes.computeIfAbsent(voteFor.id, k -> new HashSet<>());
             if (voteForHeight == voteFor.height) {
                 if (voters.add(voter.nodeId) && voters.size() >= majority) {
@@ -258,7 +257,7 @@ public class Dfinity {
             }
         }
 
-        private void sendBlock(@NotNull DfinityBlock voteFor) {
+        private void sendBlock(DfinityBlock voteFor) {
             committeeMajorityBlocks.add(voteFor.id);
             committeeMajorityHeight.add(voteFor.height);
             voteForHeight = -1;
@@ -271,7 +270,7 @@ public class Dfinity {
          * for this new proposal.
          * If we reach the majority, we can send the (signed) block on the network.
          */
-        void onProposal(@NotNull DfinityBlock b) {
+        void onProposal(DfinityBlock b) {
             if (voteForHeight == b.height) {
                 Set<Integer> voters = votes.computeIfAbsent(b.id, k -> new HashSet<>());
 
@@ -292,7 +291,7 @@ public class Dfinity {
         }
 
         @Override
-        public boolean onBlock(@NotNull DfinityBlock b) {
+        public boolean onBlock(DfinityBlock b) {
             if (!super.onBlock(b)) return false;
             committeeMajorityBlocks.add(b.id);
             committeeMajorityHeight.add(b.height);
@@ -323,7 +322,7 @@ public class Dfinity {
         int lastRDSent = 0;
         Map<Integer, Set<Integer>> exchanged = new HashMap<>();
 
-        RandomBeaconNode(@NotNull DfinityBlock genesis) {
+        RandomBeaconNode(DfinityBlock genesis) {
             super(genesis);
         }
 
@@ -331,7 +330,7 @@ public class Dfinity {
          * Exchange the signatures with other nodes. When the threshold is reached we
          * have our random beacon for this height
          */
-        public void onRandomBeaconExchange(@NotNull RandomBeaconNode from, int height) {
+        public void onRandomBeaconExchange(RandomBeaconNode from, int height) {
             if (height >= this.height && height > lastRDSent) {
                 Set<Integer> voters = exchanged.computeIfAbsent(height, k -> new HashSet<>());
                 if (voters.add(from.nodeId) && height == this.height && voters.size() >= majority) {
@@ -352,7 +351,7 @@ public class Dfinity {
          * the next height
          */
         @Override
-        public boolean onBlock(@NotNull DfinityBlock b) {
+        public boolean onBlock(DfinityBlock b) {
             if (!super.onBlock(b)) return true;
             if (head.height == height) {
                 height++;

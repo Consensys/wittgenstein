@@ -1,8 +1,6 @@
 package net.consensys.wittgenstein.core;
 
 
-import org.jetbrains.annotations.NotNull;
-
 import java.util.*;
 
 /**
@@ -16,20 +14,20 @@ public class BlockChainNetwork extends Network<BlockChainNode<? extends Block>> 
      */
     public BlockChainNode<? extends Block> observer;
 
-    public void addObserver(@NotNull BlockChainNode<? extends Block> observer) {
+    public void addObserver(BlockChainNode<? extends Block> observer) {
         this.observer = observer;
         addNode(observer);
     }
 
     public static class SendBlock<TB extends Block, TN extends BlockChainNode<TB>> extends MessageContent<TN> {
-        final @NotNull TB toSend;
+        final TB toSend;
 
-        public SendBlock(@NotNull TB toSend) {
+        public SendBlock(TB toSend) {
             this.toSend = toSend;
         }
 
         @Override
-        public void action(@NotNull TN fromNode, @NotNull TN toNode) {
+        public void action(TN fromNode, TN toNode) {
             toNode.onBlock(toSend);
         }
 

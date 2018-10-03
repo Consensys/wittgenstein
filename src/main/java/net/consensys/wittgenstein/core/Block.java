@@ -1,7 +1,5 @@
 package net.consensys.wittgenstein.core;
 
-import org.jetbrains.annotations.NotNull;
-
 @SuppressWarnings("WeakerAccess")
 abstract public class Block<TB extends Block> {
 
@@ -34,7 +32,7 @@ abstract public class Block<TB extends Block> {
     }
 
 
-    public Block(@NotNull BlockChainNode producer, int height, @NotNull TB parent, boolean valid, int time) {
+    public Block(BlockChainNode producer, int height, TB parent, boolean valid, int time) {
         if (height <= 0) {
             throw new IllegalArgumentException("Only the genesis block has a special height");
         }
@@ -71,7 +69,7 @@ abstract public class Block<TB extends Block> {
 
 
     @SuppressWarnings("unused")
-    public boolean isAncestor(@NotNull Block b) {
+    public boolean isAncestor(Block b) {
         if (this == b) return false;
 
         Block cur = b;
@@ -86,7 +84,7 @@ abstract public class Block<TB extends Block> {
     /***
      * @return true if b is a direct father or ancestor. false if 'b' is on a different branch
      */
-    public boolean hasDirectLink(@NotNull TB b) {
+    public boolean hasDirectLink(TB b) {
         if (b == this) return true;
         if (b.height == height) return false;
 

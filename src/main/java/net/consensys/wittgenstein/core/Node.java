@@ -1,7 +1,5 @@
 package net.consensys.wittgenstein.core;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -58,6 +56,7 @@ public class Node {
             } catch (NoSuchAlgorithmException e) {
                 throw new IllegalStateException();
             }
+
         }
 
         protected int allocateNodeId() {
@@ -74,9 +73,9 @@ public class Node {
 
         /**
          * Many algo will want a hash of the node id. Be careful: sha-3 is
-         *  not the ethereum v1 hash.
+         * not the ethereum v1 hash.
          */
-        protected @NotNull byte[] getHash(int nodeId) {
+        protected byte[] getHash(int nodeId) {
             return digest.digest(ByteBuffer.allocate(4).putInt(nodeId).array());
         }
     }
@@ -84,7 +83,7 @@ public class Node {
     public static class NodeBuilderWithPosition extends NodeBuilder {
         final Random rd;
 
-        public NodeBuilderWithPosition(@NotNull Random rd) {
+        public NodeBuilderWithPosition(Random rd) {
             this.rd = rd;
         }
 
@@ -98,7 +97,7 @@ public class Node {
     }
 
 
-    public Node(@NotNull NodeBuilder nb, boolean byzantine) {
+    public Node(NodeBuilder nb, boolean byzantine) {
         this.nodeId = nb.allocateNodeId();
         if (this.nodeId < 0) {
             throw new IllegalArgumentException("bad nodeId:" + nodeId);
@@ -115,11 +114,11 @@ public class Node {
         this.hash256 = nb.getHash(nodeId);
     }
 
-    public Node(@NotNull NodeBuilder nb) {
+    public Node(NodeBuilder nb) {
         this(nb, false);
     }
 
-    int dist(@NotNull Node n) {
+    int dist(Node n) {
         int dx = Math.min(Math.abs(x - n.x), MAX_X - Math.abs(x - n.x));
         int dy = Math.min(Math.abs(y - n.y), MAX_Y - Math.abs(y - n.y));
         return (int) Math.sqrt(dx * dx + dy * dy);

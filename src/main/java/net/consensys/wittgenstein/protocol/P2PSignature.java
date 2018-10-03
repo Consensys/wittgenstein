@@ -1,7 +1,6 @@
 package net.consensys.wittgenstein.protocol;
 
 import net.consensys.wittgenstein.core.*;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
@@ -65,7 +64,7 @@ public class P2PSignature {
         final BitSet desc;
         final P2PSigNode who;
 
-        public State(@NotNull P2PSigNode who) {
+        public State(P2PSigNode who) {
             this.desc = (BitSet) who.verifiedSignatures.clone();
             this.who = who;
         }
@@ -76,7 +75,7 @@ public class P2PSignature {
         }
 
         @Override
-        public void action(@NotNull P2PSigNode from, @NotNull P2PSigNode to) {
+        public void action(P2PSigNode from, P2PSigNode to) {
             to.onPeerState(this);
         }
     }
@@ -84,7 +83,7 @@ public class P2PSignature {
     static class SendSigs extends Network.MessageContent<P2PSigNode> {
         final BitSet sigs;
 
-        public SendSigs(@NotNull BitSet sigs) {
+        public SendSigs(BitSet sigs) {
             this.sigs = sigs;
         }
 
@@ -94,7 +93,7 @@ public class P2PSignature {
         }
 
         @Override
-        public void action(@NotNull P2PSigNode from, @NotNull P2PSigNode to) {
+        public void action(P2PSigNode from, P2PSigNode to) {
             to.onNewSig(sigs);
         }
     }
@@ -115,7 +114,7 @@ public class P2PSignature {
         /**
          * Asynchronous, so when we receive a state it can be an old one.
          */
-        void onPeerState(@NotNull State state) {
+        void onPeerState(State state) {
             int newCard = state.desc.cardinality();
             State old = peersState.get(state.who.nodeId);
 
@@ -128,7 +127,7 @@ public class P2PSignature {
          * If the state has changed we send a message to all.
          * If we're done, we updates all our peers.
          */
-        void updateVerifiedSignatures(@NotNull BitSet sigs) {
+        void updateVerifiedSignatures(BitSet sigs) {
             int oldCard = verifiedSignatures.cardinality();
             verifiedSignatures.or(sigs);
             int newCard = verifiedSignatures.cardinality();
@@ -155,7 +154,7 @@ public class P2PSignature {
          * Nothing much to do when we receive a sig set: we just add it to our
          * toVerify list.
          */
-        void onNewSig(@NotNull BitSet sigs) {
+        void onNewSig(BitSet sigs) {
             toVerify.add(sigs);
         }
 

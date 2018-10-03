@@ -18,7 +18,7 @@ public class TestMessageStorage {
 
     private Network.MessageContent<Node> dummy = new Network.MessageContent<Node>() {
         @Override
-        public void action(@NotNull Node from, @NotNull Node to) {
+        public void action( Node from,  Node to) {
         }
     };
 
@@ -61,7 +61,7 @@ public class TestMessageStorage {
         AtomicBoolean ab = new AtomicBoolean(false);
         Network.MessageContent<Node> act = new Network.MessageContent<Node>() {
             @Override
-            public void action(@NotNull Node from, @NotNull Node to) {
+            public void action( Node from,  Node to) {
                 ab.set(true);
             }
         };
@@ -86,7 +86,7 @@ public class TestMessageStorage {
         AtomicLong ab = new AtomicLong(0);
         Network.MessageContent<Node> act = new Network.MessageContent<Node>() {
             @Override
-            public void action(@NotNull Node from, @NotNull Node to) {
+            public void action( Node from,  Node to) {
                 ab.set(network.time);
             }
         };

@@ -1,8 +1,5 @@
 package net.consensys.wittgenstein.core;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
 import java.util.Arrays;
 import java.util.List;
 
@@ -10,15 +7,15 @@ import java.util.List;
  * This is a class internal to the framework.
  */
 abstract class Message<TN extends Node> {
-    abstract @NotNull Network.MessageContent<TN> getMessageContent();
+    abstract Network.MessageContent<TN> getMessageContent();
 
     abstract int getNextDestId();
 
-    abstract int nextArrivalTime(@NotNull Network network);
+    abstract int nextArrivalTime(Network network);
 
-    abstract @Nullable Message<?> getNextSameTime();
+    abstract Message<?> getNextSameTime();
 
-    abstract void setNextSameTime(@Nullable Message<?> m);
+    abstract void setNextSameTime(Message<?> m);
 
     abstract void markRead();
 
@@ -42,17 +39,17 @@ abstract class Message<TN extends Node> {
      * - this also allows on disk serialization
      */
     final static class MultipleDestMessage<TN extends Node> extends Message<TN> {
-        final @NotNull Network.MessageContent<TN> messageContent;
+        final Network.MessageContent<TN> messageContent;
         private final int fromNodeId;
 
         private final int sendTime;
         final int randomSeed;
         private final int[] destIds;
         private int curPos = 0;
-        private @Nullable Message<?> nextSameTime = null;
+        private Message<?> nextSameTime = null;
 
-        MultipleDestMessage(@NotNull Network.MessageContent<TN> m, @NotNull Node fromNode,
-                            @NotNull List<Network.MessageArrival> dests, int sendTime, int randomSeed) {
+        MultipleDestMessage(Network.MessageContent<TN> m, Node fromNode,
+                            List<Network.MessageArrival> dests, int sendTime, int randomSeed) {
             this.messageContent = m;
             this.fromNodeId = fromNode.nodeId;
             this.randomSeed = randomSeed;
@@ -75,7 +72,7 @@ abstract class Message<TN extends Node> {
         }
 
         @Override
-        @NotNull Network.MessageContent<TN> getMessageContent() {
+        Network.MessageContent<TN> getMessageContent() {
             return messageContent;
         }
 
@@ -84,7 +81,7 @@ abstract class Message<TN extends Node> {
             return destIds[curPos];
         }
 
-        int nextArrivalTime(@NotNull Network network) {
+        int nextArrivalTime(Network network) {
             return sendTime + network.networkLatency.getLatency(
                     (Node) network.allNodes.get(this.fromNodeId),
                     (Node) network.allNodes.get(this.getNextDestId()),
@@ -93,12 +90,12 @@ abstract class Message<TN extends Node> {
         }
 
         @Override
-        @Nullable Message<?> getNextSameTime() {
+        Message<?> getNextSameTime() {
             return nextSameTime;
         }
 
         @Override
-        void setNextSameTime(@Nullable Message<?> m) {
+        void setNextSameTime(Message<?> m) {
             this.nextSameTime = m;
         }
 
@@ -118,24 +115,24 @@ abstract class Message<TN extends Node> {
 
 
     final static class SingleDestMessage<TN extends Node> extends Message<TN> {
-        final @NotNull Network.MessageContent<TN> messageContent;
+        final Network.MessageContent<TN> messageContent;
         private final int fromNodeId;
         private final int toNodeId;
         private final int arrivalTime;
-        private @Nullable Message<?> nextSameTime = null;
+        private Message<?> nextSameTime = null;
 
 
         @Override
-        @Nullable Message<?> getNextSameTime() {
+        Message<?> getNextSameTime() {
             return nextSameTime;
         }
 
         @Override
-        void setNextSameTime(@Nullable Message<?> nextSameTime) {
+        void setNextSameTime(Message<?> nextSameTime) {
             this.nextSameTime = nextSameTime;
         }
 
-        SingleDestMessage(@NotNull Network.MessageContent<TN> messageContent, @NotNull Node fromNode, @NotNull Node toNode, int arrivalTime) {
+        SingleDestMessage(Network.MessageContent<TN> messageContent, Node fromNode, Node toNode, int arrivalTime) {
             this.messageContent = messageContent;
             this.fromNodeId = fromNode.nodeId;
             this.toNodeId = toNode.nodeId;
@@ -152,7 +149,7 @@ abstract class Message<TN extends Node> {
         }
 
         @Override
-        @NotNull Network.MessageContent<TN> getMessageContent() {
+        Network.MessageContent<TN> getMessageContent() {
             return messageContent;
         }
 
@@ -161,7 +158,7 @@ abstract class Message<TN extends Node> {
             return toNodeId;
         }
 
-        int nextArrivalTime(@NotNull Network network) {
+        int nextArrivalTime(Network network) {
             return arrivalTime;
         }
 
