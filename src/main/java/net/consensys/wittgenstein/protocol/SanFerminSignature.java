@@ -92,7 +92,7 @@ public class SanFerminSignature {
     this.shuffledLists = shuffledLists;
 
     this.network = new Network<SanFerminNode>();
-    this.nb = new Node.NodeBuilderWithPosition(network.rd);
+    this.nb = new Node.NodeBuilderWithRandomPosition(network.rd);
 
     this.allNodes = new ArrayList<SanFerminNode>(totalCount);
     for (int i = 0; i < totalCount; i++) {

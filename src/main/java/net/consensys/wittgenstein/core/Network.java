@@ -57,6 +57,10 @@ public class Network<TN extends Node> {
     this(0);
   }
 
+    /**
+     * Use this constructor to set the seed used by the random number generator.
+     * This allows to have different executions, but still reproducible.
+     */
   public Network(long randomSeed) {
     this.rd = new Random(randomSeed);
   }

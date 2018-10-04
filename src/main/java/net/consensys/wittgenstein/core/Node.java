@@ -79,10 +79,10 @@ public class Node {
     }
   }
 
-  public static class NodeBuilderWithPosition extends NodeBuilder {
+  public static class NodeBuilderWithRandomPosition extends NodeBuilder {
     final Random rd;
 
-    public NodeBuilderWithPosition(Random rd) {
+    public NodeBuilderWithRandomPosition(Random rd) {
       this.rd = rd;
     }
 

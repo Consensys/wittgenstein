@@ -46,7 +46,7 @@ public class Dfinity {
     this.attestationConstructionTime = attestationConstructionTime;
     this.percentageDeadAttester = percentageDeadAttester;
 
-    this.nb = new Node.NodeBuilderWithPosition(network.rd);
+    this.nb = new Node.NodeBuilderWithRandomPosition(network.rd);
     this.network.addObserver(new DfinityNode(genesis) {});
   }
 

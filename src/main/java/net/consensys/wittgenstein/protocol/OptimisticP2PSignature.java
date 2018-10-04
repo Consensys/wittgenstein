@@ -76,7 +76,7 @@ public class OptimisticP2PSignature {
     this.pairingTime = pairingTime;
 
     this.network = new P2PNetwork(connectionCount);
-    this.nb = new Node.NodeBuilderWithPosition(network.rd);
+    this.nb = new Node.NodeBuilderWithRandomPosition(network.rd);
   }
 
   static class SendSig extends Network.Message<P2PSigNode> {
