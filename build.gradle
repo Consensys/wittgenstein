@@ -21,6 +21,5 @@ dependencies {
 spotless {
     java {
         eclipse().configFile 'eclipse-java-google-style.xml'
-        paddedCell()
     }
 }
