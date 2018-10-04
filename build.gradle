@@ -17,3 +17,10 @@ repositories {
 dependencies {
     testImplementation 'junit:junit:4.12'
 }
+
+spotless {
+    java {
+        eclipse().configFile 'eclipse-java-google-style.xml'
+        paddedCell()
+    }
+}
