@@ -29,7 +29,7 @@ But you're actually supposed to write code to implement your specific scenarios 
 
 ## How to implement a new protocol
 Here is an example:
-
+```java
 public class PingPong {
     /**
      * You need a network. Nodes are added to this network.
@@ -100,8 +100,9 @@ public class PingPong {
         }
     }
 }
-
+```
 This will print:
+```
 0 ms, pongs received 0
 100 ms, pongs received 38
 200 ms, pongs received 184
@@ -112,4 +113,4 @@ This will print:
 700 ms, pongs received 1000
 800 ms, pongs received 1000
 900 ms, pongs received 1000
-
+```
