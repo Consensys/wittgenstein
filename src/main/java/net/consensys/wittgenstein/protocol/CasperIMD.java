@@ -1,7 +1,6 @@
 package net.consensys.wittgenstein.protocol;
 
 import net.consensys.wittgenstein.core.*;
-
 import java.util.*;
 
 /**

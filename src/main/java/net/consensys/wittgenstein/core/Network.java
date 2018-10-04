@@ -57,10 +57,10 @@ public class Network<TN extends Node> {
     this(0);
   }
 
-    /**
-     * Use this constructor to set the seed used by the random number generator.
-     * This allows to have different executions, but still reproducible.
-     */
+  /**
+   * Use this constructor to set the seed used by the random number generator. This allows to have
+   * different executions, but still reproducible.
+   */
   public Network(long randomSeed) {
     this.rd = new Random(randomSeed);
   }
@@ -230,8 +230,8 @@ public class Network<TN extends Node> {
   /**
    * The generic message that goes on a network. Triggers an 'action' on reception.
    * <p>
-   * Object of this class must be immutable. Especially, Message is shared between the
-   * messages for messages sent to multiple nodes.
+   * Object of this class must be immutable. Especially, Message is shared between the messages for
+   * messages sent to multiple nodes.
    */
   public static abstract class Message<TN extends Node> {
     public abstract void action(TN from, TN to);
@@ -397,7 +397,7 @@ public class Network<TN extends Node> {
   }
 
   public void send(Message<? extends TN> m, int sendTime, TN fromNode,
-                   Collection<? extends Node> dests) {
+      Collection<? extends Node> dests) {
     int randomSeed = rd.nextInt();
 
     List<MessageArrival> da = createMessageArrivals(m, sendTime, fromNode, dests, randomSeed);
@@ -408,14 +408,15 @@ public class Network<TN extends Node> {
         Envelope<?> msg = new Envelope.SingleDestEnvelope<>(m, fromNode, ms.dest, ms.arrival);
         msgs.addMsg(msg);
       } else {
-        Envelope<?> msg = new Envelope.MultipleDestEnvelope<>(m, fromNode, da, sendTime, randomSeed);
+        Envelope<?> msg =
+            new Envelope.MultipleDestEnvelope<>(m, fromNode, da, sendTime, randomSeed);
         msgs.addMsg(msg);
       }
     }
   }
 
-  List<MessageArrival> createMessageArrivals(Message<? extends TN> m, int sendTime,
-                                             TN fromNode, Collection<? extends Node> dests, int randomSeed) {
+  List<MessageArrival> createMessageArrivals(Message<? extends TN> m, int sendTime, TN fromNode,
+      Collection<? extends Node> dests, int randomSeed) {
     ArrayList<MessageArrival> da = new ArrayList<>(dests.size());
     for (Node n : dests) {
       MessageArrival ma = createMessageArrival(m, fromNode, n, sendTime, randomSeed);
@@ -430,7 +431,7 @@ public class Network<TN extends Node> {
 
 
   private MessageArrival createMessageArrival(Message<?> m, Node fromNode, Node toNode,
-                                              int sendTime, int randomSeed) {
+      int sendTime, int randomSeed) {
     if (sendTime <= time) {
       throw new IllegalStateException("" + m + ", sendTime=" + sendTime + ", time=" + time);
     }

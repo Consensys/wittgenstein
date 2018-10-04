@@ -31,9 +31,9 @@ abstract class Envelope<TN extends Node> {
    * keep the list of the network latency to save memory
    * <p>
    * To avoid storing the network latencies, we do: - generate the randomness from a unique per
-   * MultipleDestEnvelope + the node id - sort the nodes with the calculated latency (hence the first
-   * node is the first to receive the message) - recalculate them on the fly as the nodeId & the
-   * randomSeed are kept. - this also allows on disk serialization
+   * MultipleDestEnvelope + the node id - sort the nodes with the calculated latency (hence the
+   * first node is the first to receive the message) - recalculate them on the fly as the nodeId &
+   * the randomSeed are kept. - this also allows on disk serialization
    */
   final static class MultipleDestEnvelope<TN extends Node> extends Envelope<TN> {
     final Network.Message<TN> message;
@@ -45,8 +45,8 @@ abstract class Envelope<TN extends Node> {
     private int curPos = 0;
     private Envelope<?> nextSameTime = null;
 
-    MultipleDestEnvelope(Network.Message<TN> m, Node fromNode,
-                         List<Network.MessageArrival> dests, int sendTime, int randomSeed) {
+    MultipleDestEnvelope(Network.Message<TN> m, Node fromNode, List<Network.MessageArrival> dests,
+        int sendTime, int randomSeed) {
       this.message = m;
       this.fromNodeId = fromNode.nodeId;
       this.randomSeed = randomSeed;
@@ -60,8 +60,8 @@ abstract class Envelope<TN extends Node> {
 
     @Override
     public String toString() {
-      return "Envelope{" + "message=" + message + ", fromNode=" + fromNodeId
-          + ", dests=" + Arrays.toString(destIds) + ", curPos=" + curPos + '}';
+      return "Envelope{" + "message=" + message + ", fromNode=" + fromNodeId + ", dests="
+          + Arrays.toString(destIds) + ", curPos=" + curPos + '}';
     }
 
     @Override
@@ -124,8 +124,7 @@ abstract class Envelope<TN extends Node> {
       this.nextSameTime = nextSameTime;
     }
 
-    SingleDestEnvelope(Network.Message<TN> message, Node fromNode, Node toNode,
-                       int arrivalTime) {
+    SingleDestEnvelope(Network.Message<TN> message, Node fromNode, Node toNode, int arrivalTime) {
       this.message = message;
       this.fromNodeId = fromNode.nodeId;
       this.toNodeId = toNode.nodeId;
@@ -134,8 +133,8 @@ abstract class Envelope<TN extends Node> {
 
     @Override
     public String toString() {
-      return "Envelope{" + "message=" + message + ", fromNode=" + fromNodeId
-          + ", dest=" + toNodeId + '}';
+      return "Envelope{" + "message=" + message + ", fromNode=" + fromNodeId + ", dest=" + toNodeId
+          + '}';
     }
 
     @Override
