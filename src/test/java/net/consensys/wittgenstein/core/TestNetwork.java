@@ -1,6 +1,5 @@
 package net.consensys.wittgenstein.core;
 
-import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;

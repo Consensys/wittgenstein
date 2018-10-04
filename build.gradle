@@ -1,0 +1,19 @@
+plugins {
+    id "com.diffplug.gradle.spotless" version "3.15.0"
+}
+
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'com.diffplug.gradle.spotless'
+
+description = 'wittgenstein'
+
+repositories {
+    mavenLocal()
+    maven { url "http://repo.maven.apache.org/maven2" }
+}
+
+
+dependencies {
+    testImplementation 'junit:junit:4.12'
+}
