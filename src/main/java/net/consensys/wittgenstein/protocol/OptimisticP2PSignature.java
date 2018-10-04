@@ -79,7 +79,7 @@ public class OptimisticP2PSignature {
     this.nb = new Node.NodeBuilderWithPosition(network.rd);
   }
 
-  static class SendSig extends Network.MessageContent<P2PSigNode> {
+  static class SendSig extends Network.Message<P2PSigNode> {
     final int sig;
 
     public SendSig(P2PSigNode who) {

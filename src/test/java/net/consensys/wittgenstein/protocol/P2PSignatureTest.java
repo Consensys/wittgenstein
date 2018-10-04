@@ -35,7 +35,7 @@ public class P2PSignatureTest {
 
     ps.network.msgs.clear();
     n1.sendSigs();
-    Network.MessageContent<?> mc = ps.network.msgs.peekFirstMessageContent();
+    Network.Message<?> mc = ps.network.msgs.peekFirstMessageContent();
     Assert.assertNotNull(mc);
 
     P2PSignature.SendSigs ss = (P2PSignature.SendSigs) mc;

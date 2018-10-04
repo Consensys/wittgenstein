@@ -20,7 +20,7 @@ public class BlockChainNetwork extends Network<BlockChainNode<? extends Block>> 
   }
 
   public static class SendBlock<TB extends Block, TN extends BlockChainNode<TB>>
-      extends MessageContent<TN> {
+      extends Message<TN> {
     final TB toSend;
 
     public SendBlock(TB toSend) {

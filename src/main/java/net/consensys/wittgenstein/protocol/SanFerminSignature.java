@@ -586,7 +586,7 @@ public class SanFerminSignature {
     NO
   }
 
-  class SwapReply extends Network.MessageContent<SanFerminNode> {
+  class SwapReply extends Network.Message<SanFerminNode> {
 
     Status status;
     final int level;
@@ -613,7 +613,7 @@ public class SanFerminSignature {
   }
 
 
-  class SwapRequest extends Network.MessageContent<SanFerminNode> {
+  class SwapRequest extends Network.Message<SanFerminNode> {
 
     final int level;
     int aggValue; // see Reply.aggValue

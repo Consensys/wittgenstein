@@ -101,7 +101,7 @@ public class Dfinity {
     }
   }
 
-  static class BlockProposal extends Network.MessageContent<DfinityNode> {
+  static class BlockProposal extends Network.Message<DfinityNode> {
     final DfinityBlock block;
 
     public BlockProposal(DfinityBlock block) {
@@ -115,7 +115,7 @@ public class Dfinity {
     }
   }
 
-  static class Vote extends Network.MessageContent<DfinityNode> {
+  static class Vote extends Network.Message<DfinityNode> {
     final DfinityBlock voteFor;
 
     public Vote(DfinityBlock voteFor) {
@@ -129,7 +129,7 @@ public class Dfinity {
   }
 
 
-  static class RandomBeaconExchange extends Network.MessageContent<RandomBeaconNode> {
+  static class RandomBeaconExchange extends Network.Message<RandomBeaconNode> {
     final int height;
 
     public RandomBeaconExchange(int height) {
@@ -142,7 +142,7 @@ public class Dfinity {
     }
   }
 
-  static class RandomBeaconResult extends Network.MessageContent<DfinityNode> {
+  static class RandomBeaconResult extends Network.Message<DfinityNode> {
     final int height;
     final long rd;
 

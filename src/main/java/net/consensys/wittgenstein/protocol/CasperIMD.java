@@ -1,9 +1,7 @@
 package net.consensys.wittgenstein.protocol;
 
-import net.consensys.wittgenstein.core.Block;
-import net.consensys.wittgenstein.core.BlockChainNetwork;
-import net.consensys.wittgenstein.core.BlockChainNode;
-import net.consensys.wittgenstein.core.Node;
+import net.consensys.wittgenstein.core.*;
+
 import java.util.*;
 
 /**
@@ -83,7 +81,7 @@ public class CasperIMD {
   // EF team repo:
   // https://github.com/ethereum/beacon_chain/blob/master/beacon_chain/state/attestation_record.py
   // It contains a field referencing the block hash: 'shard_block_hash': 'hash32'
-  class Attestation extends BlockChainNetwork.MessageContent<CasperNode> {
+  class Attestation extends Network.Message<CasperNode> {
     final Attester attester;
     final int height;
     final Set<Long> hs = new HashSet<>(); // technically, we put them in a set for efficiency

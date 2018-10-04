@@ -510,7 +510,7 @@ public class SanFerminOptimistic {
     }
   }
 
-  class Swap extends Network.MessageContent<SanFerminNode> {
+  class Swap extends Network.Message<SanFerminNode> {
 
     boolean wantReply; // indicate that the other needs a reply to this
     // Swap

@@ -84,7 +84,7 @@ public class Network<TN extends Node> {
     final int startTime;
     final int endTime;
     @SuppressWarnings("unchecked")
-    final Message<?>[] msgsByMs = new Message[duration];
+    final Envelope<?>[] msgsByMs = new Envelope[duration];
 
     public MsgsSlot(int startTime) {
       this.startTime = startTime - (startTime % duration);
@@ -98,20 +98,20 @@ public class Network<TN extends Node> {
       return (aTime % duration);
     }
 
-    public void addMsg(Message<?> m) {
+    public void addMsg(Envelope<?> m) {
       int pos = getPos(m.nextArrivalTime(Network.this));
       m.setNextSameTime(msgsByMs[pos]);
       msgsByMs[pos] = m;
     }
 
-    public Message<?> peek(int time) {
+    public Envelope<?> peek(int time) {
       int pos = getPos(time);
       return msgsByMs[pos];
     }
 
-    public Message<?> poll(int time) {
+    public Envelope<?> poll(int time) {
       int pos = getPos(time);
-      Message<?> m = msgsByMs[pos];
+      Envelope<?> m = msgsByMs[pos];
       if (m != null) {
         msgsByMs[pos] = m.getNextSameTime();
       }
@@ -122,7 +122,7 @@ public class Network<TN extends Node> {
       int size = 0;
       for (int i = 0; i < duration; i++) {
         int ss = 0;
-        Message m = msgsByMs[i];
+        Envelope m = msgsByMs[i];
         while (m != null) {
           ss++;
           m = m.getNextSameTime();
@@ -132,7 +132,7 @@ public class Network<TN extends Node> {
       return size;
     }
 
-    Message<?> peekFirst() {
+    Envelope<?> peekFirst() {
       for (int i = 0; i < duration; i++) {
         if (msgsByMs[i] != null) {
           return msgsByMs[i];
@@ -175,15 +175,15 @@ public class Network<TN extends Node> {
       return msgsBySlot.get(pos);
     }
 
-    void addMsg(Message<?> m) {
+    void addMsg(Envelope<?> m) {
       findSlot(m.nextArrivalTime(Network.this)).addMsg(m);
     }
 
-    Message<?> peek(int time) {
+    Envelope<?> peek(int time) {
       return findSlot(time).peek(time);
     }
 
-    Message<?> poll(int time) {
+    Envelope<?> poll(int time) {
       return findSlot(time).poll(time);
     }
 
@@ -195,9 +195,9 @@ public class Network<TN extends Node> {
     /**
      * @return the first message in the queue, null if the queue is empty.
      */
-    Message<?> peekFirst() {
+    Envelope<?> peekFirst() {
       for (MsgsSlot ms : msgsBySlot) {
-        Message<?> m = ms.peekFirst();
+        Envelope<?> m = ms.peekFirst();
         if (m != null)
           return m;
       }
@@ -208,16 +208,16 @@ public class Network<TN extends Node> {
     /**
      * For tests: they can find their message content.
      */
-    public MessageContent<?> peekFirstMessageContent() {
-      Message<?> m = peekFirst();
-      return m == null ? null : m.getMessageContent();
+    public Message<?> peekFirstMessageContent() {
+      Envelope<?> m = peekFirst();
+      return m == null ? null : m.getMessage();
     }
 
     /**
      * @return the first message in the queue, null if the queue is empty.
      */
-    public Message<?> pollFirst() {
-      Message<?> m = peekFirst();
+    public Envelope<?> pollFirst() {
+      Envelope<?> m = peekFirst();
       return m == null ? null : poll(m.nextArrivalTime(Network.this));
     }
   }
@@ -226,10 +226,10 @@ public class Network<TN extends Node> {
   /**
    * The generic message that goes on a network. Triggers an 'action' on reception.
    * <p>
-   * Object of this class must be immutable. Especially, MessageContent is shared between the
+   * Object of this class must be immutable. Especially, Message is shared between the
    * messages for messages sent to multiple nodes.
    */
-  public static abstract class MessageContent<TN extends Node> {
+  public static abstract class Message<TN extends Node> {
     public abstract void action(TN from, TN to);
 
     /**
@@ -244,7 +244,7 @@ public class Network<TN extends Node> {
   /**
    * Some protocols want some tasks to be executed at a given time
    */
-  public class Task extends MessageContent<TN> {
+  public class Task extends Message<TN> {
     final Runnable r;
 
     public Task(Runnable r) {
@@ -323,7 +323,7 @@ public class Network<TN extends Node> {
     public void action(Node from, Node to) {
       r.run();
       if (continuationCondition.check()) {
-        msgs.addMsg(new Message.SingleDestMessage<>(this, sender, sender, time + period));
+        msgs.addMsg(new Envelope.SingleDestEnvelope<>(this, sender, sender, time + period));
       }
     }
   }
@@ -346,11 +346,11 @@ public class Network<TN extends Node> {
   /**
    * Send a message to all nodes.
    */
-  public void sendAll(MessageContent<? extends TN> m, int sendTime, TN fromNode) {
+  public void sendAll(Message<? extends TN> m, int sendTime, TN fromNode) {
     send(m, sendTime, fromNode, allNodes);
   }
 
-  public void sendAll(MessageContent<? extends TN> m, TN fromNode) {
+  public void sendAll(Message<? extends TN> m, TN fromNode) {
     send(m, time + 1, fromNode, allNodes);
   }
 
@@ -358,21 +358,21 @@ public class Network<TN extends Node> {
    * Send a message to a collection of nodes. The message is considered as sent immediately, and
    * will arrive at a time depending on the network latency.
    */
-  public void send(MessageContent<? extends TN> m, TN fromNode, Collection<TN> dests) {
+  public void send(Message<? extends TN> m, TN fromNode, Collection<TN> dests) {
     send(m, time + 1, fromNode, dests);
   }
 
-  public void send(MessageContent<? extends TN> m, TN fromNode, TN toNode) {
+  public void send(Message<? extends TN> m, TN fromNode, TN toNode) {
     send(m, time + 1, fromNode, toNode);
   }
 
   /**
    * Send a message to a single node.
    */
-  public void send(MessageContent<? extends TN> mc, int sendTime, TN fromNode, TN toNode) {
+  public void send(Message<? extends TN> mc, int sendTime, TN fromNode, TN toNode) {
     MessageArrival ms = createMessageArrival(mc, fromNode, toNode, sendTime, rd.nextInt());
     if (ms != null) {
-      Message<?> m = new Message.SingleDestMessage<>(mc, fromNode, toNode, ms.arrival);
+      Envelope<?> m = new Envelope.SingleDestEnvelope<>(mc, fromNode, toNode, ms.arrival);
       msgs.addMsg(m);
     }
   }
@@ -392,8 +392,8 @@ public class Network<TN extends Node> {
     }
   }
 
-  public void send(MessageContent<? extends TN> m, int sendTime, TN fromNode,
-      Collection<? extends Node> dests) {
+  public void send(Message<? extends TN> m, int sendTime, TN fromNode,
+                   Collection<? extends Node> dests) {
     int randomSeed = rd.nextInt();
 
     List<MessageArrival> da = createMessageArrivals(m, sendTime, fromNode, dests, randomSeed);
@@ -401,17 +401,17 @@ public class Network<TN extends Node> {
     if (!da.isEmpty()) {
       if (da.size() == 1) {
         MessageArrival ms = da.get(0);
-        Message<?> msg = new Message.SingleDestMessage<>(m, fromNode, ms.dest, ms.arrival);
+        Envelope<?> msg = new Envelope.SingleDestEnvelope<>(m, fromNode, ms.dest, ms.arrival);
         msgs.addMsg(msg);
       } else {
-        Message<?> msg = new Message.MultipleDestMessage<>(m, fromNode, da, sendTime, randomSeed);
+        Envelope<?> msg = new Envelope.MultipleDestEnvelope<>(m, fromNode, da, sendTime, randomSeed);
         msgs.addMsg(msg);
       }
     }
   }
 
-  List<MessageArrival> createMessageArrivals(MessageContent<? extends TN> m, int sendTime,
-      TN fromNode, Collection<? extends Node> dests, int randomSeed) {
+  List<MessageArrival> createMessageArrivals(Message<? extends TN> m, int sendTime,
+                                             TN fromNode, Collection<? extends Node> dests, int randomSeed) {
     ArrayList<MessageArrival> da = new ArrayList<>(dests.size());
     for (Node n : dests) {
       MessageArrival ma = createMessageArrival(m, fromNode, n, sendTime, randomSeed);
@@ -425,8 +425,8 @@ public class Network<TN extends Node> {
   }
 
 
-  private MessageArrival createMessageArrival(MessageContent<?> m, Node fromNode, Node toNode,
-      int sendTime, int randomSeed) {
+  private MessageArrival createMessageArrival(Message<?> m, Node fromNode, Node toNode,
+                                              int sendTime, int randomSeed) {
     if (sendTime <= time) {
       throw new IllegalStateException("" + m + ", sendTime=" + sendTime + ", time=" + time);
     }
@@ -462,18 +462,18 @@ public class Network<TN extends Node> {
 
   public void registerTask(final Runnable task, int startAt, TN fromNode) {
     Task sw = new Task(task);
-    msgs.addMsg(new Message.SingleDestMessage<>(sw, fromNode, fromNode, startAt));
+    msgs.addMsg(new Envelope.SingleDestEnvelope<>(sw, fromNode, fromNode, startAt));
   }
 
   public void registerPeriodicTask(final Runnable task, int startAt, int period, TN fromNode) {
     PeriodicTask sw = new PeriodicTask(task, fromNode, period);
-    msgs.addMsg(new Message.SingleDestMessage<>(sw, fromNode, fromNode, startAt));
+    msgs.addMsg(new Envelope.SingleDestEnvelope<>(sw, fromNode, fromNode, startAt));
   }
 
   public void registerPeriodicTask(final Runnable task, int startAt, int period, TN fromNode,
       Condition c) {
     PeriodicTask sw = new PeriodicTask(task, fromNode, period, c);
-    msgs.addMsg(new Message.SingleDestMessage<>(sw, fromNode, fromNode, startAt));
+    msgs.addMsg(new Envelope.SingleDestEnvelope<>(sw, fromNode, fromNode, startAt));
   }
 
   public void registerConditionalTask(final Runnable task, int startAt, int duration, TN fromNode,
@@ -482,9 +482,9 @@ public class Network<TN extends Node> {
     conditionalTasks.add(ct);
   }
 
-  private Message<?> nextMessage(int until) {
+  private Envelope<?> nextMessage(int until) {
     while (time <= until) {
-      Message<?> m = msgs.poll(time);
+      Envelope<?> m = msgs.poll(time);
       if (m != null) {
         return m;
       } else {
@@ -497,9 +497,9 @@ public class Network<TN extends Node> {
   void receiveUntil(int until) {
     //noinspection ConstantConditions
     int previousTime = time;
-    Message<?> next = nextMessage(until);
+    Envelope<?> next = nextMessage(until);
     while (next != null) {
-      Message<?> m = next;
+      Envelope<?> m = next;
       if (m.nextArrivalTime(this) != previousTime) {
         if (time > m.nextArrivalTime(this)) {
           throw new IllegalStateException(
@@ -523,14 +523,14 @@ public class Network<TN extends Node> {
       TN from = allNodes.get(m.getFromId());
       TN to = allNodes.get(m.getNextDestId());
       if (partitionId(from) == partitionId(to)) {
-        if (!(m.getMessageContent() instanceof Network<?>.Task)) {
-          if (m.getMessageContent().size() == 0)
+        if (!(m.getMessage() instanceof Network<?>.Task)) {
+          if (m.getMessage().size() == 0)
             throw new IllegalStateException();
           to.msgReceived++;
-          to.bytesReceived += m.getMessageContent().size();
+          to.bytesReceived += m.getMessage().size();
         }
         @SuppressWarnings("unchecked")
-        MessageContent<TN> mc = (MessageContent<TN>) m.getMessageContent();
+        Message<TN> mc = (Message<TN>) m.getMessage();
         mc.action(from, to);
       }
 

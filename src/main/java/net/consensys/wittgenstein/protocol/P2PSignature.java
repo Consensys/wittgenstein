@@ -58,7 +58,7 @@ public class P2PSignature {
     this.nb = new Node.NodeBuilderWithPosition(network.rd);
   }
 
-  static class State extends Network.MessageContent<P2PSigNode> {
+  static class State extends Network.Message<P2PSigNode> {
     final BitSet desc;
     final P2PSigNode who;
 
@@ -78,7 +78,7 @@ public class P2PSignature {
     }
   }
 
-  static class SendSigs extends Network.MessageContent<P2PSigNode> {
+  static class SendSigs extends Network.Message<P2PSigNode> {
     final BitSet sigs;
 
     public SendSigs(BitSet sigs) {

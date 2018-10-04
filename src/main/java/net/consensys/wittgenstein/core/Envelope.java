@@ -6,16 +6,16 @@ import java.util.List;
 /**
  * This is a class internal to the framework.
  */
-abstract class Message<TN extends Node> {
-  abstract Network.MessageContent<TN> getMessageContent();
+abstract class Envelope<TN extends Node> {
+  abstract Network.Message<TN> getMessage();
 
   abstract int getNextDestId();
 
   abstract int nextArrivalTime(Network network);
 
-  abstract Message<?> getNextSameTime();
+  abstract Envelope<?> getNextSameTime();
 
-  abstract void setNextSameTime(Message<?> m);
+  abstract void setNextSameTime(Envelope<?> m);
 
   abstract void markRead();
 
@@ -27,27 +27,27 @@ abstract class Message<TN extends Node> {
    * The implementation idea here is the following: - we expect that messages are the bottleneck -
    * we expect that we have a lot of single messages sent to multiple nodes, many thousands - this
    * has been confirmed by looking at the behavior with youkit 95% of the memory is messages - so we
-   * want to optimize this case. - we have a single MultipleDestMessage for all nodes - we don't
+   * want to optimize this case. - we have a single MultipleDestEnvelope for all nodes - we don't
    * keep the list of the network latency to save memory
    * <p>
    * To avoid storing the network latencies, we do: - generate the randomness from a unique per
-   * MultipleDestMessage + the node id - sort the nodes with the calculated latency (hence the first
+   * MultipleDestEnvelope + the node id - sort the nodes with the calculated latency (hence the first
    * node is the first to receive the message) - recalculate them on the fly as the nodeId & the
    * randomSeed are kept. - this also allows on disk serialization
    */
-  final static class MultipleDestMessage<TN extends Node> extends Message<TN> {
-    final Network.MessageContent<TN> messageContent;
+  final static class MultipleDestEnvelope<TN extends Node> extends Envelope<TN> {
+    final Network.Message<TN> message;
     private final int fromNodeId;
 
     private final int sendTime;
     final int randomSeed;
     private final int[] destIds;
     private int curPos = 0;
-    private Message<?> nextSameTime = null;
+    private Envelope<?> nextSameTime = null;
 
-    MultipleDestMessage(Network.MessageContent<TN> m, Node fromNode,
-        List<Network.MessageArrival> dests, int sendTime, int randomSeed) {
-      this.messageContent = m;
+    MultipleDestEnvelope(Network.Message<TN> m, Node fromNode,
+                         List<Network.MessageArrival> dests, int sendTime, int randomSeed) {
+      this.message = m;
       this.fromNodeId = fromNode.nodeId;
       this.randomSeed = randomSeed;
       this.destIds = new int[dests.size()];
@@ -60,13 +60,13 @@ abstract class Message<TN extends Node> {
 
     @Override
     public String toString() {
-      return "Message{" + "messageContent=" + messageContent + ", fromNode=" + fromNodeId
+      return "Envelope{" + "message=" + message + ", fromNode=" + fromNodeId
           + ", dests=" + Arrays.toString(destIds) + ", curPos=" + curPos + '}';
     }
 
     @Override
-    Network.MessageContent<TN> getMessageContent() {
-      return messageContent;
+    Network.Message<TN> getMessage() {
+      return message;
     }
 
     @Override
@@ -82,12 +82,12 @@ abstract class Message<TN extends Node> {
     }
 
     @Override
-    Message<?> getNextSameTime() {
+    Envelope<?> getNextSameTime() {
       return nextSameTime;
     }
 
     @Override
-    void setNextSameTime(Message<?> m) {
+    void setNextSameTime(Envelope<?> m) {
       this.nextSameTime = m;
     }
 
@@ -106,27 +106,27 @@ abstract class Message<TN extends Node> {
   }
 
 
-  final static class SingleDestMessage<TN extends Node> extends Message<TN> {
-    final Network.MessageContent<TN> messageContent;
+  final static class SingleDestEnvelope<TN extends Node> extends Envelope<TN> {
+    final Network.Message<TN> message;
     private final int fromNodeId;
     private final int toNodeId;
     private final int arrivalTime;
-    private Message<?> nextSameTime = null;
+    private Envelope<?> nextSameTime = null;
 
 
     @Override
-    Message<?> getNextSameTime() {
+    Envelope<?> getNextSameTime() {
       return nextSameTime;
     }
 
     @Override
-    void setNextSameTime(Message<?> nextSameTime) {
+    void setNextSameTime(Envelope<?> nextSameTime) {
       this.nextSameTime = nextSameTime;
     }
 
-    SingleDestMessage(Network.MessageContent<TN> messageContent, Node fromNode, Node toNode,
-        int arrivalTime) {
-      this.messageContent = messageContent;
+    SingleDestEnvelope(Network.Message<TN> message, Node fromNode, Node toNode,
+                       int arrivalTime) {
+      this.message = message;
       this.fromNodeId = fromNode.nodeId;
       this.toNodeId = toNode.nodeId;
       this.arrivalTime = arrivalTime;
@@ -134,13 +134,13 @@ abstract class Message<TN extends Node> {
 
     @Override
     public String toString() {
-      return "Message{" + "messageContent=" + messageContent + ", fromNode=" + fromNodeId
+      return "Envelope{" + "message=" + message + ", fromNode=" + fromNodeId
           + ", dest=" + toNodeId + '}';
     }
 
     @Override
-    Network.MessageContent<TN> getMessageContent() {
-      return messageContent;
+    Network.Message<TN> getMessage() {
+      return message;
     }
 
     @Override

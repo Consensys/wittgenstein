@@ -21,3 +21,14 @@ spotless {
         eclipse().configFile 'eclipse-java-google-style.xml'
     }
 }
+
+test {
+    afterSuite { desc, result ->
+        if (!desc.parent)
+            println("${result.resultType} " +
+                    "(${result.testCount} tests, " +
+                    "${result.successfulTestCount} successes, " +
+                    "${result.failedTestCount} failures, " +
+                    "${result.skippedTestCount} skipped)")
+    }
+}

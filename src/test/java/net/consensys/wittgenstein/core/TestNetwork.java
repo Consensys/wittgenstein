@@ -32,7 +32,7 @@ public class TestNetwork {
     AtomicInteger a1 = new AtomicInteger(-1);
     AtomicInteger a2 = new AtomicInteger(-1);
 
-    Network.MessageContent<Node> act = new Network.MessageContent<Node>() {
+    Network.Message<Node> act = new Network.Message<Node>() {
       @Override
       public void action(Node from, Node to) {
         a1.set(from.nodeId);
@@ -67,7 +67,7 @@ public class TestNetwork {
     AtomicInteger a1 = new AtomicInteger(0);
     AtomicInteger a2 = new AtomicInteger(0);
 
-    Network.MessageContent<Node> act = new Network.MessageContent<Node>() {
+    Network.Message<Node> act = new Network.Message<Node>() {
       @Override
       public void action(Node from, Node to) {
         a1.addAndGet(from.nodeId);
@@ -94,7 +94,7 @@ public class TestNetwork {
   @Test
   public void testMultipleMessage() {
     AtomicInteger ab = new AtomicInteger(0);
-    Network.MessageContent<Node> act = new Network.MessageContent<Node>() {
+    Network.Message<Node> act = new Network.Message<Node>() {
       @Override
       public void action(Node from, Node to) {
         ab.incrementAndGet();
@@ -112,7 +112,7 @@ public class TestNetwork {
 
   @Test
   public void testStats() {
-    Network.MessageContent<Node> act = new Network.MessageContent<Node>() {
+    Network.Message<Node> act = new Network.Message<Node>() {
       @Override
       public void action(Node from, Node to) {}
     };
@@ -144,14 +144,14 @@ public class TestNetwork {
 
   @Test
   public void testSortedArrivals() {
-    Network.MessageContent<Node> act = new Network.MessageContent<Node>() {
+    Network.Message<Node> act = new Network.Message<Node>() {
       @Override
       public void action(Node from, Node to) {}
     };
 
     network.send(act, 1, n0, Arrays.asList(n1, n2, n3));
 
-    Message m = network.msgs.peekFirst();
+    Envelope m = network.msgs.peekFirst();
     Assert.assertNotNull(m);
 
     HashSet<Integer> dests = new HashSet<>(Arrays.asList(1, 2, 3));
@@ -179,16 +179,16 @@ public class TestNetwork {
   @Test
   public void testDelays() {
     network.setNetworkLatency(new NetworkLatency.EthScanNetworkLatency());
-    Network.MessageContent<Node> act = new Network.MessageContent<Node>() {
+    Network.Message<Node> act = new Network.Message<Node>() {
       @Override
       public void action(Node from, Node to) {}
     };
 
     network.send(act, 1, n0, Arrays.asList(n1, n2, n3));
-    Message m = network.msgs.pollFirst();
+    Envelope m = network.msgs.pollFirst();
     Assert.assertNotNull(m);
-    Assert.assertTrue(m instanceof Message.MultipleDestMessage);
-    Message.MultipleDestMessage mm = (Message.MultipleDestMessage) m;
+    Assert.assertTrue(m instanceof Envelope.MultipleDestEnvelope);
+    Envelope.MultipleDestEnvelope mm = (Envelope.MultipleDestEnvelope) m;
 
 
     List<Network.MessageArrival> mas =
@@ -215,7 +215,7 @@ public class TestNetwork {
     Node n3 = new Node(nb);
 
     AtomicInteger ab = new AtomicInteger(0);
-    Network.MessageContent<Node> act = new Network.MessageContent<Node>() {
+    Network.Message<Node> act = new Network.Message<Node>() {
       @Override
       public void action(Node from, Node to) {
         ab.incrementAndGet();
