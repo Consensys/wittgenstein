@@ -28,7 +28,7 @@ public class PingPong {
   static class Pong extends Network.Message<PingPongNode> {
     @Override
     public void action(PingPongNode from, PingPongNode to) {
-      to.onPong(from);
+      to.onPong();
     }
   }
 
@@ -46,7 +46,7 @@ public class PingPong {
       network.send(new Pong(), this, from);
     }
 
-    void onPong(PingPongNode from) {
+    void onPong() {
       pong++;
     }
   }
