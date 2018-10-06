@@ -52,6 +52,7 @@ public class BlockChainNetwork extends Network<BlockChainNode<? extends Block>> 
     }
   }
 
+
   public void printStat(boolean small) {
     HashMap<Integer, Set<Block>> productionCount = new HashMap<>();
     Set<BlockChainNode> blockProducers = new HashSet<>();

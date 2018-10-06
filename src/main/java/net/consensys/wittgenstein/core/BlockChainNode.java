@@ -30,8 +30,9 @@ public abstract class BlockChainNode<TB extends Block> extends Node {
    *         it.
    */
   public boolean onBlock(TB b) {
-    if (!b.valid)
+    if (!b.valid) {
       return false;
+    }
 
     if (this.blocksReceivedByBlockId.put(b.id, b) != null) {
       return false; // If we have already received this block
@@ -49,4 +50,37 @@ public abstract class BlockChainNode<TB extends Block> extends Node {
    * This describes how to choose the head between two blocks.
    */
   public abstract TB best(TB cur, TB alt);
+
+
+  /**
+   * Counts the transactions included in a block created by this node in the chain starting at this
+   * head.
+   */
+  public int txsCreatedInChain(Block<?> head) {
+    int txs = 0;
+    Block<?> cur = head;
+    while (cur != null) {
+      if (cur.producer == this) {
+        txs += cur.txCount();
+      }
+      cur = cur.parent;
+    }
+    return txs;
+  }
+
+
+  /**
+   * Counts the number of blocks created by this node in the chain starting at this head.
+   */
+  public int blocksCreatedInChain(Block<?> head) {
+    int blocks = 0;
+    Block<?> cur = head;
+    while (cur != null) {
+      if (cur.producer == this) {
+        blocks++;
+      }
+      cur = cur.parent;
+    }
+    return blocks;
+  }
 }

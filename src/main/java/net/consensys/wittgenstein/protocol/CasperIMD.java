@@ -1,10 +1,13 @@
 package net.consensys.wittgenstein.protocol;
 
 import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.tools.Graph;
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
 
 /**
- * Cqsper IMD - Beacon chain stage 1 (no justification, no dynasty changes)
+ * Casper IMD - Beacon chain stage 1 (no justification, no dynasty changes)
  * https://ethresear.ch/t/beacon-chain-casper-ffg-rpj-mini-spec/2760
  */
 @SuppressWarnings({"WeakerAccess", "SameParameterValue", "unused"})
@@ -84,7 +87,8 @@ public class CasperIMD {
     final Attester attester;
     final int height;
     final Set<Long> hs = new HashSet<>(); // technically, we put them in a set for efficiency
-    final CasperBlock head; // It's not in the spec, but we need this to be sure we're not confusing the attestations from different branches
+    final CasperBlock head;
+    // It's not in the spec, but we need this to be sure we're not confusing the attestations from different branches
 
     public Attestation(Attester attester, int height) {
       this.attester = attester;
@@ -524,6 +528,7 @@ public class CasperIMD {
     }
   }
 
+
   /**
    * Skip its father's block. Idea: it can them include the transactions of its father.
    */
@@ -549,6 +554,7 @@ public class CasperIMD {
       };
     }
   }
+
 
   /**
    * Try to skip his father if his father skipped his grand father Idea: you will have the
@@ -586,6 +592,7 @@ public class CasperIMD {
       return "ByzantineBPNS{" + "delay=" + delay + ", skipped=" + skipped + '}';
     }
   }
+
 
   /**
    * Wait for the previous block (height - 1) before applying the delay Idea: by always including
@@ -652,27 +659,39 @@ public class CasperIMD {
     }
   }
 
+  private static void runSet(int delay, boolean randomOnTies, Graph.Series report) {
+    CasperIMD bc = new CasperIMD(5, randomOnTies, 5, 80, 1000, 1);
+
+    ByzBlockProducer badNode = bc.new ByzBlockProducerWF(delay, bc.genesis);
+    bc.init(badNode);
+
+    bc.network.run(3600 * 5); // 5 hours is a minimum if you want something statistically reasonable
+
+    bc.network.printStat(true);
+
+    report
+        .addLine(new Graph.ReportLine(delay, badNode.txsCreatedInChain(bc.network.observer.head)));
+  }
+
   public static void main(String... args) {
+
+    Graph graph = new Graph("ByzPP impact", "delay in ms", "ByzBP tx counts");
+    Graph.Series txsR = new Graph.Series("tx count");
+    graph.addSerie(txsR);
+    Graph.Series txsNR = new Graph.Series("tx count - not random on ties");
+    graph.addSerie(txsNR);
 
     new CasperIMD().network.printNetworkLatency();
 
-    for (int delay = -4000; delay < 25000; delay += 1000) {
-      CasperIMD bc = new CasperIMD();
-      bc.init(bc.new ByzBlockProducerWF(delay, bc.genesis));
-      // bc.init(bc.new BlockProducer(BlockChainNetwork.BYZANTINE_NODE_ID, bc.genesis));
-      //bc.network.removeNetworkLatency();
+    for (int delay = -5000; delay < 16000; delay += 500) {
+      runSet(delay, false, txsNR);
+      runSet(delay, true, txsR);
+    }
 
-
-      bc.network.run(30);
-
-      //   bc.network.partition(.5f);
-      bc.network.run(3600 * 5); // 5 hours is a minimum if you want something statistically reasonable
-      //   bc.network.endPartition();
-
-      bc.network.run(30);
-
-      // System.out.println("");
-      bc.network.printStat(true);
+    try {
+      graph.save(new File("/tmp/graph.png"));
+    } catch (IOException e) {
+      System.err.println("Can't generate the graph: " + e.getMessage());
     }
   }
 }
