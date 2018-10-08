@@ -122,7 +122,8 @@ public class P2PSignature {
     }
 
     /**
-     * If the state has changed we send a message to all. If we're done, we updates all our peers.
+     * If the state has changed we send a message to all. If we're done, we update all our peers: it
+     * will be our last message.
      */
     void updateVerifiedSignatures(BitSet sigs) {
       int oldCard = verifiedSignatures.cardinality();

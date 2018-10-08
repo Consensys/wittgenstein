@@ -63,12 +63,13 @@ public class CasperIMD {
     this.blockConstructionTime = blockConstructionTime;
     this.attestationConstructionTime = attestationConstructionTime;
 
+    this.network.setNetworkLatency(new NetworkLatency.NetworkLatencyByDistance());
     this.network.addObserver(new CasperNode(false, genesis) {});
   }
 
 
-  final BlockChainNetwork network = new BlockChainNetwork();
-  final Node.NodeBuilder nb = new Node.NodeBuilder();
+  final BlockChainNetwork network = new BlockChainNetwork(0);
+  final Node.NodeBuilder nb = new Node.NodeBuilderWithRandomPosition(network.rd);
   final CasperBlock genesis = new CasperBlock();
 
   final ArrayList<Attester> attesters = new ArrayList<>();
@@ -659,11 +660,19 @@ public class CasperIMD {
     }
   }
 
+  private static boolean latencyPrinted = false;
+
   private static void runSet(int delay, boolean randomOnTies, Graph.Series report) {
     CasperIMD bc = new CasperIMD(5, randomOnTies, 5, 80, 1000, 1);
 
     ByzBlockProducer badNode = bc.new ByzBlockProducerWF(delay, bc.genesis);
     bc.init(badNode);
+
+    if (!latencyPrinted) {
+      NetworkLatency nl = NetworkLatency.estimateLatency(bc.network, 100000);
+      System.out.println(nl);
+      latencyPrinted = true;
+    }
 
     bc.network.run(3600 * 5); // 5 hours is a minimum if you want something statistically reasonable
 
@@ -680,8 +689,6 @@ public class CasperIMD {
     graph.addSerie(txsR);
     Graph.Series txsNR = new Graph.Series("tx count - not random on ties");
     graph.addSerie(txsNR);
-
-    new CasperIMD().network.printNetworkLatency();
 
     for (int delay = -5000; delay < 16000; delay += 500) {
       runSet(delay, false, txsNR);

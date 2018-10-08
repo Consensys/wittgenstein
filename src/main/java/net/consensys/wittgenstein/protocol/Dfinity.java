@@ -50,7 +50,7 @@ public class Dfinity {
     this.network.addObserver(new DfinityNode(genesis) {});
   }
 
-  final BlockChainNetwork network = new BlockChainNetwork();
+  final BlockChainNetwork network = new BlockChainNetwork(0);
   final DfinityBlock genesis = DfinityBlock.createGenesis();
   final DfinityBlockComparator blockComparator = new DfinityBlockComparator();
 
