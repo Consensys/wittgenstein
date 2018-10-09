@@ -8,7 +8,8 @@ import org.junit.Test;
 import java.util.BitSet;
 
 public class P2PSignatureTest {
-  private P2PSignature ps = new P2PSignature(100, 60, 10, 2, 20, false);
+  private P2PSignature ps =
+      new P2PSignature(100, 60, 10, 2, 20, false, P2PSignature.SendSigsStrategy.dif, 4);
   private P2PSignature.P2PSigNode n1;
   private P2PSignature.P2PSigNode n2;
 
@@ -67,5 +68,25 @@ public class P2PSignatureTest {
 
     n1.updateVerifiedSignatures(sigs);
     Assert.assertEquals(2, n1.verifiedSignatures.cardinality());
+  }
+
+  private static BitSet fromString(String binary) {
+    binary = binary.replaceAll(" ", "");
+    BitSet bitset = new BitSet(binary.length());
+    for (int i = 0; i < binary.length(); i++) {
+      if (binary.charAt(i) == '1') {
+        bitset.set(i);
+      }
+    }
+    return bitset;
+  }
+
+  @Test
+  public void testCompressedSize() {
+    Assert.assertEquals(5, ps.compressedSize(fromString("1101 0111")));
+    Assert.assertEquals(2, ps.compressedSize(fromString("1111 1110")));
+    Assert.assertEquals(6, ps.compressedSize(fromString("0111 0111")));
+    Assert.assertEquals(0, ps.compressedSize(fromString("0000 0000")));
+    Assert.assertEquals(3, ps.compressedSize(fromString("1111 1111 1111")));
   }
 }

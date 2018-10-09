@@ -1,6 +1,7 @@
 package net.consensys.wittgenstein.core;
 
 import net.consensys.wittgenstein.core.utils.GeneralizedParetoDistribution;
+import java.util.Random;
 
 @SuppressWarnings("WeakerAccess")
 public abstract class NetworkLatency {
@@ -206,9 +207,10 @@ public abstract class NetworkLatency {
 
   public static MeasuredNetworkLatency estimateLatency(Network net, final int rounds) {
     return estimateLatency(net, n -> {
+      Random rd = new Random(0);
       Node res = n;
       while (res == n) {
-        res = (Node) net.allNodes.get(net.rd.nextInt(net.allNodes.size()));
+        res = (Node) net.allNodes.get(rd.nextInt(net.allNodes.size()));
       }
       return res;
     }, rounds);
@@ -219,10 +221,11 @@ public abstract class NetworkLatency {
    */
   public static MeasuredNetworkLatency estimateP2PLatency(P2PNetwork net, final int rounds) {
     return estimateLatency(net, n -> {
+      Random rd = new Random(0);
       P2PNode pn = (P2PNode) n;
       Node res = n;
       while (res == n) {
-        res = pn.peers.get(net.rd.nextInt(pn.peers.size()));
+        res = pn.peers.get(rd.nextInt(pn.peers.size()));
       }
       return res;
     }, rounds);
