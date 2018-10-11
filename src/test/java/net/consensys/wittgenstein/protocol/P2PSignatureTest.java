@@ -81,12 +81,36 @@ public class P2PSignatureTest {
     return bitset;
   }
 
+
+
   @Test
   public void testCompressedSize() {
+    Assert.assertEquals(1, ps.compressedSize(fromString("1111")));
+    Assert.assertEquals(1, ps.compressedSize(fromString("1111 1111")));
+    Assert.assertEquals(1, ps.compressedSize(fromString("1111 1111 1111 1111")));
+
+    Assert.assertEquals(3, ps.compressedSize(fromString(
+        "0000 0000 0000 0000  0000 0000 0000 0000 1111 1111 1111 1111  1111 1111 1111 0000")));
+
+    Assert.assertEquals(1, ps.compressedSize(fromString(
+        "0000 0000 0000 0000  0000 0000 0000 0000 1111 1111 1111 1111  1111 1111 1111 1111 0000")));
+
+    Assert.assertEquals(2, ps.compressedSize(fromString(
+        "0000 0000 0000 0000  1111 1111 1111 1111 1111 1111 1111 1111  1111 1111 1111 1111 0000")));
+
+    Assert.assertEquals(3,
+        ps.compressedSize(fromString("1111 1111 1111 1111  1111 1111 1111 0000")));
+
+    Assert.assertEquals(1, ps.compressedSize(fromString("1111 1111 0000")));
+    Assert.assertEquals(3, ps.compressedSize(fromString("0001 1111 1111 0000")));
+    Assert.assertEquals(3, ps.compressedSize(fromString("0001 1111 1111 1111"))); // we could optimize further & have 2
+
+    Assert.assertEquals(2, ps.compressedSize(fromString("0000 1111 1111 1111  0000")));
+
     Assert.assertEquals(5, ps.compressedSize(fromString("1101 0111")));
     Assert.assertEquals(2, ps.compressedSize(fromString("1111 1110")));
     Assert.assertEquals(6, ps.compressedSize(fromString("0111 0111")));
     Assert.assertEquals(0, ps.compressedSize(fromString("0000 0000")));
-    Assert.assertEquals(3, ps.compressedSize(fromString("1111 1111 1111")));
+    Assert.assertEquals(2, ps.compressedSize(fromString("1111 1111 1111")));
   }
 }

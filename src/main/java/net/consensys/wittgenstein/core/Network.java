@@ -146,6 +146,7 @@ public class Network<TN extends Node> {
     }
   }
 
+
   public final class MessageStorage {
     public final ArrayList<MsgsSlot> msgsBySlot = new ArrayList<>();
 
@@ -245,6 +246,7 @@ public class Network<TN extends Node> {
     }
   }
 
+
   /**
    * Some protocols want some tasks to be executed at a given time
    */
@@ -265,6 +267,7 @@ public class Network<TN extends Node> {
       r.run();
     }
   }
+
 
   public final class ConditionalTask extends Task {
     /**
@@ -303,6 +306,7 @@ public class Network<TN extends Node> {
   public interface Condition {
     boolean check();
   }
+
 
   /**
    * Some protocols want some tasks to be executed periodically
@@ -394,6 +398,10 @@ public class Network<TN extends Node> {
     public int compareTo(Network.MessageArrival o) {
       return Long.compare(arrival, o.arrival);
     }
+  }
+
+  public boolean hasMessage() {
+    return msgs.size() != 0;
   }
 
   public void send(Message<? extends TN> m, int sendTime, TN fromNode,
@@ -530,7 +538,7 @@ public class Network<TN extends Node> {
       if (partitionId(from) == partitionId(to)) {
         if (!(m.getMessage() instanceof Network<?>.Task)) {
           if (m.getMessage().size() == 0)
-            throw new IllegalStateException();
+            throw new IllegalStateException("wrong size: " + m);
           to.msgReceived++;
           to.bytesReceived += m.getMessage().size();
         }

@@ -1,6 +1,10 @@
 package net.consensys.wittgenstein.protocol;
 
 import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.utils.MoreMath;
+import net.consensys.wittgenstein.tools.Graph;
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -87,9 +91,13 @@ public class P2PSignature {
       this.who = who;
     }
 
+    /**
+     * By convention, all the last bits are implicitly set to zero, so we don't always have to
+     * transport the full state.
+     */
     @Override
     public int size() {
-      return desc.size() / 8;
+      return Math.max(1, desc.length() / 8);
     }
 
     @Override
@@ -103,37 +111,90 @@ public class P2PSignature {
    * Strategy is: - we divide the bitset in ranges of size sigRange - all the signatures at the
    * beginning of a range are aggregated, until one of them is not available.
    * <p>
-   * Example for a range of size 4: 1101 0111 => we have 5 sigs instead of 6 1111 1110 => we have 2
-   * sigs instead of 7 0111 0111 => we have 6 sigs
+   * Example for a range of size 4:</br>
+   * 1101 0111 => we have 5 sigs instead of 6</br>
+   * 1111 1110 => we have 2 sigs instead of 7</br>
+   * 0111 0111 => we have 6 sigs </br>
    * <p>
    * Note that we don't aggregate consecutive ranges, because we would not be able to merge bitsets
-   * later. For example, still with a range of for, with two nodes: node 1: 1111 1111 0000 => 2
-   * sigs, and not 1 node 2: 0000 1111 1111 => again, 2 sigs and not 1
+   * later.</br>
+   * For example, still with a range of for, with two nodes:</br>
+   * node 1: 1111 1111 0000 => 2 sigs, and not 1</br>
+   * node 2: 0000 1111 1111 => again, 2 sigs and not 1</br>
    * <p>
    * By keeping the two aggregated signatures node 1 & node 2 can exchange aggregated signatures.
+   * 1111 1111 => 1 0001 1111 1111 0000 => 3 0001 1111 1111 1111 => 2 </>
    */
   int compressedSize(BitSet sigs) {
+    if (sigs.length() == nodeCount) {
+      // Shortcuts: if we have all sigs, then we just send
+      //  an aggregated signature
+      return 1;
+    }
+
+    int firstOneAt = -1;
     int sigCt = 0;
     int pos = -1;
     boolean compressing = false;
-    while (++pos < sigs.size()) {
+    boolean wasCompressing = false;
+    while (++pos <= sigs.length() + 1) {
       if (!sigs.get(pos)) {
         compressing = false;
+        sigCt -= mergeRanges(firstOneAt, pos);
+        firstOneAt = -1;
       } else if (compressing) {
         if ((pos + 1) % sigRange == 0) {
           // We compressed the whole range, but now we're starting a new one...
           compressing = false;
+          wasCompressing = true;
         }
       } else {
         sigCt++;
         if (pos % sigRange == 0) {
           compressing = true;
+          if (!wasCompressing) {
+            firstOneAt = pos;
+          } else {
+            wasCompressing = false;
+          }
         }
       }
     }
+
     return sigCt;
   }
 
+  /**
+   * Merging can be combined, so this function is recursive. For example, for a range size of 2, if
+   * we have 11 11 11 11 11 11 11 11 11 11 11 => 11 sigs w/o merge.</br>
+   * This should become 3 after merge: the first 8, then the second set of two blocks
+   */
+  private int mergeRanges(int firstOneAt, int pos) {
+    if (firstOneAt < 0) {
+      return 0;
+    }
+    // We start only at the beginning of
+    if (firstOneAt % (sigRange * 2) != 0) {
+      firstOneAt += (sigRange * 2) - (firstOneAt % (sigRange * 2));
+    }
+
+    int rangeCt = (pos - firstOneAt) / sigRange;
+    if (rangeCt < 2) {
+      return 0;
+    }
+
+    int max = MoreMath.log2(rangeCt);
+    while (max > 0) {
+      int sizeInBlocks = (int) Math.pow(2, max);
+      int size = sizeInBlocks * sigRange;
+      if (firstOneAt % size == 0) {
+        return (sizeInBlocks - 1) + mergeRanges(firstOneAt + size, pos);
+      }
+      max--;
+    }
+
+    return 0;
+  }
 
   static class SendSigs extends Network.Message<P2PSigNode> {
     final BitSet sigs;
@@ -146,7 +207,7 @@ public class P2PSignature {
     public SendSigs(BitSet sigs, int sigCount) {
       this.sigs = sigs;
       // Size = bit field + the signatures included
-      this.size = sigs.size() / 8 + sigCount * 48;
+      this.size = sigs.length() / 8 + sigCount * 48;
     }
 
 
@@ -363,17 +424,125 @@ public class P2PSignature {
     return last;
   }
 
+  static class Stats {
+    final int minSigCount;
+    final int maxSigCount;
+    final int avgSigCount;
+
+    public Stats(int minSigCount, int maxSigCount, int avgSigCount) {
+      this.minSigCount = minSigCount;
+      this.maxSigCount = maxSigCount;
+      this.avgSigCount = avgSigCount;
+    }
+  }
+
+  private Stats getStat() {
+    int min = Integer.MAX_VALUE;
+    int max = Integer.MIN_VALUE;
+    long tot = 0;
+    for (int i = 0; i < nodeCount; i++) {
+      P2PSigNode n = (P2PSigNode) network.getNodeById(i);
+      int sigs = n.verifiedSignatures.cardinality();
+      tot += sigs;
+      if (sigs < min)
+        min = sigs;
+      if (sigs > max)
+        max = sigs;
+    }
+    return new Stats(min, max, (int) (tot / nodeCount));
+  }
+
+  public static void sigsPerTime() {
+    NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
+
+    P2PSignature ps1 =
+        new P2PSignature(1000, (int) (1000 * 1), 15, 3, 20, true, SendSigsStrategy.all, 1);
+    ps1.network.setNetworkLatency(nl);
+
+
+    P2PSignature ps2 =
+        new P2PSignature(1000, (int) (1000 * 1), 15, 3, 50, true, SendSigsStrategy.all, 1);
+    ps2.network.setNetworkLatency(nl);
+
+    Graph graph = new Graph("number of sig per time", "time in ms", "sig count");
+    Graph.Series series1min = new Graph.Series("sig count - worse node");
+    Graph.Series series1max = new Graph.Series("sig count - best node");
+    Graph.Series series1avg = new Graph.Series("sig count - avg");
+    graph.addSerie(series1min);
+    graph.addSerie(series1max);
+    graph.addSerie(series1avg);
+
+    ps1.init();
+    ps2.init();
+
+    Stats s;
+    do {
+      ps1.network.runMs(10);
+      s = ps1.getStat();
+      series1min.addLine(new Graph.ReportLine(ps1.network.time, s.minSigCount));
+      series1max.addLine(new Graph.ReportLine(ps1.network.time, s.maxSigCount));
+      series1avg.addLine(new Graph.ReportLine(ps1.network.time, s.avgSigCount));
+    } while (s.minSigCount != 1000);
+
+    try {
+      graph.save(new File("/tmp/graph.png"));
+    } catch (IOException e) {
+      System.err.println("Can't generate the graph: " + e.getMessage());
+    }
+  }
+
+  public static void sigsPerStrategy() {
+    NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
+    P2PSignature ps1 =
+        new P2PSignature(1000, (int) (1000 * 1), 15, 3, 20, true, SendSigsStrategy.all, 1);
+    ps1.network.setNetworkLatency(nl);
+
+    P2PSignature ps2 =
+        new P2PSignature(1000, (int) (1000 * 1), 15, 3, 20, false, SendSigsStrategy.all, 1);
+    ps2.network.setNetworkLatency(nl);
+
+    Graph graph = new Graph("number of sig per time", "time in ms", "sig count");
+    Graph.Series series1avg = new Graph.Series("sig count - full aggregate strategy");
+    Graph.Series series2avg = new Graph.Series("sig count - single aggregate");
+    graph.addSerie(series1avg);
+    graph.addSerie(series2avg);
+
+    ps1.init();
+    ps2.init();
+
+    Stats s;
+    do {
+      ps1.network.runMs(10);
+      ps2.network.runMs(10);
+      s = ps1.getStat();
+      series1avg.addLine(new Graph.ReportLine(ps1.network.time, s.avgSigCount));
+      series2avg.addLine(new Graph.ReportLine(ps2.network.time, s.avgSigCount));
+    } while (s.minSigCount != 1000);
+
+    try {
+      graph.save(new File("/tmp/graph.png"));
+    } catch (IOException e) {
+      System.err.println("Can't generate the graph: " + e.getMessage());
+    }
+  }
+
+
+
   public static void main(String... args) {
     NetworkLatency nl = new NetworkLatency.NetworkLatencyByDistance();
     System.out.println("" + nl);
+
+    if (true) {
+      //    sigsPerStrategy();
+    }
 
     boolean printLat = false;
     for (int cnt : new int[] {15}) {
       for (int sendPeriod : new int[] {20, 100}) {
         for (int nodeCt : new int[] {1000, 10000}) {
-          for (int r : new int[] {1, 2, 4, 6}) {
-            P2PSignature p2ps = new P2PSignature(nodeCt, nodeCt / 2 + 1, cnt, 3, sendPeriod, true,
-                r < 2 ? SendSigsStrategy.all : SendSigsStrategy.cmp, r);
+          for (int r : new int[] {1, 2, 4, 6, 8, 12, 14, 16}) {
+            P2PSignature p2ps = new P2PSignature(nodeCt, (int) (nodeCt * 0.67), cnt, 3, sendPeriod,
+                true, r < 2 ? SendSigsStrategy.all : SendSigsStrategy.cmp, r);
             p2ps.network.setNetworkLatency(nl);
             P2PSigNode observer = p2ps.init();
 
@@ -385,7 +554,7 @@ public class P2PSignature {
             }
             p2ps.network.rd.setSeed(0);
 
-            p2ps.network.run(5);
+            p2ps.network.run(10);
             System.out.println("peers=" + cnt + ", sendPeriod=" + sendPeriod + " " + observer);
           }
         }
@@ -395,6 +564,22 @@ public class P2PSignature {
 }
 
 /*
+
+peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=all sigRange=1, doneAt=721, sigs=520, msgReceived=343, msgSent=143, KBytesSent=400, KBytesReceived=459}
+peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=cmp sigRange=2, doneAt=721, sigs=520, msgReceived=343, msgSent=143, KBytesSent=299, KBytesReceived=326}
+peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=cmp sigRange=4, doneAt=721, sigs=520, msgReceived=343, msgSent=143, KBytesSent=315, KBytesReceived=343}
+
+peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=all sigRange=1, doneAt=1450, sigs=1000, msgReceived=516, msgSent=195, KBytesSent=746, KBytesReceived=764}
+peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=cmp sigRange=2, doneAt=1450, sigs=1000, msgReceived=516, msgSent=195, KBytesSent=418, KBytesReceived=412}
+peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=cmp sigRange=4, doneAt=1450, sigs=1000, msgReceived=516, msgSent=195, KBytesSent=254, KBytesReceived=237}
+peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=cmp sigRange=6, doneAt=1450, sigs=1000, msgReceived=516, msgSent=195, KBytesSent=200, KBytesReceived=178}
+peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=cmp sigRange=8, doneAt=1450, sigs=1000, msgReceived=516, msgSent=195, KBytesSent=172, KBytesReceived=149}
+peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=cmp sigRange=12, doneAt=1450, sigs=1000, msgReceived=516, msgSent=195, KBytesSent=145, KBytesReceived=120}
+peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=cmp sigRange=14, doneAt=1450, sigs=1000, msgReceived=516, msgSent=195, KBytesSent=137, KBytesReceived=111}
+peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=cmp sigRange=16, doneAt=1450, sigs=1000, msgReceived=516, msgSent=195, KBytesSent=131, KBytesReceived=105}
+
+
+
 P2P BlockChainNetwork latency: time to receive a message:
 10ms 0%, cumulative 0%
 20ms 0%, cumulative 0%
