@@ -454,15 +454,9 @@ public class P2PSignature {
 
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
-
-    P2PSignature ps1 =
-        new P2PSignature(1000, (int) (1000 * 1), 15, 3, 20, true, SendSigsStrategy.all, 1);
+    int nodeCt = 1000;
+    P2PSignature ps1 = new P2PSignature(nodeCt, nodeCt, 15, 3, 20, true, SendSigsStrategy.all, 1);
     ps1.network.setNetworkLatency(nl);
-
-
-    P2PSignature ps2 =
-        new P2PSignature(1000, (int) (1000 * 1), 15, 3, 50, true, SendSigsStrategy.all, 1);
-    ps2.network.setNetworkLatency(nl);
 
     Graph graph = new Graph("number of sig per time", "time in ms", "sig count");
     Graph.Series series1min = new Graph.Series("sig count - worse node");
@@ -473,7 +467,6 @@ public class P2PSignature {
     graph.addSerie(series1avg);
 
     ps1.init();
-    ps2.init();
 
     Stats s;
     do {
@@ -482,7 +475,7 @@ public class P2PSignature {
       series1min.addLine(new Graph.ReportLine(ps1.network.time, s.minSigCount));
       series1max.addLine(new Graph.ReportLine(ps1.network.time, s.maxSigCount));
       series1avg.addLine(new Graph.ReportLine(ps1.network.time, s.avgSigCount));
-    } while (s.minSigCount != 1000);
+    } while (s.minSigCount != nodeCt);
 
     try {
       graph.save(new File("/tmp/graph.png"));
@@ -492,13 +485,13 @@ public class P2PSignature {
   }
 
   public static void sigsPerStrategy() {
+    int nodeCt = 1000;
+
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
-    P2PSignature ps1 =
-        new P2PSignature(1000, (int) (1000 * 1), 15, 3, 20, true, SendSigsStrategy.all, 1);
+    P2PSignature ps1 = new P2PSignature(nodeCt, nodeCt, 15, 3, 20, true, SendSigsStrategy.all, 1);
     ps1.network.setNetworkLatency(nl);
 
-    P2PSignature ps2 =
-        new P2PSignature(1000, (int) (1000 * 1), 15, 3, 20, false, SendSigsStrategy.all, 1);
+    P2PSignature ps2 = new P2PSignature(nodeCt, nodeCt, 15, 3, 20, false, SendSigsStrategy.all, 1);
     ps2.network.setNetworkLatency(nl);
 
     Graph graph = new Graph("number of sig per time", "time in ms", "sig count");
@@ -517,7 +510,7 @@ public class P2PSignature {
       s = ps1.getStat();
       series1avg.addLine(new Graph.ReportLine(ps1.network.time, s.avgSigCount));
       series2avg.addLine(new Graph.ReportLine(ps2.network.time, s.avgSigCount));
-    } while (s.minSigCount != 1000);
+    } while (s.minSigCount != nodeCt);
 
     try {
       graph.save(new File("/tmp/graph.png"));
@@ -533,7 +526,7 @@ public class P2PSignature {
     System.out.println("" + nl);
 
     if (true) {
-      //    sigsPerStrategy();
+      sigsPerTime();
     }
 
     boolean printLat = false;
