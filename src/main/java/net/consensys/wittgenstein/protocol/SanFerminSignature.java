@@ -3,6 +3,7 @@ package net.consensys.wittgenstein.protocol;
 import net.consensys.wittgenstein.core.Network;
 import net.consensys.wittgenstein.core.NetworkLatency;
 import net.consensys.wittgenstein.core.Node;
+import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.tools.Graph;
 import java.io.File;
 import java.io.IOException;
@@ -25,10 +26,10 @@ public class SanFerminSignature {
   /**
    * The number of nodes in the network
    */
-  final int totalCount;
+  final int nodeCount;
 
   /**
-   * exponent to represent @totalCount in base 2 totalCount = 2 ** powerOfTwo; It is used to
+   * exponent to represent @nodeCount in base 2 nodeCount = 2 ** powerOfTwo; It is used to
    * represent the length of the binary string of a node's id.
    */
   final int powerOfTwo;
@@ -85,10 +86,10 @@ public class SanFerminSignature {
   public final List<SanFerminNode> finishedNodes;
 
 
-  public SanFerminSignature(int totalCount, int powerOfTwo, int threshold, int pairingTime,
+  public SanFerminSignature(int nodeCount, int threshold, int pairingTime,
       int signatureSize, int replyTimeout, int candidateCount, boolean shuffledLists) {
-    this.totalCount = totalCount;
-    this.powerOfTwo = powerOfTwo;
+    this.nodeCount = nodeCount;
+    this.powerOfTwo = MoreMath.log2(nodeCount);
     this.threshold = threshold;
     this.pairingTime = pairingTime;
     this.signatureSize = signatureSize;
@@ -99,8 +100,8 @@ public class SanFerminSignature {
     this.network = new Network<>();
     this.nb = new Node.NodeBuilderWithRandomPosition(network.rd);
 
-    this.allNodes = new ArrayList<>(totalCount);
-    for (int i = 0; i < totalCount; i++) {
+    this.allNodes = new ArrayList<>(nodeCount);
+    for (int i = 0; i < nodeCount; i++) {
       final SanFerminNode n = new SanFerminNode(this.nb);
       this.allNodes.add(n);
       this.network.addNode(n);
@@ -118,9 +119,9 @@ public class SanFerminSignature {
   final Node.NodeBuilder nb;
 
   /**
-   * StartAll makes each node starts swapping with each other when the network starts
+   * init makes each node starts swapping with each other when the network starts
    */
-  public void StartAll() {
+  public void init() {
     for (SanFerminNode n : allNodes)
       network.registerTask(n::goNextLevel, 1, n);
   }
@@ -734,11 +735,13 @@ public class SanFerminSignature {
     final int minSigCount;
     final int maxSigCount;
     final int avgSigCount;
+    final int done;
 
-    public Stats(int minSigCount, int maxSigCount, int avgSigCount) {
+    public Stats(int minSigCount, int maxSigCount, int avgSigCount, int done) {
       this.minSigCount = minSigCount;
       this.maxSigCount = maxSigCount;
       this.avgSigCount = avgSigCount;
+      this.done = done;
     }
   }
 
@@ -746,22 +749,26 @@ public class SanFerminSignature {
     int min = Integer.MAX_VALUE;
     int max = Integer.MIN_VALUE;
     long tot = 0;
-    for (int i = 0; i < totalCount; i++) {
+    int done = 0;
+    for (int i = 0; i < nodeCount; i++) {
       SanFerminNode n = network.getNodeById(i);
-      int sigs = n.aggValue; // todo
+      if (n.done) {
+        done++;
+      }
+      int sigs = n.aggValue;
       tot += sigs;
       if (sigs < min)
         min = sigs;
       if (sigs > max)
         max = sigs;
     }
-    return new Stats(min, max, (int) (tot / totalCount));
+    return new Stats(min, max, (int) (tot / nodeCount), done);
   }
 
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
-    int nodeCt = 1000;
-    SanFerminSignature ps1 = new SanFerminSignature(8, 3, 4, 2, 48, 300, 3, true);
+    int nodeCt = 1024;
+    SanFerminSignature ps1 = new SanFerminSignature(nodeCt, nodeCt, 2, 48, 300, 1, false);
 
     ps1.network.setNetworkLatency(nl);
 
@@ -773,8 +780,7 @@ public class SanFerminSignature {
     graph.addSerie(series1max);
     graph.addSerie(series1avg);
 
-    //   ps1.init();
-    ps1.StartAll();
+    ps1.init();
 
     Stats s;
     do {
@@ -783,7 +789,7 @@ public class SanFerminSignature {
       series1min.addLine(new Graph.ReportLine(ps1.network.time, s.minSigCount));
       series1max.addLine(new Graph.ReportLine(ps1.network.time, s.maxSigCount));
       series1avg.addLine(new Graph.ReportLine(ps1.network.time, s.avgSigCount));
-    } while (s.minSigCount != nodeCt);
+    } while (s.done != ps1.nodeCount && ps1.network.time < 4000);
 
     try {
       graph.save(new File("/tmp/graph.png"));
@@ -808,7 +814,7 @@ public class SanFerminSignature {
     SanFerminSignature p2ps;
     //p2ps = new SanFerminSignature(1024, 10,512, 2,48,300,1,false);
     //p2ps = new SanFerminSignature(512, 9,256, 2,48,300,1,false);
-    p2ps = new SanFerminSignature(4096, 12, 2048, 2, 48, 300, 1, false);
+    p2ps = new SanFerminSignature(4096, 2048, 2, 48, 300, 1, false);
 
     //p2ps = new SanFerminSignature(8, 3,4, 2,48,300,1,false);
 
@@ -818,7 +824,7 @@ public class SanFerminSignature {
     p2ps.network.setNetworkLatency(distribProp, distribVal);
     //p2ps.network.removeNetworkLatency();
 
-    p2ps.StartAll();
+    p2ps.init();
     p2ps.network.run(30);
     p2ps.finishedNodes.sort(Comparator.comparingLong(n2 -> n2.thresholdAt));
     int max = p2ps.finishedNodes.size() < 10 ? p2ps.finishedNodes.size() : 10;

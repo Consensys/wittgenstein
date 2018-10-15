@@ -28,7 +28,7 @@ public class SanFerminOptimistic {
   final int totalCount;
 
   /**
-   * exponent to represent @totalCount in base 2 totalCount = 2 ** powerOfTwo; It is used to
+   * exponent to represent @nodeCount in base 2 nodeCount = 2 ** powerOfTwo; It is used to
    * represent the length of the binary string of a node's id.
    */
   final int powerOfTwo;
@@ -117,7 +117,7 @@ public class SanFerminOptimistic {
   final Node.NodeBuilder nb;
 
   /**
-   * StartAll makes each node starts swapping with each other when the network starts
+   * init makes each node starts swapping with each other when the network starts
    */
   public void StartAll() {
     for (SanFerminNode n : allNodes)
