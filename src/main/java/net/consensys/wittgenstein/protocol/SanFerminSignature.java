@@ -15,7 +15,8 @@ import java.util.stream.Collectors;
  * SanFerminNode{nodeId=1000000001, doneAt=4860, sigs=874, msgReceived=272, msgSent=275,
  * KBytesSent=13, KBytesReceived=13, outdatedSwaps=0}
  */
-@SuppressWarnings("WeakerAccess") public class SanFerminSignature {
+@SuppressWarnings("WeakerAccess")
+public class SanFerminSignature {
 
   /**
    * The number of nodes in the network

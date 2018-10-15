@@ -13,16 +13,16 @@ As it's often what happens with mock protocol implementations, it looked like th
 ## How to build it
 To check everything is correct:
 
-mvn test
+gradle clean test
 
-You ca build a jar with this maven command:
+You can build a jar with this maven command:
 
-mvn package
+gradle jar
 
 ## How to run it
 Once built:
 
-java -Xms6000m -Xmx12048m -classpath target/wittgenstein-1.0-SNAPSHOT.jar net.consensys.wittgenstein.protocol.OptimisticP2PSignature
+java -Xms6000m -Xmx12048m -classpath build/libs/wittgenstein.jar net.consensys.wittgenstein.protocol.OptimisticP2PSignature
 
 But you're actually supposed to write code to implement your specific scenarios today. An obvious improvement
  would be to be able to define scenarios reusable between protocols.
@@ -40,7 +40,7 @@ public class PingPong {
     /**
      * Nodes have positions. This position is chosen by the builder.
      */
-    private final Node.NodeBuilder nb = new Node.NodeBuilderWithRandomPosition(network.rd); //
+    private final Node.NodeBuilder nb = new Node.NodeBuilderWithRandomPosition(network.rd);
 
     /**
      * Messages, exchanged on the network, are specific to the protocol.
