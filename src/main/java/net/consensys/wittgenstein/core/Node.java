@@ -79,6 +79,7 @@ public class Node {
     }
   }
 
+
   public static class NodeBuilderWithRandomPosition extends NodeBuilder {
     final Random rd;
 
@@ -121,15 +122,5 @@ public class Node {
     int dx = Math.min(Math.abs(x - n.x), MAX_X - Math.abs(x - n.x));
     int dy = Math.min(Math.abs(y - n.y), MAX_Y - Math.abs(y - n.y));
     return (int) Math.sqrt(dx * dx + dy * dy);
-  }
-
-
-  /**
-   * Many protocols finish at a point. A node can return the time it has ended.
-   * 
-   * @return network time the node ended its execution of the protocol, 0 if it is still running
-   */
-  public int doneAt() {
-    return 0;
   }
 }

@@ -617,9 +617,8 @@ public class SanFerminSignature {
 
 
   class SwapRequest extends Network.Message<SanFerminNode> {
-
     final int level;
-    int aggValue; // see Reply.aggValue
+    final int aggValue; // see Reply.aggValue
     // String data -- no need to specify it, but only in the size() method
 
 
@@ -763,6 +762,12 @@ public class SanFerminSignature {
     } catch (IOException e) {
       System.err.println("Can't generate the graph: " + e.getMessage());
     }
+
+    System.out.println("bytes sent: " + StatsHelper.getStatsOn(ps1.allNodes, Node::getBytesSent));
+    System.out
+        .println("bytes rcvd: " + StatsHelper.getStatsOn(ps1.allNodes, Node::getBytesReceived));
+    System.out.println("msg sent: " + StatsHelper.getStatsOn(ps1.allNodes, Node::getMsgSent));
+    System.out.println("msg rcvd: " + StatsHelper.getStatsOn(ps1.allNodes, Node::getMsgReceived));
   }
 
 
