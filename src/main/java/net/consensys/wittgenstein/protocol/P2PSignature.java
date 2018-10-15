@@ -2,6 +2,7 @@ package net.consensys.wittgenstein.protocol;
 
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.utils.MoreMath;
+import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.tools.Graph;
 import java.io.File;
 import java.io.IOException;
@@ -434,33 +435,6 @@ public class P2PSignature {
     return last;
   }
 
-  static class Stats {
-    final int minSigCount;
-    final int maxSigCount;
-    final int avgSigCount;
-
-    public Stats(int minSigCount, int maxSigCount, int avgSigCount) {
-      this.minSigCount = minSigCount;
-      this.maxSigCount = maxSigCount;
-      this.avgSigCount = avgSigCount;
-    }
-  }
-
-  private Stats getStat() {
-    int min = Integer.MAX_VALUE;
-    int max = Integer.MIN_VALUE;
-    long tot = 0;
-    for (int i = 0; i < nodeCount; i++) {
-      P2PSigNode n = (P2PSigNode) network.getNodeById(i);
-      int sigs = n.verifiedSignatures.cardinality();
-      tot += sigs;
-      if (sigs < min)
-        min = sigs;
-      if (sigs > max)
-        max = sigs;
-    }
-    return new Stats(min, max, (int) (tot / nodeCount));
-  }
 
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
@@ -478,14 +452,15 @@ public class P2PSignature {
 
     ps1.init();
 
-    Stats s;
+    StatsHelper.SimpleStats s;
     do {
       ps1.network.runMs(10);
-      s = ps1.getStat();
-      series1min.addLine(new Graph.ReportLine(ps1.network.time, s.minSigCount));
-      series1max.addLine(new Graph.ReportLine(ps1.network.time, s.maxSigCount));
-      series1avg.addLine(new Graph.ReportLine(ps1.network.time, s.avgSigCount));
-    } while (s.minSigCount != nodeCt);
+      s = StatsHelper.getStatsOn(ps1.network.allNodes,
+          n -> ((P2PSigNode) n).verifiedSignatures.cardinality());
+      series1min.addLine(new Graph.ReportLine(ps1.network.time, s.min));
+      series1max.addLine(new Graph.ReportLine(ps1.network.time, s.max));
+      series1avg.addLine(new Graph.ReportLine(ps1.network.time, s.avg));
+    } while (s.min != ps1.nodeCount);
 
     try {
       graph.save(new File("/tmp/graph.png"));
@@ -513,11 +488,12 @@ public class P2PSignature {
       ps1.init();
       ps1.network.setMsgDiscardTime(1000);
 
-      Stats s;
+      StatsHelper.SimpleStats s;
       do {
         ps1.network.runMs(10);
-        s = ps1.getStat();
-      } while (s.minSigCount != ps1.nodeCount);
+        s = StatsHelper.getStatsOn(ps1.network.allNodes,
+            n -> ((P2PSigNode) n).verifiedSignatures.cardinality());
+      } while (s.min != ps1.nodeCount);
       series.addLine(new Graph.ReportLine(ps1.nodeCount, ps1.network.time));
     }
 
@@ -526,7 +502,6 @@ public class P2PSignature {
     } catch (IOException e) {
       System.err.println("Can't generate the graph: " + e.getMessage());
     }
-
   }
 
 
@@ -549,14 +524,18 @@ public class P2PSignature {
     ps1.init();
     ps2.init();
 
-    Stats s;
+    StatsHelper.SimpleStats s1;
+    StatsHelper.SimpleStats s2;
     do {
       ps1.network.runMs(10);
       ps2.network.runMs(10);
-      s = ps1.getStat();
-      series1avg.addLine(new Graph.ReportLine(ps1.network.time, s.avgSigCount));
-      series2avg.addLine(new Graph.ReportLine(ps2.network.time, s.avgSigCount));
-    } while (s.minSigCount != nodeCt);
+      s1 = StatsHelper.getStatsOn(ps1.network.allNodes,
+          n -> ((P2PSigNode) n).verifiedSignatures.cardinality());
+      s2 = StatsHelper.getStatsOn(ps2.network.allNodes,
+          n -> ((P2PSigNode) n).verifiedSignatures.cardinality());
+      series1avg.addLine(new Graph.ReportLine(ps1.network.time, s1.avg));
+      series2avg.addLine(new Graph.ReportLine(ps2.network.time, s2.avg));
+    } while (s1.min != nodeCt);
 
     try {
       graph.save(new File("/tmp/graph.png"));

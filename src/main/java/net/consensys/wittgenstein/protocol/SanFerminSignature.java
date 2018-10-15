@@ -3,6 +3,7 @@ package net.consensys.wittgenstein.protocol;
 import net.consensys.wittgenstein.core.Network;
 import net.consensys.wittgenstein.core.NetworkLatency;
 import net.consensys.wittgenstein.core.Node;
+import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.tools.Graph;
 import java.io.File;
@@ -731,40 +732,6 @@ public class SanFerminSignature {
   }
 
 
-  static class Stats {
-    final int minSigCount;
-    final int maxSigCount;
-    final int avgSigCount;
-    final int done;
-
-    public Stats(int minSigCount, int maxSigCount, int avgSigCount, int done) {
-      this.minSigCount = minSigCount;
-      this.maxSigCount = maxSigCount;
-      this.avgSigCount = avgSigCount;
-      this.done = done;
-    }
-  }
-
-  private Stats getStat() {
-    int min = Integer.MAX_VALUE;
-    int max = Integer.MIN_VALUE;
-    long tot = 0;
-    int done = 0;
-    for (int i = 0; i < nodeCount; i++) {
-      SanFerminNode n = network.getNodeById(i);
-      if (n.done) {
-        done++;
-      }
-      int sigs = n.aggValue;
-      tot += sigs;
-      if (sigs < min)
-        min = sigs;
-      if (sigs > max)
-        max = sigs;
-    }
-    return new Stats(min, max, (int) (tot / nodeCount), done);
-  }
-
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
     int nodeCt = 1024;
@@ -782,14 +749,14 @@ public class SanFerminSignature {
 
     ps1.init();
 
-    Stats s;
+    StatsHelper.SimpleStats s;
     do {
       ps1.network.runMs(10);
-      s = ps1.getStat();
-      series1min.addLine(new Graph.ReportLine(ps1.network.time, s.minSigCount));
-      series1max.addLine(new Graph.ReportLine(ps1.network.time, s.maxSigCount));
-      series1avg.addLine(new Graph.ReportLine(ps1.network.time, s.avgSigCount));
-    } while (s.done != ps1.nodeCount && ps1.network.time < 4000);
+      s = StatsHelper.getStatsOn(ps1.allNodes, n -> ((SanFerminNode) n).aggValue);
+      series1min.addLine(new Graph.ReportLine(ps1.network.time, s.min));
+      series1max.addLine(new Graph.ReportLine(ps1.network.time, s.max));
+      series1avg.addLine(new Graph.ReportLine(ps1.network.time, s.avg));
+    } while (ps1.network.time < 4000);
 
     try {
       graph.save(new File("/tmp/graph.png"));

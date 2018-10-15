@@ -123,4 +123,13 @@ public class Node {
     return (int) Math.sqrt(dx * dx + dy * dy);
   }
 
+
+  /**
+   * Many protocols finish at a point. A node can return the time it has ended.
+   * 
+   * @return network time the node ended its execution of the protocol, 0 if it is still running
+   */
+  public int doneAt() {
+    return 0;
+  }
 }

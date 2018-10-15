@@ -1,11 +1,7 @@
 package net.consensys.wittgenstein.protocol;
 
 import net.consensys.wittgenstein.core.Network;
-import net.consensys.wittgenstein.core.NetworkLatency;
 import net.consensys.wittgenstein.core.Node;
-import net.consensys.wittgenstein.tools.Graph;
-import java.io.File;
-import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -25,7 +21,7 @@ public class SanFerminOptimistic {
   /**
    * The number of nodes in the network
    */
-  final int totalCount;
+  final int nodeCount;
 
   /**
    * exponent to represent @nodeCount in base 2 nodeCount = 2 ** powerOfTwo; It is used to represent
@@ -84,9 +80,9 @@ public class SanFerminOptimistic {
   public List<SanFerminNode> finishedNodes;
 
 
-  public SanFerminOptimistic(int totalCount, int powerOfTwo, int threshold, int pairingTime,
+  public SanFerminOptimistic(int nodeCount, int powerOfTwo, int threshold, int pairingTime,
       int signatureSize, int replyTimeout, int candidateCount, boolean shuffledLists) {
-    this.totalCount = totalCount;
+    this.nodeCount = nodeCount;
     this.powerOfTwo = powerOfTwo;
     this.threshold = threshold;
     this.pairingTime = pairingTime;
@@ -98,8 +94,8 @@ public class SanFerminOptimistic {
     this.network = new Network<>();
     this.nb = new Node.NodeBuilderWithRandomPosition(network.rd);
 
-    this.allNodes = new ArrayList<>(totalCount);
-    for (int i = 0; i < totalCount; i++) {
+    this.allNodes = new ArrayList<>(nodeCount);
+    for (int i = 0; i < nodeCount; i++) {
       final SanFerminNode n = new SanFerminNode(this.nb);
       this.allNodes.add(n);
       this.network.addNode(n);
@@ -510,6 +506,7 @@ public class SanFerminOptimistic {
     }
   }
 
+
   class Swap extends Network.Message<SanFerminNode> {
 
     boolean wantReply; // indicate that the other needs a reply to this
@@ -538,74 +535,7 @@ public class SanFerminOptimistic {
   }
 
 
-  static class Stats {
-    final int minSigCount;
-    final int maxSigCount;
-    final int avgSigCount;
-
-    public Stats(int minSigCount, int maxSigCount, int avgSigCount) {
-      this.minSigCount = minSigCount;
-      this.maxSigCount = maxSigCount;
-      this.avgSigCount = avgSigCount;
-    }
-  }
-
-  private Stats getStat() {
-    int min = Integer.MAX_VALUE;
-    int max = Integer.MIN_VALUE;
-    long tot = 0;
-    for (int i = 0; i < totalCount; i++) {
-      SanFerminNode n = (SanFerminNode) network.getNodeById(i);
-      int sigs = n.aggValue; // todo
-      tot += sigs;
-      if (sigs < min)
-        min = sigs;
-      if (sigs > max)
-        max = sigs;
-    }
-    return new Stats(min, max, (int) (tot / totalCount));
-  }
-
-  public static void sigsPerTime() {
-    NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
-    int nodeCt = 1000;
-    SanFerminOptimistic ps1 = new SanFerminOptimistic(8, 3, 4, 2, 48, 300, 3, true);
-
-    ps1.network.setNetworkLatency(nl);
-
-    Graph graph = new Graph("number of sig per time", "time in ms", "sig count");
-    Graph.Series series1min = new Graph.Series("sig count - worse node");
-    Graph.Series series1max = new Graph.Series("sig count - best node");
-    Graph.Series series1avg = new Graph.Series("sig count - avg");
-    graph.addSerie(series1min);
-    graph.addSerie(series1max);
-    graph.addSerie(series1avg);
-
-    //   ps1.init();
-    ps1.StartAll();
-
-    Stats s;
-    do {
-      ps1.network.runMs(10);
-      s = ps1.getStat();
-      series1min.addLine(new Graph.ReportLine(ps1.network.time, s.minSigCount));
-      series1max.addLine(new Graph.ReportLine(ps1.network.time, s.maxSigCount));
-      series1avg.addLine(new Graph.ReportLine(ps1.network.time, s.avgSigCount));
-    } while (s.minSigCount != nodeCt);
-
-    try {
-      graph.save(new File("/tmp/graph.png"));
-    } catch (IOException e) {
-      System.err.println("Can't generate the graph: " + e.getMessage());
-    }
-  }
-
-
-
   public static void main(String... args) {
-
-
-
     int[] distribProp = {1, 33, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
     int[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
     for (int i = 0; i < distribVal.length; i++)

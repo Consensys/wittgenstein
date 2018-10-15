@@ -27,7 +27,7 @@ public class Network<TN extends Node> {
    * Internal variable. Nodes id are sequential & start at zero, so we can we index them in an
    * array.
    */
-  protected final List<TN> allNodes = new ArrayList<>(2048);
+  public final List<TN> allNodes = new ArrayList<>(2048);
 
   /**
    * By using a single random generator, we have repeatable runs.
