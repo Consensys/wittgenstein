@@ -29,8 +29,8 @@ public class SanFerminSignature {
   final int nodeCount;
 
   /**
-   * exponent to represent @nodeCount in base 2 nodeCount = 2 ** powerOfTwo; It is used to
-   * represent the length of the binary string of a node's id.
+   * exponent to represent @nodeCount in base 2 nodeCount = 2 ** powerOfTwo; It is used to represent
+   * the length of the binary string of a node's id.
    */
   final int powerOfTwo;
   /**
@@ -86,8 +86,8 @@ public class SanFerminSignature {
   public final List<SanFerminNode> finishedNodes;
 
 
-  public SanFerminSignature(int nodeCount, int threshold, int pairingTime,
-      int signatureSize, int replyTimeout, int candidateCount, boolean shuffledLists) {
+  public SanFerminSignature(int nodeCount, int threshold, int pairingTime, int signatureSize,
+      int replyTimeout, int candidateCount, boolean shuffledLists) {
     this.nodeCount = nodeCount;
     this.powerOfTwo = MoreMath.log2(nodeCount);
     this.threshold = threshold;

@@ -28,8 +28,8 @@ public class SanFerminOptimistic {
   final int totalCount;
 
   /**
-   * exponent to represent @nodeCount in base 2 nodeCount = 2 ** powerOfTwo; It is used to
-   * represent the length of the binary string of a node's id.
+   * exponent to represent @nodeCount in base 2 nodeCount = 2 ** powerOfTwo; It is used to represent
+   * the length of the binary string of a node's id.
    */
   final int powerOfTwo;
   /**
