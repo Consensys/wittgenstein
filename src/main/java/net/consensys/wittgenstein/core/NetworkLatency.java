@@ -138,14 +138,18 @@ public abstract class NetworkLatency {
           new StringBuilder("BlockChainNetwork latency: time to receive a message:\n");
 
       int cur = 0;
-      for (int ms = 10; cur < 100 & ms < 600; ms += (ms < 50 ? 10 : ms == 50 ? 50 : 100)) {
+      for (int ms: new int[]{20, 40, 60, 80, 100, 150, 200, 300, 400, 500, 1000, 2000, 3000, 50000, 10000, 20000}) {
         int size = 0;
+        boolean print = false;
         while (cur < longDistrib.length && longDistrib[cur] < ms) {
           size++;
           cur++;
+          print = true;
         }
-        sb.append(ms).append("ms ").append(size).append("%, cumulative ");
-        sb.append(cur).append("%\n");
+        if (print) {
+          sb.append(ms).append("ms ").append(size).append("%, cumulative ");
+          sb.append(cur).append("%\n");
+        }
       }
 
       for (int s = 1; cur < 100; s++) {

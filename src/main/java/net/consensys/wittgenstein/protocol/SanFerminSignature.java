@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
  * SanFerminNode{nodeId=1000000001, doneAt=4860, sigs=874, msgReceived=272, msgSent=275,
  * KBytesSent=13, KBytesReceived=13, outdatedSwaps=0}
  */
-public class SanFerminSignature {
+@SuppressWarnings("WeakerAccess") public class SanFerminSignature {
 
   /**
    * The number of nodes in the network
@@ -91,10 +91,10 @@ public class SanFerminSignature {
     this.candidateCount = candidateCount;
     this.shuffledLists = shuffledLists;
 
-    this.network = new Network<SanFerminNode>();
+    this.network = new Network<>();
     this.nb = new Node.NodeBuilderWithRandomPosition(network.rd);
 
-    this.allNodes = new ArrayList<SanFerminNode>(totalCount);
+    this.allNodes = new ArrayList<>(totalCount);
     for (int i = 0; i < totalCount; i++) {
       final SanFerminNode n = new SanFerminNode(this.nb);
       this.allNodes.add(n);
@@ -204,7 +204,7 @@ public class SanFerminSignature {
 
     /**
      * Ids of the nodes we have sent a SwapRequest to. Different strategies to pick the nodes are
-     * detailled in `pickNextNodes`
+     * detailed in `pickNextNodes`
      */
     Set<Integer> pendingNodes;
 
@@ -279,9 +279,6 @@ public class SanFerminSignature {
      * onSwapRequest checks if it is a request for the same current level, and if it is, swap and go
      * to the next level. onSwapRequest is the fastest way to swap, since the value is already
      * embedded in the message.
-     *
-     * @param node
-     * @param request
      */
     public void onSwapRequest(SanFerminNode node, SwapRequest request) {
       receivedRequests++;
@@ -535,7 +532,7 @@ public class SanFerminSignature {
         // This may happen in case the number of nodes is not a power
         // of two, or more generally if the node already tried to
         // contact all of his eligible peers already
-        return Collections.EMPTY_LIST;
+        return Collections.emptyList();
       }
       usedCandidates.put(currentPrefixLength, set);
       return selectedCandidates;
@@ -560,7 +557,6 @@ public class SanFerminSignature {
       // number of potential candidates at a given level
       int diff = powerOfTwo - currentPrefixLength;
       int potentials = (int) Math.pow(2, diff) - 1;
-
     }
 
     /**
@@ -656,8 +652,7 @@ public class SanFerminSignature {
     public List<SanFerminNode> getOwnSet(int level) {
       int min = 0;
       int max = allNodes.size();
-      int currLevel = 0;
-      for (currLevel = 0; currLevel <= level && min <= max; currLevel++) {
+      for (int currLevel = 0; currLevel <= level && min <= max; currLevel++) {
         int m = Math.floorDiv((max + min), 2);
         if (binaryId.charAt(currLevel) == '0') {
           // reduce the interval to the left
@@ -750,9 +745,7 @@ public class SanFerminSignature {
 
     p2ps.StartAll();
     p2ps.network.run(30);
-    Collections.sort(p2ps.finishedNodes, (n1, n2) -> {
-      return Long.compare(n1.thresholdAt, n2.thresholdAt);
-    });
+    p2ps.finishedNodes.sort(Comparator.comparingLong(n2 -> n2.thresholdAt));
     int max = p2ps.finishedNodes.size() < 10 ? p2ps.finishedNodes.size() : 10;
     for (SanFerminNode n : p2ps.finishedNodes.subList(0, max))
       System.out.println(n);

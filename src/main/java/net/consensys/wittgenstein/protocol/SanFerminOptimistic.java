@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
  * SanFerminNode{nodeId=1000000001, doneAt=4860, sigs=874, msgReceived=272, msgSent=275,
  * KBytesSent=13, KBytesReceived=13, outdatedSwaps=0}
  */
-public class SanFerminOptimistic {
+@SuppressWarnings("WeakerAccess") public class SanFerminOptimistic {
 
   /**
    * The number of nodes in the network
@@ -90,10 +90,10 @@ public class SanFerminOptimistic {
     this.candidateCount = candidateCount;
     this.shuffledLists = shuffledLists;
 
-    this.network = new Network<SanFerminNode>();
+    this.network = new Network<>();
     this.nb = new Node.NodeBuilderWithRandomPosition(network.rd);
 
-    this.allNodes = new ArrayList<SanFerminNode>(totalCount);
+    this.allNodes = new ArrayList<>(totalCount);
     for (int i = 0; i < totalCount; i++) {
       final SanFerminNode n = new SanFerminNode(this.nb);
       this.allNodes.add(n);
@@ -465,7 +465,7 @@ public class SanFerminOptimistic {
         // This may happen in case the number of nodes is not a power
         // of two, or more generally if the node already tried to
         // contact all of his eligible peers already
-        return Collections.EMPTY_LIST;
+        return Collections.emptyList();
       }
       usedCandidates.put(currentPrefixLength, set);
       return selectedCandidates;
@@ -559,9 +559,7 @@ public class SanFerminOptimistic {
     p2ps.network.run(30);
 
     // print results
-    Collections.sort(p2ps.finishedNodes, (n1, n2) -> {
-      return Long.compare(n1.thresholdAt, n2.thresholdAt);
-    });
+    Collections.sort(p2ps.finishedNodes, Comparator.comparingLong(n2 -> n2.thresholdAt));
     int max = p2ps.finishedNodes.size() < 10 ? p2ps.finishedNodes.size() : 10;
     for (SanFerminNode n : p2ps.finishedNodes.subList(0, max))
       System.out.println(n);

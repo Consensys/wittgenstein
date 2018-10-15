@@ -3,6 +3,7 @@ package net.consensys.wittgenstein.protocol;
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.tools.Graph;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -14,8 +15,7 @@ import java.util.*;
  * of its direct peers Sends, every x milliseconds, to one of its peers a set of missing signatures
  * Runs in parallel a task to validate the signatures sets it has received.
  */
-@SuppressWarnings("WeakerAccess")
-public class P2PSignature {
+@SuppressWarnings("WeakerAccess") public class P2PSignature {
   /**
    * The nuumber of nodes in the network
    */
@@ -47,13 +47,13 @@ public class P2PSignature {
   final boolean doubleAggregateStrategy;
 
 
+  final boolean withState = true;
+
   /**
    *
    */
   enum SendSigsStrategy {
-    all,
-    dif,
-    cmp
+    all, dif, cmp
   }
 
 
@@ -67,8 +67,8 @@ public class P2PSignature {
   final Node.NodeBuilder nb;
 
   public P2PSignature(int nodeCount, int threshold, int connectionCount, int pairingTime,
-      int sigsSendPeriod, boolean doubleAggregateStrategy, SendSigsStrategy sendSigsStrategy,
-      int sigRange) {
+    int sigsSendPeriod, boolean doubleAggregateStrategy, SendSigsStrategy sendSigsStrategy,
+    int sigRange) {
     this.nodeCount = nodeCount;
     this.threshold = threshold;
     this.connectionCount = connectionCount;
@@ -95,13 +95,11 @@ public class P2PSignature {
      * By convention, all the last bits are implicitly set to zero, so we don't always have to
      * transport the full state.
      */
-    @Override
-    public int size() {
+    @Override public int size() {
       return Math.max(1, desc.length() / 8);
     }
 
-    @Override
-    public void action(P2PSigNode from, P2PSigNode to) {
+    @Override public void action(P2PSigNode from, P2PSigNode to) {
       to.onPeerState(this);
     }
   }
@@ -211,13 +209,11 @@ public class P2PSignature {
     }
 
 
-    @Override
-    public int size() {
+    @Override public int size() {
       return size;
     }
 
-    @Override
-    public void action(P2PSigNode from, P2PSigNode to) {
+    @Override public void action(P2PSigNode from, P2PSigNode to) {
       to.onNewSig(sigs);
     }
   }
@@ -258,7 +254,9 @@ public class P2PSignature {
       int newCard = verifiedSignatures.cardinality();
 
       if (newCard > oldCard) {
-        sendStateToPeers();
+        if (withState) {
+          sendStateToPeers();
+        }
 
         if (!done && verifiedSignatures.cardinality() >= threshold) {
           doneAt = network.time;
@@ -286,7 +284,7 @@ public class P2PSignature {
      * We select a peer which needs some signatures we have. We also remove it from out list once we
      * sent it a signature set.
      */
-    void sendSigs() {
+    void  sendSigs() {
       State found = null;
       BitSet toSend = null;
       Iterator<State> it = peersState.values().iterator();
@@ -303,13 +301,17 @@ public class P2PSignature {
         }
       }
 
+      if (!withState) {
+        found = new State((P2PSigNode)peers.get(network.rd.nextInt(peers.size())));
+      }
+
       if (found != null) {
         SendSigs ss;
         if (sendSigsStrategy == SendSigsStrategy.dif) {
           ss = new SendSigs(toSend);
         } else if (sendSigsStrategy == SendSigsStrategy.cmp) {
-          ss = new SendSigs((BitSet) verifiedSignatures.clone(),
-              compressedSize(verifiedSignatures));
+          ss =
+            new SendSigs((BitSet) verifiedSignatures.clone(), compressedSize(verifiedSignatures));
         } else {
           ss = new SendSigs((BitSet) verifiedSignatures.clone());
         }
@@ -364,7 +366,7 @@ public class P2PSignature {
         toVerify.remove(best);
         final BitSet tBest = best;
         network.registerTask(() -> P2PSigNode.this.updateVerifiedSignatures(tBest),
-            network.time + pairingTime * 2, P2PSigNode.this);
+          network.time + pairingTime * 2, P2PSigNode.this);
       }
     }
 
@@ -390,19 +392,17 @@ public class P2PSignature {
           // There is at least one signature we don't have yet
           final BitSet tBest = agg;
           network.registerTask(() -> P2PSigNode.this.updateVerifiedSignatures(tBest),
-              network.time + pairingTime * 2, P2PSigNode.this);
+            network.time + pairingTime * 2, P2PSigNode.this);
         }
       }
     }
 
 
-    @Override
-    public String toString() {
+    @Override public String toString() {
       return "P2PSigNode{" + "nodeId=" + nodeId + " sendSigsStrategy=" + sendSigsStrategy
-          + " sigRange=" + sigRange + ", doneAt=" + doneAt + ", sigs="
-          + verifiedSignatures.cardinality() + ", msgReceived=" + msgReceived + ", msgSent="
-          + msgSent + ", KBytesSent=" + bytesSent / 1024 + ", KBytesReceived="
-          + bytesReceived / 1024 + '}';
+        + " sigRange=" + sigRange + ", doneAt=" + doneAt + ", sigs="
+        + verifiedSignatures.cardinality() + ", msgReceived=" + msgReceived + ", msgSent=" + msgSent
+        + ", KBytesSent=" + bytesSent / 1024 + ", KBytesReceived=" + bytesReceived / 1024 + '}';
     }
   }
 
@@ -412,11 +412,13 @@ public class P2PSignature {
       final P2PSigNode n = new P2PSigNode();
       last = n;
       network.addNode(n);
-      network.registerTask(n::sendStateToPeers, 1, n);
+      if (withState) {
+        network.registerTask(n::sendStateToPeers, 1, n);
+      }
       network.registerConditionalTask(n::sendSigs, 1, sigsSendPeriod, n,
-          () -> !(n.peersState.isEmpty()), () -> !n.done);
+        () -> !(n.peersState.isEmpty()), () -> !n.done);
       network.registerConditionalTask(n::checkSigs, 1, pairingTime, n, () -> !n.toVerify.isEmpty(),
-          () -> !n.done);
+        () -> !n.done);
     }
 
     network.setPeers();
@@ -484,6 +486,42 @@ public class P2PSignature {
     }
   }
 
+  public static void sigsPerNodeCount() {
+    List<P2PSignature> pss = new ArrayList<>();
+    for (int nodeCt : new int[] {50, 100, 200, 300, 400, 500}){//, 1000, 1500, 2000, 2500, 3000, 4000, 5000,
+     // 10000, 15000, 20000}) {
+      NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
+      P2PSignature ps1 = new P2PSignature(nodeCt, nodeCt, 15, 3, 20, true, SendSigsStrategy.all, 1);
+      ps1.network.setNetworkLatency(nl);
+      pss.add(ps1);
+    }
+
+    Graph graph = new Graph("number of sig per time", "number of nodes", "time in ms");
+    Graph.Series series = new Graph.Series("all nodes time");
+    graph.addSerie(series);
+
+    for (P2PSignature ps1 : pss) {
+      ps1.network.rd.setSeed(1);
+      ps1.init();
+      ps1.network.setMsgDiscardTime(1000);
+
+      Stats s;
+      do {
+        ps1.network.runMs(10);
+        s = ps1.getStat();
+      } while (s.minSigCount != ps1.nodeCount);
+      series.addLine(new Graph.ReportLine(ps1.nodeCount, ps1.network.time));
+    }
+
+    try {
+      graph.save(new File("/tmp/graph.png"));
+    } catch (IOException e) {
+      System.err.println("Can't generate the graph: " + e.getMessage());
+    }
+
+  }
+
+
   public static void sigsPerStrategy() {
     int nodeCt = 1000;
 
@@ -526,7 +564,7 @@ public class P2PSignature {
     System.out.println("" + nl);
 
     if (true) {
-      sigsPerTime();
+      //sigsPerNodeCount();
     }
 
     boolean printLat = false;
@@ -534,15 +572,16 @@ public class P2PSignature {
       for (int sendPeriod : new int[] {20, 100}) {
         for (int nodeCt : new int[] {1000, 10000}) {
           for (int r : new int[] {1, 2, 4, 6, 8, 12, 14, 16}) {
-            P2PSignature p2ps = new P2PSignature(nodeCt, (int) (nodeCt * 0.67), cnt, 3, sendPeriod,
-                true, r < 2 ? SendSigsStrategy.all : SendSigsStrategy.cmp, r);
+            P2PSignature p2ps =
+              new P2PSignature(nodeCt, (int) (nodeCt * 0.67), cnt, 3, sendPeriod, true,
+                r < 2 ? SendSigsStrategy.all : SendSigsStrategy.cmp, r);
             p2ps.network.setNetworkLatency(nl);
             P2PSigNode observer = p2ps.init();
 
             if (!printLat) {
               System.out.println("NON P2P " + NetworkLatency.estimateLatency(p2ps.network, 100000));
-              System.out
-                  .println("\nP2P " + NetworkLatency.estimateP2PLatency(p2ps.network, 100000));
+              System.out.println(
+                "\nP2P " + NetworkLatency.estimateP2PLatency(p2ps.network, 100000));
               printLat = true;
             }
             p2ps.network.rd.setSeed(0);
