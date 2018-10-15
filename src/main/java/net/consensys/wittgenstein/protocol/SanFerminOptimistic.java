@@ -582,6 +582,7 @@ public class SanFerminOptimistic {
     graph.addSerie(series1avg);
 
     //   ps1.init();
+    ps1.StartAll();
 
     Stats s;
     do {
@@ -602,6 +603,9 @@ public class SanFerminOptimistic {
 
 
   public static void main(String... args) {
+
+
+
     int[] distribProp = {1, 33, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
     int[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
     for (int i = 0; i < distribVal.length; i++)

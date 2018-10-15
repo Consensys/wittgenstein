@@ -17,6 +17,16 @@ dependencies {
     testImplementation 'junit:junit:4.12'
 }
 
+jar {
+    manifest {
+        attributes "Main-Class": "net.consensys.wittgenstein.protocol.P2PSignature"
+    }
+
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
+
 spotless {
     java {
         eclipse().configFile 'eclipse-java-google-style.xml'
