@@ -298,14 +298,19 @@ public class P2PSignature {
               if (nodesAtRound.equals(sanFerminPeers(r))) {
                 SendSigs ss = new SendSigs(verifiedSignatures, compressedSize(verifiedSignatures));
                 List<Node> dest = new ArrayList<>();
-                // 
-                int lastPeerInSet = nodesAtRound.length() - 1;
-                dest.add(network.getNodeById(lastPeerInSet));
-                if (r >= 2) {
-                  while (!nodesAtRound.get(--lastPeerInSet));
-                  dest.add(network.getNodeById(lastPeerInSet));
+                BitSet nextRound = sanFerminPeers(r + 1);
+                for (int i = 0; i < (r == 2 ? 1 : 2); i++) {
+                  int start = nextRound.length() - 1;
+                  int dec = network.rd.nextInt(nextRound.cardinality());
+                  while (dec != 0) {
+                    while (!nextRound.get(start)) {
+                      start--;
+                    }
+                    dec--;
+                  }
+                  dest.add(network.getNodeById(start));
+                  nextRound.set(start, false);
                 }
-
                 network.send(ss, network.time + 1, this, dest);
               }
             }
