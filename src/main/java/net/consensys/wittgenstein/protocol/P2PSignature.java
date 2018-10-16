@@ -50,7 +50,7 @@ public class P2PSignature {
 
   final boolean withState = true;
 
-  final boolean sanFermin = true;
+  final boolean sanFermin;
 
 
   /**
@@ -73,15 +73,16 @@ public class P2PSignature {
   final Node.NodeBuilder nb;
 
   public P2PSignature(int nodeCount, int threshold, int connectionCount, int pairingTime,
-      int sigsSendPeriod, boolean doubleAggregateStrategy, SendSigsStrategy sendSigsStrategy,
-      int sigRange) {
+      int sigsSendPeriod, boolean doubleAggregateStrategy, boolean sanFermin,
+      SendSigsStrategy sendSigsStrategy, int sigRange) {
     this.nodeCount = nodeCount;
     this.threshold = threshold;
     this.connectionCount = connectionCount;
     this.pairingTime = pairingTime;
     this.sigsSendPeriod = sigsSendPeriod;
     this.doubleAggregateStrategy = doubleAggregateStrategy;
-    this.sendSigsStrategy = sanFermin ? SendSigsStrategy.cmp : sendSigsStrategy;
+    this.sanFermin = sanFermin;
+    this.sendSigsStrategy = this.sanFermin ? SendSigsStrategy.cmp : sendSigsStrategy;
     this.sigRange = sigRange;
 
     this.network = new P2PNetwork(connectionCount);
@@ -211,7 +212,7 @@ public class P2PSignature {
     }
 
     public SendSigs(BitSet sigs, int sigCount) {
-      this.sigs = sigs;
+      this.sigs = (BitSet) sigs.clone();
       // Size = bit field + the signatures included
       this.size = sigs.length() / 8 + sigCount * 48;
     }
@@ -244,15 +245,14 @@ public class P2PSignature {
     }
 
     public BitSet sanFerminPeers(int round) {
-      final int log = 2;
-      if (round < 1 || log != 2) {
-        throw new IllegalArgumentException("round=" + round + ", log=" + log);
+      if (round < 1) {
+        throw new IllegalArgumentException("round=" + round);
       }
       BitSet res = new BitSet(nodeCount);
       int cMask = (1 << round) - 1;
       int start = (cMask | nodeId) ^ cMask;
       int end = nodeId | cMask;
-      end = Math.min(end, nodeCount);
+      end = Math.min(end, nodeCount - 1);
       res.set(start, end + 1);
       res.set(nodeId, false);
 
@@ -298,6 +298,7 @@ public class P2PSignature {
               if (nodesAtRound.equals(sanFerminPeers(r))) {
                 SendSigs ss = new SendSigs(verifiedSignatures, compressedSize(verifiedSignatures));
                 List<Node> dest = new ArrayList<>();
+                // 
                 int lastPeerInSet = nodesAtRound.length() - 1;
                 dest.add(network.getNodeById(lastPeerInSet));
                 if (r >= 2) {
@@ -495,16 +496,22 @@ public class P2PSignature {
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
     int nodeCt = 1024;
-    P2PSignature ps1 = new P2PSignature(nodeCt, nodeCt, 15, 3, 100, true, SendSigsStrategy.dif, 2);
+    P2PSignature ps1 =
+        new P2PSignature(nodeCt, nodeCt, 15, 3, 300, true, true, SendSigsStrategy.all, 2);
     ps1.network.setNetworkLatency(nl);
-    Graph graph = new Graph("number of sig per time", "time in ms", "sig count");
-    Graph.Series series1min = new Graph.Series("sig count - worse node");
-    Graph.Series series1max = new Graph.Series("sig count - best node");
-    Graph.Series series1avg = new Graph.Series("sig count - avg");
-    graph.addSerie(series1min);
+    String desc = "nodeCount=" + nodeCt + ", gossip " + (ps1.sanFermin ? " + San Fermin" : "alone")
+        + ", gossip period=" + ps1.sigsSendPeriod
+        + (!ps1.sanFermin ? ", compression=" + ps1.sendSigsStrategy : "");
+    Graph graph = new Graph("number of signatures per time (" + desc + ")", "time in ms",
+        "number of signatures");
+    Graph.Series series1min = new Graph.Series("signatures count - worse node");
+    Graph.Series series1max = new Graph.Series("signatures count - best node");
+    Graph.Series series1avg = new Graph.Series("signatures count - average");
+    // graph.addSerie(series1min);
     graph.addSerie(series1max);
     graph.addSerie(series1avg);
 
+    System.out.println(nl + " " + desc);
     ps1.init();
 
     StatsHelper.SimpleStats s;
@@ -540,7 +547,8 @@ public class P2PSignature {
     for (int nodeCt : new int[] {50, 100, 200, 300, 400, 500}) {//, 1000, 1500, 2000, 2500, 3000, 4000, 5000,
       // 10000, 15000, 20000}) {
       NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
-      P2PSignature ps1 = new P2PSignature(nodeCt, nodeCt, 15, 3, 20, true, SendSigsStrategy.all, 1);
+      P2PSignature ps1 =
+          new P2PSignature(nodeCt, nodeCt, 15, 3, 20, true, false, SendSigsStrategy.all, 1);
       ps1.network.setNetworkLatency(nl);
       pss.add(ps1);
     }
@@ -575,10 +583,12 @@ public class P2PSignature {
     int nodeCt = 1000;
 
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
-    P2PSignature ps1 = new P2PSignature(nodeCt, nodeCt, 15, 3, 20, true, SendSigsStrategy.all, 1);
+    P2PSignature ps1 =
+        new P2PSignature(nodeCt, nodeCt, 15, 3, 20, true, false, SendSigsStrategy.all, 1);
     ps1.network.setNetworkLatency(nl);
 
-    P2PSignature ps2 = new P2PSignature(nodeCt, nodeCt, 15, 3, 20, false, SendSigsStrategy.all, 1);
+    P2PSignature ps2 =
+        new P2PSignature(nodeCt, nodeCt, 15, 3, 20, false, false, SendSigsStrategy.all, 1);
     ps2.network.setNetworkLatency(nl);
 
     Graph graph = new Graph("number of sig per time", "time in ms", "sig count");
@@ -627,7 +637,7 @@ public class P2PSignature {
         for (int nodeCt : new int[] {1000, 10000}) {
           for (int r : new int[] {1, 2, 4, 6, 8, 12, 14, 16}) {
             P2PSignature p2ps = new P2PSignature(nodeCt, (int) (nodeCt * 0.67), cnt, 3, sendPeriod,
-                true, r < 2 ? SendSigsStrategy.all : SendSigsStrategy.cmp, r);
+                true, false, r < 2 ? SendSigsStrategy.all : SendSigsStrategy.cmp, r);
             p2ps.network.setNetworkLatency(nl);
             P2PSigNode observer = p2ps.init();
 
@@ -647,51 +657,3 @@ public class P2PSignature {
     }
   }
 }
-
-/*
-
-peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=all sigRange=1, doneAt=721, sigs=520, msgReceived=343, msgSent=143, KBytesSent=400, KBytesReceived=459}
-peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=cmp sigRange=2, doneAt=721, sigs=520, msgReceived=343, msgSent=143, KBytesSent=299, KBytesReceived=326}
-peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=cmp sigRange=4, doneAt=721, sigs=520, msgReceived=343, msgSent=143, KBytesSent=315, KBytesReceived=343}
-
-peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=all sigRange=1, doneAt=1450, sigs=1000, msgReceived=516, msgSent=195, KBytesSent=746, KBytesReceived=764}
-peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=cmp sigRange=2, doneAt=1450, sigs=1000, msgReceived=516, msgSent=195, KBytesSent=418, KBytesReceived=412}
-peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=cmp sigRange=4, doneAt=1450, sigs=1000, msgReceived=516, msgSent=195, KBytesSent=254, KBytesReceived=237}
-peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=cmp sigRange=6, doneAt=1450, sigs=1000, msgReceived=516, msgSent=195, KBytesSent=200, KBytesReceived=178}
-peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=cmp sigRange=8, doneAt=1450, sigs=1000, msgReceived=516, msgSent=195, KBytesSent=172, KBytesReceived=149}
-peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=cmp sigRange=12, doneAt=1450, sigs=1000, msgReceived=516, msgSent=195, KBytesSent=145, KBytesReceived=120}
-peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=cmp sigRange=14, doneAt=1450, sigs=1000, msgReceived=516, msgSent=195, KBytesSent=137, KBytesReceived=111}
-peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=cmp sigRange=16, doneAt=1450, sigs=1000, msgReceived=516, msgSent=195, KBytesSent=131, KBytesReceived=105}
-
-
-
-P2P BlockChainNetwork latency: time to receive a message:
-10ms 0%, cumulative 0%
-20ms 0%, cumulative 0%
-30ms 1%, cumulative 1%
-40ms 1%, cumulative 2%
-50ms 2%, cumulative 4%
-100ms 14%, cumulative 18%
-200ms 60%, cumulative 78%
-300ms 21%, cumulative 99%
-400ms 0%, cumulative 99%
-500ms 1%, cumulative 100%
-
-peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=all sigRange=1, doneAt=724, sigs=520, msgReceived=345, msgSent=143, KBytesSent=378, KBytesReceived=458}
-peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=cmp sigRange=2, doneAt=724, sigs=520, msgReceived=345, msgSent=143, KBytesSent=292, KBytesReceived=343}
-peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=cmp sigRange=4, doneAt=724, sigs=520, msgReceived=345, msgSent=143, KBytesSent=299, KBytesReceived=350}
-peers=15, sendPeriod=20 P2PSigNode{nodeId=999 sendSigsStrategy=cmp sigRange=6, doneAt=724, sigs=520, msgReceived=345, msgSent=143, KBytesSent=303, KBytesReceived=373}
-peers=15, sendPeriod=20 P2PSigNode{nodeId=9999 sendSigsStrategy=all sigRange=1, doneAt=1116, sigs=5136, msgReceived=1224, msgSent=826, KBytesSent=10967, KBytesReceived=12175}
-peers=15, sendPeriod=20 P2PSigNode{nodeId=9999 sendSigsStrategy=cmp sigRange=2, doneAt=1116, sigs=5136, msgReceived=1224, msgSent=826, KBytesSent=8423, KBytesReceived=9248}
-peers=15, sendPeriod=20 P2PSigNode{nodeId=9999 sendSigsStrategy=cmp sigRange=4, doneAt=1116, sigs=5136, msgReceived=1224, msgSent=826, KBytesSent=8758, KBytesReceived=9465}
-peers=15, sendPeriod=20 P2PSigNode{nodeId=9999 sendSigsStrategy=cmp sigRange=6, doneAt=1116, sigs=5136, msgReceived=1224, msgSent=826, KBytesSent=9263, KBytesReceived=10072}
-peers=15, sendPeriod=100 P2PSigNode{nodeId=999 sendSigsStrategy=all sigRange=1, doneAt=1204, sigs=504, msgReceived=183, msgSent=58, KBytesSent=338, KBytesReceived=426}
-peers=15, sendPeriod=100 P2PSigNode{nodeId=999 sendSigsStrategy=cmp sigRange=2, doneAt=1204, sigs=504, msgReceived=183, msgSent=58, KBytesSent=253, KBytesReceived=315}
-peers=15, sendPeriod=100 P2PSigNode{nodeId=999 sendSigsStrategy=cmp sigRange=4, doneAt=1204, sigs=504, msgReceived=183, msgSent=58, KBytesSent=262, KBytesReceived=322}
-peers=15, sendPeriod=100 P2PSigNode{nodeId=999 sendSigsStrategy=cmp sigRange=6, doneAt=1204, sigs=504, msgReceived=183, msgSent=58, KBytesSent=278, KBytesReceived=341}
-peers=15, sendPeriod=100 P2PSigNode{nodeId=9999 sendSigsStrategy=all sigRange=1, doneAt=2688, sigs=5059, msgReceived=903, msgSent=843, KBytesSent=11017, KBytesReceived=11487}
-peers=15, sendPeriod=100 P2PSigNode{nodeId=9999 sendSigsStrategy=cmp sigRange=2, doneAt=2688, sigs=5059, msgReceived=903, msgSent=843, KBytesSent=8516, KBytesReceived=8803}
-peers=15, sendPeriod=100 P2PSigNode{nodeId=9999 sendSigsStrategy=cmp sigRange=4, doneAt=2688, sigs=5059, msgReceived=903, msgSent=843, KBytesSent=8762, KBytesReceived=9054}
-peers=15, sendPeriod=100 P2PSigNode{nodeId=9999 sendSigsStrategy=cmp sigRange=6, doneAt=2688, sigs=5059, msgReceived=903, msgSent=843, KBytesSent=9296, KBytesReceived=9596}
-
- */

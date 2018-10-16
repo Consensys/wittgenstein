@@ -22,8 +22,6 @@ public class Graph {
   private final String xName;
   private final String yName;
 
-
-
   public static class Series {
     final String description;
     final List<ReportLine> vals = new ArrayList<>();

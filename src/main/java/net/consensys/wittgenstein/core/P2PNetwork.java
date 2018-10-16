@@ -14,8 +14,7 @@ public class P2PNetwork extends Network<P2PNode> {
    */
   public void setPeers() {
     final ArrayList<P2PNode> todo = new ArrayList<>(allNodes);
-
-    int toCreate = todo.size() * connectionCount;
+    int toCreate = (todo.size() * connectionCount) / 2;
 
     while (toCreate-- > 0) {
       int pp1 = rd.nextInt(todo.size());
