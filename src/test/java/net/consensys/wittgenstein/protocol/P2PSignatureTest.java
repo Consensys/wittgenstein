@@ -113,4 +113,21 @@ public class P2PSignatureTest {
     Assert.assertEquals(0, ps.compressedSize(fromString("0000 0000")));
     Assert.assertEquals(2, ps.compressedSize(fromString("1111 1111 1111")));
   }
+
+  @Test
+  public void testSanFerminSets() {
+    BitSet t1 = new BitSet(ps.nodeCount);
+    t1.set(0);
+    Assert.assertEquals(t1, n1.sanFerminPeers(1));
+
+    BitSet t2 = new BitSet(ps.nodeCount);
+    t2.set(0);
+    t2.set(2, 4);
+    Assert.assertEquals(t2, n1.sanFerminPeers(2));
+
+    BitSet t3 = new BitSet(ps.nodeCount);
+    t3.set(0);
+    t3.set(2, 8);
+    Assert.assertEquals(t3, n1.sanFerminPeers(3));
+  }
 }

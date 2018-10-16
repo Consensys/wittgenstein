@@ -50,7 +50,7 @@ public class P2PSignature {
 
   final boolean withState = true;
 
-  final boolean sanFermin = false;
+  final boolean sanFermin = true;
 
 
   /**
@@ -81,7 +81,7 @@ public class P2PSignature {
     this.pairingTime = pairingTime;
     this.sigsSendPeriod = sigsSendPeriod;
     this.doubleAggregateStrategy = doubleAggregateStrategy;
-    this.sendSigsStrategy = sendSigsStrategy;
+    this.sendSigsStrategy = sanFermin ? SendSigsStrategy.cmp : sendSigsStrategy;
     this.sigRange = sigRange;
 
     this.network = new P2PNetwork(connectionCount);
@@ -243,33 +243,18 @@ public class P2PSignature {
       verifiedSignatures.set(nodeId, true);
     }
 
-    public List<P2PSigNode> sanFerminPeers(int log, int round) {
+    public BitSet sanFerminPeers(int round) {
+      final int log = 2;
       if (round < 1 || log != 2) {
         throw new IllegalArgumentException("round=" + round + ", log=" + log);
       }
-      int rangeSize = (int) Math.pow(2, round);
-      int segCount = nodeCount / rangeSize;
-
-      if (round == 1) {
-        int peerId = (nodeId % 2 == 1 ? nodeId - 1 : nodeId + 1) % nodeCount;
-        P2PSigNode peer = (P2PSigNode) network.getNodeById(peerId);
-        return List.of(peer);
-      }
-
+      BitSet res = new BitSet(nodeCount);
       int cMask = (1 << round) - 1;
-
       int start = (cMask | nodeId) ^ cMask;
       int end = nodeId | cMask;
-      if (nodeId < start + rangeSize / 2) {
-        start += rangeSize / 2;
-      } else {
-        end -= rangeSize / 2;
-      }
-
-      ArrayList<P2PSigNode> res = new ArrayList<>(rangeSize / 2);
-      for (int i = start; i < end; i++) {
-        res.add((P2PSigNode) network.getNodeById(i));
-      }
+      end = Math.min(end, nodeCount);
+      res.set(start, end + 1);
+      res.set(nodeId, false);
 
       return res;
     }
@@ -301,13 +286,31 @@ public class P2PSignature {
         }
 
         if (sanFermin) {
-          P2PSigNode pl1 = sanFerminPeers(2, 1).get(0);
-          if (sigs.get(pl1.nodeId)) {
-            // We have just validated the signatures from our peer of level 1. Let's tell this
-            //  to our friends at level 2
-            SendSigs ss = new SendSigs(verifiedSignatures, compressedSize(verifiedSignatures));
-            network.send(ss, network.time + 1, this, sanFerminPeers(2, 2));
+          int r = 2;
+          while (r < 30 && r < MoreMath.log2(nodeCount)) {
+            BitSet nodesAtRound = sanFerminPeers(r);
+            nodesAtRound.and(sigs);
+            if (nodesAtRound.length() != 0) {
+              // In the sigs we've just verified we have one or more of the sigs of this round
+              // We now need to check if we completed the set.
+              nodesAtRound = sanFerminPeers(r);
+              nodesAtRound.and(verifiedSignatures);
+              if (nodesAtRound.equals(sanFerminPeers(r))) {
+                SendSigs ss = new SendSigs(verifiedSignatures, compressedSize(verifiedSignatures));
+                List<Node> dest = new ArrayList<>();
+                int lastPeerInSet = nodesAtRound.length() - 1;
+                dest.add(network.getNodeById(lastPeerInSet));
+                if (r >= 2) {
+                  while (!nodesAtRound.get(--lastPeerInSet));
+                  dest.add(network.getNodeById(lastPeerInSet));
+                }
+
+                network.send(ss, network.time + 1, this, dest);
+              }
+            }
+            r++;
           }
+
         }
 
         if (!done && verifiedSignatures.cardinality() >= threshold) {
@@ -478,27 +481,10 @@ public class P2PSignature {
       for (int i = 0; i < nodeCount; i++) {
         final P2PSigNode n = (P2PSigNode) network.getNodeById(i);
         SendSigs sigs = new SendSigs(n.verifiedSignatures);
-        network.send(sigs, 1, n, n.sanFerminPeers(2, 1));
+        int peerId = n.sanFerminPeers(1).length() - 1;
+        network.send(sigs, 1, n, network.getNodeById(peerId));
       }
     }
-
-    /*
-    
-    *san fermin one level*
-    NetworkLatencyByDistance
-    bytes sent: min: 9001, max:968884, avg:164485
-    bytes rcvd: min: 26361, max:1948148, avg:149044
-    msg sent: min: 92, max:4856, avg:704
-    msg rcvd: min: 222, max:1559, avg:641
-    done at: min: 948, max:1317, avg:1192
-    
-    *san fermin two levels*
-    bytes sent: min: 8630, max:1337903, avg:159634
-    bytes rcvd: min: 26637, max:1691759, avg:143090
-    msg sent: min: 90, max:4395, avg:632
-    msg rcvd: min: 219, max:1363, avg:578
-    done at: min: 0, max:1032, avg:913
-     */
 
     network.setPeers();
 
@@ -509,7 +495,7 @@ public class P2PSignature {
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
     int nodeCt = 1024;
-    P2PSignature ps1 = new P2PSignature(nodeCt, nodeCt, 15, 3, 20, true, SendSigsStrategy.dif, 2);
+    P2PSignature ps1 = new P2PSignature(nodeCt, nodeCt, 15, 3, 100, true, SendSigsStrategy.dif, 2);
     ps1.network.setNetworkLatency(nl);
     Graph graph = new Graph("number of sig per time", "time in ms", "sig count");
     Graph.Series series1min = new Graph.Series("sig count - worse node");
