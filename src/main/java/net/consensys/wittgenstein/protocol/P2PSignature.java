@@ -296,21 +296,29 @@ public class P2PSignature {
               nodesAtRound = sanFerminPeers(r);
               nodesAtRound.and(verifiedSignatures);
               if (nodesAtRound.equals(sanFerminPeers(r))) {
-                SendSigs ss = new SendSigs(verifiedSignatures, compressedSize(verifiedSignatures));
+                // Ok, we're going to contact some of the nodes of the upper level
+                //  We're going to select these nodes randomly
+
                 List<Node> dest = new ArrayList<>();
                 BitSet nextRound = sanFerminPeers(r + 1);
-                for (int i = 0; i < (r == 2 ? 1 : 2); i++) {
-                  int start = nextRound.length() - 1;
-                  int dec = network.rd.nextInt(nextRound.cardinality());
-                  while (dec != 0) {
-                    while (!nextRound.get(start)) {
-                      start--;
-                    }
-                    dec--;
-                  }
-                  dest.add(network.getNodeById(start));
-                  nextRound.set(start, false);
+                nextRound.andNot(nodesAtRound);
+
+                int size = nextRound.cardinality();
+                int p1 = network.rd.nextInt(size) + 1;
+                int id1 = nextRound.length() - p1;
+                assert nextRound.get(id1);
+                dest.add(network.getNodeById(id1));
+                if (size > 1) {
+                  int p2;
+                  do {
+                    p2 = network.rd.nextInt(size) + 1;
+                  } while (p1 == p2);
+                  int id2 = nextRound.length() - p2;
+                  assert nextRound.get(id2);
+                  dest.add(network.getNodeById(id2));
                 }
+
+                SendSigs ss = new SendSigs(verifiedSignatures, compressedSize(verifiedSignatures));
                 network.send(ss, network.time + 1, this, dest);
               }
             }
@@ -500,9 +508,9 @@ public class P2PSignature {
 
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
-    int nodeCt = 1024;
+    int nodeCt = 1024;// 32768;
     P2PSignature ps1 =
-        new P2PSignature(nodeCt, nodeCt, 15, 3, 300, true, true, SendSigsStrategy.all, 2);
+        new P2PSignature(nodeCt, nodeCt, 15, 3, 20, true, true, SendSigsStrategy.all, 2);
     ps1.network.setNetworkLatency(nl);
     String desc = "nodeCount=" + nodeCt + ", gossip " + (ps1.sanFermin ? " + San Fermin" : "alone")
         + ", gossip period=" + ps1.sigsSendPeriod
