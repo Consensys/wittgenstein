@@ -46,6 +46,13 @@ public class Node {
     return bytesReceived;
   }
 
+  @Override
+  public String toString() {
+    return "Node{" +
+            "nodeId=" + nodeId +
+            '}';
+  }
+
   public static class NodeBuilder {
     protected int nodeIds = 0;
     protected final MessageDigest digest;
@@ -70,6 +77,8 @@ public class Node {
     protected int getY() {
       return 1;
     }
+
+
 
     /**
      * Many algo will want a hash of the node id. Be careful: sha-3 is not the ethereum v1 hash.
