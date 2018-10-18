@@ -32,13 +32,12 @@ public class SanFerminHelper {
     final HashMap<Integer, BitSet> usedNodes;
 
 
-    public SanFerminHelper(Node n, List<Node> allNodes,
-                           HashMap<Integer, BitSet> usedNodes) {
+    public SanFerminHelper(Node n, List<Node> allNodes) {
         this.n = n;
         this.binaryId = leftPadWithZeroes(Integer.toBinaryString(n.nodeId),
                 MoreMath.log2(allNodes.size()));
         this.allNodes = allNodes;
-        this.usedNodes = usedNodes;
+        this.usedNodes = new HashMap<Integer,BitSet>();
     }
 
     /**
