@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 
 /**
@@ -722,11 +723,42 @@ public class SanFerminSignature implements Protocol{
       return candidates.get(idx);
     }
 
-    public List<SanFerminNode> pickNextNodes(int level, int howMany) {
-      if (howMany > 1)
-        throw new Error("can't handle that at the moment");
+      public List<SanFerminNode> pickNextNodes(int level, int howMany) {
+            return Collections.singletonList(getExactCandidateNode(level));
+      }
 
-      return Collections.singletonList(getExactCandidateNode(level));
+      public List<SanFerminNode> pickNextNodes2(int level, int howMany) {
+        List<SanFerminNode> candidateSet =
+                new ArrayList<>(getCandidateSet(level));
+        int idx = candidateSet.indexOf(this.node);
+        if (idx == -1)
+            throw new IllegalStateException("that should not happen");
+
+        List<SanFerminNode> newList = new ArrayList<>();
+        BitSet set = usedNodes.getOrDefault(level, new BitSet());
+        // add the "correct" one first if not already
+        if (set.get(idx)) {
+            newList.add(candidateSet.get(idx));
+            candidateSet.remove(idx);
+            set.set(idx);
+        }
+
+        if (candidateSet.size() == 0) {
+            return newList;
+        }
+        // add the rest if not taken already
+        List<SanFerminNode> availableNodes =
+                IntStream.range(0,candidateSet.size()).filter(node -> !set.get(node))
+                        .mapToObj(i -> {
+                          set.set(i); // register it
+                          return candidateSet.get(i);
+                        }).collect(Collectors.toList());
+
+
+
+        Collections.shuffle(availableNodes);
+
+        return newList;
     }
   }
 
