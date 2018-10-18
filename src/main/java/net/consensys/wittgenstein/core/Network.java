@@ -158,6 +158,16 @@ public class Network<TN extends Node> {
       return size;
     }
 
+    public int sizeAt(int time) {
+      int size = 0;
+      Envelope<?> cur = peek(time);
+      while (cur != null) {
+        size++;
+        cur = cur.getNextSameTime();
+      }
+      return size;
+    }
+
     void cleanup() {
       while (!msgsBySlot.isEmpty() && time >= msgsBySlot.get(0).endTime) {
         msgsBySlot.remove(0);

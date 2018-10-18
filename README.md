@@ -22,7 +22,7 @@ gradle clean shadowJar
 ## How to run it
 Once built:
 
-java -Xms6000m -Xmx12048m -classpath build/libs/wittgenstein-all.jar net.consensys.wittgenstein.protocol.OptimisticP2PSignature
+
 
 But you're actually supposed to write code to implement your specific scenarios today. An obvious improvement
  would be to be able to define scenarios reusable between protocols.

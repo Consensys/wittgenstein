@@ -456,8 +456,8 @@ public class CasperIMD {
       Attester n = new Attester(genesis);
       attesters.add(n);
       network.addNode(n);
-      network.registerPeriodicTask(n.getPeriodicTask(), SLOT_DURATION * (i + 1) + 4000,
-          SLOT_DURATION * cycleLength, n);
+      network.registerPeriodicTask(n.getPeriodicTask(),
+          SLOT_DURATION * (1 + i % cycleLength) + 4000, SLOT_DURATION * cycleLength, n);
     }
 
   }
