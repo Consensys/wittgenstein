@@ -309,7 +309,7 @@ public class SanFerminSignature {
         return;
       }
 
-      // just send the value but dont aggregate it
+      // just send the value but don't aggregate it
       // OPTIMISTIC reply
       if (isSwapping) {
         this.sendSwapReply(node, Status.OK, request.level, this.aggValue);
@@ -733,7 +733,7 @@ public class SanFerminSignature {
 
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
-    int nodeCt = 1024;
+    int nodeCt = 32768 / 2;
     SanFerminSignature ps1 = new SanFerminSignature(nodeCt, nodeCt, 2, 48, 300, 1, false);
 
     ps1.network.setNetworkLatency(nl);
@@ -749,13 +749,14 @@ public class SanFerminSignature {
     ps1.init();
 
     StatsHelper.SimpleStats s;
+    final long limit = 6000;
     do {
       ps1.network.runMs(10);
       s = StatsHelper.getStatsOn(ps1.allNodes, n -> ((SanFerminNode) n).aggValue);
       series1min.addLine(new Graph.ReportLine(ps1.network.time, s.min));
       series1max.addLine(new Graph.ReportLine(ps1.network.time, s.max));
       series1avg.addLine(new Graph.ReportLine(ps1.network.time, s.avg));
-    } while (ps1.network.time < 4000);
+    } while (ps1.network.time < limit);
 
     try {
       graph.save(new File("/tmp/graph.png"));
@@ -768,6 +769,11 @@ public class SanFerminSignature {
         .println("bytes rcvd: " + StatsHelper.getStatsOn(ps1.allNodes, Node::getBytesReceived));
     System.out.println("msg sent: " + StatsHelper.getStatsOn(ps1.allNodes, Node::getMsgSent));
     System.out.println("msg rcvd: " + StatsHelper.getStatsOn(ps1.allNodes, Node::getMsgReceived));
+    System.out.println("done at: " + StatsHelper.getStatsOn(ps1.network.allNodes, n -> {
+      long val = ((SanFerminNode) n).doneAt;
+      return val == 0 ? limit : val;
+    }));
+
   }
 
 

@@ -20,6 +20,27 @@ public class CasperIMDTest {
 
 
   @Test
+  public void testInit() {
+    ci.network.time = 0;
+    ci.init(ci.new ByzBlockProducerWF(0, ci.genesis));
+    Assert.assertEquals(5 * 80, ci.attestersCount);
+    Assert.assertEquals(0, ci.network.msgs.sizeAt(1));
+    Assert.assertEquals("One block producer start at second 8", 1, ci.network.msgs.sizeAt(8000));
+    Assert.assertEquals("Next block producer", 1, ci.network.msgs.sizeAt(16000));
+    Assert.assertEquals("Next block producer", 1, ci.network.msgs.sizeAt(24000));
+    Assert.assertEquals("Next block producer", 1, ci.network.msgs.sizeAt(32000));
+    Assert.assertEquals("Next block producer", 1, ci.network.msgs.sizeAt(40000));
+    Assert.assertEquals("Done", 0, ci.network.msgs.sizeAt(48000));
+
+    Assert.assertEquals("The 80 attesters starts at second 12", 80, ci.network.msgs.sizeAt(12000));
+    Assert.assertEquals("Next set of attesters", 80, ci.network.msgs.sizeAt(20000));
+    Assert.assertEquals("Next set of attesters", 80, ci.network.msgs.sizeAt(28000));
+    Assert.assertEquals("Next set of attesters", 80, ci.network.msgs.sizeAt(36000));
+    Assert.assertEquals("Next set of attesters", 80, ci.network.msgs.sizeAt(44000));
+    Assert.assertEquals("No more attesters, we will loop", 0, ci.network.msgs.sizeAt(52000));
+  }
+
+  @Test
   public void testMerge() {
     CasperIMD.CasperBlock b = bp1.buildBlock(bp1.head, 1);
     bp1.onBlock(b);
