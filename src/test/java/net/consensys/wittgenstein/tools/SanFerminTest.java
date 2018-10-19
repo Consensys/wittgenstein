@@ -39,4 +39,16 @@ public class SanFerminTest {
         Assert.assertFalse(set0.contains(allNodes.get(3)));
     }
 
+    @Test
+    public void testPickNextNodes() {
+        Node n1 = allNodes.get(1);
+        SanFerminHelper helper = new SanFerminHelper(n1,allNodes);
+
+        List<Node> set2 = helper.pickNextNodes(2,10);
+        Assert.assertTrue(set2.contains(allNodes.get(0)));
+
+        List<Node> set22 = helper.nextCandidateSet(10);
+        Assert.assertEquals(set2,set22);
+    }
+
 }

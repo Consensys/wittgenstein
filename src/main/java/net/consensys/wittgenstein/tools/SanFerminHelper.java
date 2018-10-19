@@ -10,34 +10,42 @@ import java.util.stream.IntStream;
 
 /**
  * SanFerminHelper is a helper that computes some useful information needed in
- * San Fermin-like protocols. A SanFerminHelper can keep track at which level
- * one node is to propose a new candidate set. It can also compute the set of
+ * San Fermin-like protocols. A SanFerminHelper keeps track of already
+ * contacted nodes at each level.
+ * It can also compute the set of
  * candidates to contact at a given level, and computes the set of a given node
  * at a given level.
  */
-public class SanFerminHelper {
+public class SanFerminHelper<T extends Node> {
 
-    final Node n;
+    private final T n;
     /**
      * The id of the node in binary
      */
-    final String binaryId;
+    private final String binaryId;
     /**
      * List of all nodes
      */
-    final List<Node> allNodes;
+    private final List<T> allNodes;
     /**
      * List of nodes we already selected at different levels
      */
-    final HashMap<Integer, BitSet> usedNodes;
+    private final HashMap<Integer, BitSet> usedNodes;
 
+    /**
+     * currentLevel tracks at which level this SanFerminHelper is. It is
+     * useful when using the helper to "conduct" the protocol using the method
+     * `nextCandidateSet`
+     */
+    public int currentLevel;
 
-    public SanFerminHelper(Node n, List<Node> allNodes) {
+    public SanFerminHelper(T n, List<T> allNodes) {
         this.n = n;
-        this.binaryId = leftPadWithZeroes(Integer.toBinaryString(n.nodeId),
-                MoreMath.log2(allNodes.size()));
+        this.binaryId = toBinaryID(n,allNodes.size());
         this.allNodes = allNodes;
-        this.usedNodes = new HashMap<Integer,BitSet>();
+        this.usedNodes = new HashMap<>();
+        this.currentLevel =  MoreMath.log2(allNodes.size());
+
     }
 
     /**
@@ -46,7 +54,7 @@ public class SanFerminHelper {
      * @param level
      * @return
      */
-    public List<Node> getOwnSet(int level) {
+    public List<T> getOwnSet(int level) {
         int min = 0;
         int max = allNodes.size();
         for (int currLevel = 0; currLevel <= level && min <= max; currLevel++) {
@@ -75,7 +83,7 @@ public class SanFerminHelper {
      * @param level
      * @return
      */
-    public List<Node> getCandidateSet(int level) {
+    public List<T> getCandidateSet(int level) {
         int min = 0;
         int max = allNodes.size();
         int currLevel = 0;
@@ -112,13 +120,13 @@ public class SanFerminHelper {
      * @param level
      * @return
      */
-    public Node getExactCandidateNode(int level) {
-        List<Node> own = this.getOwnSet(level);
+    public T getExactCandidateNode(int level) {
+        List<T> own = this.getOwnSet(level);
         int idx = own.indexOf(this.n);
         if (idx == -1)
             throw new IllegalStateException("that should not happen");
 
-        List<Node> candidates = this.getCandidateSet(level);
+        List<T> candidates = this.getCandidateSet(level);
         if (idx >= candidates.size())
             throw new IllegalStateException("that also should not happen");
 
@@ -135,16 +143,19 @@ public class SanFerminHelper {
      * @param howMany
      * @return
      */
-    public List<Node> pickNextNodes(int level, int howMany) {
-        List<Node> candidateSet = new ArrayList<>(getCandidateSet(level));
-        int idx = candidateSet.indexOf(this.n);
-        if (idx == -1)
+    public List<T> pickNextNodes(int level, int howMany) {
+        List<T> candidateSet = new ArrayList<>(getCandidateSet(level));
+
+        List<T> ownSet = getOwnSet(level);
+        int idx = ownSet.indexOf(this.n);
+        if (idx == -1 || ownSet.size() < idx)
             throw new IllegalStateException("that should not happen");
 
-        List<Node> newList = new ArrayList<>();
+
+        List<T> newList = new ArrayList<>();
         BitSet set = usedNodes.getOrDefault(level, new BitSet());
         // add the "correct" one first if not already
-        if (set.get(idx)) {
+        if (!set.get(idx)) {
             newList.add(candidateSet.get(idx));
             candidateSet.remove(idx);
             set.set(idx);
@@ -154,19 +165,32 @@ public class SanFerminHelper {
             return newList;
         }
         // add the rest if not taken already
-        List<Node> availableNodes =
-                IntStream.range(0,candidateSet.size()).filter(node -> !set.get(node))
+        newList.addAll( IntStream.range(0,candidateSet.size())
+                        // only take nodes not seen before
+                        .filter(node -> !set.get(node))
+                        // less than howMany
+                        .limit(howMany)
+                        // map to the nodes and set them seen
                         .mapToObj(i -> {
                             set.set(i); // register it
                             return candidateSet.get(i);
-                        }).collect(Collectors.toList());
+                        }).collect(Collectors.toList()));
 
 
-
-        Collections.shuffle(availableNodes);
+        Collections.shuffle(newList);
         return newList;
     }
 
+    /**
+     * nextCandidateSet decreases the common length prefix and returns at
+     * maximum `howMany` nodes in the new candidate set. One can pick others
+     * unpicked nodes for this level using
+     * `pickNextNodes(helper.currentLevel,howMany)`.
+     */
+    public List<T> nextCandidateSet(int howMany) {
+        this.currentLevel--;
+        return pickNextNodes(this.currentLevel,howMany);
+    }
     /**
      * Simply pads the binary string id to the exact length = n where N = 2^n
      */
@@ -178,6 +202,12 @@ public class SanFerminHelper {
         String padding = sb.toString();
         String paddedString = padding.substring(originalString.length()) + originalString;
         return paddedString;
+    }
+
+    public static String toBinaryID(Node node, int setSize) {
+        int log2 = MoreMath.log2(setSize);
+        return  leftPadWithZeroes(Integer.toBinaryString(node.nodeId),
+                log2);
     }
 
 }
