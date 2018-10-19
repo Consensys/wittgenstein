@@ -7,7 +7,6 @@ import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.tools.Graph;
 import net.consensys.wittgenstein.tools.SanFerminHelper;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -107,8 +106,8 @@ public class SanFerminSignature {
     }
 
     // register the sanfermin helper with all the nodes
-    this.allNodes.stream().forEach(n -> n.candidateTree =
-            new SanFerminHelper<SanFerminNode>(n, allNodes));
+    this.allNodes.stream().forEach(
+        n -> n.candidateTree = new SanFerminHelper<SanFerminNode>(n, allNodes));
 
     finishedNodes = new ArrayList<>();
   }
@@ -245,7 +244,7 @@ public class SanFerminSignature {
     public SanFerminNode(NodeBuilder nb) {
       super(nb);
 
-      this.binaryId = SanFerminHelper.toBinaryID(this,nodeCount);
+      this.binaryId = SanFerminHelper.toBinaryID(this, nodeCount);
       this.usedCandidates = new HashMap<>();
       this.done = false;
       this.thresholdDone = false;
@@ -276,8 +275,7 @@ public class SanFerminSignature {
         } else {
           this.sendSwapReply(node, Status.NO, 0);
           // it's a value we might want to keep for later!
-          boolean isCandidate =
-                  candidateTree.getCandidateSet(request.level).contains(node);
+          boolean isCandidate = candidateTree.getCandidateSet(request.level).contains(node);
           boolean isValidSig = true; // as always :)
           if (isCandidate && isValidSig) {
             // it is a good request we can save for later!
@@ -295,8 +293,7 @@ public class SanFerminSignature {
       }
 
       // accept if it is a valid swap !
-      boolean isCandidate =
-              candidateTree.getCandidateSet(currentPrefixLength).contains(node);
+      boolean isCandidate = candidateTree.getCandidateSet(currentPrefixLength).contains(node);
       boolean goodLevel = request.level == currentPrefixLength;
       boolean isValidSig = true; // as always :)
       if (isCandidate && goodLevel && isValidSig) {
@@ -325,8 +322,7 @@ public class SanFerminSignature {
           // we dont want to aggregate twice so we have to check
           // pendingNode (acts like a lock).
           if (!this.pendingNodes.contains(from.nodeId)) {
-            boolean isCandidate =
-                    candidateTree.getCandidateSet(currentPrefixLength).contains(from);
+            boolean isCandidate = candidateTree.getCandidateSet(currentPrefixLength).contains(from);
             boolean goodLevel = reply.level == currentPrefixLength;
             boolean isValidSig = true; // as always :)
             if (isCandidate && goodLevel && isValidSig) {
@@ -346,9 +342,8 @@ public class SanFerminSignature {
           print(" received SwapReply NO from " + from.binaryId);
           // only try the next one if this is an expected reply
           if (this.pendingNodes.contains(from.nodeId)) {
-             List<SanFerminNode> nodes =
-                     this.candidateTree.pickNextNodes(this.currentPrefixLength,
-                    candidateCount);
+            List<SanFerminNode> nodes =
+                this.candidateTree.pickNextNodes(this.currentPrefixLength, candidateCount);
             sendToNodes(nodes);
           } else {
             print(" UNEXPECTED NO reply from " + from.binaryId);
@@ -360,9 +355,8 @@ public class SanFerminSignature {
     }
 
     /**
-     * sendToNodes sends a swap request to the given nodes. It attaches a
-     * timeout to the request. If no SwapReply has been received before timeout,
-     * sendToNodes() will be called again.
+     * sendToNodes sends a swap request to the given nodes. It attaches a timeout to the request. If
+     * no SwapReply has been received before timeout, sendToNodes() will be called again.
      */
     private void sendToNodes(List<SanFerminNode> candidates) {
       // TODO move to fully multiple node mode ! but git commit before
@@ -395,8 +389,7 @@ public class SanFerminSignature {
           // that means we haven't got a successful reply for that
           // level so we try other nodes
           List<SanFerminNode> newList =
-                  this.candidateTree.pickNextNodes(this.currentPrefixLength,
-                  candidateCount);
+              this.candidateTree.pickNextNodes(this.currentPrefixLength, candidateCount);
           sendToNodes(newList);
         }
       }, network.time + replyTimeout, SanFerminNode.this);
@@ -446,8 +439,7 @@ public class SanFerminSignature {
         goNextLevel();
         return;
       }
-      List<SanFerminNode> newList =
-              this.candidateTree.nextCandidateSet(candidateCount);
+      List<SanFerminNode> newList = this.candidateTree.nextCandidateSet(candidateCount);
       this.sendToNodes(newList);
     }
 
@@ -555,7 +547,6 @@ public class SanFerminSignature {
       return 4 + signatureSize;
     }
   }
-
 
 
 

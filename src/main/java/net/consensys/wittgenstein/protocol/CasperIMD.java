@@ -687,7 +687,7 @@ public class CasperIMD {
     Graph.Series txsR = new Graph.Series("tx count");
     graph.addSerie(txsR);
     Graph.Series txsNR = new Graph.Series("tx count - not random on ties");
-   // graph.addSerie(txsNR);
+    // graph.addSerie(txsNR);
 
     for (int delay = -2000; delay < 14000; delay += 1000) {
       runSet(delay, false, txsNR);
