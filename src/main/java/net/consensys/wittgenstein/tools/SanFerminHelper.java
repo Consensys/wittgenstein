@@ -112,11 +112,11 @@ public class SanFerminHelper<T extends Node> {
     List<T> own = this.getOwnSet(level);
     int idx = own.indexOf(this.n);
     if (idx == -1)
-      throw new IllegalStateException("that should not happen");
+      throw new IllegalStateException();
 
     List<T> candidates = this.getCandidateSet(level);
     if (idx >= candidates.size())
-      throw new IllegalStateException("that also should not happen");
+      throw new IllegalStateException();
 
     return candidates.get(idx);
   }
@@ -133,8 +133,7 @@ public class SanFerminHelper<T extends Node> {
     List<T> ownSet = getOwnSet(level);
     int idx = ownSet.indexOf(this.n);
     if (idx == -1 || ownSet.size() < idx)
-      throw new IllegalStateException("that should not happen");
-
+      throw new IllegalStateException();
 
     List<T> newList = new ArrayList<>();
     BitSet set = usedNodes.getOrDefault(level, new BitSet());
