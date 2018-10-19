@@ -6,7 +6,6 @@ import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.tools.Graph;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -18,7 +17,8 @@ import java.util.*;
  * of its direct peers Sends, every x milliseconds, to one of its peers a set of missing signatures
  * Runs in parallel a task to validate the signatures sets it has received.
  */
-@SuppressWarnings("WeakerAccess") public class GSFSignature {
+@SuppressWarnings("WeakerAccess")
+public class GSFSignature {
   /**
    * The nuumber of nodes in the network
    */
@@ -51,7 +51,7 @@ import java.util.*;
   final Node.NodeBuilder nb;
 
   public GSFSignature(int nodeCount, int threshold, int connectionCount, int pairingTime,
-    boolean doubleAggregateStrategy) {
+      boolean doubleAggregateStrategy) {
     this.nodeCount = nodeCount;
     this.threshold = threshold;
     this.connectionCount = connectionCount;
@@ -62,11 +62,12 @@ import java.util.*;
     this.nb = new Node.NodeBuilderWithRandomPosition(network.rd);
   }
 
-  @Override public String toString() {
-    return "GSFSignature, " + "nodes=" + nodeCount + ", threshold=" + threshold
-      + ", connections=" + connectionCount + ", pairing=" + pairingTime
-      + ", doubleAggregate=" + doubleAggregateStrategy + ", timeout="
-      + timeoutPerLevelMs + "ms, periodTime=" + periodDurationMs + "ms";
+  @Override
+  public String toString() {
+    return "GSFSignature, " + "nodes=" + nodeCount + ", threshold=" + threshold + ", connections="
+        + connectionCount + ", pairing=" + pairingTime + ", doubleAggregate="
+        + doubleAggregateStrategy + ", timeout=" + timeoutPerLevelMs + "ms, periodTime="
+        + periodDurationMs + "ms";
   }
 
   static class SendSigs extends Network.Message<GSFNode> {
@@ -80,12 +81,14 @@ import java.util.*;
     }
 
 
-    @Override public int size() {
+    @Override
+    public int size() {
       return size;
     }
 
 
-    @Override public void action(GSFNode from, GSFNode to) {
+    @Override
+    public void action(GSFNode from, GSFNode to) {
       to.onNewSig(sigs);
     }
   }
@@ -134,8 +137,8 @@ import java.util.*;
       BitSet verifiedSignatures = new BitSet(); // The signatures verified in this level
 
       /**
-       * We're going to contact all nodes, one after the other. That's our position
-       *  in the peers' list.
+       * We're going to contact all nodes, one after the other. That's our position in the peers'
+       * list.
        */
       int posInLevel = 0;
 
@@ -145,8 +148,8 @@ import java.util.*;
       int objective;
 
       /**
-       * Build a level 0 object. At level 0 need (and have) only our own signature.
-       * We have only one peer to contact.
+       * Build a level 0 object. At level 0 need (and have) only our own signature. We have only one
+       * peer to contact.
        */
       public SFLevel() {
         level = 0;
@@ -179,7 +182,7 @@ import java.util.*;
 
       boolean hasStarted() {
         return network.time > level * timeoutPerLevelMs
-          || verifiedSignatures.cardinality() == maxSigsInLevel();
+            || verifiedSignatures.cardinality() == maxSigsInLevel();
       }
 
       void doCycle() {
@@ -314,7 +317,7 @@ import java.util.*;
         toVerify.remove(best);
         final BitSet tBest = best;
         network.registerTask(() -> GSFNode.this.updateVerifiedSignatures(tBest),
-          network.time + pairingTime * 2, GSFNode.this);
+            network.time + pairingTime * 2, GSFNode.this);
       }
     }
 
@@ -340,16 +343,18 @@ import java.util.*;
           // There is at least one signature we don't have yet
           final BitSet tBest = agg;
           network.registerTask(() -> GSFNode.this.updateVerifiedSignatures(tBest),
-            network.time + pairingTime * 2, GSFNode.this);
+              network.time + pairingTime * 2, GSFNode.this);
         }
       }
     }
 
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
       return "P2PSigNode{" + "nodeId=" + nodeId + ", doneAt=" + doneAt + ", sigs="
-        + verifiedSignatures.cardinality() + ", msgReceived=" + msgReceived + ", msgSent=" + msgSent
-        + ", KBytesSent=" + bytesSent / 1024 + ", KBytesReceived=" + bytesReceived / 1024 + '}';
+          + verifiedSignatures.cardinality() + ", msgReceived=" + msgReceived + ", msgSent="
+          + msgSent + ", KBytesSent=" + bytesSent / 1024 + ", KBytesReceived="
+          + bytesReceived / 1024 + '}';
     }
   }
 
@@ -362,7 +367,7 @@ import java.util.*;
       n.initLevel();
       network.registerPeriodicTask(n::doCycle, 1, periodDurationMs, n);
       network.registerConditionalTask(n::checkSigs, 1, pairingTime, n, () -> !n.toVerify.isEmpty(),
-        () -> !n.done);
+          () -> !n.done);
     }
   }
 
@@ -374,7 +379,7 @@ import java.util.*;
     ps1.network.setNetworkLatency(nl);
     String desc = ps1.toString();
     Graph graph = new Graph("number of signatures per time (" + desc + ")", "time in ms",
-      "number of signatures");
+        "number of signatures");
     Graph.Series series1min = new Graph.Series("signatures count - worse node");
     Graph.Series series1max = new Graph.Series("signatures count - best node");
     Graph.Series series1avg = new Graph.Series("signatures count - average");
@@ -389,7 +394,7 @@ import java.util.*;
     do {
       ps1.network.runMs(10);
       s = StatsHelper.getStatsOn(ps1.network.allNodes,
-        n -> ((GSFNode) n).verifiedSignatures.cardinality());
+          n -> ((GSFNode) n).verifiedSignatures.cardinality());
       series1min.addLine(new Graph.ReportLine(ps1.network.time, s.min));
       series1max.addLine(new Graph.ReportLine(ps1.network.time, s.max));
       series1avg.addLine(new Graph.ReportLine(ps1.network.time, s.avg));
@@ -401,16 +406,16 @@ import java.util.*;
       System.err.println("Can't generate the graph: " + e.getMessage());
     }
 
+    System.out
+        .println("bytes sent: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getBytesSent));
     System.out.println(
-      "bytes sent: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getBytesSent));
+        "bytes rcvd: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getBytesReceived));
+    System.out
+        .println("msg sent: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getMsgSent));
+    System.out
+        .println("msg rcvd: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getMsgReceived));
     System.out.println(
-      "bytes rcvd: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getBytesReceived));
-    System.out.println(
-      "msg sent: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getMsgSent));
-    System.out.println(
-      "msg rcvd: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getMsgReceived));
-    System.out.println(
-      "done at: " + StatsHelper.getStatsOn(ps1.network.allNodes, n -> ((GSFNode) n).doneAt));
+        "done at: " + StatsHelper.getStatsOn(ps1.network.allNodes, n -> ((GSFNode) n).doneAt));
   }
 
 
