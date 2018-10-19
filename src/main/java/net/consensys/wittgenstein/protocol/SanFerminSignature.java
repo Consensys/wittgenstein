@@ -6,11 +6,12 @@ import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.tools.Graph;
+import net.consensys.wittgenstein.tools.SanFerminHelper;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 
 /**
@@ -70,10 +71,6 @@ public class SanFerminSignature {
    */
   int candidateCount;
 
-  /**
-   * useCnadidateTree tells whether we should use the tree way of selecting the new nodes.
-   */
-  boolean useCandidateTree;
 
   /**
    * allNodes represent the full list of nodes present in the system. NOTE: This assumption that a
@@ -109,10 +106,9 @@ public class SanFerminSignature {
       this.network.addNode(n);
     }
 
-    // compute candidate set once all peers have been created
-    for (SanFerminNode n : allNodes)
-      n.computeCandidateSets();
-
+    // register the sanfermin helper with all the nodes
+    this.allNodes.stream().forEach(n -> n.candidateTree =
+            new SanFerminHelper<SanFerminNode>(n, allNodes));
 
     finishedNodes = new ArrayList<>();
   }
@@ -163,20 +159,6 @@ public class SanFerminSignature {
   }
 
   /**
-   * Simply pads the binary string id to the exact length = n where N = 2^n
-   */
-  public static String leftPadWithZeroes(String originalString, int length) {
-    StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < length; i++) {
-      sb.append("0");
-    }
-    String padding = sb.toString();
-    String paddedString = padding.substring(originalString.length()) + originalString;
-    return paddedString;
-  }
-
-
-  /**
    * SanFerminNode is a node that carefully selects the peers he needs to contact to get the final
    * aggregated result
    */
@@ -193,12 +175,8 @@ public class SanFerminSignature {
      */
     public int currentPrefixLength;
 
-    CandidateTree candidateTree;
-    /**
-     * List of nodes that are candidates to swap with this node sorted through different prefix
-     * length.
-     */
-    HashMap<Integer, List<SanFerminNode>> candidateSets;
+    SanFerminHelper<SanFerminNode> candidateTree;
+
     /**
      * BitSet to save which node have we sent swaprequest so far
      */
@@ -267,8 +245,7 @@ public class SanFerminSignature {
     public SanFerminNode(NodeBuilder nb) {
       super(nb);
 
-      this.binaryId = leftPadWithZeroes(Integer.toBinaryString(this.nodeId), powerOfTwo);
-      this.candidateSets = new HashMap<>();
+      this.binaryId = SanFerminHelper.toBinaryID(this,nodeCount);
       this.usedCandidates = new HashMap<>();
       this.done = false;
       this.thresholdDone = false;
@@ -280,7 +257,6 @@ public class SanFerminSignature {
       this.currentPrefixLength = powerOfTwo;
       this.signatureCache = new HashMap<>();
       this.futurSigs = new HashMap<>();
-      this.candidateTree = new CandidateTree(allNodes, this);
     }
 
     /**
@@ -300,7 +276,8 @@ public class SanFerminSignature {
         } else {
           this.sendSwapReply(node, Status.NO, 0);
           // it's a value we might want to keep for later!
-          boolean isCandidate = candidateSets.get(request.level).contains(node);
+          boolean isCandidate =
+                  candidateTree.getCandidateSet(request.level).contains(node);
           boolean isValidSig = true; // as always :)
           if (isCandidate && isValidSig) {
             // it is a good request we can save for later!
@@ -318,7 +295,8 @@ public class SanFerminSignature {
       }
 
       // accept if it is a valid swap !
-      boolean isCandidate = candidateSets.get(currentPrefixLength).contains(node);
+      boolean isCandidate =
+              candidateTree.getCandidateSet(currentPrefixLength).contains(node);
       boolean goodLevel = request.level == currentPrefixLength;
       boolean isValidSig = true; // as always :)
       if (isCandidate && goodLevel && isValidSig) {
@@ -347,7 +325,8 @@ public class SanFerminSignature {
           // we dont want to aggregate twice so we have to check
           // pendingNode (acts like a lock).
           if (!this.pendingNodes.contains(from.nodeId)) {
-            boolean isCandidate = candidateSets.get(currentPrefixLength).contains(from);
+            boolean isCandidate =
+                    candidateTree.getCandidateSet(currentPrefixLength).contains(from);
             boolean goodLevel = reply.level == currentPrefixLength;
             boolean isValidSig = true; // as always :)
             if (isCandidate && goodLevel && isValidSig) {
@@ -367,7 +346,10 @@ public class SanFerminSignature {
           print(" received SwapReply NO from " + from.binaryId);
           // only try the next one if this is an expected reply
           if (this.pendingNodes.contains(from.nodeId)) {
-            tryNextNode();
+             List<SanFerminNode> nodes =
+                     this.candidateTree.pickNextNodes(this.currentPrefixLength,
+                    candidateCount);
+            sendToNodes(nodes);
           } else {
             print(" UNEXPECTED NO reply from " + from.binaryId);
           }
@@ -378,13 +360,12 @@ public class SanFerminSignature {
     }
 
     /**
-     * tryNextNode simply picks the next eligible candidate from the list and send a swap request to
-     * it. It attaches a timeout to the request. If no SwapReply has been received before timeout,
-     * tryNextNode() will be called again.
+     * sendToNodes sends a swap request to the given nodes. It attaches a
+     * timeout to the request. If no SwapReply has been received before timeout,
+     * sendToNodes() will be called again.
      */
-    private void tryNextNode() {
+    private void sendToNodes(List<SanFerminNode> candidates) {
       // TODO move to fully multiple node mode ! but git commit before
-      List<SanFerminNode> candidates = this.pickNextNodes();
       if (candidates.size() == 0) {
         // when malicious actors are introduced or some nodes are
         // failing this case can happen. In that case, the node
@@ -412,8 +393,11 @@ public class SanFerminSignature {
         if (!SanFerminNode.this.done && SanFerminNode.this.currentPrefixLength == currLevel) {
           print("TIMEOUT of SwapRequest at level " + currLevel);
           // that means we haven't got a successful reply for that
-          // level so we try another node
-          tryNextNode();
+          // level so we try other nodes
+          List<SanFerminNode> newList =
+                  this.candidateTree.pickNextNodes(this.currentPrefixLength,
+                  candidateCount);
+          sendToNodes(newList);
         }
       }, network.time + replyTimeout, SanFerminNode.this);
 
@@ -462,7 +446,9 @@ public class SanFerminSignature {
         goNextLevel();
         return;
       }
-      this.tryNextNode();
+      List<SanFerminNode> newList =
+              this.candidateTree.nextCandidateSet(candidateCount);
+      this.sendToNodes(newList);
     }
 
     private void sendSwapReply(SanFerminNode n, Status s, int value) {
@@ -474,77 +460,7 @@ public class SanFerminSignature {
       network.send(r, SanFerminNode.this, Collections.singleton(n));
     }
 
-    /**
-     * computeCandidateSets computes the set of nodes that are eligible for swapping with, at each
-     * level. NOTE: This function assumes knowledge of the whole graph of node. See "allNodes" field
-     * for further discussion about this assumption.
-     */
-    private void computeCandidateSets() {
-      for (SanFerminNode node : allNodes) {
-        if (node.nodeId == this.nodeId) {
-          continue; // we skip ourself
-        }
-        int length = LengthLCP(this, node);
-        List<SanFerminNode> list = candidateSets.getOrDefault(length, new LinkedList<>());
-        list.add(node);
-        candidateSets.put(length, list);
-      }
-      if (shuffledLists)
-        candidateSets.replaceAll((k, v) -> {
-          Collections.shuffle(v, network.rd);
-          return v;
-        });
 
-      for (Map.Entry<Integer, List<SanFerminNode>> entry : candidateSets.entrySet()) {
-        int size = entry.getValue().size();
-        usedCandidates.put(entry.getKey(), new BitSet(size));
-      }
-    }
-
-    /**
-     * One big question is which node to chose amongst the list so that it minimizes the number of
-     * "NO" replies,ie. so that it minimizes the number of nodes who contact another node who
-     * already swapped at this level.
-     */
-    private List<SanFerminNode> pickNextNodes() {
-      if (useCandidateTree)
-        return candidateTree.pickNextNodes(this.currentPrefixLength, candidateCount);
-      return pickNextNode1();
-    }
-
-    /**
-     * This implementation randomly shuffle the list and pick the first one, and perform the same
-     * steps for further nodes if the first one does not work. There are tons of ways to perform
-     * this decision-making, some which brings better guarantees probably. This PoC chooses to use a
-     * random assignement, as most often, uniformity performs better in computer science.
-     *
-     * @return
-     */
-    private List<SanFerminNode> pickNextNode1() {
-      List<SanFerminNode> list = candidateSets.getOrDefault(currentPrefixLength, new ArrayList<>());
-
-      // iterate over bitset to find non-asked node yet
-      BitSet set = usedCandidates.getOrDefault(currentPrefixLength, new BitSet(0));
-      // we expect to choose candidateCount number of candidates
-      List<SanFerminNode> selectedCandidates = new ArrayList<>(candidateCount);
-      boolean found = false;
-      for (int i = 0; i < list.size() && selectedCandidates.size() <= candidateCount; i++) {
-        if (set.get(i))
-          continue;
-        found = true;
-        selectedCandidates.add(list.get(i));
-        set.set(i);
-        break;
-      }
-      if (!found) {
-        // This may happen in case the number of nodes is not a power
-        // of two, or more generally if the node already tried to
-        // contact all of his eligible peers already
-        return Collections.emptyList();
-      }
-      usedCandidates.put(currentPrefixLength, set);
-      return selectedCandidates;
-    }
 
     /**
      * Transition prevents any more aggregation at this level, and launch the "verification routine"
@@ -640,127 +556,7 @@ public class SanFerminSignature {
     }
   }
 
-  static class CandidateTree {
-    /**
-     * nodeId of the node managing this candidate tree
-     */
-    SanFerminNode node;
-    String binaryId;
-    List<SanFerminNode> allNodes;
-    HashMap<Integer, BitSet> usedNodes;
 
-    public CandidateTree(List<SanFerminNode> nodes, SanFerminNode node) {
-      this.node = node;
-      this.binaryId = node.binaryId;
-      this.allNodes = nodes;
-      this.usedNodes = new HashMap<>();
-    }
-
-    public List<SanFerminNode> getOwnSet(int level) {
-      int min = 0;
-      int max = allNodes.size();
-      for (int currLevel = 0; currLevel <= level && min <= max; currLevel++) {
-        int m = Math.floorDiv((max + min), 2);
-        if (binaryId.charAt(currLevel) == '0') {
-          // reduce the interval to the left
-          max = m;
-        } else if (binaryId.charAt(currLevel) == '1') {
-          // reduce interval to the right
-          min = m;
-        }
-        if (max == min)
-          break;
-
-        if (max - 1 == 0 || min == allNodes.size())
-          break;
-      }
-
-      return allNodes.subList(min, max);
-    }
-
-    public List<SanFerminNode> getCandidateSet(int level) {
-      int min = 0;
-      int max = allNodes.size();
-      int currLevel = 0;
-      for (currLevel = 0; currLevel <= level && min <= max; currLevel++) {
-        int m = Math.floorDiv((max + min), 2);
-        if (binaryId.charAt(currLevel) == '0') {
-          if (currLevel == level) {
-            // when we are at the right level, swap the order
-            min = m;
-          } else {
-            max = m;
-          }
-
-        } else if (binaryId.charAt(currLevel) == '1') {
-          if (currLevel == level) {
-            // when we are at the right level, swap the order
-            max = m;
-          } else {
-            min = m;
-          }
-        }
-        if (max == min)
-          break;
-
-        if (max - 1 == 0 || min == allNodes.size())
-          break;
-      }
-      return allNodes.subList(min, max);
-    }
-
-    public SanFerminNode getExactCandidateNode(int level) {
-      List<SanFerminNode> own = this.getOwnSet(level);
-      int idx = own.indexOf(this.node);
-      if (idx == -1)
-        throw new IllegalStateException("that should not happen");
-
-      List<SanFerminNode> candidates = this.getCandidateSet(level);
-      if (idx >= candidates.size())
-        // well it can happen for N != 2^n
-        throw new IllegalStateException("that also should not happen");
-
-      return candidates.get(idx);
-    }
-
-      public List<SanFerminNode> pickNextNodes(int level, int howMany) {
-            return Collections.singletonList(getExactCandidateNode(level));
-      }
-
-      public List<SanFerminNode> pickNextNodes2(int level, int howMany) {
-        List<SanFerminNode> candidateSet =
-                new ArrayList<>(getCandidateSet(level));
-        int idx = candidateSet.indexOf(this.node);
-        if (idx == -1)
-            throw new IllegalStateException("that should not happen");
-
-        List<SanFerminNode> newList = new ArrayList<>();
-        BitSet set = usedNodes.getOrDefault(level, new BitSet());
-        // add the "correct" one first if not already
-        if (set.get(idx)) {
-            newList.add(candidateSet.get(idx));
-            candidateSet.remove(idx);
-            set.set(idx);
-        }
-
-        if (candidateSet.size() == 0) {
-            return newList;
-        }
-        // add the rest if not taken already
-        List<SanFerminNode> availableNodes =
-                IntStream.range(0,candidateSet.size()).filter(node -> !set.get(node))
-                        .mapToObj(i -> {
-                          set.set(i); // register it
-                          return candidateSet.get(i);
-                        }).collect(Collectors.toList());
-
-
-
-        Collections.shuffle(availableNodes);
-
-        return newList;
-    }
-  }
 
 
   public static void sigsPerTime() {
@@ -808,10 +604,9 @@ public class SanFerminSignature {
 
   }
 
-
   public static void main(String... args) {
 
-    if (true) {
+    if (false) {
       sigsPerTime();
       return;
     }
@@ -826,9 +621,8 @@ public class SanFerminSignature {
     //p2ps = new SanFerminSignature(512, 9,256, 2,48,300,1,false);
     p2ps = new SanFerminSignature(4096, 2048, 2, 48, 300, 1, false);
 
-    //p2ps = new SanFerminSignature(8, 3,4, 2,48,300,1,false);
+    //p2ps = new SanFerminSignature(8, 3,4,48,300,1,false);
 
-    p2ps.useCandidateTree = true;
 
     //p2ps.verbose = true;
     p2ps.network.setNetworkLatency(distribProp, distribVal);
@@ -840,7 +634,8 @@ public class SanFerminSignature {
     int max = p2ps.finishedNodes.size() < 10 ? p2ps.finishedNodes.size() : 10;
     for (SanFerminNode n : p2ps.finishedNodes.subList(0, max))
       System.out.println(n);
-    System.out.println(p2ps.finishedNodes.get(p2ps.finishedNodes.size() - 1));
+
+    //System.out.println(p2ps.finishedNodes.get(p2ps.finishedNodes.size() - 1);
 
     p2ps.network.printNetworkLatency();
   }
