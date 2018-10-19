@@ -75,8 +75,7 @@ public class SanFerminHelper<T extends Node> {
   public List<T> getCandidateSet(int level) {
     int min = 0;
     int max = allNodes.size();
-    int currLevel = 0;
-    for (currLevel = 0; currLevel <= level && min <= max; currLevel++) {
+    for (int currLevel = 0; currLevel <= level && min <= max; currLevel++) {
       int m = Math.floorDiv((max + min), 2);
       if (binaryId.charAt(currLevel) == '0') {
         if (currLevel == level) {
@@ -160,7 +159,7 @@ public class SanFerminHelper<T extends Node> {
         })
         .collect(Collectors.toList()));
 
-
+    usedNodes.put(level, set);
     Collections.shuffle(newList, rd);
     return newList;
   }
