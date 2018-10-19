@@ -567,7 +567,7 @@ public class P2PSignature {
 
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
-    int nodeCt = 32768 / 2;
+    int nodeCt = 1024;
     P2PSignature ps1 =
         new P2PSignature(nodeCt, nodeCt, 15, 3, 50, true, true, SendSigsStrategy.all, 2);
     ps1.network.setNetworkLatency(nl);
