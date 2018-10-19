@@ -339,8 +339,8 @@ public class SanFerminSignature {
           print(" received SwapReply NO from " + from.binaryId);
           // only try the next one if this is an expected reply
           if (this.pendingNodes.contains(from.nodeId)) {
-            List<SanFerminNode> nodes =
-                this.candidateTree.pickNextNodes(this.currentPrefixLength, candidateCount);
+            List<SanFerminNode> nodes = this.candidateTree.pickNextNodes(this.currentPrefixLength,
+                candidateCount, network.rd);
             sendToNodes(nodes);
           } else {
             print(" UNEXPECTED NO reply from " + from.binaryId);
@@ -385,8 +385,8 @@ public class SanFerminSignature {
           print("TIMEOUT of SwapRequest at level " + currLevel);
           // that means we haven't got a successful reply for that
           // level so we try other nodes
-          List<SanFerminNode> newList =
-              this.candidateTree.pickNextNodes(this.currentPrefixLength, candidateCount);
+          List<SanFerminNode> newList = this.candidateTree.pickNextNodes(this.currentPrefixLength,
+              candidateCount, network.rd);
           sendToNodes(newList);
         }
       }, network.time + replyTimeout, SanFerminNode.this);
@@ -436,7 +436,7 @@ public class SanFerminSignature {
         goNextLevel();
         return;
       }
-      List<SanFerminNode> newList = this.candidateTree.nextCandidateSet(candidateCount);
+      List<SanFerminNode> newList = this.candidateTree.nextCandidateSet(candidateCount, network.rd);
       this.sendToNodes(newList);
     }
 
