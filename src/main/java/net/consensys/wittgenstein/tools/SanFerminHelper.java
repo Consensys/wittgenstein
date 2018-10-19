@@ -2,7 +2,6 @@ package net.consensys.wittgenstein.tools;
 
 import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.core.utils.MoreMath;
-import net.consensys.wittgenstein.protocol.SanFerminSignature;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
