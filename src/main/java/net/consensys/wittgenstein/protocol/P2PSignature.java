@@ -419,9 +419,8 @@ public class P2PSignature {
       Iterator<State> it = peersState.values().iterator();
       while (it.hasNext() && found == null) {
         State cur = it.next();
-        toSend = (BitSet) cur.desc.clone();
-        toSend.flip(0, nodeCount);
-        toSend.and(verifiedSignatures);
+        toSend = (BitSet) verifiedSignatures.clone();
+        toSend.andNot(cur.desc);
         int v1 = toSend.cardinality();
 
         if (v1 > 0) {
