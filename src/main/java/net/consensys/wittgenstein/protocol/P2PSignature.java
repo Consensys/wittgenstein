@@ -390,7 +390,7 @@ public class P2PSignature {
       }
 
       if (res.size() > nodeCt) {
-        Collections.shuffle(res);
+        Collections.shuffle(res, network.rd);
         return res.subList(0, nodeCt);
       } else {
         return res;
@@ -419,9 +419,8 @@ public class P2PSignature {
       Iterator<State> it = peersState.values().iterator();
       while (it.hasNext() && found == null) {
         State cur = it.next();
-        toSend = (BitSet) cur.desc.clone();
-        toSend.flip(0, nodeCount);
-        toSend.and(verifiedSignatures);
+        toSend = (BitSet) verifiedSignatures.clone();
+        toSend.andNot(cur.desc);
         int v1 = toSend.cardinality();
 
         if (v1 > 0) {
@@ -568,7 +567,7 @@ public class P2PSignature {
 
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
-    int nodeCt = 32768 / 2;
+    int nodeCt = 1024;
     P2PSignature ps1 =
         new P2PSignature(nodeCt, nodeCt, 15, 3, 50, true, true, SendSigsStrategy.all, 2);
     ps1.network.setNetworkLatency(nl);
