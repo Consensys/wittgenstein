@@ -390,7 +390,7 @@ public class P2PSignature {
       }
 
       if (res.size() > nodeCt) {
-        Collections.shuffle(res);
+        Collections.shuffle(res, network.rd);
         return res.subList(0, nodeCt);
       } else {
         return res;
