@@ -32,7 +32,7 @@ public class Network<TN extends Node> {
   /**
    * By using a single random generator, we have repeatable runs.
    */
-  public final Random rd;
+  public final Random rd = new Random(0);
 
   final List<Integer> partitionsInX = new ArrayList<>();
 
@@ -53,17 +53,6 @@ public class Network<TN extends Node> {
    */
   public int time = 0;
 
-  public Network() {
-    this(0);
-  }
-
-  /**
-   * Use this constructor to set the seed used by the random number generator. This allows to have
-   * different executions, but still reproducible.
-   */
-  public Network(long randomSeed) {
-    this.rd = new Random(randomSeed);
-  }
 
   public TN getNodeById(int id) {
     return allNodes.get(id);

@@ -70,7 +70,7 @@ public class CasperIMD implements Protocol  {
   }
 
 
-  final BlockChainNetwork network = new BlockChainNetwork(0);
+  final BlockChainNetwork network = new BlockChainNetwork();
   final Node.NodeBuilder nb = new Node.NodeBuilderWithRandomPosition(network.rd);
   final CasperBlock genesis = new CasperBlock();
 
