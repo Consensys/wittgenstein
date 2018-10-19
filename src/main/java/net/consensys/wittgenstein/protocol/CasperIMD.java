@@ -685,9 +685,9 @@ public class CasperIMD {
   public static void main(String... args) {
     Graph graph = new Graph("ByzPP impact", "delay in ms", "ByzBP tx counts");
     Graph.Series txsR = new Graph.Series("tx count");
-    graph.addSerie(txsR);
+    //graph.addSerie(txsR);
     Graph.Series txsNR = new Graph.Series("tx count - not random on ties");
-    // graph.addSerie(txsNR);
+    graph.addSerie(txsNR);
 
     for (int delay = -2000; delay < 14000; delay += 1000) {
       runSet(delay, false, txsNR);
