@@ -5,18 +5,16 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public class SanFerminTest {
-
-  List<Node> allNodes;
-  final int count = 8;
+  private List<Node> allNodes;
 
   @Before
   public void setup() {
     allNodes = new ArrayList<>();
     Node.NodeBuilder nb = new Node.NodeBuilder();
+    int count = 8;
     for (int i = 0; i < count; i++)
       allNodes.add(new Node(nb));
   }
@@ -24,7 +22,7 @@ public class SanFerminTest {
   @Test
   public void testCandidateSet() {
     Node n1 = allNodes.get(1);
-    SanFerminHelper helper = new SanFerminHelper(n1, allNodes);
+    SanFerminHelper<Node> helper = new SanFerminHelper<>(n1, allNodes);
 
     List<Node> set2 = helper.getCandidateSet(2);
     Assert.assertTrue(set2.contains(allNodes.get(0)));
@@ -42,7 +40,7 @@ public class SanFerminTest {
   @Test
   public void testPickNextNodes() {
     Node n1 = allNodes.get(1);
-    SanFerminHelper helper = new SanFerminHelper(n1, allNodes);
+    SanFerminHelper<Node> helper = new SanFerminHelper<>(n1, allNodes);
 
     List<Node> set2 = helper.pickNextNodes(2, 10);
     Assert.assertTrue(set2.contains(allNodes.get(0)));

@@ -106,8 +106,7 @@ public class SanFerminSignature {
     }
 
     // register the sanfermin helper with all the nodes
-    this.allNodes.stream().forEach(
-        n -> n.candidateTree = new SanFerminHelper<SanFerminNode>(n, allNodes));
+    this.allNodes.forEach(n -> n.candidateTree = new SanFerminHelper<>(n, allNodes));
 
     finishedNodes = new ArrayList<>();
   }
@@ -204,9 +203,7 @@ public class SanFerminSignature {
      */
     boolean isSwapping;
 
-    /**
-     * ----- STATS INFORMATION -----
-     */
+
     /**
      * Integer field that simulate an aggregated signature badly. It keeps increasing as the node do
      * more swaps. It assumes each node has the value "1" and the aggregation operation is the

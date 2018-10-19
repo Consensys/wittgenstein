@@ -13,6 +13,7 @@ import java.util.stream.IntStream;
  * compute the set of candidates to contact at a given level, and computes the set of a given node
  * at a given level.
  */
+@SuppressWarnings("WeakerAccess")
 public class SanFerminHelper<T extends Node> {
 
   private final T n;
@@ -46,9 +47,6 @@ public class SanFerminHelper<T extends Node> {
 
   /**
    * getOwnSet returns the set of nodes at a given level that contains the node given to the helper
-   * 
-   * @param level
-   * @return
    */
   public List<T> getOwnSet(int level) {
     int min = 0;
@@ -75,9 +73,6 @@ public class SanFerminHelper<T extends Node> {
   /**
    * getCandidateSet returns the whole set of nodes at a given level that should be contacted by the
    * node given to the helper
-   * 
-   * @param level
-   * @return
    */
   public List<T> getCandidateSet(int level) {
     int min = 0;
@@ -113,9 +108,6 @@ public class SanFerminHelper<T extends Node> {
   /**
    * getExactCandidateNode selects deterministically the node from the candidate set at the given
    * level that should be contacted.
-   * 
-   * @param level
-   * @return
    */
   public T getExactCandidateNode(int level) {
     List<T> own = this.getOwnSet(level);
@@ -135,10 +127,6 @@ public class SanFerminHelper<T extends Node> {
    * pickNextNodes returns the nodes that should be contacted at a given level. The difference with
    * getCandidateSet is that saves which nodes have been selected already, and returns only new or
    * no nodes at each call for the same level.
-   * 
-   * @param level
-   * @param howMany
-   * @return
    */
   public List<T> pickNextNodes(int level, int howMany) {
     List<T> candidateSet = new ArrayList<>(getCandidateSet(level));
@@ -199,8 +187,7 @@ public class SanFerminHelper<T extends Node> {
       sb.append("0");
     }
     String padding = sb.toString();
-    String paddedString = padding.substring(originalString.length()) + originalString;
-    return paddedString;
+    return padding.substring(originalString.length()) + originalString;
   }
 
   public static String toBinaryID(Node node, int setSize) {
