@@ -162,7 +162,7 @@ public class SanFerminHelper<T extends Node> {
         })
         .collect(Collectors.toList()));
 
-
+    usedNodes.put(level,set);
     Collections.shuffle(newList);
     return newList;
   }
