@@ -688,16 +688,15 @@ public class CasperIMD implements Protocol  {
   }
 
   public static void main(String... args) {
-
     Graph graph = new Graph("ByzPP impact", "delay in ms", "ByzBP tx counts");
     Graph.Series txsR = new Graph.Series("tx count");
     graph.addSerie(txsR);
     Graph.Series txsNR = new Graph.Series("tx count - not random on ties");
-    graph.addSerie(txsNR);
+   // graph.addSerie(txsNR);
 
-    for (int delay = -5000; delay < 16000; delay += 500) {
+    for (int delay = -2000; delay < 14000; delay += 1000) {
       runSet(delay, false, txsNR);
-      runSet(delay, true, txsR);
+      //runSet(delay, true, txsR);
     }
 
     try {
@@ -707,53 +706,3 @@ public class CasperIMD implements Protocol  {
     }
   }
 }
-/*
-
-ByzBlockProducer{delay=-4000, onDirectFather=372, onOlderAncestor=80, incNotTheBestFather=32}; 408; 1920000; 183060; 166565
-ByzBlockProducer{delay=-3000, onDirectFather=353, onOlderAncestor=99, incNotTheBestFather=45}; 401; 2389000; 183060; 166565
-ByzBlockProducer{delay=-2000, onDirectFather=360, onOlderAncestor=92, incNotTheBestFather=45}; 408; 2832000; 183060; 166565
-ByzBlockProducer{delay=-1000, onDirectFather=369, onOlderAncestor=83, incNotTheBestFather=46}; 417; 3303000; 183060; 166565
-ByzBlockProducer{delay=0, onDirectFather=369, onOlderAncestor=83, incNotTheBestFather=46}; 417; 3720000; 183060; 166565 <========
-ByzBlockProducer{delay=1000, onDirectFather=367, onOlderAncestor=85, incNotTheBestFather=31}; 405; 3949000; 183060; 166565
-ByzBlockProducer{delay=2000, onDirectFather=383, onOlderAncestor=69, incNotTheBestFather=35}; 419; 4478000; 183060; 166565
-ByzBlockProducer{delay=3000, onDirectFather=417, onOlderAncestor=35, incNotTheBestFather=35}; 426; 4926000; 183060; 166565
-ByzBlockProducer{delay=4000, onDirectFather=418, onOlderAncestor=34, incNotTheBestFather=34}; 432; 5440000; 183060; 166565
-ByzBlockProducer{delay=5000, onDirectFather=411, onOlderAncestor=41, incNotTheBestFather=41}; 407; 5587000; 183060; 166565 <========
-ByzBlockProducer{delay=6000, onDirectFather=402, onOlderAncestor=50, incNotTheBestFather=50}; 350; 5196000; 183060; 166565
-ByzBlockProducer{delay=7000, onDirectFather=406, onOlderAncestor=46, incNotTheBestFather=46}; 222; 3530000; 183060; 166565
-ByzBlockProducer{delay=8000, onDirectFather=421, onOlderAncestor=31, incNotTheBestFather=31}; 224; 3688000; 183060; 166565
-ByzBlockProducer{delay=9000, onDirectFather=406, onOlderAncestor=46, incNotTheBestFather=46}; 163; 2939000; 183060; 166565
-ByzBlockProducer{delay=10000, onDirectFather=404, onOlderAncestor=48, incNotTheBestFather=48}; 2; 36000; 183060; 166565
-ByzBlockProducer{delay=13000, onDirectFather=408, onOlderAncestor=43, incNotTheBestFather=43}; 1; 21000; 182655; 166565
-ByzBlockProducer{delay=14000, onDirectFather=406, onOlderAncestor=45, incNotTheBestFather=45}; 1; 22000; 182655; 166565
-ByzBlockProducer{delay=16000, onDirectFather=403, onOlderAncestor=48, incNotTheBestFather=48}; 1; 24000; 182655; 166565
-
-ByzantineBPWF{delay=-4000, late=54, onTime=397}; 404; 1886844; 183060; 166565
-ByzantineBPWF{delay=-3000, late=54, onTime=397}; 404; 2239844; 183060; 166565
-ByzantineBPWF{delay=-2000, late=47, onTime=404}; 404; 2596344; 183060; 166565
-ByzantineBPWF{delay=-1000, late=43, onTime=408}; 404; 2959344; 183060; 166565
-ByzantineBPWF{delay=0, late=37, onTime=414}; 404; 3328344; 183060; 166565
-ByzantineBPWF{delay=1000, late=37, onTime=414}; 404; 3697344; 183060; 166565
-ByzantineBPWF{delay=2000, late=45, onTime=406}; 403; 4068047; 183060; 166565
-ByzantineBPWF{delay=3000, late=0, onTime=451}; 398; 4378000; 183060; 166565
-ByzantineBPWF{delay=4000, late=0, onTime=451}; 396; 4752000; 183060; 166565
-ByzantineBPWF{delay=5000, late=0, onTime=451}; 378; 4914000; 183060; 166565
-ByzantineBPWF{delay=6000, late=0, onTime=451}; 307; 4298000; 183060; 166565
-ByzantineBPWF{delay=7000, late=0, onTime=451}; 205; 3075000; 183060; 166565
-
-
-ByzantineBPNS{delay=-4000, skipped=34}; 374; 1784000; 183060; 166565
-ByzantineBPNS{delay=-3000, skipped=37}; 364; 2204000; 183060; 166565
-ByzantineBPNS{delay=-2000, skipped=38}; 370; 2604000; 183060; 166565
-ByzantineBPNS{delay=-1000, skipped=39}; 378; 3030000; 183060; 166565
-ByzantineBPNS{delay=0, skipped=39}; 378; 3408000; 183060; 166565
-ByzantineBPNS{delay=1000, skipped=51}; 354; 3490000; 183060; 166565
-ByzantineBPNS{delay=2000, skipped=49}; 370; 3988000; 183060; 166565
-ByzantineBPNS{delay=3000, skipped=40}; 390; 4658000; 183060; 166565
-ByzantineBPNS{delay=4000, skipped=42}; 387; 4972000; 183060; 166565
-ByzantineBPNS{delay=5000, skipped=38}; 368; 5120000; 183060; 166565  <=== not as good as a simple delay
-ByzantineBPNS{delay=6000, skipped=47}; 289; 4278000; 183060; 166565
-ByzantineBPNS{delay=7000, skipped=45}; 219; 3485000; 183060; 166565
-
-
- */
