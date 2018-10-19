@@ -210,7 +210,6 @@ public class P2PSignature {
     }
 
     return sigCt;
-
   }
 
   /**
@@ -341,18 +340,20 @@ public class P2PSignature {
                 // Ok, we're going to contact some of the nodes of the upper level
                 //  We're going to select these nodes randomly
 
-
-                List<Node> dest = new ArrayList<>();
                 BitSet nextRound = sanFerminPeers(r + 1);
                 nextRound.andNot(nodesAtRound);
-                dest = randomSubset(nextRound, 20);
 
-                // here we can send
+                //We contact two nodes.
+                List<Node> dest = randomSubset(nextRound, 2);
+
+                // here we can send:
                 // - all the signatures -- good for fault tolerance, bad for message size
                 // - only the aggregated signature for this san fermin range
                 // - all the signatures we can add on top of this aggregated san fermin sig
-                // on the early tests sending all results seems more efficient
-                //SendSigs ss = new SendSigs(verifiedSignatures, compressedSize(verifiedSignatures));
+                // on the early tests sending all results seems more efficient. But
+                // if we suppose that only small messages are supported, then
+                //  we can send only the San Fermin ones to make it fit into a UDP message
+                // SendSigs ss = new SendSigs(verifiedSignatures, compressedSize(verifiedSignatures));
                 SendSigs ss = new SendSigs(sanFerminPeers(r), 1);
                 network.send(ss, network.time + 1, this, dest);
               }
