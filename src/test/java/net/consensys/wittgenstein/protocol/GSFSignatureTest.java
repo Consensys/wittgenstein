@@ -8,12 +8,14 @@ public class GSFSignatureTest {
   private GSFSignature p = new GSFSignature(32, 32, 3);
   private GSFSignature.GSFNode n0;
 
-  @Before public void before() {
+  @Before
+  public void before() {
     p.init();
     n0 = p.network.getNodeById(0);
   }
 
-  @Test public void testInit() {
+  @Test
+  public void testInit() {
     Assert.assertEquals(6, n0.levels.size());
 
     Assert.assertEquals(0, n0.levels.get(0).peers.size());
@@ -33,7 +35,8 @@ public class GSFSignatureTest {
     Assert.assertEquals(0, n0.levels.get(5).verifiedSignatures.cardinality());
   }
 
-  @Test public void testMaxSigInLevel() {
+  @Test
+  public void testMaxSigInLevel() {
     Assert.assertEquals(1, n0.levels.get(0).maxSigsInLevel());
     Assert.assertEquals(1, n0.levels.get(1).maxSigsInLevel()); // send 0, wait for 1
     Assert.assertEquals(2, n0.levels.get(2).maxSigsInLevel()); // send 0 1, wait for 2 3
@@ -42,7 +45,8 @@ public class GSFSignatureTest {
     Assert.assertEquals(16, n0.levels.get(5).maxSigsInLevel());
   }
 
-  @Test public void testSend() {
+  @Test
+  public void testSend() {
     p.network.runMs(1);
     // Each node has sent its signature to its peer.
     Assert.assertEquals(64, p.network.msgs.size());
