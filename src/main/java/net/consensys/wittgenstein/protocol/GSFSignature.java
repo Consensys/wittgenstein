@@ -9,6 +9,7 @@ import net.consensys.wittgenstein.tools.Graph;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * A p2p protocol for BLS signature aggregation.
@@ -34,17 +35,29 @@ public class GSFSignature {
    */
   final int pairingTime;
 
-  public int timeoutPerLevelMs = 100;
-  public int periodDurationMs = 20;
-  final int duplicatedCalls = 15;
+  final public int timeoutPerLevelMs;
+  final public int periodDurationMs;
+  final int duplicatedCalls;
+
+  final int nodesDown;
 
   final Network<GSFNode> network;
   final Node.NodeBuilder nb;
 
-  public GSFSignature(int nodeCount, int threshold, int pairingTime) {
+  public GSFSignature(int nodeCount, double ratioThreshold, int pairingTime, int timeoutPerLevelMs,
+      int periodDurationMs, int duplicatedCalls, double ratioNodesDown) {
+    if (ratioNodesDown >= 1 || ratioNodesDown < 0 || ratioThreshold > 1 || ratioThreshold <= 0) {
+      throw new IllegalArgumentException(
+          "ratioNodesDown=" + ratioNodesDown + ", ratioThreshold=" + ratioThreshold);
+    }
     this.nodeCount = nodeCount;
-    this.threshold = threshold;
     this.pairingTime = pairingTime;
+    this.timeoutPerLevelMs = timeoutPerLevelMs;
+    this.periodDurationMs = periodDurationMs;
+    this.duplicatedCalls = duplicatedCalls;
+    this.nodesDown = (int) (ratioNodesDown * nodeCount);
+    this.threshold = (int) (ratioThreshold * (nodeCount - nodesDown));
+
 
     this.network = new Network<>();
     this.nb = new Node.NodeBuilderWithRandomPosition(network.rd);
@@ -53,8 +66,8 @@ public class GSFSignature {
   @Override
   public String toString() {
     return "GSFSignature, " + "nodes=" + nodeCount + ", threshold=" + threshold + ", pairing="
-        + pairingTime + "ms, timeout=" + timeoutPerLevelMs + "ms, periodTime=" + periodDurationMs
-        + "ms, duplicatedCalls=" + duplicatedCalls;
+        + pairingTime + "ms, level timeout=" + timeoutPerLevelMs + "ms, period=" + periodDurationMs
+        + "ms, duplicatedCalls=" + duplicatedCalls + ", dead nodes=" + nodesDown;
   }
 
   static class SendSigs extends Network.Message<GSFNode> {
@@ -97,10 +110,11 @@ public class GSFSignature {
     }
 
     public void initLevel() {
+      int roundedPow2NodeCount = MoreMath.roundPow2(nodeCount);
       BitSet allPreviousNodes = new BitSet(nodeCount);
       SFLevel last = new SFLevel();
       levels.add(last);
-      for (int l = 0; l < MoreMath.log2(nodeCount); l++) {
+      for (int l = 1; Math.pow(2, l) <= roundedPow2NodeCount; l++) {
         allPreviousNodes.or(last.waitedSigs);
         last = new SFLevel(last, allPreviousNodes);
         levels.add(last);
@@ -180,7 +194,7 @@ public class GSFSignature {
       }
 
       void doCycle(BitSet toSend) {
-        if (remainingCalls == 0 || !hasStarted(toSend)) {
+        if (remainingCalls == 0 || !hasStarted(toSend) || peers.size() == 0) {
           return;
         }
 
@@ -303,7 +317,7 @@ public class GSFSignature {
         if (cur.sigs.cardinality() > l.verifiedSignatures.cardinality()) {
           best = cur;
           if (cur.sigs.cardinality() == l.maxSigsInLevel()) {
-            found = true; // if it allows us to finish a level we select it.
+            found = true; // if it allows us to finish a level, we select it.
           }
         } else {
           it.remove();
@@ -332,19 +346,24 @@ public class GSFSignature {
     for (int i = 0; i < nodeCount; i++) {
       final GSFNode n = new GSFNode();
       network.addNode(n);
+      if (i < nodesDown) {
+        n.down = true;
+      }
     }
     for (GSFNode n : network.allNodes) {
-      n.initLevel();
-      network.registerPeriodicTask(n::doCycle, 1, periodDurationMs, n);
-      network.registerConditionalTask(n::checkSigs, 1, pairingTime, n, () -> !n.toVerify.isEmpty(),
-          () -> !n.done);
+      if (!n.down) {
+        n.initLevel();
+        network.registerPeriodicTask(n::doCycle, 1, periodDurationMs, n);
+        network.registerConditionalTask(n::checkSigs, 1, pairingTime, n,
+            () -> !n.toVerify.isEmpty(), () -> !n.done);
+      }
     }
   }
 
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
     int nodeCt = 32768 / 2;
-    GSFSignature ps1 = new GSFSignature(nodeCt, nodeCt, 3);
+    GSFSignature ps1 = new GSFSignature(nodeCt, 1.0, 3, 100, 20, 100, 0.10);
     ps1.network.setNetworkLatency(nl);
     String desc = ps1.toString();
     Graph graph = new Graph("number of signatures per time (" + desc + ")", "time in ms",
@@ -359,15 +378,20 @@ public class GSFSignature {
     System.out.println(nl + " " + desc);
     ps1.init();
 
+    long startAt = System.currentTimeMillis();
     StatsHelper.SimpleStats s;
     do {
       ps1.network.runMs(10);
-      s = StatsHelper.getStatsOn(ps1.network.allNodes,
+      s = StatsHelper.getStatsOn(
+          ps1.network.allNodes.stream().filter(n -> !n.down).collect(Collectors.toList()),
           n -> ((GSFNode) n).verifiedSignatures.cardinality());
       series1min.addLine(new Graph.ReportLine(ps1.network.time, s.min));
       series1max.addLine(new Graph.ReportLine(ps1.network.time, s.max));
       series1avg.addLine(new Graph.ReportLine(ps1.network.time, s.avg));
-    } while (s.min != ps1.nodeCount);
+      if (ps1.network.time % 10000 == 0)
+        System.out.println(" " + s.avg);
+    } while (s.min != ps1.nodeCount - ps1.nodesDown);
+    long endAt = System.currentTimeMillis();
 
     try {
       graph.save(new File("/tmp/graph.png"));
@@ -385,6 +409,8 @@ public class GSFSignature {
         .println("msg rcvd: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getMsgReceived));
     System.out.println(
         "done at: " + StatsHelper.getStatsOn(ps1.network.allNodes, n -> ((GSFNode) n).doneAt));
+    System.out.println("Simulation execution time: " + ((endAt - startAt) / 1000) + "s");
+
   }
 
 
