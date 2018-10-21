@@ -5,7 +5,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class GSFSignatureTest {
-  private GSFSignature p = new GSFSignature(32, 32, 3);
+  private GSFSignature p = new GSFSignature(32, 1, 3, 20, 10, 10, 0);
   private GSFSignature.GSFNode n0;
 
   @Before
@@ -50,6 +50,20 @@ public class GSFSignatureTest {
     p.network.runMs(1);
     // Each node has sent its signature to its peer.
     Assert.assertEquals(64, p.network.msgs.size());
+  }
+
+  @Test
+  public void testDeadNodes() {
+    GSFSignature p = new GSFSignature(31, 1, 3, 20, 10, 10, 0.1);
+    p.init();
+    GSFSignature.GSFNode n0 = p.network.getNodeById(0);
+    GSFSignature.GSFNode n3 = p.network.getNodeById(3);
+
+    Assert.assertTrue(n0.down);
+    Assert.assertFalse(n3.down);
+
+    Assert.assertEquals(6, n3.levels.size());
+    Assert.assertEquals(16, n3.levels.get(5).maxSigsInLevel());
   }
 
 }

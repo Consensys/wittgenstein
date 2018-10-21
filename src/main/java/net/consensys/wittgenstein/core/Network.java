@@ -443,12 +443,11 @@ public class Network<TN extends Node> {
       throw new IllegalStateException("" + m + ", sendTime=" + sendTime + ", time=" + time);
     }
 
-    if (partitionId(fromNode) == partitionId(toNode)) {
-      assert !(m instanceof Network.Task);
-      fromNode.msgSent++;
-      fromNode.bytesSent += m.size();
-      int nt =
-          networkLatency.getLatency(fromNode, toNode, getPseudoRandom(toNode.nodeId, randomSeed));
+    assert !(m instanceof Network.Task);
+    fromNode.msgSent++;
+    fromNode.bytesSent += m.size();
+    if (partitionId(fromNode) == partitionId(toNode) && !fromNode.down && !toNode.down) {
+      int nt = networkLatency.getLatency(fromNode, toNode, getPseudoRandom(toNode.nodeId, randomSeed));
       if (nt < msgDiscardTime) {
         return new MessageArrival(toNode, sendTime + nt);
       }

@@ -24,6 +24,7 @@ public class Node {
   public final int x;
   public final int y;
   public final boolean byzantine;
+  public boolean down; // Cannot send or receive messages
 
   protected long msgReceived = 0;
   protected long msgSent = 0;
@@ -48,9 +49,7 @@ public class Node {
 
   @Override
   public String toString() {
-    return "Node{" +
-            "nodeId=" + nodeId +
-            '}';
+    return "Node{" + "nodeId=" + nodeId + '}';
   }
 
   public static class NodeBuilder {
