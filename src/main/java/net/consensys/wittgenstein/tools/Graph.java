@@ -7,7 +7,6 @@ import org.knowm.xchart.XYChartBuilder;
 import org.knowm.xchart.XYSeries;
 import org.knowm.xchart.internal.chartpart.Chart;
 import org.knowm.xchart.style.Styler;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -161,28 +160,42 @@ public class Graph {
     series.add(s);
   }
 
+  /**
+   * TODO
+   * 
+   * @param title - the title of the series to be created
+   * @param series - all the series must have the same value for 'x' at the same index. We allow
+   *        missing values at the end
+   * @return the aggregated series
+   */
   public static Graph.Series averageSeries(String title, List<Graph.Series> series) {
     Graph.Series seriesAvg = new Graph.Series(title);
-    int largest = 0;
+
+    Graph.Series largest = null;
     for (Graph.Series s : series) {
-      if (s.vals.size() > largest) {
-        largest = s.vals.size();
+      if (largest == null || s.vals.size() > largest.vals.size()) {
+        largest = s;
       }
     }
 
-    double runs = series.size();
-    double sum;
-    for (int i = 0; i < largest; i++) {
-      sum = 0;
-      for (int j = 0; j < runs; j++) {
-        try {
-          sum += series.get(j).vals.get(i).getY();
-        } catch (IndexOutOfBoundsException e) {
-          sum += series.get(j).vals.get(series.get(j).vals.size() - 1).getY();
+    for (int i = 0; largest != null && i < largest.vals.size(); i++) {
+      double x = largest.vals.get(i).x;
+      double sum = 0;
+      for (Series s : series) {
+        if (i < s.vals.size()) {
+          double lx = s.vals.get(i).x;
+          if (Math.abs(x - lx) > 0.00001) {
+            throw new IllegalArgumentException(
+                "We need the indexes to be the same, x=" + x + ", lx=" + lx);
+          }
+          sum += s.vals.get(i).getY();
+        } else {
+          sum += s.vals.get(s.vals.size() - 1).getY();
         }
       }
-      seriesAvg.addLine(new Graph.ReportLine(10 * i, sum / runs));
+      seriesAvg.addLine(new Graph.ReportLine(x, sum / series.size()));
     }
+
     return seriesAvg;
   }
 

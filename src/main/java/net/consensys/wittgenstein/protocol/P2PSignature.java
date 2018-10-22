@@ -6,7 +6,6 @@ import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.tools.Graph;
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.util.*;
 
 /**
