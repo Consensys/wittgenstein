@@ -447,7 +447,8 @@ public class Network<TN extends Node> {
     fromNode.msgSent++;
     fromNode.bytesSent += m.size();
     if (partitionId(fromNode) == partitionId(toNode) && !fromNode.down && !toNode.down) {
-      int nt = networkLatency.getLatency(fromNode, toNode, getPseudoRandom(toNode.nodeId, randomSeed));
+      int nt =
+          networkLatency.getLatency(fromNode, toNode, getPseudoRandom(toNode.nodeId, randomSeed));
       if (nt < msgDiscardTime) {
         return new MessageArrival(toNode, sendTime + nt);
       }

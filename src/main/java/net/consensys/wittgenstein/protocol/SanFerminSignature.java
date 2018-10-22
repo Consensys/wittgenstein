@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
  * KBytesSent=13, KBytesReceived=13, outdatedSwaps=0}
  */
 @SuppressWarnings("WeakerAccess")
-public class SanFerminSignature implements Protocol{
+public class SanFerminSignature implements Protocol {
 
   /**
    * The number of nodes in the network
@@ -108,9 +108,12 @@ public class SanFerminSignature implements Protocol{
 
     finishedNodes = new ArrayList<>();
   }
-  public SanFerminSignature copy(){
-    return new SanFerminSignature(nodeCount,threshold,pairingTime,signatureSize,replyTimeout,candidateCount,shuffledLists);
+
+  public SanFerminSignature copy() {
+    return new SanFerminSignature(nodeCount, threshold, pairingTime, signatureSize, replyTimeout,
+        candidateCount, shuffledLists);
   }
+
   final Network<SanFerminNode> network;
   final Node.NodeBuilder nb;
 
