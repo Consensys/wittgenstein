@@ -78,11 +78,9 @@ public class OptimisticP2PSignature implements Protocol {
     this.network = new P2PNetwork(connectionCount);
     this.nb = new Node.NodeBuilderWithRandomPosition(network.rd);
   }
-
-  public OptimisticP2PSignature copy() {
-    return new OptimisticP2PSignature(nodeCount, threshold, connectionCount, pairingTime, 0);
+  public OptimisticP2PSignature copy(){
+    return new OptimisticP2PSignature(nodeCount,threshold,connectionCount, pairingTime, 0);
   }
-
   static class SendSig extends Network.Message<P2PSigNode> {
     final int sig;
 

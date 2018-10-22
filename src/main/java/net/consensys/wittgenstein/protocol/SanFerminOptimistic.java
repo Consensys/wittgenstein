@@ -109,10 +109,8 @@ public class SanFerminOptimistic implements Protocol {
 
     finishedNodes = new ArrayList<>();
   }
-
-  public SanFerminOptimistic copy() {
-    return new SanFerminOptimistic(nodeCount, powerOfTwo, threshold, pairingTime, signatureSize,
-        replyTimeout, candidateCount, shuffledLists);
+  public SanFerminOptimistic copy(){
+    return new SanFerminOptimistic(nodeCount,powerOfTwo,threshold,pairingTime,signatureSize,replyTimeout,candidateCount,shuffledLists);
   }
 
   final Network<SanFerminNode> network;
