@@ -16,7 +16,7 @@ import java.util.*;
  * Runs in parallel a task to validate the signatures sets it has received.
  */
 @SuppressWarnings("WeakerAccess")
-public class P2PSignature implements Protocol {
+public class P2PSignature implements Protocol{
   /**
    * The nuumber of nodes in the network
    */
@@ -130,49 +130,8 @@ public class P2PSignature implements Protocol {
    * <p>
    * By keeping the two aggregated signatures node 1 & node 2 can exchange aggregated signatures.
    * 1111 1111 => 1 0001 1111 1111 0000 => 3 0001 1111 1111 1111 => 2 </>
-   *
-   * @return the number of signatures to include
    */
   int compressedSize(BitSet sigs) {
-    if (sigs.length() == nodeCount) {
-      // Shortcuts: if we have all sigs, then we just send
-      //  an aggregated signature
-      return 1;
-    }
-
-    int firstOneAt = -1;
-    int sigCt = 0;
-    int pos = -1;
-    boolean compressing = false;
-    boolean wasCompressing = false;
-    while (++pos <= sigs.length() + 1) {
-      if (!sigs.get(pos)) {
-        compressing = false;
-        sigCt -= mergeRanges(firstOneAt, pos);
-        firstOneAt = -1;
-      } else if (compressing) {
-        if ((pos + 1) % sigRange == 0) {
-          // We compressed the whole range, but now we're starting a new one...
-          compressing = false;
-          wasCompressing = true;
-        }
-      } else {
-        sigCt++;
-        if (pos % sigRange == 0) {
-          compressing = true;
-          if (!wasCompressing) {
-            firstOneAt = pos;
-          } else {
-            wasCompressing = false;
-          }
-        }
-      }
-    }
-
-    return sigCt;
-  }
-
-  int compressedSize(BitSet sigs, BitSet knownSigs) {
     if (sigs.length() == nodeCount) {
       // Shortcuts: if we have all sigs, then we just send
       //  an aggregated signature
@@ -336,24 +295,21 @@ public class P2PSignature implements Protocol {
               nodesAtRound = sanFerminPeers(r);
               nodesAtRound.and(verifiedSignatures);
               if (nodesAtRound.equals(sanFerminPeers(r))) {
-                // Ok, we're going to contact some of the nodes of the upper level
-                //  We're going to select these nodes randomly
-
+                SendSigs ss = new SendSigs(verifiedSignatures, compressedSize(verifiedSignatures));
+                List<Node> dest = new ArrayList<>();
                 BitSet nextRound = sanFerminPeers(r + 1);
-                nextRound.andNot(nodesAtRound);
-
-                //We contact two nodes.
-                List<Node> dest = randomSubset(nextRound, 2);
-
-                // here we can send:
-                // - all the signatures -- good for fault tolerance, bad for message size
-                // - only the aggregated signature for this san fermin range
-                // - all the signatures we can add on top of this aggregated san fermin sig
-                // on the early tests sending all results seems more efficient. But
-                // if we suppose that only small messages are supported, then
-                //  we can send only the San Fermin ones to make it fit into a UDP message
-                // SendSigs ss = new SendSigs(verifiedSignatures, compressedSize(verifiedSignatures));
-                SendSigs ss = new SendSigs(sanFerminPeers(r), 1);
+                for (int i = 0; i < (r == 2 ? 1 : 2); i++) {
+                  int start = nextRound.length() - 1;
+                  int dec = network.rd.nextInt(nextRound.cardinality());
+                  while (dec != 0) {
+                    while (!nextRound.get(start)) {
+                      start--;
+                    }
+                    dec--;
+                  }
+                  dest.add(network.getNodeById(start));
+                  nextRound.set(start, false);
+                }
                 network.send(ss, network.time + 1, this, dest);
               }
             }
@@ -369,31 +325,6 @@ public class P2PSignature implements Protocol {
             sendSigs();
           }
         }
-      }
-    }
-
-    private List<Node> randomSubset(BitSet nodes, int nodeCt) {
-      List<Node> res = new ArrayList<>();
-      int pos = 0;
-      do {
-        int cur = nodes.nextSetBit(pos);
-        if (cur >= 0) {
-          res.add(network.getNodeById(cur));
-          pos = cur + 1;
-        } else {
-          break;
-        }
-      } while (true);
-
-      for (Node n : peers) {
-        res.remove(n);
-      }
-
-      if (res.size() > nodeCt) {
-        Collections.shuffle(res, network.rd);
-        return res.subList(0, nodeCt);
-      } else {
-        return res;
       }
     }
 
@@ -419,8 +350,9 @@ public class P2PSignature implements Protocol {
       Iterator<State> it = peersState.values().iterator();
       while (it.hasNext() && found == null) {
         State cur = it.next();
-        toSend = (BitSet) verifiedSignatures.clone();
-        toSend.andNot(cur.desc);
+        toSend = (BitSet) cur.desc.clone();
+        toSend.flip(0, nodeCount);
+        toSend.and(verifiedSignatures);
         int v1 = toSend.cardinality();
 
         if (v1 > 0) {
@@ -578,6 +510,7 @@ public class P2PSignature implements Protocol {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
     //NetworkLatency.NetworkLatencyByDistance nl1 = new NetworkLatency.NetworkLatencyByDistance();
     int nodeCt = 1024;
+
     List<Graph.Series> rawResultsMin = new ArrayList<>();
     List<Graph.Series> rawResultsMax = new ArrayList<>();
     List<Graph.Series> rawResultsAvg = new ArrayList<>();

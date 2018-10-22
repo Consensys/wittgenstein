@@ -31,23 +31,6 @@ public class P2PSignatureTest {
   }
 
   @Test
-  public void testRepeatability() {
-    P2PSignature p1 =
-        new P2PSignature(100, 25, 10, 2, 5, false, true, P2PSignature.SendSigsStrategy.dif, 4);
-    P2PSignature p2 =
-        new P2PSignature(100, 25, 10, 2, 5, false, true, P2PSignature.SendSigsStrategy.dif, 4);
-
-    p1.init();
-    p1.network.run(10);
-    p2.init();
-    p2.network.run(10);
-    for (Node n : p1.network.allNodes) {
-      Assert.assertEquals(((P2PSignature.P2PSigNode) n).doneAt,
-          ((P2PSignature.P2PSigNode) p2.network.getNodeById(n.nodeId)).doneAt);
-    }
-  }
-
-  @Test
   public void testSendSigs() {
     n1.peersState.put(n2.nodeId, new P2PSignature.State(n2));
 
