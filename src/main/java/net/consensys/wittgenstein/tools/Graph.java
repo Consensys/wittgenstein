@@ -10,6 +10,7 @@ import org.knowm.xchart.style.Styler;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -79,6 +80,14 @@ public class Graph {
   public static class ReportLine {
     final double x;
     final double y;
+
+    public double getY() {
+      return y;
+    }
+
+    public double getX() {
+      return x;
+    }
 
     public ReportLine(double x, double y) {
       this.x = x;
@@ -151,4 +160,30 @@ public class Graph {
   public void addSerie(Series s) {
     series.add(s);
   }
+
+  public static Graph.Series averageSeries(String title, List<Graph.Series> series){
+    Graph.Series seriesAvg = new Graph.Series(title);
+    int largest =0;
+    for (Graph.Series s:series) {
+      if (s.vals.size()>largest){
+        largest = s.vals.size();
+      }
+    }
+
+    double runs = series.size();
+    double sum;
+    for (int i = 0;i<largest; i++) {
+       sum = 0;
+      for (int j = 0;j<runs ; j++ ){
+          try{
+            sum += series.get(j).vals.get(i).getY();
+          } catch(IndexOutOfBoundsException e){
+            sum += series.get(j).vals.get(series.get(j).vals.size()-1).getY();
+          }
+      }
+      seriesAvg.addLine(new Graph.ReportLine(10*i, sum/runs));
+    }
+    return seriesAvg;
+    }
+
 }

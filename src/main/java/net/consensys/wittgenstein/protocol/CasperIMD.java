@@ -126,8 +126,8 @@ public class CasperIMD {
     final Map<Integer, Set<Attestation>> attestationsByHeight;
 
     public CasperBlock(BlockProducer blockProducer, int height, CasperBlock father,
-        Map<Integer, Set<Attestation>> attestationsByHeight, boolean valid, int time) {
-      super(blockProducer, height, father, valid, time);
+                       Map<Integer, Set<Attestation>> attestationsByHeight, int time) {
+      super(blockProducer, height, father, true, time);
       this.attestationsByHeight = attestationsByHeight;
     }
 
@@ -176,11 +176,6 @@ public class CasperIMD {
     public CasperBlock best(CasperBlock o1, CasperBlock o2) {
       if (o1 == o2)
         return o1;
-
-      if (!o2.valid)
-        return o1;
-      if (!o1.valid)
-        return o2;
 
       if (o1.height == o2.height) {
         // Someone sent two blocks for the same height
@@ -389,11 +384,18 @@ public class CasperIMD {
           if (a.height < height && !allFromBlocks.contains(a)) {
             Set<Attestation> sa = res.computeIfAbsent(a.height, k -> new HashSet<>());
             sa.add(a);
+
+            Set<Attestation> aa =  res.get(a.height);
+            if (aa == null) {
+              aa = new HashSet<>();
+              res.put(a.height, aa);
+            }
+            aa.add(a);
           }
         }
       }
 
-      return new CasperBlock(this, height, base, res, true, network.time);
+      return new CasperBlock(this, height, base, res, network.time);
     }
 
     void createAndSendBlock(int height) {
@@ -456,6 +458,7 @@ public class CasperIMD {
       Attester n = new Attester(genesis);
       attesters.add(n);
       network.addNode(n);
+      //TODO: Verify enough attesters in first 5 cycles, SLOT_DURATION * (i + 1) mod cycleLength +4000
       network.registerPeriodicTask(n.getPeriodicTask(), SLOT_DURATION * (i + 1) + 4000,
           SLOT_DURATION * cycleLength, n);
     }
@@ -675,7 +678,7 @@ public class CasperIMD {
     }
 
     bc.network.run(3600 * 5); // 5 hours is a minimum if you want something statistically reasonable
-
+    //TODO: improve time
     bc.network.printStat(true);
 
     report
