@@ -52,7 +52,7 @@ public class Dfinity implements Protocol{
     this.network.addObserver(new DfinityNode(genesis) {});
   }
 
-  final BlockChainNetwork network = new BlockChainNetwork(0);
+  final BlockChainNetwork network = new BlockChainNetwork();
   final DfinityBlock genesis = DfinityBlock.createGenesis();
   final DfinityBlockComparator blockComparator = new DfinityBlockComparator();
 

@@ -32,7 +32,7 @@ public class Network<TN extends Node> {
   /**
    * By using a single random generator, we have repeatable runs.
    */
-  public final Random rd;
+  public final Random rd = new Random(0);
 
   final List<Integer> partitionsInX = new ArrayList<>();
 
@@ -53,17 +53,6 @@ public class Network<TN extends Node> {
    */
   public int time = 0;
 
-  public Network() {
-    this(0);
-  }
-
-  /**
-   * Use this constructor to set the seed used by the random number generator. This allows to have
-   * different executions, but still reproducible.
-   */
-  public Network(long randomSeed) {
-    this.rd = new Random(randomSeed);
-  }
 
   public TN getNodeById(int id) {
     return allNodes.get(id);
@@ -154,6 +143,16 @@ public class Network<TN extends Node> {
       int size = 0;
       for (MsgsSlot ms : msgsBySlot) {
         size += ms.size();
+      }
+      return size;
+    }
+
+    public int sizeAt(int time) {
+      int size = 0;
+      Envelope<?> cur = peek(time);
+      while (cur != null) {
+        size++;
+        cur = cur.getNextSameTime();
       }
       return size;
     }
@@ -444,12 +443,11 @@ public class Network<TN extends Node> {
       throw new IllegalStateException("" + m + ", sendTime=" + sendTime + ", time=" + time);
     }
 
-    if (partitionId(fromNode) == partitionId(toNode)) {
-      assert !(m instanceof Network.Task);
-      fromNode.msgSent++;
-      fromNode.bytesSent += m.size();
-      int nt =
-          networkLatency.getLatency(fromNode, toNode, getPseudoRandom(toNode.nodeId, randomSeed));
+    assert !(m instanceof Network.Task);
+    fromNode.msgSent++;
+    fromNode.bytesSent += m.size();
+    if (partitionId(fromNode) == partitionId(toNode) && !fromNode.down && !toNode.down) {
+      int nt = networkLatency.getLatency(fromNode, toNode, getPseudoRandom(toNode.nodeId, randomSeed));
       if (nt < msgDiscardTime) {
         return new MessageArrival(toNode, sendTime + nt);
       }
