@@ -17,6 +17,7 @@ import java.util.*;
  */
 @SuppressWarnings("WeakerAccess")
 public class P2PSignature implements Protocol {
+
     /**
      * The nuumber of nodes in the network
      */
@@ -169,9 +170,10 @@ public class P2PSignature implements Protocol {
             }
         }
 
+
         return sigCt;
     }
-
+    
     int compressedSize(BitSet sigs, BitSet knownSigs) {
         if (sigs.length() == nodeCount) {
             // Shortcuts: if we have all sigs, then we just send
@@ -299,6 +301,7 @@ public class P2PSignature implements Protocol {
             return res;
         }
 
+
         /**
          * Asynchronous, so when we receive a state it can be an old one.
          */
@@ -402,12 +405,14 @@ public class P2PSignature implements Protocol {
             network.send(s, this, peers);
         }
 
+
         /**
          * Nothing much to do when we receive a sig set: we just add it to our toVerify list.
          */
         void onNewSig(BitSet sigs) {
             toVerify.add(sigs);
         }
+
 
         /**
          * We select a peer which needs some signatures we have. We also remove it from out list once we
@@ -432,6 +437,7 @@ public class P2PSignature implements Protocol {
             if (!withState) {
                 found = new State((P2PSigNode) peers.get(network.rd.nextInt(peers.size())));
             }
+
 
             if (found != null) {
                 SendSigs ss;
@@ -524,6 +530,7 @@ public class P2PSignature implements Protocol {
                 }
             }
         }
+
 
 
         @Override
