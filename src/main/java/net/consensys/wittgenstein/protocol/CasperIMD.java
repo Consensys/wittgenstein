@@ -131,8 +131,8 @@ public class CasperIMD implements Protocol {
     final Map<Integer, Set<Attestation>> attestationsByHeight;
 
     public CasperBlock(BlockProducer blockProducer, int height, CasperBlock father,
-        Map<Integer, Set<Attestation>> attestationsByHeight, boolean valid, int time) {
-      super(blockProducer, height, father, valid, time);
+        Map<Integer, Set<Attestation>> attestationsByHeight, int time) {
+      super(blockProducer, height, father, true, time);
       this.attestationsByHeight = attestationsByHeight;
     }
 
@@ -400,7 +400,7 @@ public class CasperIMD implements Protocol {
         }
       }
 
-      return new CasperBlock(this, height, base, res, true, network.time);
+      return new CasperBlock(this, height, base, res, network.time);
     }
 
     void createAndSendBlock(int height) {
