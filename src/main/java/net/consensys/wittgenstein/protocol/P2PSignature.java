@@ -16,7 +16,7 @@ import java.util.*;
  * Runs in parallel a task to validate the signatures sets it has received.
  */
 @SuppressWarnings("WeakerAccess")
-public class P2PSignature implements Protocol {
+public class P2PSignature implements Protocol{
   /**
    * The nuumber of nodes in the network
    */
