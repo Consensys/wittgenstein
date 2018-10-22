@@ -11,7 +11,7 @@ import java.util.*;
  * https://ethresear.ch/t/beacon-chain-casper-ffg-rpj-mini-spec/2760
  */
 @SuppressWarnings({"WeakerAccess", "SameParameterValue", "unused"})
-public class CasperIMD implements Protocol  {
+public class CasperIMD implements Protocol {
   final int SLOT_DURATION = 8000;
 
   /**
@@ -48,9 +48,12 @@ public class CasperIMD implements Protocol  {
    * Time to build an attestation. Same for all.
    */
   final int attestationConstructionTime;
-  public CasperIMD copy(){
-    return new CasperIMD(cycleLength,randomOnTies, blockProducersCount, attestersPerRound, blockConstructionTime, attestationConstructionTime);
+
+  public CasperIMD copy() {
+    return new CasperIMD(cycleLength, randomOnTies, blockProducersCount, attestersPerRound,
+        blockConstructionTime, attestationConstructionTime);
   }
+
   public CasperIMD() {
     this(5, true, 5, 80, 1000, 1);
   }
@@ -397,7 +400,7 @@ public class CasperIMD implements Protocol  {
         }
       }
 
-      return new CasperBlock(this, height, base, res, network.time);
+      return new CasperBlock(this, height, base, res, true, network.time);
     }
 
     void createAndSendBlock(int height) {
@@ -460,14 +463,8 @@ public class CasperIMD implements Protocol  {
       Attester n = new Attester(genesis);
       attesters.add(n);
       network.addNode(n);
-<<<<<<< HEAD
-      //TODO: Verify enough attesters in first 5 cycles, SLOT_DURATION * (i + 1) mod cycleLength +4000
-      network.registerPeriodicTask(n.getPeriodicTask(), SLOT_DURATION * (i + 1) + 4000,
-          SLOT_DURATION * cycleLength, n);
-=======
       network.registerPeriodicTask(n.getPeriodicTask(),
           SLOT_DURATION * (1 + i % cycleLength) + 4000, SLOT_DURATION * cycleLength, n);
->>>>>>> c83dad77b7dfe287db3dc8124419c248e8ba3bcf
     }
 
   }
