@@ -41,7 +41,6 @@ public class SanFerminHelper<T extends Node> {
     this.allNodes = allNodes;
     this.usedNodes = new HashMap<>();
     this.currentLevel = MoreMath.log2(allNodes.size());
-
   }
 
   /**
@@ -76,8 +75,7 @@ public class SanFerminHelper<T extends Node> {
   public List<T> getCandidateSet(int level) {
     int min = 0;
     int max = allNodes.size();
-    int currLevel = 0;
-    for (currLevel = 0; currLevel <= level && min <= max; currLevel++) {
+    for (int currLevel = 0; currLevel <= level && min <= max; currLevel++) {
       int m = Math.floorDiv((max + min), 2);
       if (binaryId.charAt(currLevel) == '0') {
         if (currLevel == level) {
@@ -127,7 +125,7 @@ public class SanFerminHelper<T extends Node> {
    * getCandidateSet is that saves which nodes have been selected already, and returns only new or
    * no nodes at each call for the same level.
    */
-  public List<T> pickNextNodes(int level, int howMany) {
+  public List<T> pickNextNodes(int level, int howMany, Random rd) {
     List<T> candidateSet = new ArrayList<>(getCandidateSet(level));
 
     List<T> ownSet = getOwnSet(level);
@@ -161,8 +159,8 @@ public class SanFerminHelper<T extends Node> {
         })
         .collect(Collectors.toList()));
 
-    usedNodes.put(level,set);
-    Collections.shuffle(newList);
+    usedNodes.put(level, set);
+    Collections.shuffle(newList, rd);
     return newList;
   }
 
@@ -171,9 +169,9 @@ public class SanFerminHelper<T extends Node> {
    * the new candidate set. One can pick others unpicked nodes for this level using
    * `pickNextNodes(helper.currentLevel,howMany)`.
    */
-  public List<T> nextCandidateSet(int howMany) {
+  public List<T> nextCandidateSet(int howMany, Random rd) {
     this.currentLevel--;
-    return pickNextNodes(this.currentLevel, howMany);
+    return pickNextNodes(this.currentLevel, howMany, rd);
   }
 
   /**
