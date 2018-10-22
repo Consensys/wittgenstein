@@ -497,105 +497,108 @@ public class P2PSignature {
     return last;
   }
 
-  protected static P2PSignature setNetwork(int connectionCount, int pairingTime, int sigSendPeriod, boolean doubleAggStrat, boolean sanFermin,SendSigsStrategy sendSigsStrategy, int sigRange){
-      int nodeCt = 1024;
-      P2PSignature ps1 =
-              new P2PSignature(nodeCt, nodeCt, 15, 3, 300, true, true, SendSigsStrategy.all, 2);
+  protected static P2PSignature setNetwork(int connectionCount, int pairingTime, int sigSendPeriod,
+      boolean doubleAggStrat, boolean sanFermin, SendSigsStrategy sendSigsStrategy, int sigRange) {
+    int nodeCt = 1024;
+    P2PSignature ps1 =
+        new P2PSignature(nodeCt, nodeCt, 15, 3, 300, true, true, SendSigsStrategy.all, 2);
 
-      return ps1;
+    return ps1;
   }
-    //TODO: Store data points from graph in ArrayList
+  //TODO: Store data points from graph in ArrayList
 
   public static void sigsPerTime() {
-      NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
-      //NetworkLatency.NetworkLatencyByDistance nl1 = new NetworkLatency.NetworkLatencyByDistance();
-      int nodeCt = 1024 ;
-      boolean printed = false;
+    NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
+    //NetworkLatency.NetworkLatencyByDistance nl1 = new NetworkLatency.NetworkLatencyByDistance();
+    int nodeCt = 1024;
+    boolean printed = false;
 
-      List<Graph.Series> rawResultsMin = new ArrayList<>();
-      List<Graph.Series> rawResultsMax = new ArrayList<>();
-      List<Graph.Series> rawResultsAvg = new ArrayList<>();
+    List<Graph.Series> rawResultsMin = new ArrayList<>();
+    List<Graph.Series> rawResultsMax = new ArrayList<>();
+    List<Graph.Series> rawResultsAvg = new ArrayList<>();
 
-      P2PSignature psTemplate =
-              new P2PSignature(nodeCt, nodeCt, 15, 3, 50, true, true, SendSigsStrategy.all, 2);
-      psTemplate.network.setNetworkLatency(nl);
+    P2PSignature psTemplate =
+        new P2PSignature(nodeCt, nodeCt, 15, 3, 50, true, true, SendSigsStrategy.all, 2);
+    psTemplate.network.setNetworkLatency(nl);
 
-      String desc = "nodeCount=" + nodeCt + ", gossip " + (psTemplate.sanFermin ? " + San Fermin" : "alone")
-              + ", gossip period=" + psTemplate.sigsSendPeriod + (!psTemplate.sanFermin ?
-              ", compression=" + psTemplate.sendSigsStrategy :
-              "");
-      System.out.println(nl + " " + desc);
-      Graph graph = new Graph("number of signatures per time (" + desc + ")", "time in ms",
-              "number of signatures");
-      Graph medianGraph = new Graph("average number of signatures per time (" + desc + ")", "time in ms",
-              "number of signatures");
+    String desc =
+        "nodeCount=" + nodeCt + ", gossip " + (psTemplate.sanFermin ? " + San Fermin" : "alone")
+            + ", gossip period=" + psTemplate.sigsSendPeriod
+            + (!psTemplate.sanFermin ? ", compression=" + psTemplate.sendSigsStrategy : "");
+    System.out.println(nl + " " + desc);
+    Graph graph = new Graph("number of signatures per time (" + desc + ")", "time in ms",
+        "number of signatures");
+    Graph medianGraph = new Graph("average number of signatures per time (" + desc + ")",
+        "time in ms", "number of signatures");
 
-      int lastSeries=4;
-      StatsHelper.SimpleStats s;
+    int lastSeries = 4;
+    StatsHelper.SimpleStats s;
 
-      boolean boolTime=true;
-      for(int i = 1; i<=lastSeries; i++) {
+    boolean boolTime = true;
+    for (int i = 1; i <= lastSeries; i++) {
 
-          Graph.Series curMin = new Graph.Series("signatures count - worse node"+i);
-          Graph.Series curMax = new Graph.Series("signatures count - best node"+i);
-          Graph.Series curAvg = new Graph.Series("signatures count - average"+i);
-          rawResultsAvg.add(curAvg);
-          rawResultsMin.add(curMin);
-          rawResultsMax.add(curMax);
+      Graph.Series curMin = new Graph.Series("signatures count - worse node" + i);
+      Graph.Series curMax = new Graph.Series("signatures count - best node" + i);
+      Graph.Series curAvg = new Graph.Series("signatures count - average" + i);
+      rawResultsAvg.add(curAvg);
+      rawResultsMin.add(curMin);
+      rawResultsMax.add(curMax);
 
-          P2PSignature ps1 = psTemplate.copy();
-              System.out.println(ps1);
-         // ps1.network.setNetworkLatency(nl1);
-          ps1.network.setNetworkLatency(nl);
-          ps1.network.rd.setSeed(i);
-          ps1.init();
+      P2PSignature ps1 = psTemplate.copy();
+      System.out.println(ps1);
+      // ps1.network.setNetworkLatency(nl1);
+      ps1.network.setNetworkLatency(nl);
+      ps1.network.rd.setSeed(i);
+      ps1.init();
 
-          int counter = 0;
+      int counter = 0;
 
-          do {
-              ps1.network.runMs(10);
-              s = StatsHelper.getStatsOn(ps1.network.allNodes,
-                      n -> ((P2PSigNode) n).verifiedSignatures.cardinality());
-              curMin.addLine(new Graph.ReportLine(ps1.network.time, s.min));
-              curMax.addLine(new Graph.ReportLine(ps1.network.time, s.max));
-              curAvg.addLine(new Graph.ReportLine(ps1.network.time, s.avg));
+      do {
+        ps1.network.runMs(10);
+        s = StatsHelper.getStatsOn(ps1.network.allNodes,
+            n -> ((P2PSigNode) n).verifiedSignatures.cardinality());
+        curMin.addLine(new Graph.ReportLine(ps1.network.time, s.min));
+        curMax.addLine(new Graph.ReportLine(ps1.network.time, s.max));
+        curAvg.addLine(new Graph.ReportLine(ps1.network.time, s.avg));
 
 
-          } while (s.min != ps1.nodeCount);
-            graph.addSerie(curMin);
-            graph.addSerie(curMax);
-            graph.addSerie(curAvg);
-          if(i==lastSeries){
-              try {
-                  graph.save(new File("/tmp/graphNew.png"));
+      } while (s.min != ps1.nodeCount);
+      graph.addSerie(curMin);
+      graph.addSerie(curMax);
+      graph.addSerie(curAvg);
+      if (i == lastSeries) {
+        try {
+          graph.save(new File("/tmp/graphNew.png"));
 
-              } catch (IOException e) {
-                  System.err.println("Can't generate the graph: " + e.getMessage());
-              }
-          }
-          System.out
-                  .println("bytes sent: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getBytesSent));
-          System.out.println(
-                  "bytes rcvd: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getBytesReceived));
-          System.out
-                  .println("msg sent: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getMsgSent));
-          System.out
-                  .println("msg rcvd: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getMsgReceived));
-          System.out.println(
-                  "done at: " + StatsHelper.getStatsOn(ps1.network.allNodes, n -> ((P2PSigNode) n).doneAt));
-      }
-
-      Graph.Series seriesAvgmax =  Graph.averageSeries("Signatures count average - best node",rawResultsMax);
-      Graph.Series seriesAvgavg =  Graph.averageSeries("Signatures count average - average",rawResultsAvg);
-      medianGraph.addSerie(seriesAvgmax);
-      medianGraph.addSerie(seriesAvgavg);
-
-      try {
-          medianGraph.save(new File("/tmp/graphAvg.png"));
-
-      } catch (IOException e) {
+        } catch (IOException e) {
           System.err.println("Can't generate the graph: " + e.getMessage());
+        }
       }
+      System.out.println(
+          "bytes sent: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getBytesSent));
+      System.out.println(
+          "bytes rcvd: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getBytesReceived));
+      System.out
+          .println("msg sent: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getMsgSent));
+      System.out.println(
+          "msg rcvd: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getMsgReceived));
+      System.out.println(
+          "done at: " + StatsHelper.getStatsOn(ps1.network.allNodes, n -> ((P2PSigNode) n).doneAt));
+    }
+
+    Graph.Series seriesAvgmax =
+        Graph.averageSeries("Signatures count average - best node", rawResultsMax);
+    Graph.Series seriesAvgavg =
+        Graph.averageSeries("Signatures count average - average", rawResultsAvg);
+    medianGraph.addSerie(seriesAvgmax);
+    medianGraph.addSerie(seriesAvgavg);
+
+    try {
+      medianGraph.save(new File("/tmp/graphAvg.png"));
+
+    } catch (IOException e) {
+      System.err.println("Can't generate the graph: " + e.getMessage());
+    }
   }
 
   public static void sigsPerNodeCount() {
@@ -634,11 +637,10 @@ public class P2PSignature {
     }
   }
 
-    protected P2PSignature copy() {
-         return new P2PSignature(nodeCount,  threshold,  connectionCount,  pairingTime,
-         sigsSendPeriod,  doubleAggregateStrategy,  sanFermin,
-         sendSigsStrategy,  sigRange);
-    }
+  protected P2PSignature copy() {
+    return new P2PSignature(nodeCount, threshold, connectionCount, pairingTime, sigsSendPeriod,
+        doubleAggregateStrategy, sanFermin, sendSigsStrategy, sigRange);
+  }
 
   public static void sigsPerStrategy() {
     int nodeCt = 1000;

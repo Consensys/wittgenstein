@@ -126,7 +126,7 @@ public class CasperIMD {
     final Map<Integer, Set<Attestation>> attestationsByHeight;
 
     public CasperBlock(BlockProducer blockProducer, int height, CasperBlock father,
-                       Map<Integer, Set<Attestation>> attestationsByHeight, int time) {
+        Map<Integer, Set<Attestation>> attestationsByHeight, int time) {
       super(blockProducer, height, father, true, time);
       this.attestationsByHeight = attestationsByHeight;
     }
@@ -385,7 +385,7 @@ public class CasperIMD {
             Set<Attestation> sa = res.computeIfAbsent(a.height, k -> new HashSet<>());
             sa.add(a);
 
-            Set<Attestation> aa =  res.get(a.height);
+            Set<Attestation> aa = res.get(a.height);
             if (aa == null) {
               aa = new HashSet<>();
               res.put(a.height, aa);

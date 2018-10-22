@@ -161,29 +161,29 @@ public class Graph {
     series.add(s);
   }
 
-  public static Graph.Series averageSeries(String title, List<Graph.Series> series){
+  public static Graph.Series averageSeries(String title, List<Graph.Series> series) {
     Graph.Series seriesAvg = new Graph.Series(title);
-    int largest =0;
-    for (Graph.Series s:series) {
-      if (s.vals.size()>largest){
+    int largest = 0;
+    for (Graph.Series s : series) {
+      if (s.vals.size() > largest) {
         largest = s.vals.size();
       }
     }
 
     double runs = series.size();
     double sum;
-    for (int i = 0;i<largest; i++) {
-       sum = 0;
-      for (int j = 0;j<runs ; j++ ){
-          try{
-            sum += series.get(j).vals.get(i).getY();
-          } catch(IndexOutOfBoundsException e){
-            sum += series.get(j).vals.get(series.get(j).vals.size()-1).getY();
-          }
+    for (int i = 0; i < largest; i++) {
+      sum = 0;
+      for (int j = 0; j < runs; j++) {
+        try {
+          sum += series.get(j).vals.get(i).getY();
+        } catch (IndexOutOfBoundsException e) {
+          sum += series.get(j).vals.get(series.get(j).vals.size() - 1).getY();
+        }
       }
-      seriesAvg.addLine(new Graph.ReportLine(10*i, sum/runs));
+      seriesAvg.addLine(new Graph.ReportLine(10 * i, sum / runs));
     }
     return seriesAvg;
-    }
+  }
 
 }

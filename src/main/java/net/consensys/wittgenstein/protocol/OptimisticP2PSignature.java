@@ -68,8 +68,8 @@ public class OptimisticP2PSignature {
   final P2PNetwork network;
   final Node.NodeBuilder nb;
 
-  public OptimisticP2PSignature(int nodeCount, int threshold, int connectionCount,
-      int pairingTime,int seed) {
+  public OptimisticP2PSignature(int nodeCount, int threshold, int connectionCount, int pairingTime,
+      int seed) {
     this.nodeCount = nodeCount;
     this.threshold = threshold;
     this.connectionCount = connectionCount;
@@ -160,7 +160,7 @@ public class OptimisticP2PSignature {
     boolean printLat = false;
 
     for (int i = 1000; i < 2000; i += 1000) {
-      OptimisticP2PSignature p2ps = new OptimisticP2PSignature(i, i / 2 + 1, 13, 3,0);
+      OptimisticP2PSignature p2ps = new OptimisticP2PSignature(i, i / 2 + 1, 13, 3, 0);
       p2ps.network.setNetworkLatency(nl);
       P2PSigNode observer = p2ps.init();
 
