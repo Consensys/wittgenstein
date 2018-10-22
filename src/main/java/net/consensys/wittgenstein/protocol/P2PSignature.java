@@ -572,11 +572,9 @@ public class P2PSignature implements Protocol {
 
     return ps1;
   }
-  //TODO: Store data points from graph in ArrayList
 
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
-    //NetworkLatency.NetworkLatencyByDistance nl1 = new NetworkLatency.NetworkLatencyByDistance();
     int nodeCt = 1024;
     List<Graph.Series> rawResultsMin = new ArrayList<>();
     List<Graph.Series> rawResultsMax = new ArrayList<>();
