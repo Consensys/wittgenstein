@@ -11,7 +11,7 @@ import java.util.*;
  * https://ethresear.ch/t/beacon-chain-casper-ffg-rpj-mini-spec/2760
  */
 @SuppressWarnings({"WeakerAccess", "SameParameterValue", "unused"})
-public class CasperIMD {
+public class CasperIMD implements Protocol  {
   final int SLOT_DURATION = 8000;
 
   /**
@@ -48,7 +48,9 @@ public class CasperIMD {
    * Time to build an attestation. Same for all.
    */
   final int attestationConstructionTime;
-
+  public CasperIMD copy(){
+    return new CasperIMD(cycleLength,randomOnTies, blockProducersCount, attestersPerRound, blockConstructionTime, attestationConstructionTime);
+  }
   public CasperIMD() {
     this(5, true, 5, 80, 1000, 1);
   }

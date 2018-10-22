@@ -1,8 +1,6 @@
 package net.consensys.wittgenstein.protocol;
 
-import net.consensys.wittgenstein.core.Network;
-import net.consensys.wittgenstein.core.NetworkLatency;
-import net.consensys.wittgenstein.core.Node;
+import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.tools.Graph;
@@ -22,7 +20,7 @@ import java.util.stream.Collectors;
  * KBytesSent=13, KBytesReceived=13, outdatedSwaps=0}
  */
 @SuppressWarnings("WeakerAccess")
-public class SanFerminSignature {
+public class SanFerminSignature implements Protocol{
 
   /**
    * The number of nodes in the network
@@ -115,7 +113,9 @@ public class SanFerminSignature {
 
     finishedNodes = new ArrayList<>();
   }
-
+  public SanFerminSignature copy(){
+    return new SanFerminSignature(nodeCount,threshold,pairingTime,signatureSize,replyTimeout,candidateCount,shuffledLists);
+  }
   final Network<SanFerminNode> network;
   final Node.NodeBuilder nb;
 

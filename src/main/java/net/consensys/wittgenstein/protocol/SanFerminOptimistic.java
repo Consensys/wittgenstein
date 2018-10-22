@@ -2,6 +2,7 @@ package net.consensys.wittgenstein.protocol;
 
 import net.consensys.wittgenstein.core.Network;
 import net.consensys.wittgenstein.core.Node;
+import net.consensys.wittgenstein.core.Protocol;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -16,7 +17,7 @@ import java.util.stream.Collectors;
  * KBytesSent=13, KBytesReceived=13, outdatedSwaps=0}
  */
 @SuppressWarnings("WeakerAccess")
-public class SanFerminOptimistic {
+public class SanFerminOptimistic implements Protocol {
 
   /**
    * The number of nodes in the network
@@ -107,6 +108,9 @@ public class SanFerminOptimistic {
 
 
     finishedNodes = new ArrayList<>();
+  }
+  public SanFerminOptimistic copy(){
+    return new SanFerminOptimistic(nodeCount,powerOfTwo,threshold,pairingTime,signatureSize,replyTimeout,candidateCount,shuffledLists);
   }
 
   final Network<SanFerminNode> network;

@@ -43,7 +43,7 @@ import java.util.List;
  * msgReceived=273298, msgSent=285058, KBytesSent=14475, KBytesReceived=13878}
  */
 @SuppressWarnings("WeakerAccess")
-public class OptimisticP2PSignature {
+public class OptimisticP2PSignature implements Protocol {
   /**
    * The nuumber of nodes in the network
    */
@@ -78,7 +78,9 @@ public class OptimisticP2PSignature {
     this.network = new P2PNetwork(connectionCount);
     this.nb = new Node.NodeBuilderWithRandomPosition(network.rd);
   }
-
+  public OptimisticP2PSignature copy(){
+    return new OptimisticP2PSignature(nodeCount,threshold,connectionCount, pairingTime, 0);
+  }
   static class SendSig extends Network.Message<P2PSigNode> {
     final int sig;
 
