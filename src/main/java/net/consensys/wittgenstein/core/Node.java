@@ -24,7 +24,6 @@ public class Node {
   public final int x;
   public final int y;
   public final boolean byzantine;
-  public boolean down; // Cannot send or receive messages
 
   protected long msgReceived = 0;
   protected long msgSent = 0;
@@ -45,11 +44,6 @@ public class Node {
 
   public long getBytesReceived() {
     return bytesReceived;
-  }
-
-  @Override
-  public String toString() {
-    return "Node{" + "nodeId=" + nodeId + '}';
   }
 
   public static class NodeBuilder {
@@ -76,8 +70,6 @@ public class Node {
     protected int getY() {
       return 1;
     }
-
-
 
     /**
      * Many algo will want a hash of the node id. Be careful: sha-3 is not the ethereum v1 hash.

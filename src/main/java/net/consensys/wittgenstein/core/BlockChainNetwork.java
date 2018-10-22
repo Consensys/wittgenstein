@@ -14,6 +14,10 @@ public class BlockChainNetwork extends Network<BlockChainNode<? extends Block>> 
    */
   public BlockChainNode<? extends Block> observer;
 
+  public BlockChainNetwork(int randomSeed) {
+    super(randomSeed);
+  }
+
   public void addObserver(BlockChainNode<? extends Block> observer) {
     this.observer = observer;
     addNode(observer);
