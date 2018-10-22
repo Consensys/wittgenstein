@@ -510,7 +510,6 @@ public class P2PSignature {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
     //NetworkLatency.NetworkLatencyByDistance nl1 = new NetworkLatency.NetworkLatencyByDistance();
     int nodeCt = 1024;
-    boolean printed = false;
 
     List<Graph.Series> rawResultsMin = new ArrayList<>();
     List<Graph.Series> rawResultsMax = new ArrayList<>();
@@ -533,9 +532,7 @@ public class P2PSignature {
     int lastSeries = 4;
     StatsHelper.SimpleStats s;
 
-    boolean boolTime = true;
-    for (int i = 1; i <= lastSeries; i++) {
-
+    for (int i = 0; i < lastSeries; i++) {
       Graph.Series curMin = new Graph.Series("signatures count - worse node" + i);
       Graph.Series curMax = new Graph.Series("signatures count - best node" + i);
       Graph.Series curAvg = new Graph.Series("signatures count - average" + i);
@@ -544,13 +541,8 @@ public class P2PSignature {
       rawResultsMax.add(curMax);
 
       P2PSignature ps1 = psTemplate.copy();
-      System.out.println(ps1);
-      // ps1.network.setNetworkLatency(nl1);
-      ps1.network.setNetworkLatency(nl);
       ps1.network.rd.setSeed(i);
       ps1.init();
-
-      int counter = 0;
 
       do {
         ps1.network.runMs(10);
@@ -559,20 +551,11 @@ public class P2PSignature {
         curMin.addLine(new Graph.ReportLine(ps1.network.time, s.min));
         curMax.addLine(new Graph.ReportLine(ps1.network.time, s.max));
         curAvg.addLine(new Graph.ReportLine(ps1.network.time, s.avg));
-
-
       } while (s.min != ps1.nodeCount);
       graph.addSerie(curMin);
       graph.addSerie(curMax);
       graph.addSerie(curAvg);
-      if (i == lastSeries) {
-        try {
-          graph.save(new File("/tmp/graphNew.png"));
 
-        } catch (IOException e) {
-          System.err.println("Can't generate the graph: " + e.getMessage());
-        }
-      }
       System.out.println(
           "bytes sent: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getBytesSent));
       System.out.println(
@@ -585,6 +568,12 @@ public class P2PSignature {
           "done at: " + StatsHelper.getStatsOn(ps1.network.allNodes, n -> ((P2PSigNode) n).doneAt));
     }
 
+    try {
+      graph.save(new File("/tmp/graph_ind.png"));
+    } catch (IOException e) {
+      System.err.println("Can't generate the graph: " + e.getMessage());
+    }
+
     Graph.Series seriesAvgmax =
         Graph.averageSeries("Signatures count average - best node", rawResultsMax);
     Graph.Series seriesAvgavg =
@@ -593,8 +582,7 @@ public class P2PSignature {
     medianGraph.addSerie(seriesAvgavg);
 
     try {
-      medianGraph.save(new File("/tmp/graphAvg.png"));
-
+      medianGraph.save(new File("/tmp/graph_avg.png"));
     } catch (IOException e) {
       System.err.println("Can't generate the graph: " + e.getMessage());
     }
