@@ -6,6 +6,7 @@ import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.tools.Graph;
+import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -428,7 +429,7 @@ public class GSFSignature {
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
     int nodeCt = 32768 / 32;
-    GSFSignature ps1 = new GSFSignature(nodeCt, 1, 3, 100, 10, 10, 0);
+    GSFSignature ps1 = new GSFSignature(nodeCt, .8, 3, 100, 20, 10, 0.2);
     ps1.network.setNetworkLatency(nl);
     String desc = ps1.toString();
     Graph graph = new Graph("number of signatures per time (" + desc + ")", "time in ms",
@@ -443,13 +444,13 @@ public class GSFSignature {
     System.out.println(nl + " " + desc);
     ps1.init();
 
+    List<GSFNode> liveNodes =
+        ps1.network.allNodes.stream().filter(n -> !n.down).collect(Collectors.toList());
     long startAt = System.currentTimeMillis();
     StatsHelper.SimpleStats s;
     do {
       ps1.network.runMs(10);
-      s = StatsHelper.getStatsOn(
-          ps1.network.allNodes.stream().filter(n -> !n.down).collect(Collectors.toList()),
-          n -> ((GSFNode) n).verifiedSignatures.cardinality());
+      s = StatsHelper.getStatsOn(liveNodes, n -> ((GSFNode) n).verifiedSignatures.cardinality());
       series1min.addLine(new Graph.ReportLine(ps1.network.time, s.min));
       series1max.addLine(new Graph.ReportLine(ps1.network.time, s.max));
       series1avg.addLine(new Graph.ReportLine(ps1.network.time, s.avg));
@@ -465,16 +466,12 @@ public class GSFSignature {
       System.err.println("Can't generate the graph: " + e.getMessage());
     }
 
-    System.out
-        .println("bytes sent: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getBytesSent));
-    System.out.println(
-        "bytes rcvd: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getBytesReceived));
-    System.out
-        .println("msg sent: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getMsgSent));
-    System.out
-        .println("msg rcvd: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getMsgReceived));
-    System.out.println(
-        "done at: " + StatsHelper.getStatsOn(ps1.network.allNodes, n -> ((GSFNode) n).doneAt));
+
+    System.out.println("bytes sent: " + StatsHelper.getStatsOn(liveNodes, Node::getBytesSent));
+    System.out.println("bytes rcvd: " + StatsHelper.getStatsOn(liveNodes, Node::getBytesReceived));
+    System.out.println("msg sent: " + StatsHelper.getStatsOn(liveNodes, Node::getMsgSent));
+    System.out.println("msg rcvd: " + StatsHelper.getStatsOn(liveNodes, Node::getMsgReceived));
+    System.out.println("done at: " + StatsHelper.getStatsOn(liveNodes, n -> ((GSFNode) n).doneAt));
     System.out.println("Simulation execution time: " + ((endAt - startAt) / 1000) + "s");
   }
 
