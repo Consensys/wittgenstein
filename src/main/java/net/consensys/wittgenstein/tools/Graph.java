@@ -80,6 +80,14 @@ public class Graph {
     final double x;
     final double y;
 
+    public double getY() {
+      return y;
+    }
+
+    public double getX() {
+      return x;
+    }
+
     public ReportLine(double x, double y) {
       this.x = x;
       this.y = y;
@@ -151,4 +159,44 @@ public class Graph {
   public void addSerie(Series s) {
     series.add(s);
   }
+
+  /**
+   * TODO
+   * 
+   * @param title - the title of the series to be created
+   * @param series - all the series must have the same value for 'x' at the same index. We allow
+   *        missing values at the end
+   * @return the aggregated series
+   */
+  public static Graph.Series averageSeries(String title, List<Graph.Series> series) {
+    Graph.Series seriesAvg = new Graph.Series(title);
+
+    Graph.Series largest = null;
+    for (Graph.Series s : series) {
+      if (largest == null || s.vals.size() > largest.vals.size()) {
+        largest = s;
+      }
+    }
+
+    for (int i = 0; largest != null && i < largest.vals.size(); i++) {
+      double x = largest.vals.get(i).x;
+      double sum = 0;
+      for (Series s : series) {
+        if (i < s.vals.size()) {
+          double lx = s.vals.get(i).x;
+          if (Math.abs(x - lx) > 0.00001) {
+            throw new IllegalArgumentException(
+                "We need the indexes to be the same, x=" + x + ", lx=" + lx);
+          }
+          sum += s.vals.get(i).getY();
+        } else {
+          sum += s.vals.get(s.vals.size() - 1).getY();
+        }
+      }
+      seriesAvg.addLine(new Graph.ReportLine(x, sum / series.size()));
+    }
+
+    return seriesAvg;
+  }
+
 }

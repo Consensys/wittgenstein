@@ -5,7 +5,7 @@ import net.consensys.wittgenstein.core.*;
 import java.util.*;
 
 @SuppressWarnings({"WeakerAccess", "SameParameterValue"})
-public class Dfinity {
+public class Dfinity implements Protocol {
   final int roundTime = 3000; // the delay between the block generation and the start of the next random beacon generation
 
   final int blockProducersCount;
@@ -25,6 +25,11 @@ public class Dfinity {
   final int majority;
 
   final Node.NodeBuilder nb;
+
+  public Dfinity copy() {
+    return new Dfinity(blockProducersCount, attestersCount, attestersPerRound,
+        blockConstructionTime, attestationConstructionTime, percentageDeadAttester);
+  }
 
   public Dfinity() {
     this(10, 300, 100, 1000, 1, 0);

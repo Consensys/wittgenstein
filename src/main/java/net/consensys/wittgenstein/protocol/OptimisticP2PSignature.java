@@ -43,7 +43,7 @@ import java.util.List;
  * msgReceived=273298, msgSent=285058, KBytesSent=14475, KBytesReceived=13878}
  */
 @SuppressWarnings("WeakerAccess")
-public class OptimisticP2PSignature {
+public class OptimisticP2PSignature implements Protocol {
   /**
    * The nuumber of nodes in the network
    */
@@ -68,8 +68,8 @@ public class OptimisticP2PSignature {
   final P2PNetwork network;
   final Node.NodeBuilder nb;
 
-  public OptimisticP2PSignature(int nodeCount, int threshold, int connectionCount,
-      int pairingTime) {
+  public OptimisticP2PSignature(int nodeCount, int threshold, int connectionCount, int pairingTime,
+      int seed) {
     this.nodeCount = nodeCount;
     this.threshold = threshold;
     this.connectionCount = connectionCount;
@@ -77,6 +77,10 @@ public class OptimisticP2PSignature {
 
     this.network = new P2PNetwork(connectionCount);
     this.nb = new Node.NodeBuilderWithRandomPosition(network.rd);
+  }
+
+  public OptimisticP2PSignature copy() {
+    return new OptimisticP2PSignature(nodeCount, threshold, connectionCount, pairingTime, 0);
   }
 
   static class SendSig extends Network.Message<P2PSigNode> {
@@ -160,7 +164,7 @@ public class OptimisticP2PSignature {
     boolean printLat = false;
 
     for (int i = 1000; i < 2000; i += 1000) {
-      OptimisticP2PSignature p2ps = new OptimisticP2PSignature(i, i / 2 + 1, 13, 3);
+      OptimisticP2PSignature p2ps = new OptimisticP2PSignature(i, i / 2 + 1, 13, 3, 0);
       p2ps.network.setNetworkLatency(nl);
       P2PSigNode observer = p2ps.init();
 
