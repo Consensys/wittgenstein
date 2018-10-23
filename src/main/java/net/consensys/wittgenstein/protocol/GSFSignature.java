@@ -427,8 +427,8 @@ public class GSFSignature {
 
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
-    int nodeCt = 32768 / 4;
-    GSFSignature ps1 = new GSFSignature(nodeCt, .8, 3, 50, 10, 10, 0.2);
+    int nodeCt = 32768 / 32;
+    GSFSignature ps1 = new GSFSignature(nodeCt, 1, 3, 100, 10, 10, 0);
     ps1.network.setNetworkLatency(nl);
     String desc = ps1.toString();
     Graph graph = new Graph("number of signatures per time (" + desc + ")", "time in ms",
