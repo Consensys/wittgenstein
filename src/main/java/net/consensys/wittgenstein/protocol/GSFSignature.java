@@ -443,7 +443,6 @@ public class GSFSignature {
 
     System.out.println(nl + " " + desc);
     ps1.init();
-
     List<GSFNode> liveNodes =
         ps1.network.allNodes.stream().filter(n -> !n.down).collect(Collectors.toList());
     long startAt = System.currentTimeMillis();
@@ -465,8 +464,7 @@ public class GSFSignature {
     } catch (IOException e) {
       System.err.println("Can't generate the graph: " + e.getMessage());
     }
-
-
+    
     System.out.println("bytes sent: " + StatsHelper.getStatsOn(liveNodes, Node::getBytesSent));
     System.out.println("bytes rcvd: " + StatsHelper.getStatsOn(liveNodes, Node::getBytesReceived));
     System.out.println("msg sent: " + StatsHelper.getStatsOn(liveNodes, Node::getMsgSent));
