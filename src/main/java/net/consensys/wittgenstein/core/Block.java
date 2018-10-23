@@ -31,6 +31,10 @@ abstract public class Block<TB extends Block> {
     valid = true;
   }
 
+  static public long getLastBlockId() {
+    return blockId;
+  }
+
 
   public Block(BlockChainNode producer, int height, TB parent, boolean valid, int time) {
     if (height <= 0) {

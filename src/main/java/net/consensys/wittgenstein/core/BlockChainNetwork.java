@@ -59,13 +59,13 @@ public class BlockChainNetwork extends Network<BlockChainNode<? extends Block>> 
 
     Block cur = observer.head;
 
-    int blocksCreated = 0;
+    int blockInChain = 0;
     while (cur != observer.genesis) {
       assert cur != null;
       assert cur.producer != null;
       if (!small)
         System.out.println("block: " + cur.toString());
-      blocksCreated++;
+      blockInChain++;
 
       productionCount.putIfAbsent(cur.producer.nodeId, new HashSet<>());
       productionCount.get(cur.producer.nodeId).add(cur);
@@ -75,7 +75,8 @@ public class BlockChainNetwork extends Network<BlockChainNode<? extends Block>> 
     }
 
     if (!small) {
-      System.out.println("block count:" + blocksCreated + ", all tx: " + observer.head.lastTxId);
+      System.out.println("block count:" + blockInChain + " on " + Block.getLastBlockId()
+          + ", all tx: " + observer.head.lastTxId);
     }
     List<BlockChainNode> bps = new ArrayList<>(blockProducers);
     bps.sort(Comparator.comparingInt(o -> o.nodeId));

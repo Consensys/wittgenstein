@@ -379,9 +379,19 @@ public class GSFSignature {
       final GSFNode n = new GSFNode();
       network.addNode(n);
       if (i < nodesDown) {
-        n.down = true;
+        // n.down = true;
       }
     }
+
+    for (int setDown = 0; setDown < nodesDown;) {
+      int down = network.rd.nextInt(nodeCount);
+      Node n = network.allNodes.get(down);
+      if (!n.down) {
+        n.down = true;
+        setDown++;
+      }
+    }
+
     for (GSFNode n : network.allNodes) {
       if (!n.down) {
         n.initLevel();
@@ -394,8 +404,8 @@ public class GSFSignature {
 
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
-    int nodeCt = 32768 / 32;
-    GSFSignature ps1 = new GSFSignature(nodeCt, .67, 3, 100, 20, 10, 0);
+    int nodeCt = 32768 / 8;
+    GSFSignature ps1 = new GSFSignature(nodeCt, 1, 3, 10, 10, 10, 1);
     ps1.network.setNetworkLatency(nl);
     String desc = ps1.toString();
     Graph graph = new Graph("number of signatures per time (" + desc + ")", "time in ms",
