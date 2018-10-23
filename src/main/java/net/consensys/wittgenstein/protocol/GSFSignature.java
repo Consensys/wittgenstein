@@ -154,7 +154,7 @@ public class GSFSignature {
       int posInLevel = 0;
 
       /**
-       * Number of message to send with the full set of signature. When it's zero, we're done.
+       * Number of message to send for each new update.
        */
       int remainingCalls;
 
@@ -231,9 +231,7 @@ public class GSFSignature {
         List<GSFNode> res = new ArrayList<>(peersCt);
 
         while (peersCt > 0 && remainingCalls > 0) {
-          if (toSend.cardinality() == expectedSigs()) {
-            remainingCalls--;
-          }
+          remainingCalls--;
 
           GSFNode p = peers.get(posInLevel++);
           if (!finishedPeers.contains(p)) {
@@ -285,6 +283,12 @@ public class GSFSignature {
       }
 
       if (sigs.cardinality() > sfl.verifiedSignatures.cardinality()) {
+        for (int i = sfl.level; i < levels.size(); i++) {
+          // We have some new sigs. This is interesting for our level and all the
+          //  levels above. So we reset the remainingCalls variable.
+          levels.get(i).remainingCalls = levels.get(i).peers.size();
+        }
+
         // We're going to update our common set only if we have more sigs.
         // It's a replacement, not a completion.
         sfl.verifiedSignatures.andNot(sfl.waitedSigs);
@@ -305,8 +309,8 @@ public class GSFSignature {
           while (toSend.cardinality() == sfl.expectedSigs(sfl.level + 1)
               && sfl.level < levels.size() - 1) {
             sfl = levels.get(sfl.level + 1);
-            SendSigs sendSigs = new SendSigs(toSend, sfl,
-                sfl.verifiedSignatures.cardinality() == sfl.expectedSigs());
+            SendSigs sendSigs =
+                new SendSigs(toSend, sfl, sfl.verifiedSignatures.equals(sfl.waitedSigs));
             List<GSFNode> peers =
                 sfl.getRemainingPeers(sfl.verifiedSignatures, acceleratedCallsCount);
             if (!peers.isEmpty()) {
