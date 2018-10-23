@@ -37,12 +37,12 @@ public class GSFSignatureTest {
 
   @Test
   public void testMaxSigInLevel() {
-    Assert.assertEquals(1, n0.levels.get(0).maxSigsInLevel());
-    Assert.assertEquals(1, n0.levels.get(1).maxSigsInLevel()); // send 0, wait for 1
-    Assert.assertEquals(2, n0.levels.get(2).maxSigsInLevel()); // send 0 1, wait for 2 3
-    Assert.assertEquals(4, n0.levels.get(3).maxSigsInLevel()); // send 0 1 2 3, wait for 4 5 6 7
-    Assert.assertEquals(8, n0.levels.get(4).maxSigsInLevel());
-    Assert.assertEquals(16, n0.levels.get(5).maxSigsInLevel());
+    Assert.assertEquals(1, n0.levels.get(0).expectedSigs());
+    Assert.assertEquals(1, n0.levels.get(1).expectedSigs()); // send 0, wait for 1
+    Assert.assertEquals(2, n0.levels.get(2).expectedSigs()); // send 0 1, wait for 2 3
+    Assert.assertEquals(4, n0.levels.get(3).expectedSigs()); // send 0 1 2 3, wait for 4 5 6 7
+    Assert.assertEquals(8, n0.levels.get(4).expectedSigs());
+    Assert.assertEquals(16, n0.levels.get(5).expectedSigs());
   }
 
   @Test
@@ -52,9 +52,19 @@ public class GSFSignatureTest {
     Assert.assertEquals(64, p.network.msgs.size());
   }
 
+  // TODO
+  //@Test
+  public void testNonPowerTwoNodeCount() {
+    GSFSignature p = new GSFSignature(31, 1, 3, 20, 10, 10, 0.1);
+    p.init();
+    GSFSignature.GSFNode n3 = p.network.getNodeById(3);
+    Assert.assertEquals(6, n3.levels.size());
+    Assert.assertEquals(16, n3.levels.get(5).expectedSigs());
+  }
+
   @Test
   public void testDeadNodes() {
-    GSFSignature p = new GSFSignature(31, 1, 3, 20, 10, 10, 0.1);
+    GSFSignature p = new GSFSignature(32, 1, 3, 20, 10, 10, 0.1);
     p.init();
     GSFSignature.GSFNode n0 = p.network.getNodeById(0);
     GSFSignature.GSFNode n3 = p.network.getNodeById(3);
@@ -63,7 +73,7 @@ public class GSFSignatureTest {
     Assert.assertFalse(n3.down);
 
     Assert.assertEquals(6, n3.levels.size());
-    Assert.assertEquals(16, n3.levels.get(5).maxSigsInLevel());
+    Assert.assertEquals(16, n3.levels.get(5).expectedSigs());
   }
 
 }
