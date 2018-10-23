@@ -64,16 +64,10 @@ public class GSFSignatureTest {
 
   @Test
   public void testDeadNodes() {
-    GSFSignature p = new GSFSignature(32, 1, 3, 20, 10, 10, 0.1);
+    GSFSignature p = new GSFSignature(32, 0.8, 3, 20, 10, 10, 0.1);
     p.init();
-    GSFSignature.GSFNode n0 = p.network.getNodeById(0);
-    GSFSignature.GSFNode n3 = p.network.getNodeById(3);
-
-    Assert.assertTrue(n0.down);
-    Assert.assertFalse(n3.down);
-
-    Assert.assertEquals(6, n3.levels.size());
-    Assert.assertEquals(16, n3.levels.get(5).expectedSigs());
+    long dead = p.network.allNodes.stream().filter(n -> n.down).count();
+    Assert.assertEquals(3, dead);
   }
 
 }
