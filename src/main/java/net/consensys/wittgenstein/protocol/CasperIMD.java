@@ -671,6 +671,7 @@ public class CasperIMD implements Protocol {
 
   private static void runSet(int delay, boolean randomOnTies, Graph.Series report) {
     CasperIMD bc = new CasperIMD(5, randomOnTies, 5, 80, 1000, 1);
+    //bc.network.setNetworkLatency(new NetworkLatency.EthScanNetworkLatency());
 
     ByzBlockProducer badNode = bc.new ByzBlockProducerWF(delay, bc.genesis);
     bc.init(badNode);
@@ -682,8 +683,7 @@ public class CasperIMD implements Protocol {
     }
 
     bc.network.run(3600 * 5); // 5 hours is a minimum if you want something statistically reasonable
-    //TODO: improve time
-    bc.network.printStat(true);
+    bc.network.printStat(false);
 
     report
         .addLine(new Graph.ReportLine(delay, badNode.txsCreatedInChain(bc.network.observer.head)));
@@ -696,7 +696,7 @@ public class CasperIMD implements Protocol {
     Graph.Series txsNR = new Graph.Series("tx count - not random on ties");
     graph.addSerie(txsNR);
 
-    for (int delay = -2000; delay < 14000; delay += 1000) {
+    for (int delay = -3000; delay < 12000; delay += 1000) {
       runSet(delay, false, txsNR);
       //runSet(delay, true, txsR);
     }
