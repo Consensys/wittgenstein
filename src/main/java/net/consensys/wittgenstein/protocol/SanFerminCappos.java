@@ -218,12 +218,9 @@ public class SanFerminCappos implements Protocol {
       }
 
       if (wantReply) {
-        this.sendSwap(Collections.singletonList(from), swap.level, this.aggValue, false);
-        return;
+        this.sendSwap(Collections.singletonList(from), swap.level,
+                this.totalNumberOfSigs(swap.level),false);
       }
-
-      if (isSwapping)
-        return; // do nothing if we are already swapping
 
 
       // accept if it is a valid swap !
@@ -231,9 +228,11 @@ public class SanFerminCappos implements Protocol {
       boolean goodLevel = swap.level == currentPrefixLength;
       boolean isValidSig = true; // as always :)
       if (isCandidate && goodLevel && isValidSig) {
-        transition(" received valid SWAP ", from.binaryId, swap.level, swap.aggValue);
+        if (!isSwapping)
+          transition(" received valid SWAP ", from.binaryId, swap.level, swap.aggValue);
       } else {
         print(" received  INVALID Swap" + "from " + from.binaryId + " at level " + swap.level);
+        print("   ---> " + isValidSig + " - " + goodLevel + " - " + isCandidate);
       }
     }
 
@@ -256,7 +255,8 @@ public class SanFerminCappos implements Protocol {
 
       print(" send Swaps to " + String.join(" - ",
           candidates.stream().map(n -> n.binaryId).collect(Collectors.toList())));
-      this.sendSwap(candidates, this.currentPrefixLength, this.aggValue, true);
+      this.sendSwap(candidates, this.currentPrefixLength,
+              this.totalNumberOfSigs(this.currentPrefixLength+1), true);
 
       int currLevel = this.currentPrefixLength;
       network.registerTask(() -> {
@@ -289,12 +289,7 @@ public class SanFerminCappos implements Protocol {
         return;
       }
 
-      int howManySigsTotal = this.signatureCache.entrySet().stream()
-                            .map(entry -> entry.getValue())
-                            .map(list -> list.stream().max(Integer::max).get())
-                            .reduce(0,Integer::sum);
-
-      boolean enoughSigs = howManySigsTotal > threshold;
+      boolean enoughSigs = totalNumberOfSigs(this.currentPrefixLength) >= threshold;
       boolean noMoreSwap = this.currentPrefixLength == 0;
 
       if (enoughSigs && !thresholdDone) {
@@ -331,6 +326,13 @@ public class SanFerminCappos implements Protocol {
       network.send(r, SanFerminNode.this, nodes);
     }
 
+    public int totalNumberOfSigs(int level) {
+      return this.signatureCache.entrySet().stream()
+              .filter(entry -> entry.getKey() >= level)
+              .map(entry -> entry.getValue())
+              .map(list -> list.stream().max(Integer::max).get())
+              .reduce(0,Integer::sum) + 1; // +1 for own sig
+    }
     /**
      * Transition prevents any more aggregation at this level, and launch the "verification routine"
      * and move on to the next level. The first three parameters are only here for logging purposes.
@@ -338,10 +340,8 @@ public class SanFerminCappos implements Protocol {
     private void transition(String type, String fromId, int level, int toAggregate) {
       this.isSwapping = true;
       network.registerTask(() -> {
-        int before = this.aggValue;
-        this.aggValue += toAggregate;
-        print(" received " + type + " lvl=" + level + " from " + fromId + " aggValue " + before
-            + " -> " + this.aggValue);
+        print(" received " + type + " lvl=" + level + " from " + fromId);
+        this.putCachedSig(level,toAggregate);
         this.goNextLevel();
       }, network.time + pairingTime, this);
     }
@@ -358,8 +358,21 @@ public class SanFerminCappos implements Protocol {
               new ArrayList<>());
       list.add(value);
       this.signatureCache.put(level,list);
+      boolean enoughSigs = totalNumberOfSigs(this.currentPrefixLength) >= threshold;
+
+      if (enoughSigs && !thresholdDone) {
+        print(" --- THRESHOLD REACHED --- ");
+        thresholdDone = true;
+        thresholdAt = network.time + pairingTime * 2;
+      }
     }
 
+    public long getThresholdAt(){
+      return thresholdAt;
+    }
+    public long getDoneAt(){
+      return doneAt;
+    }
     /**
      * simple helper method to print node info + message
      */
@@ -372,7 +385,8 @@ public class SanFerminCappos implements Protocol {
     @Override
     public String toString() {
       return "SanFerminNode{" + "nodeId=" + binaryId + ", thresholdAt=" + thresholdAt + ", doneAt="
-          + doneAt + ", sigs=" + aggValue + ", msgReceived=" + msgReceived + ", msgSent=" + msgSent
+          + doneAt + ", sigs=" + totalNumberOfSigs(-1) + ", msgReceived=" + msgReceived + ", " +
+              "msgSent=" + msgSent
           + ", KBytesSent=" + bytesSent / 1024 + ", KBytesReceived=" + bytesReceived / 1024 + '}';
     }
   }
@@ -387,7 +401,7 @@ public class SanFerminCappos implements Protocol {
     // String data -- no need to specify it, but only in the size() method
 
 
-    public Swap(int level, int aggValue, boolean reply) {
+    public Swap(int level, int aggValue, boolean reply, int bitset) {
       this.level = level;
       this.wantReply = reply;
       this.aggValue = aggValue;
@@ -413,24 +427,30 @@ public class SanFerminCappos implements Protocol {
       distribVal[i] += 50; // more or less the latency we had before the refactoring
 
     SanFerminCappos p2ps;
-    //p2ps = new SanFerminCappos(1024, 10,512, 2,48,300,3,true);
-    //p2ps = new SanFerminCappos(512, 9,256, 2,48,300,1,false);
-
-    p2ps = new SanFerminCappos(8, 4, 4, 2, 200, 2);
 
 
-    p2ps.verbose = true;
+    p2ps = new SanFerminCappos(8, 4, 4, 48, 100, 3);
+    //p2ps = new SanFerminCappos(1024, 800, 4, 48, 100, 50);
+    p2ps = new SanFerminCappos(16384, 8192, 4, 48, 100, 100);
+    //p2ps.verbose = true;
     p2ps.network.setNetworkLatency(distribProp, distribVal).setMsgDiscardTime(1000);
     //p2ps.network.removeNetworkLatency();
 
     p2ps.StartAll();
     p2ps.network.run(30);
 
-    // print results
-    Collections.sort(p2ps.finishedNodes, Comparator.comparingLong(n2 -> n2.thresholdAt));
-    int max = p2ps.finishedNodes.size() < 10 ? p2ps.finishedNodes.size() : 10;
-    for (SanFerminNode n : p2ps.finishedNodes.subList(0, max))
-      System.out.println(n);
+    int max = 10;
+    // print results first reached threshold
+    System.out.println(" --- First reaching threshold ---");
+    p2ps.finishedNodes.stream()
+            .sorted(Comparator.comparingLong(SanFerminNode::getThresholdAt))
+            .limit(max).forEach(System.out::println);
+
+    System.out.println(" --- First reaching full sig ---");
+    p2ps.finishedNodes.stream()
+            .sorted(Comparator.comparingLong(SanFerminNode::getDoneAt))
+            .limit(max).forEach(System.out::println);
+
 
     p2ps.network.printNetworkLatency();
   }
