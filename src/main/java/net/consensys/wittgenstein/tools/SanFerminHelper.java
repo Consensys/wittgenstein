@@ -19,7 +19,7 @@ public class SanFerminHelper<T extends Node> {
   /**
    * The id of the node in binary
    */
-  private final String binaryId;
+  public final String binaryId;
   /**
    * List of all nodes
    */
@@ -30,16 +30,21 @@ public class SanFerminHelper<T extends Node> {
   private final HashMap<Integer, BitSet> usedNodes;
 
   /**
+   * Random instance for reproducible experiments
+   */
+  private final Random rd;
+  /**
    * currentLevel tracks at which level this SanFerminHelper is. It is useful when using the helper
    * to "conduct" the protocol using the method `nextCandidateSet`
    */
   public int currentLevel;
 
-  public SanFerminHelper(T n, List<T> allNodes) {
+  public SanFerminHelper(T n, List<T> allNodes, Random rd) {
     this.n = n;
     this.binaryId = toBinaryID(n, allNodes.size());
     this.allNodes = allNodes;
     this.usedNodes = new HashMap<>();
+    this.rd = rd;
     this.currentLevel = MoreMath.log2(allNodes.size());
   }
 
@@ -103,6 +108,12 @@ public class SanFerminHelper<T extends Node> {
   }
 
   /**
+   *
+   */
+  public boolean isCandidate(T node, int level) {
+    return this.getCandidateSet(level).contains(node);
+  }
+  /**
    * getExactCandidateNode selects deterministically the node from the candidate set at the given
    * level that should be contacted.
    */
@@ -125,7 +136,7 @@ public class SanFerminHelper<T extends Node> {
    * getCandidateSet is that saves which nodes have been selected already, and returns only new or
    * no nodes at each call for the same level.
    */
-  public List<T> pickNextNodes(int level, int howMany, Random rd) {
+  public List<T> pickNextNodes(int level, int howMany) {
     List<T> candidateSet = new ArrayList<>(getCandidateSet(level));
 
     List<T> ownSet = getOwnSet(level);
@@ -169,9 +180,9 @@ public class SanFerminHelper<T extends Node> {
    * the new candidate set. One can pick others unpicked nodes for this level using
    * `pickNextNodes(helper.currentLevel,howMany)`.
    */
-  public List<T> nextCandidateSet(int howMany, Random rd) {
+  public List<T> nextCandidateSet(int howMany) {
     this.currentLevel--;
-    return pickNextNodes(this.currentLevel, howMany, rd);
+    return pickNextNodes(this.currentLevel, howMany);
   }
 
   /**

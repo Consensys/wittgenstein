@@ -3,6 +3,9 @@ package net.consensys.wittgenstein.protocol;
 import net.consensys.wittgenstein.core.Network;
 import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.core.Protocol;
+import net.consensys.wittgenstein.core.utils.MoreMath;
+import net.consensys.wittgenstein.tools.SanFerminHelper;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -17,22 +20,12 @@ import java.util.stream.Collectors;
  * KBytesSent=13, KBytesReceived=13, outdatedSwaps=0}
  */
 @SuppressWarnings("WeakerAccess")
-public class SanFerminOptimistic implements Protocol {
+public class SanFerminCappos implements Protocol {
 
   /**
    * The number of nodes in the network
    */
   final int nodeCount;
-
-  /**
-   * exponent to represent @nodeCount in base 2 nodeCount = 2 ** powerOfTwo; It is used to represent
-   * the length of the binary string of a node's id.
-   */
-  final int powerOfTwo;
-  /**
-   * The number of signatures to reach to finish the protocol
-   */
-  final int threshold;
 
   /**
    * The time it takes to do a pairing for a node i.e. simulation of the most heavy computation
@@ -44,10 +37,6 @@ public class SanFerminOptimistic implements Protocol {
    */
   final int signatureSize;
 
-  /**
-   * how much time to wait for a reply upon a given request
-   */
-  final int replyTimeout;
 
   /**
    * Do we print logging information from nodes or not
@@ -55,14 +44,20 @@ public class SanFerminOptimistic implements Protocol {
   boolean verbose;
 
   /**
-   * Should we shuffle the list of the candidate sets at each peers
-   */
-  boolean shuffledLists;
-
-  /**
    * how many candidate do we try to reach at the same time for a given level
    */
   int candidateCount;
+
+  /**
+   * Threshold is the ratio of number of actual contributions vs number of
+   * expected contributions in a given range level
+   */
+  int threshold;
+
+  /**
+   * timeout after which to pass on to the next level in ms
+   */
+  int timeout;
 
   public List<SanFerminNode> getAllNodes() {
     return allNodes;
@@ -81,16 +76,14 @@ public class SanFerminOptimistic implements Protocol {
   public List<SanFerminNode> finishedNodes;
 
 
-  public SanFerminOptimistic(int nodeCount, int powerOfTwo, int threshold, int pairingTime,
-      int signatureSize, int replyTimeout, int candidateCount, boolean shuffledLists) {
+  public SanFerminCappos(int nodeCount, int threshold, int pairingTime,
+                         int signatureSize, int timeout, int candidateCount) {
     this.nodeCount = nodeCount;
-    this.powerOfTwo = powerOfTwo;
-    this.threshold = threshold;
     this.pairingTime = pairingTime;
     this.signatureSize = signatureSize;
-    this.replyTimeout = replyTimeout;
     this.candidateCount = candidateCount;
-    this.shuffledLists = shuffledLists;
+    this.threshold = threshold;
+    this.timeout = timeout;
 
     this.network = new Network<>();
     this.nb = new Node.NodeBuilderWithRandomPosition(network.rd);
@@ -104,15 +97,10 @@ public class SanFerminOptimistic implements Protocol {
 
     // compute candidate set once all peers have been created
     for (SanFerminNode n : allNodes)
-      n.computeCandidateSets();
+      n.helper = new SanFerminHelper<>(n,allNodes,this.network.rd);
 
 
     finishedNodes = new ArrayList<>();
-  }
-
-  public SanFerminOptimistic copy() {
-    return new SanFerminOptimistic(nodeCount, powerOfTwo, threshold, pairingTime, signatureSize,
-        replyTimeout, candidateCount, shuffledLists);
   }
 
   final Network<SanFerminNode> network;
@@ -126,53 +114,10 @@ public class SanFerminOptimistic implements Protocol {
       network.registerTask(n::goNextLevel, 1, n);
   }
 
-  /**
-   * Returns the length of the longest common prefix between the ids of the two nodes. NOTE: ids are
-   * transformed into binary form first, and the length of the prefix corresponds to the length in
-   * binary string form.
-   *
-   * @param a the node with whom to compare ids
-   * @param b the other node with whom to compare ids
-   * @return length of the LCP
-   */
-  static public int LengthLCP(SanFerminNode a, SanFerminNode b) {
-    String s1 = a.binaryId;
-    String s2 = b.binaryId;
-
-    String ret = "";
-    int idx = 0;
-
-    while (true) {
-      char thisLetter = 0;
-      for (String word : new String[] {s1, s2}) {
-        if (idx == word.length()) {
-          return ret.length();
-        }
-        if (thisLetter == 0) {
-          thisLetter = word.charAt(idx);
-        }
-        if (thisLetter != word.charAt(idx)) {
-          return ret.length();
-        }
-      }
-      ret += thisLetter;
-      idx++;
-    }
+  public SanFerminCappos copy() {
+    return new SanFerminCappos(nodeCount, threshold, pairingTime,
+            signatureSize,timeout,candidateCount);
   }
-
-  /**
-   * Simply pads the binary string id to the exact length = n where N = 2^n
-   */
-  public static String leftPadWithZeroes(String originalString, int length) {
-    StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < length; i++) {
-      sb.append("0");
-    }
-    String padding = sb.toString();
-    String paddedString = padding.substring(originalString.length()) + originalString;
-    return paddedString;
-  }
-
 
   /**
    * SanFerminNode is a node that carefully selects the peers he needs to contact to get the final
@@ -184,6 +129,8 @@ public class SanFerminOptimistic implements Protocol {
      */
     public final String binaryId;
 
+    private SanFerminHelper<SanFerminNode> helper;
+
     /**
      * This node needs to exchange with another node having a current common prefix length of
      * currentPrefixLength. A node starts by the highest possible prefix length and works towards a
@@ -192,29 +139,9 @@ public class SanFerminOptimistic implements Protocol {
     public int currentPrefixLength;
 
     /**
-     * List of nodes that are candidates to swap with this node sorted through different prefix
-     * length.
+     * Set of received signatures at each level.
      */
-    HashMap<Integer, List<SanFerminNode>> candidateSets;
-    /**
-     * BitSet to save which node have we sent swaprequest so far
-     */
-    HashMap<Integer, BitSet> usedCandidates;
-
-    /**
-     * Set of aggregated signatures saved. Since it's only a logarithmic number it's not much to
-     * save (log_2(20k) = 15)
-     */
-    HashMap<Integer, Integer> signatureCache;
-
-    /**
-     * Ids of the nodes we have sent a SwapRequest to. Different strategies to pick the nodes are
-     * detailed in `pickNextNodes`
-     */
-    Set<Integer> pendingNodes;
-
-    HashMap<Integer, Integer> futurSigs;
-
+    HashMap<Integer, List<Integer>> signatureCache;
     /**
      * isSwapping indicates whether we are in a state where we can swap at the current level or not.
      * This is acting as a Lock, since between the time we receive a valid swap and the time we
@@ -250,18 +177,15 @@ public class SanFerminOptimistic implements Protocol {
 
     public SanFerminNode(NodeBuilder nb) {
       super(nb);
-      this.binaryId = leftPadWithZeroes(Integer.toBinaryString(this.nodeId), powerOfTwo);
-      this.candidateSets = new HashMap<>();
-      this.usedCandidates = new HashMap<>();
+      this.binaryId = SanFerminHelper.toBinaryID(this,nodeCount);
       this.done = false;
       this.thresholdDone = false;
       this.aggValue = 1;
       this.isSwapping = false;
       // node should start at n-1 with N = 2^n
       // this counter gets decreased with `goNextLevel`.
-      this.currentPrefixLength = powerOfTwo;
+      this.currentPrefixLength = MoreMath.log2(nodeCount);
       this.signatureCache = new HashMap<>();
-      this.futurSigs = new HashMap<>();
     }
 
     /**
@@ -277,15 +201,17 @@ public class SanFerminOptimistic implements Protocol {
         if (wantReply && isValueCached) {
           print(
               "sending back CACHED signature at level " + swap.level + " to node " + from.binaryId);
-          this.sendSwap(Collections.singletonList(from), swap.level,
-              this.signatureCache.get(swap.level), false);
+          this.sendSwap(Collections.singletonList(from),
+                  swap.level,
+                  this.getBestCachedSig(swap.level),
+                  false);
         } else {
           // it's a value we might want to keep for later!
-          boolean isCandidate = candidateSets.get(swap.level).contains(from);
+          boolean isCandidate = this.helper.isCandidate(from,swap.level);
           boolean isValidSig = true; // as always :)
           if (isCandidate && isValidSig) {
             // it is a good request we can save for later!
-            this.signatureCache.put(swap.level, swap.aggValue);
+            this.putCachedSig(swap.level, swap.aggValue);
           }
         }
         return;
@@ -301,7 +227,7 @@ public class SanFerminOptimistic implements Protocol {
 
 
       // accept if it is a valid swap !
-      boolean isCandidate = candidateSets.get(currentPrefixLength).contains(from);
+      boolean isCandidate = this.helper.isCandidate(from, currentPrefixLength);
       boolean goodLevel = swap.level == currentPrefixLength;
       boolean isValidSig = true; // as always :)
       if (isCandidate && goodLevel && isValidSig) {
@@ -312,13 +238,11 @@ public class SanFerminOptimistic implements Protocol {
     }
 
     /**
-     * tryNextNode simply picks the next eligible candidate from the list and send a swap request to
+     * tryNextNodes simply picks the next eligible candidate from the list and send a swap request to
      * it. It attaches a timeout to the request. If no SwapReply has been received before timeout,
-     * tryNextNode() will be called again.
+     * tryNextNodes() will be called again.
      */
-    private void tryNextNode() {
-      // TODO move to fully multiple node mode ! but git commit before
-      List<SanFerminNode> candidates = this.pickNextNodes();
+    private void tryNextNodes(List<SanFerminNode> candidates) {
       if (candidates.size() == 0) {
         // when malicious actors are introduced or some nodes are
         // failing this case can happen. In that case, the node
@@ -330,10 +254,7 @@ public class SanFerminOptimistic implements Protocol {
         return;
       }
 
-      // add ids to the set of pending nodes
-      this.pendingNodes.addAll(candidates.stream().map(n -> n.nodeId).collect(Collectors.toList()));
-
-      print(" send SwapRequest to " + String.join(" - ",
+      print(" send Swaps to " + String.join(" - ",
           candidates.stream().map(n -> n.binaryId).collect(Collectors.toList())));
       this.sendSwap(candidates, this.currentPrefixLength, this.aggValue, true);
 
@@ -345,9 +266,11 @@ public class SanFerminOptimistic implements Protocol {
           print("TIMEOUT of SwapRequest at level " + currLevel);
           // that means we haven't got a successful reply for that
           // level so we try another node
-          tryNextNode();
+          List<SanFerminNode> nextNodes =
+                  this.helper.pickNextNodes(helper.currentLevel,candidateCount);
+          tryNextNodes(nextNodes);
         }
-      }, network.time + replyTimeout, SanFerminNode.this);
+      }, network.time + timeout, SanFerminNode.this);
 
     }
 
@@ -366,7 +289,12 @@ public class SanFerminOptimistic implements Protocol {
         return;
       }
 
-      boolean enoughSigs = this.aggValue >= threshold;
+      int howManySigsTotal = this.signatureCache.entrySet().stream()
+                            .map(entry -> entry.getValue())
+                            .map(list -> list.stream().max(Integer::max).get())
+                            .reduce(0,Integer::sum);
+
+      boolean enoughSigs = howManySigsTotal > threshold;
       boolean noMoreSwap = this.currentPrefixLength == 0;
 
       if (enoughSigs && !thresholdDone) {
@@ -383,94 +311,24 @@ public class SanFerminOptimistic implements Protocol {
         return;
       }
       this.currentPrefixLength--;
-      this.signatureCache.put(this.currentPrefixLength, this.aggValue);
       this.isSwapping = false;
-      this.pendingNodes = new HashSet<>();
 
-      if (futurSigs.containsKey(currentPrefixLength)) {
+      if (signatureCache.containsKey(currentPrefixLength)) {
         print(" FUTURe value at new level" + currentPrefixLength + " "
             + "saved. Moving on directly !");
-        this.aggValue += futurSigs.get(currentPrefixLength);
         // directly go to the next level !
         goNextLevel();
         return;
       }
-      this.tryNextNode();
+      List<SanFerminNode> newNodes =
+              this.helper.nextCandidateSet(candidateCount);
+      this.tryNextNodes(newNodes);
     }
 
-    private void sendSwap(List<SanFerminNode> nodes, int level, int value, boolean reply) {
-      Swap r = new Swap(level, value, reply);
+    private void sendSwap(List<SanFerminNode> nodes, int level, int value,
+                          boolean wantReply) {
+      Swap r = new Swap(level, value,wantReply);
       network.send(r, SanFerminNode.this, nodes);
-    }
-
-    /**
-     * computeCandidateSets computes the set of nodes that are eligible for swapping with, at each
-     * level. NOTE: This function assumes knowledge of the whole graph of node. See "allNodes" field
-     * for further discussion about this assumption.
-     */
-    private void computeCandidateSets() {
-      for (SanFerminNode node : allNodes) {
-        if (node.nodeId == this.nodeId) {
-          continue; // we skip ourself
-        }
-        int length = LengthLCP(this, node);
-        List<SanFerminNode> list = candidateSets.getOrDefault(length, new LinkedList<>());
-        list.add(node);
-        candidateSets.put(length, list);
-      }
-      if (shuffledLists)
-        candidateSets.replaceAll((k, v) -> {
-          Collections.shuffle(v, network.rd);
-          return v;
-        });
-
-      for (Map.Entry<Integer, List<SanFerminNode>> entry : candidateSets.entrySet()) {
-        int size = entry.getValue().size();
-        usedCandidates.put(entry.getKey(), new BitSet(size));
-      }
-    }
-
-    /**
-     * One big question is which node to chose amongst the list so that it minimizes the number of
-     * "NO" replies,ie. so that it minimizes the number of nodes who contact another node who
-     * already swapped at this level.
-     */
-    private List<SanFerminNode> pickNextNodes() {
-      return pickNextNode1();
-    }
-
-    /**
-     * This implementation randomly shuffle the list and pick the first one, and perform the same
-     * steps for further nodes if the first one does not work. There are tons of ways to perform
-     * this decision-making, some which brings better guarantees probably. This PoC chooses to use a
-     * random assignement, as most often, uniformity performs better in computer science.
-     */
-    private List<SanFerminNode> pickNextNode1() {
-      List<SanFerminNode> list = candidateSets.getOrDefault(currentPrefixLength, new ArrayList<>());
-
-      // iterate over bitset to find non-asked node yet
-      BitSet set = usedCandidates.getOrDefault(currentPrefixLength, new BitSet(0));
-
-      // we expect to choose candidateCount number of candidates
-      List<SanFerminNode> selectedCandidates = new ArrayList<>(candidateCount);
-      boolean found = false;
-      for (int i = 0; i < list.size() && selectedCandidates.size() <= candidateCount; i++) {
-        if (set.get(i))
-          continue;
-
-        found = true;
-        selectedCandidates.add(list.get(i));
-        set.set(i, true);
-        break;
-      }
-      if (!found) {
-        // This may happen in case the number of nodes is not a power
-        // of two, or more generally if the node already tried to
-        // contact all of his eligible peers already
-        return Collections.emptyList();
-      }
-      usedCandidates.put(currentPrefixLength, set);
-      return selectedCandidates;
     }
 
     /**
@@ -488,11 +346,18 @@ public class SanFerminOptimistic implements Protocol {
       }, network.time + pairingTime, this);
     }
 
-    private void timeout(int level) {
-      // number of potential candidates at a given level
-      int diff = powerOfTwo - currentPrefixLength;
-      int potentials = (int) Math.pow(2, diff) - 1;
+    private int getBestCachedSig(int level) {
+      List<Integer> cached = this.signatureCache.getOrDefault(level,
+              new ArrayList<>());
+      int max = cached.stream().reduce(Integer::max).get();
+      return max;
+    }
 
+    private void putCachedSig(int level,int value) {
+      List<Integer> list = this.signatureCache.getOrDefault(level,
+              new ArrayList<>());
+      list.add(value);
+      this.signatureCache.put(level,list);
     }
 
     /**
@@ -547,11 +412,11 @@ public class SanFerminOptimistic implements Protocol {
     for (int i = 0; i < distribVal.length; i++)
       distribVal[i] += 50; // more or less the latency we had before the refactoring
 
-    SanFerminOptimistic p2ps;
-    //p2ps = new SanFerminOptimistic(1024, 10,512, 2,48,300,3,true);
-    //p2ps = new SanFerminOptimistic(512, 9,256, 2,48,300,1,false);
+    SanFerminCappos p2ps;
+    //p2ps = new SanFerminCappos(1024, 10,512, 2,48,300,3,true);
+    //p2ps = new SanFerminCappos(512, 9,256, 2,48,300,1,false);
 
-    p2ps = new SanFerminOptimistic(8, 3, 4, 2, 48, 300, 3, true);
+    p2ps = new SanFerminCappos(8, 4, 4, 2, 200, 2);
 
 
     p2ps.verbose = true;
@@ -570,23 +435,3 @@ public class SanFerminOptimistic implements Protocol {
     p2ps.network.printNetworkLatency();
   }
 }
-
-/*
-*
-* ONE NODE WITHOUT SHUFFLING
-SanFerminNode{nodeId=110, thresholdAt=311, doneAt=1085, sigs=8, msgReceived=6, msgSent=6, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
-SanFerminNode{nodeId=100, thresholdAt=345, doneAt=475, sigs=8, msgReceived=7, msgSent=4, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
-SanFerminNode{nodeId=000, thresholdAt=346, doneAt=486, sigs=8, msgReceived=8, msgSent=4, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
-SanFerminNode{nodeId=010, thresholdAt=400, doneAt=1021, sigs=8, msgReceived=6, msgSent=6, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
-SanFerminNode{nodeId=101, thresholdAt=514, doneAt=888, sigs=8, msgReceived=4, msgSent=5, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
-SanFerminNode{nodeId=011, thresholdAt=691, doneAt=1553, sigs=8, msgReceived=3, msgSent=6, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
-SanFerminNode{nodeId=001, thresholdAt=739, doneAt=905, sigs=8, msgReceived=4, msgSent=4, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
- * ONE NODE WITH SHUFFLING
- SanFerminNode{nodeId=111, thresholdAt=283, doneAt=751, sigs=8, msgReceived=5, msgSent=4, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
-SanFerminNode{nodeId=101, thresholdAt=286, doneAt=588, sigs=8, msgReceived=5, msgSent=4, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
-SanFerminNode{nodeId=110, thresholdAt=329, doneAt=465, sigs=8, msgReceived=7, msgSent=3, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
-SanFerminNode{nodeId=100, thresholdAt=378, doneAt=805, sigs=8, msgReceived=4, msgSent=4, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
-SanFerminNode{nodeId=011, thresholdAt=685, doneAt=754, sigs=8, msgReceived=6, msgSent=7, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
-SanFerminNode{nodeId=001, thresholdAt=739, doneAt=847, sigs=8, msgReceived=6, msgSent=5, KBytesSent=0, KBytesReceived=0, outdatedSwaps=0}
-
- */

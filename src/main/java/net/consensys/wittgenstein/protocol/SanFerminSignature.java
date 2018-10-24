@@ -104,7 +104,8 @@ public class SanFerminSignature implements Protocol {
     }
 
     // register the sanfermin helper with all the nodes
-    this.allNodes.forEach(n -> n.candidateTree = new SanFerminHelper<>(n, allNodes));
+    this.allNodes.forEach(n -> n.candidateTree = new SanFerminHelper<>(n,
+            allNodes,this.network.rd));
 
     finishedNodes = new ArrayList<>();
   }
@@ -125,39 +126,6 @@ public class SanFerminSignature implements Protocol {
       network.registerTask(n::goNextLevel, 1, n);
   }
 
-  /**
-   * Returns the length of the longest common prefix between the ids of the two nodes. NOTE: ids are
-   * transformed into binary form first, and the length of the prefix corresponds to the length in
-   * binary string form.
-   *
-   * @param a the node with whom to compare ids
-   * @param b the other node with whom to compare ids
-   * @return length of the LCP
-   */
-  static public int LengthLCP(SanFerminNode a, SanFerminNode b) {
-    String s1 = a.binaryId;
-    String s2 = b.binaryId;
-
-    String ret = "";
-    int idx = 0;
-
-    while (true) {
-      char thisLetter = 0;
-      for (String word : new String[] {s1, s2}) {
-        if (idx == word.length()) {
-          return ret.length();
-        }
-        if (thisLetter == 0) {
-          thisLetter = word.charAt(idx);
-        }
-        if (thisLetter != word.charAt(idx)) {
-          return ret.length();
-        }
-      }
-      ret += thisLetter;
-      idx++;
-    }
-  }
 
   /**
    * SanFerminNode is a node that carefully selects the peers he needs to contact to get the final
@@ -343,7 +311,7 @@ public class SanFerminSignature implements Protocol {
           // only try the next one if this is an expected reply
           if (this.pendingNodes.contains(from.nodeId)) {
             List<SanFerminNode> nodes = this.candidateTree.pickNextNodes(this.currentPrefixLength,
-                candidateCount, network.rd);
+                candidateCount);
             sendToNodes(nodes);
           } else {
             print(" UNEXPECTED NO reply from " + from.binaryId);
@@ -389,7 +357,7 @@ public class SanFerminSignature implements Protocol {
           // that means we haven't got a successful reply for that
           // level so we try other nodes
           List<SanFerminNode> newList = this.candidateTree.pickNextNodes(this.currentPrefixLength,
-              candidateCount, network.rd);
+              candidateCount);
           sendToNodes(newList);
         }
       }, network.time + replyTimeout, SanFerminNode.this);
@@ -439,7 +407,7 @@ public class SanFerminSignature implements Protocol {
         goNextLevel();
         return;
       }
-      List<SanFerminNode> newList = this.candidateTree.nextCandidateSet(candidateCount, network.rd);
+      List<SanFerminNode> newList = this.candidateTree.nextCandidateSet(candidateCount);
       this.sendToNodes(newList);
     }
 
