@@ -1,11 +1,16 @@
 package net.consensys.wittgenstein.protocol;
 
 import net.consensys.wittgenstein.core.Network;
+import net.consensys.wittgenstein.core.NetworkLatency;
 import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.core.Protocol;
 import net.consensys.wittgenstein.core.utils.MoreMath;
+import net.consensys.wittgenstein.core.utils.StatsHelper;
+import net.consensys.wittgenstein.tools.Graph;
 import net.consensys.wittgenstein.tools.SanFerminHelper;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -401,7 +406,7 @@ public class SanFerminCappos implements Protocol {
     // String data -- no need to specify it, but only in the size() method
 
 
-    public Swap(int level, int aggValue, boolean reply, int bitset) {
+    public Swap(int level, int aggValue, boolean reply) {
       this.level = level;
       this.wantReply = reply;
       this.aggValue = aggValue;
@@ -419,8 +424,59 @@ public class SanFerminCappos implements Protocol {
     }
   }
 
+  public static void sigsPerTime() {
+    NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
+    int nodeCt = 32768 / 2;
+    SanFerminCappos ps1 = new SanFerminCappos(nodeCt, nodeCt / 2, 2, 48, 150, 50);
+    ps1.network.setNetworkLatency(nl);
+
+    Graph graph = new Graph("number of sig per time", "time in ms", "sig count");
+    Graph.Series series1min = new Graph.Series("sig count - worse node");
+    Graph.Series series1max = new Graph.Series("sig count - best node");
+    Graph.Series series1avg = new Graph.Series("sig count - avg");
+    graph.addSerie(series1min);
+    graph.addSerie(series1max);
+    graph.addSerie(series1avg);
+
+    ps1.StartAll();
+
+    StatsHelper.SimpleStats s;
+    final long limit = 6000;
+    do {
+      ps1.network.runMs(10);
+      s = StatsHelper.getStatsOn(ps1.allNodes,
+              n -> {
+                SanFerminNode sfn = ((SanFerminNode) n);
+                return sfn.totalNumberOfSigs(-1);
+              });
+      series1min.addLine(new Graph.ReportLine(ps1.network.time, s.min));
+      series1max.addLine(new Graph.ReportLine(ps1.network.time, s.max));
+      series1avg.addLine(new Graph.ReportLine(ps1.network.time, s.avg));
+    } while (ps1.network.time < limit);
+
+    try {
+      graph.save(new File("/tmp/graph.png"));
+    } catch (IOException e) {
+      System.err.println("Can't generate the graph: " + e.getMessage());
+    }
+
+    System.out.println("bytes sent: " + StatsHelper.getStatsOn(ps1.allNodes, Node::getBytesSent));
+    System.out
+            .println("bytes rcvd: " + StatsHelper.getStatsOn(ps1.allNodes, Node::getBytesReceived));
+    System.out.println("msg sent: " + StatsHelper.getStatsOn(ps1.allNodes, Node::getMsgSent));
+    System.out.println("msg rcvd: " + StatsHelper.getStatsOn(ps1.allNodes, Node::getMsgReceived));
+    System.out.println("done at: " + StatsHelper.getStatsOn(ps1.network.allNodes, n -> {
+      long val = ((SanFerminNode) n).doneAt;
+      return val == 0 ? limit : val;
+    }));
+  }
 
   public static void main(String... args) {
+
+    if (true)
+      sigsPerTime();
+
+
     int[] distribProp = {1, 33, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
     int[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
     for (int i = 0; i < distribVal.length; i++)
@@ -431,7 +487,7 @@ public class SanFerminCappos implements Protocol {
 
     p2ps = new SanFerminCappos(8, 4, 4, 48, 100, 3);
     //p2ps = new SanFerminCappos(1024, 800, 4, 48, 100, 50);
-    p2ps = new SanFerminCappos(16384, 8192, 4, 48, 100, 100);
+    p2ps = new SanFerminCappos(16384, 8192, 4, 48, 100, 50);
     //p2ps.verbose = true;
     p2ps.network.setNetworkLatency(distribProp, distribVal).setMsgDiscardTime(1000);
     //p2ps.network.removeNetworkLatency();
@@ -455,3 +511,28 @@ public class SanFerminCappos implements Protocol {
     p2ps.network.printNetworkLatency();
   }
 }
+
+/**
+ *  --- First reaching threshold ---
+ * SanFerminNode{nodeId=01111001011111, thresholdAt=877, doneAt=1016, sigs=16384, msgReceived=2099, msgSent=2148, KBytesSent=109, KBytesReceived=106}
+ * SanFerminNode{nodeId=01011001000110, thresholdAt=877, doneAt=1030, sigs=16384, msgReceived=2141, msgSent=2190, KBytesSent=111, KBytesReceived=108}
+ * SanFerminNode{nodeId=01101000101100, thresholdAt=879, doneAt=1073, sigs=16384, msgReceived=2104, msgSent=2164, KBytesSent=109, KBytesReceived=106}
+ * SanFerminNode{nodeId=00010001100100, thresholdAt=880, doneAt=947, sigs=16384, msgReceived=2332, msgSent=2386, KBytesSent=121, KBytesReceived=118}
+ * SanFerminNode{nodeId=00010001001000, thresholdAt=880, doneAt=947, sigs=16384, msgReceived=2914, msgSent=2971, KBytesSent=150, KBytesReceived=147}
+ * SanFerminNode{nodeId=00100001100100, thresholdAt=880, doneAt=947, sigs=16384, msgReceived=3135, msgSent=3185, KBytesSent=161, KBytesReceived=159}
+ * SanFerminNode{nodeId=00110000111000, thresholdAt=880, doneAt=947, sigs=16384, msgReceived=2979, msgSent=3030, KBytesSent=153, KBytesReceived=151}
+ * SanFerminNode{nodeId=00100001100011, thresholdAt=880, doneAt=947, sigs=16384, msgReceived=4460, msgSent=4508, KBytesSent=228, KBytesReceived=226}
+ * SanFerminNode{nodeId=00100001010000, thresholdAt=880, doneAt=947, sigs=16384, msgReceived=4366, msgSent=4409, KBytesSent=223, KBytesReceived=221}
+ * SanFerminNode{nodeId=00000001100100, thresholdAt=880, doneAt=947, sigs=16384, msgReceived=7963, msgSent=8010, KBytesSent=406, KBytesReceived=404}
+ *  --- First reaching full sig ---
+ * SanFerminNode{nodeId=10001001011011, thresholdAt=945, doneAt=945, sigs=16384, msgReceived=2017, msgSent=2061, KBytesSent=104, KBytesReceived=102}
+ * SanFerminNode{nodeId=00101000101010, thresholdAt=946, doneAt=946, sigs=16384, msgReceived=2175, msgSent=2225, KBytesSent=112, KBytesReceived=110}
+ * SanFerminNode{nodeId=00010001100100, thresholdAt=880, doneAt=947, sigs=16384, msgReceived=2332, msgSent=2386, KBytesSent=121, KBytesReceived=118}
+ * SanFerminNode{nodeId=00010000011010, thresholdAt=943, doneAt=947, sigs=16384, msgReceived=3006, msgSent=3071, KBytesSent=155, KBytesReceived=152}
+ * SanFerminNode{nodeId=00010001001000, thresholdAt=880, doneAt=947, sigs=16384, msgReceived=2914, msgSent=2971, KBytesSent=150, KBytesReceived=147}
+ * SanFerminNode{nodeId=00010001010100, thresholdAt=943, doneAt=947, sigs=16384, msgReceived=3023, msgSent=3069, KBytesSent=155, KBytesReceived=153}
+ * SanFerminNode{nodeId=00101000100011, thresholdAt=943, doneAt=947, sigs=16384, msgReceived=2159, msgSent=2227, KBytesSent=113, KBytesReceived=109}
+ * SanFerminNode{nodeId=00100001100100, thresholdAt=880, doneAt=947, sigs=16384, msgReceived=3135, msgSent=3185, KBytesSent=161, KBytesReceived=159}
+ * SanFerminNode{nodeId=00110000111000, thresholdAt=880, doneAt=947, sigs=16384, msgReceived=2979, msgSent=3030, KBytesSent=153, KBytesReceived=151}
+ * SanFerminNode{nodeId=00110001011110, thresholdAt=943, doneAt=947, sigs=16384, msgReceived=2985, msgSent=3039, KBytesSent=154, KBytesReceived=151}
+ */
