@@ -42,7 +42,7 @@ public class GSFSignatureTest {
     Assert.assertEquals(2, n0.levels.get(2).expectedSigs()); // send 0 1, wait for 2 3
     Assert.assertEquals(4, n0.levels.get(3).expectedSigs()); // send 0 1 2 3, wait for 4 5 6 7
     Assert.assertEquals(8, n0.levels.get(4).expectedSigs());
-    Assert.assertEquals(16, n0.leve ls.get(5).expectedSigs());
+    Assert.assertEquals(16, n0.levels.get(5).expectedSigs());
   }
 
   @Test
