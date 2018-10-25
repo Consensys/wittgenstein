@@ -154,9 +154,6 @@ public class SanFerminHelper<T extends Node> {
       set.set(idx);
     }
 
-    if (candidateSet.size() == 0) {
-      return newList;
-    }
     // add the rest if not taken already
     newList.addAll(IntStream
         .range(0, candidateSet.size())

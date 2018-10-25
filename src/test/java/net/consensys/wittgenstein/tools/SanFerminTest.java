@@ -51,8 +51,8 @@ public class SanFerminTest {
     List<Node> set2 = helper.pickNextNodes(2, 10);
     Assert.assertTrue(set2.contains(allNodes.get(0)));
 
-    List<Node> set22 = helper.nextCandidateSet(10);
-    Assert.assertEquals(set2, set22);
+    List<Node> set22 = helper.pickNextNodes(2, 10);
+    Assert.assertTrue(set22.isEmpty());
   }
 
 }
