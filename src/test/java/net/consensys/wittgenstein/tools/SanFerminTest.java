@@ -23,7 +23,7 @@ public class SanFerminTest {
   @Test
   public void testCandidateSet() {
     Node n1 = allNodes.get(1);
-    SanFerminHelper<Node> helper = new SanFerminHelper<>(n1, allNodes);
+    SanFerminHelper<Node> helper = new SanFerminHelper<>(n1, allNodes, new Random(0));
 
     List<Node> set2 = helper.getCandidateSet(2);
     Assert.assertTrue(set2.contains(allNodes.get(0)));
@@ -36,17 +36,22 @@ public class SanFerminTest {
     Assert.assertTrue(set0.contains(allNodes.get(4)));
     Assert.assertFalse(set0.contains(allNodes.get(0)));
     Assert.assertFalse(set0.contains(allNodes.get(3)));
+
+    // test counter-party set
+    Node n4 = allNodes.get(4);
+    SanFerminHelper<Node> helper4 = new SanFerminHelper<>(n4, allNodes, new Random(0));
+    Assert.assertTrue(helper4.isCandidate(n1, 0));
   }
 
   @Test
   public void testPickNextNodes() {
     Node n1 = allNodes.get(1);
-    SanFerminHelper<Node> helper = new SanFerminHelper<>(n1, allNodes);
+    SanFerminHelper<Node> helper = new SanFerminHelper<>(n1, allNodes, new Random(0));
 
-    List<Node> set2 = helper.pickNextNodes(2, 10, new Random());
+    List<Node> set2 = helper.pickNextNodes(2, 10);
     Assert.assertTrue(set2.contains(allNodes.get(0)));
 
-    List<Node> set22 = helper.nextCandidateSet(10, new Random());
+    List<Node> set22 = helper.nextCandidateSet(10);
     Assert.assertEquals(set2, set22);
   }
 

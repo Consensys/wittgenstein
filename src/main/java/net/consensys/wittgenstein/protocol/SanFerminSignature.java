@@ -104,8 +104,8 @@ public class SanFerminSignature implements Protocol {
     }
 
     // register the sanfermin helper with all the nodes
-    this.allNodes.forEach(n -> n.candidateTree = new SanFerminHelper<>(n,
-            allNodes,this.network.rd));
+    this.allNodes
+        .forEach(n -> n.candidateTree = new SanFerminHelper<>(n, allNodes, this.network.rd));
 
     finishedNodes = new ArrayList<>();
   }
@@ -310,8 +310,8 @@ public class SanFerminSignature implements Protocol {
           print(" received SwapReply NO from " + from.binaryId);
           // only try the next one if this is an expected reply
           if (this.pendingNodes.contains(from.nodeId)) {
-            List<SanFerminNode> nodes = this.candidateTree.pickNextNodes(this.currentPrefixLength,
-                candidateCount);
+            List<SanFerminNode> nodes =
+                this.candidateTree.pickNextNodes(this.currentPrefixLength, candidateCount);
             sendToNodes(nodes);
           } else {
             print(" UNEXPECTED NO reply from " + from.binaryId);
@@ -356,8 +356,8 @@ public class SanFerminSignature implements Protocol {
           print("TIMEOUT of SwapRequest at level " + currLevel);
           // that means we haven't got a successful reply for that
           // level so we try other nodes
-          List<SanFerminNode> newList = this.candidateTree.pickNextNodes(this.currentPrefixLength,
-              candidateCount);
+          List<SanFerminNode> newList =
+              this.candidateTree.pickNextNodes(this.currentPrefixLength, candidateCount);
           sendToNodes(newList);
         }
       }, network.time + replyTimeout, SanFerminNode.this);
@@ -407,7 +407,8 @@ public class SanFerminSignature implements Protocol {
         goNextLevel();
         return;
       }
-      List<SanFerminNode> newList = this.candidateTree.nextCandidateSet(candidateCount);
+      List<SanFerminNode> newList =
+          this.candidateTree.pickNextNodes(currentPrefixLength, candidateCount);
       this.sendToNodes(newList);
     }
 
@@ -458,6 +459,14 @@ public class SanFerminSignature implements Protocol {
           + doneAt + ", sigs=" + aggValue + ", msgReceived=" + msgReceived + ", msgSent=" + msgSent
           + ", sentRequests=" + sentRequests + ", receivedRequests=" + receivedRequests
           + ", KBytesSent=" + bytesSent / 1024 + ", KBytesReceived=" + bytesReceived / 1024 + '}';
+    }
+
+    public long getThresholdAt() {
+      return thresholdAt;
+    }
+
+    public long getDoneAt() {
+      return doneAt;
     }
   }
 
@@ -589,13 +598,25 @@ public class SanFerminSignature implements Protocol {
 
     p2ps.init();
     p2ps.network.run(30);
-    p2ps.finishedNodes.sort(Comparator.comparingLong(n2 -> n2.thresholdAt));
-    int max = p2ps.finishedNodes.size() < 10 ? p2ps.finishedNodes.size() : 10;
-    for (SanFerminNode n : p2ps.finishedNodes.subList(0, max))
-      System.out.println(n);
+    int max = 10;
+    // print results first reached threshold
+    System.out.println(" --- First reaching threshold ---");
+    p2ps.finishedNodes
+        .stream()
+        .sorted(Comparator.comparingLong(SanFerminNode::getThresholdAt))
+        .limit(max)
+        .forEach(System.out::println);
 
-    //System.out.println(p2ps.finishedNodes.get(p2ps.finishedNodes.size() - 1);
+    System.out.println(" --- First reaching full sig ---");
+    p2ps.finishedNodes
+        .stream()
+        .sorted(Comparator.comparingLong(SanFerminNode::getDoneAt))
+        .limit(max)
+        .forEach(System.out::println);
 
+
+    System.out.println(" --- Unfinished nodes ---");
+    p2ps.allNodes.stream().filter(n -> !n.done).limit(max).forEach(System.out::println);
     p2ps.network.printNetworkLatency();
   }
 }

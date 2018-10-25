@@ -113,6 +113,7 @@ public class SanFerminHelper<T extends Node> {
   public boolean isCandidate(T node, int level) {
     return this.getCandidateSet(level).contains(node);
   }
+
   /**
    * getExactCandidateNode selects deterministically the node from the candidate set at the given
    * level that should be contacted.
@@ -175,15 +176,6 @@ public class SanFerminHelper<T extends Node> {
     return newList;
   }
 
-  /**
-   * nextCandidateSet decreases the common length prefix and returns at maximum `howMany` nodes in
-   * the new candidate set. One can pick others unpicked nodes for this level using
-   * `pickNextNodes(helper.currentLevel,howMany)`.
-   */
-  public List<T> nextCandidateSet(int howMany) {
-    this.currentLevel--;
-    return pickNextNodes(this.currentLevel, howMany);
-  }
 
   /**
    * Simply pads the binary string id to the exact length = n where N = 2^n
