@@ -277,7 +277,7 @@ public class GSFSignature {
       }
 
       if (sfl.verifiedSignatures.cardinality() > 0 && !sigs.intersects(sfl.verifiedSignatures)) {
-        // If the new sigs stricly intersect with the previous one we can aggregate then.
+        // If the new sigs do not intersect with the previous ones we can aggregate then.
         // Note that technically we could do much more, i.e. searching the history of
         // sigs we have that could intersect
         sigs.or(sfl.verifiedSignatures);
@@ -429,7 +429,7 @@ public class GSFSignature {
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
     int nodeCt = 32768 / 32;
-    GSFSignature ps1 = new GSFSignature(nodeCt, .8, 3, 100, 20, 10, 0.2);
+    GSFSignature ps1 = new GSFSignature(nodeCt, .50, 3, 10, 50, 20, .10);
     ps1.network.setNetworkLatency(nl);
     String desc = ps1.toString();
     Graph graph = new Graph("number of signatures per time (" + desc + ")", "time in ms",
@@ -464,7 +464,7 @@ public class GSFSignature {
     } catch (IOException e) {
       System.err.println("Can't generate the graph: " + e.getMessage());
     }
-    
+
     System.out.println("bytes sent: " + StatsHelper.getStatsOn(liveNodes, Node::getBytesSent));
     System.out.println("bytes rcvd: " + StatsHelper.getStatsOn(liveNodes, Node::getBytesReceived));
     System.out.println("msg sent: " + StatsHelper.getStatsOn(liveNodes, Node::getMsgSent));
@@ -474,10 +474,48 @@ public class GSFSignature {
   }
 
 
+  public static void timePerDead() {
+    NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
+    int nodeCt = 32768 / 4;
+    int toL = 100;
+    int pd = 20;
+    GSFSignature ps1 = new GSFSignature(nodeCt, 1, 3, toL, pd, 10, 0);
+    String desc = ps1.toString();
+    Graph graph = new Graph("time to get all sigs from live nodes " + desc, "% of dead nodes",
+        "time to reach 50%");
+    Graph.Series s1 = new Graph.Series("signatures count - worse node");
+    graph.addSerie(s1);
+
+    long startAt = System.currentTimeMillis();
+    StatsHelper.SimpleStats s;
+    for (double dead = 0; dead < 0.5; dead += 0.01) {
+      ps1 = new GSFSignature(nodeCt, 1 - dead, 3, toL, pd, 10, dead);
+      ps1.network.setNetworkLatency(nl);
+      ps1.init();
+
+      ps1.network.run(2);
+      List<GSFNode> liveNodes =
+          ps1.network.allNodes.stream().filter(n -> !n.down).collect(Collectors.toList());
+
+      s = StatsHelper.getStatsOn(liveNodes, n -> ((GSFNode) n).doneAt);
+      s1.addLine(new Graph.ReportLine(dead, s.avg));
+      System.out.println("dead: " + dead + ":" + s.avg);
+    }
+    long endAt = System.currentTimeMillis();
+
+
+    try {
+      graph.save(new File("/tmp/graph.png"));
+    } catch (IOException e) {
+      System.err.println("Can't generate the graph: " + e.getMessage());
+    }
+    System.out.println("Simulation execution time: " + ((endAt - startAt) / 1000) + "s");
+  }
+
   public static void main(String... args) {
     NetworkLatency nl = new NetworkLatency.NetworkLatencyByDistance();
     System.out.println("" + nl);
 
-    sigsPerTime();
+    timePerDead();
   }
 }
