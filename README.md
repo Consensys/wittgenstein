@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/ConsenSys/wittgenstein.svg?style=svg)](https://circleci.com/gh/ConsenSys/wittgenstein)
+
 # Wittgenstein
 A simulator for some PoS, consensus or just distributed algorithms. Includes dfinity, Ethereum's Casper IMD, San Fermin and others.
 
