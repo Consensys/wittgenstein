@@ -76,7 +76,7 @@ public class GSFSignature {
     final int size;
 
     public SendSigs(BitSet sigs, GSFNode.SFLevel l) {
-      this.sigs = (BitSet) sigs.clone();;
+      this.sigs = (BitSet) sigs.clone();
       this.level = l.level;
       // Size = level + bit field + the signatures included
       this.size = 1 + l.expectedSigs() / 8 + 48;
@@ -284,8 +284,8 @@ public class GSFSignature {
       SFLevel sfl = levels.get(level);
 
       // These lines remove Olivier's optimisation
-      // sigs = (BitSet) sigs.clone();
-      // sigs.and(sfl.waitedSigs);
+      //sigs = (BitSet) sigs.clone();
+      //sigs.and(sfl.waitedSigs);
 
       boolean resetRemaining = false;
       if (sigs.cardinality() > sfl.expectedSigs()) {
@@ -391,17 +391,34 @@ public class GSFSignature {
         SFLevel l = levels.get(cur.level);
 
         if (l.expectedSigs() == l.verifiedSignatures.cardinality()) {
+          // We have already completed this level.
           it.remove();
           continue;
         }
 
-        if (cur.sigs.cardinality() == l.waitedSigs.cardinality() && l.level < levelFinished) {
-          levelFinished = l.level;
+        if (include(verifiedSignatures, cur.sigs)) {
+          it.remove();
+          continue;
+        }
+
+        if (best == null) {
           best = cur;
-        } else if (!cur.sigs.intersects(l.verifiedSignatures) && cur.sigs.cardinality()
-            + l.verifiedSignatures.cardinality() == l.waitedSigs.cardinality()) {
+        }
+
+        if (cur.sigs.cardinality() > l.expectedSigs()) {
+          best = cur;
           levelFinished = 2;
-          best = cur;
+          continue;
+        }
+
+        if (!cur.sigs.intersects(l.verifiedSignatures)) {
+          if (cur.sigs.cardinality() + l.verifiedSignatures.cardinality() == l.waitedSigs
+              .cardinality()) {
+            if (levelFinished > cur.level) {
+              best = cur;
+              levelFinished = cur.level;
+            }
+          }
         }
       }
 
@@ -427,9 +444,6 @@ public class GSFSignature {
     for (int i = 0; i < nodeCount; i++) {
       final GSFNode n = new GSFNode();
       network.addNode(n);
-      if (i < nodesDown) {
-        // n.down = true;
-      }
     }
 
     for (int setDown = 0; setDown < nodesDown;) {
@@ -453,7 +467,7 @@ public class GSFSignature {
 
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
-    int nodeCt = 32768 / 1024;
+    int nodeCt = 32768 / 8;
     GSFSignature ps1 = new GSFSignature(nodeCt, 1, 3, 100, 20, 10, .0);
     ps1.network.setNetworkLatency(nl);
     ps1.network.rd.setSeed(1);
