@@ -30,9 +30,10 @@ public class StatsHelper {
   public static SimpleStats getStatsOn(List<? extends Node> nodes, Get get) {
     long min = Long.MAX_VALUE;
     long max = Long.MIN_VALUE;
-    long tot = 0;
+      long tot = 0;
     for (Node n : nodes) {
       long val = get.get(n);
+
       tot += val;
       if (val < min)
         min = val;
