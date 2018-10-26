@@ -17,7 +17,7 @@ To check everything is correct:
 ```
 gradle clean test
 ```
-You can build a jar with this maven command:
+You can build a jar with gradle:
 ```
 gradle clean shadowJar
 ```
