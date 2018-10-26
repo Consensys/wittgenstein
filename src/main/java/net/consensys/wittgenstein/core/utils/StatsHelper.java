@@ -33,6 +33,7 @@ public class StatsHelper {
     long tot = 0;
     for (Node n : nodes) {
       long val = get.get(n);
+
       tot += val;
       if (val < min)
         min = val;
