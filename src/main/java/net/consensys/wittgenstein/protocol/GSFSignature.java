@@ -6,7 +6,6 @@ import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.tools.Graph;
-import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -15,8 +14,7 @@ import java.util.stream.Collectors;
 /**
  * A p2p protocol for BLS signature aggregation.
  * <p>
- * A node: Sends its states to all its direct peers whenever it changes Keeps the list of the states
- * of its direct peers Sends, every x milliseconds, to one of its peers a set of missing signatures
+ * A node runs San Fermin and communicates the results a la gossip. So it's a Gossiping San Fermin
  * Runs in parallel a task to validate the signatures sets it has received.
  */
 @SuppressWarnings("WeakerAccess")
@@ -77,20 +75,18 @@ public class GSFSignature {
     final boolean levelFinished;
     final int size;
 
-    public SendSigs(BitSet sigs, GSFNode.SFLevel l, boolean levelFinished) {
-      this.sigs = (BitSet) sigs.clone();
+    public SendSigs(BitSet sigs, GSFNode.SFLevel l) {
+      this.sigs = (BitSet) sigs.clone();;
       this.level = l.level;
       // Size = level + bit field + the signatures included
       this.size = 1 + l.expectedSigs() / 8 + 48;
-      this.levelFinished = levelFinished;
+      this.levelFinished = l.verifiedSignatures.equals(l.waitedSigs);
     }
-
 
     @Override
     public int size() {
       return size;
     }
-
 
     @Override
     public void action(GSFNode from, GSFNode to) {
@@ -124,8 +120,28 @@ public class GSFSignature {
       }
     }
 
+    BitSet getLastFinishedLevel() {
+      BitSet res = new BitSet();
+      SFLevel sfl = levels.get(0);
+      boolean done = false;
+      while (!done) {
+        if (sfl.waitedSigs.equals(sfl.verifiedSignatures)) {
+          res.or(sfl.waitedSigs);
+          if (sfl.level < levels.size() - 1) {
+            sfl = levels.get(sfl.level + 1);
+          } else {
+            done = true;
+          }
+        } else {
+          done = true;
+        }
+      }
+      return res;
+    }
+
+
     public void doCycle() {
-      BitSet toSend = new BitSet(nodeCount);
+      BitSet toSend = getLastFinishedLevel();
       for (SFLevel sfl : levels) {
         sfl.doCycle(toSend); // We send what we collected at the previous levels
         toSend.or(sfl.verifiedSignatures);
@@ -180,40 +196,27 @@ public class GSFSignature {
 
         // Signatures needed to finish the current level are:
         //  sigs of the previous level + peers of the previous level.
-        //  If we have all this we have finished this
-        waitedSigs = sanFerminPeers(this.level);
+        //  If we have all this we have finished this level
+        waitedSigs = allSigsAtLevel(this.level);
         waitedSigs.andNot(allPreviousNodes);
-        if (waitedSigs.cardinality() != expectedSigs()) {
-          throw new IllegalStateException("level=" + level + ", expectedSigs()=" + expectedSigs()
-              + ", " + waitedSigs.cardinality());
-        }
         peers = randomSubset(waitedSigs, Integer.MAX_VALUE);
         remainingCalls = peers.size();
       }
 
       /**
-       * That's the number of signatures we have if we have all of them.
+       * That's the number of signatures we have if we have all of them. It's also the number of
+       * signatures we're going to send.
        */
       int expectedSigs() {
-        return expectedSigs(level);
-      }
-
-      int expectedSigs(int level) {
-        if (level <= 1) {
-          return 1;
-        }
-        return (int) Math.pow(2, level - 1);
+        return waitedSigs.cardinality();
       }
 
       /**
        * We start a level if we reached the time out or if we have all the signatures.
        */
       boolean hasStarted(BitSet toSend) {
-        if (toSend.cardinality() > expectedSigs()) {
-          throw new IllegalArgumentException();
-        }
         return network.time > (level - 1) * timeoutPerLevelMs
-            || toSend.cardinality() == expectedSigs();
+            || toSend.cardinality() > expectedSigs();
       }
 
       void doCycle(BitSet toSend) {
@@ -223,7 +226,7 @@ public class GSFSignature {
 
         List<GSFNode> dest = getRemainingPeers(toSend, 1);
         if (!dest.isEmpty()) {
-          SendSigs ss = new SendSigs(toSend, this, verifiedSignatures.equals(waitedSigs));
+          SendSigs ss = new SendSigs(toSend, this);
           network.send(ss, GSFNode.this, dest.get(0));
         }
       }
@@ -248,7 +251,10 @@ public class GSFSignature {
       }
     }
 
-    public BitSet sanFerminPeers(int round) {
+    /**
+     * @return all the signatures you should have when this round is finished.
+     */
+    public BitSet allSigsAtLevel(int round) {
       if (round < 1) {
         throw new IllegalArgumentException("round=" + round);
       }
@@ -263,6 +269,12 @@ public class GSFSignature {
       return res;
     }
 
+    boolean include(BitSet large, BitSet small) {
+      BitSet a = (BitSet) large.clone();
+      a.and(small);
+      return a.equals(small);
+    }
+
 
     /**
      * If the state has changed we send a message to all. If we're done, we update all our peers: it
@@ -271,9 +283,27 @@ public class GSFSignature {
     void updateVerifiedSignatures(int level, BitSet sigs) {
       SFLevel sfl = levels.get(level);
 
+      // These lines remove Olivier's optimisation
+      // sigs = (BitSet) sigs.clone();
+      // sigs.and(sfl.waitedSigs);
+
+      boolean resetRemaining = false;
       if (sigs.cardinality() > sfl.expectedSigs()) {
-        throw new IllegalArgumentException("level=" + level + ", sigs.cardinality()="
-            + sigs.cardinality() + ", sfl.expectedSigs()=" + sfl.expectedSigs());
+        // The sender sent us signatures from its next levels as well.
+        // It means that it's actually signatures from our first levels
+        // For example, level==5, but the remote node sent us [1-5] plus maybe [6-]
+        for (int i = 1; i < levels.size() && include(sigs, levels.get(i).waitedSigs); i++) {
+          SFLevel l = levels.get(i);
+          if (!l.verifiedSignatures.equals(l.waitedSigs)) {
+            l.verifiedSignatures.or(l.waitedSigs);
+            verifiedSignatures.or(l.waitedSigs);
+            resetRemaining = true;
+          }
+          if (resetRemaining) {
+            l.remainingCalls = l.peers.size();
+          }
+        }
+        sigs = (BitSet) sfl.waitedSigs.clone();
       }
 
       if (sfl.verifiedSignatures.cardinality() > 0 && !sigs.intersects(sfl.verifiedSignatures)) {
@@ -283,7 +313,8 @@ public class GSFSignature {
         sigs.or(sfl.verifiedSignatures);
       }
 
-      if (sigs.cardinality() > sfl.verifiedSignatures.cardinality()) {
+      if (sigs.cardinality() > sfl.verifiedSignatures.cardinality() || resetRemaining) {
+
         for (int i = sfl.level; i < levels.size(); i++) {
           // We have some new sigs. This is interesting for our level and all the
           //  levels above. So we reset the remainingCalls variable.
@@ -298,26 +329,19 @@ public class GSFSignature {
         verifiedSignatures.andNot(sfl.waitedSigs);
         verifiedSignatures.or(sigs);
 
-        if (acceleratedCallsCount > 0 && sigs.cardinality() == sfl.expectedSigs()) {
-          // We completed this level. Does it finishes something?
+        if (acceleratedCallsCount > 0) {
+          // See if we completed this level. Does it finish something?
           // If so, we're going to send immediately an update to 'acceleratedCallsCount' nodes
           // It makes the protocol faster for the branches that are complete.
-          BitSet toSend = (BitSet) sigs.clone();
-          for (int i = 0; i < sfl.level; i++) {
-            toSend.or(levels.get(i).verifiedSignatures);
-          }
-
-          while (toSend.cardinality() == sfl.expectedSigs(sfl.level + 1)
-              && sfl.level < levels.size() - 1) {
+          BitSet bestToSend = getLastFinishedLevel();
+          while (include(bestToSend, sfl.waitedSigs) && sfl.level < levels.size() - 1) {
             sfl = levels.get(sfl.level + 1);
-            SendSigs sendSigs =
-                new SendSigs(toSend, sfl, sfl.verifiedSignatures.equals(sfl.waitedSigs));
+            SendSigs sendSigs = new SendSigs(bestToSend, sfl);
             List<GSFNode> peers =
                 sfl.getRemainingPeers(sfl.verifiedSignatures, acceleratedCallsCount);
             if (!peers.isEmpty()) {
               network.send(sendSigs, this, peers);
             }
-            toSend.or(sfl.verifiedSignatures);
           }
         }
         if (doneAt == 0 && verifiedSignatures.cardinality() >= threshold) {
@@ -351,9 +375,7 @@ public class GSFSignature {
      */
     void onNewSig(GSFNode from, SendSigs ssigs) {
       SFLevel sfl = levels.get(ssigs.level);
-      if (sfl.verifiedSignatures.cardinality() < ssigs.sigs.cardinality()) {
-        toVerify.add(ssigs);
-      }
+      toVerify.add(ssigs);
       if (ssigs.levelFinished) {
         sfl.finishedPeers.add(from);
       }
@@ -361,22 +383,25 @@ public class GSFSignature {
 
     public void checkSigs() {
       SendSigs best = null;
-      boolean found = false;
+      int levelFinished = Integer.MAX_VALUE;
       Iterator<SendSigs> it = toVerify.iterator();
 
-      while (it.hasNext() && !found) {
+      while (it.hasNext() && levelFinished > 2) {
         SendSigs cur = it.next();
         SFLevel l = levels.get(cur.level);
-        if (cur.sigs.cardinality() > l.verifiedSignatures.cardinality()
-            || !cur.sigs.intersects(l.verifiedSignatures)) {
-          best = cur;
-          if (cur.sigs.cardinality() == l.expectedSigs()
-              || (!cur.sigs.intersects(l.verifiedSignatures) && cur.sigs.cardinality()
-                  + l.verifiedSignatures.cardinality() == l.expectedSigs())) {
-            found = true; // if it allows us to finish a level, we select it.
-          }
-        } else {
+
+        if (l.expectedSigs() == l.verifiedSignatures.cardinality()) {
           it.remove();
+          continue;
+        }
+
+        if (cur.sigs.cardinality() == l.waitedSigs.cardinality() && l.level < levelFinished) {
+          levelFinished = l.level;
+          best = cur;
+        } else if (!cur.sigs.intersects(l.verifiedSignatures) && cur.sigs.cardinality()
+            + l.verifiedSignatures.cardinality() == l.waitedSigs.cardinality()) {
+          levelFinished = 2;
+          best = cur;
         }
       }
 
@@ -428,9 +453,10 @@ public class GSFSignature {
 
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
-    int nodeCt = 32768 / 32;
-    GSFSignature ps1 = new GSFSignature(nodeCt, .50, 3, 10, 50, 20, .10);
+    int nodeCt = 32768 / 1024;
+    GSFSignature ps1 = new GSFSignature(nodeCt, 1, 3, 100, 20, 10, .0);
     ps1.network.setNetworkLatency(nl);
+    ps1.network.rd.setSeed(1);
     String desc = ps1.toString();
     Graph graph = new Graph("number of signatures per time (" + desc + ")", "time in ms",
         "number of signatures");
@@ -476,7 +502,7 @@ public class GSFSignature {
 
   public static void timePerDead() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
-    int nodeCt = 32768 / 4;
+    int nodeCt = 32768 / 32;
     int toL = 100;
     int pd = 20;
     GSFSignature ps1 = new GSFSignature(nodeCt, 1, 3, toL, pd, 10, 0);
@@ -516,6 +542,6 @@ public class GSFSignature {
     NetworkLatency nl = new NetworkLatency.NetworkLatencyByDistance();
     System.out.println("" + nl);
 
-    timePerDead();
+    sigsPerTime();
   }
 }

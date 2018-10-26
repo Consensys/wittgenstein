@@ -70,4 +70,17 @@ public class GSFSignatureTest {
     Assert.assertEquals(3, dead);
   }
 
+  @Test
+  public void testGetLastFinishedLevel() {
+    Assert.assertEquals(1, n0.getLastFinishedLevel().cardinality());
+    n0.levels.get(1).verifiedSignatures.or(n0.levels.get(1).waitedSigs);
+    Assert.assertEquals(2, n0.getLastFinishedLevel().cardinality());
+
+    n0.levels.get(2).verifiedSignatures.set(2);
+    Assert.assertEquals(2, n0.getLastFinishedLevel().cardinality());
+
+    n0.levels.get(2).verifiedSignatures.set(3);
+    Assert.assertEquals(4, n0.getLastFinishedLevel().cardinality());
+  }
+
 }
