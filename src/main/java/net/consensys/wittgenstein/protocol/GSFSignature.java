@@ -284,8 +284,8 @@ public class GSFSignature {
       SFLevel sfl = levels.get(level);
 
       // These lines remove Olivier's optimisation
-      //sigs = (BitSet) sigs.clone();
-      //sigs.and(sfl.waitedSigs);
+      sigs = (BitSet) sigs.clone();
+      sigs.and(sfl.waitedSigs);
 
       boolean resetRemaining = false;
       if (sigs.cardinality() > sfl.expectedSigs()) {
@@ -467,8 +467,8 @@ public class GSFSignature {
 
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
-    int nodeCt = 32768 / 8;
-    GSFSignature ps1 = new GSFSignature(nodeCt, 1, 3, 100, 20, 10, .0);
+    int nodeCt = 32768 / 2;
+    GSFSignature ps1 = new GSFSignature(nodeCt, .9, 3, 100, 20, 10, .1);
     ps1.network.setNetworkLatency(nl);
     ps1.network.rd.setSeed(1);
     String desc = ps1.toString();

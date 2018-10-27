@@ -2,12 +2,13 @@ package net.consensys.wittgenstein.protocol;
 
 
 import net.consensys.wittgenstein.core.*;
+
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
 
 /**
- * The simplest protocol: just send the signatures, and do an aggregation at the end.
+ * The simplest protocol to exhange signatures: just send the signatures, and do an aggregation at the end.
  * <p>
  * Protocol: forward the message to all your peers if you have not done it already.
  * <p>
@@ -19,33 +20,10 @@ import java.util.List;
  * <p>
  * Sends a lot of messages so uses a lot of memory and slow to test.
  * <p>
- * <p>
- * NetworkLatencyByDistance{fix=10, max=200, spread=50%} P2PSigNode{nodeId=999, doneAt=137,
- * sigs=501, msgReceived=21200, msgSent=21023, KBytesSent=1067, KBytesReceived=1076}
- * P2PSigNode{nodeId=1999, doneAt=140, sigs=1001, msgReceived=59406, msgSent=59978, KBytesSent=3045,
- * KBytesReceived=3016} P2PSigNode{nodeId=2999, doneAt=140, sigs=1501, msgReceived=70113,
- * msgSent=72049, KBytesSent=3658, KBytesReceived=3560} P2PSigNode{nodeId=3999, doneAt=149,
- * sigs=2001, msgReceived=114855, msgSent=118060, KBytesSent=5995, KBytesReceived=5832}
- * P2PSigNode{nodeId=4999, doneAt=150, sigs=2501, msgReceived=148088, msgSent=149994,
- * KBytesSent=7616, KBytesReceived=7520}
- * <p>
- * P2PSigNode{nodeId=999, doneAt=218, sigs=501, msgReceived=19465, msgSent=20041, KBytesSent=1017,
- * KBytesReceived=988} P2PSigNode{nodeId=999, doneAt=220, sigs=501, msgReceived=19501,
- * msgSent=20041, KBytesSent=1017, KBytesReceived=990} P2PSigNode{nodeId=999, doneAt=219, sigs=501,
- * msgReceived=20478, msgSent=21012, KBytesSent=1067, KBytesReceived=1039} P2PSigNode{nodeId=1499,
- * doneAt=227, sigs=751, msgReceived=34754, msgSent=36007, KBytesSent=1828, KBytesReceived=1764}
- * P2PSigNode{nodeId=1999, doneAt=226, sigs=1001, msgReceived=56539, msgSent=59060, KBytesSent=2999,
- * KBytesReceived=2871} P2PSigNode{nodeId=2499, doneAt=240, sigs=1251, msgReceived=53712,
- * msgSent=55045, KBytesSent=2795, KBytesReceived=2727} P2PSigNode{nodeId=2999, doneAt=230,
- * sigs=1501, msgReceived=68177, msgSent=72049, KBytesSent=3658, KBytesReceived=3462}
- * P2PSigNode{nodeId=3999, doneAt=244, sigs=2001, msgReceived=116390, msgSent=120060,
- * KBytesSent=6096, KBytesReceived=5910} P2PSigNode{nodeId=9999, doneAt=201, sigs=5001,
- * msgReceived=273298, msgSent=285058, KBytesSent=14475, KBytesReceived=13878}
  */
-@SuppressWarnings("WeakerAccess")
-public class OptimisticP2PSignature implements Protocol {
+@SuppressWarnings("WeakerAccess") public class OptimisticP2PSignature implements Protocol {
   /**
-   * The nuumber of nodes in the network
+   * The number of nodes in the network
    */
   final int nodeCount;
 
@@ -68,8 +46,7 @@ public class OptimisticP2PSignature implements Protocol {
   final P2PNetwork network;
   final Node.NodeBuilder nb;
 
-  public OptimisticP2PSignature(int nodeCount, int threshold, int connectionCount, int pairingTime,
-      int seed) {
+  public OptimisticP2PSignature(int nodeCount, int threshold, int connectionCount, int pairingTime) {
     this.nodeCount = nodeCount;
     this.threshold = threshold;
     this.connectionCount = connectionCount;
@@ -80,7 +57,7 @@ public class OptimisticP2PSignature implements Protocol {
   }
 
   public OptimisticP2PSignature copy() {
-    return new OptimisticP2PSignature(nodeCount, threshold, connectionCount, pairingTime, 0);
+    return new OptimisticP2PSignature(nodeCount, threshold, connectionCount, pairingTime);
   }
 
   static class SendSig extends Network.Message<P2PSigNode> {
@@ -90,14 +67,12 @@ public class OptimisticP2PSignature implements Protocol {
       this.sig = who.nodeId;
     }
 
-    @Override
-    public int size() {
+    @Override public int size() {
       // NodeId + sig
       return 4 + 48;
     }
 
-    @Override
-    public void action(P2PSigNode from, P2PSigNode to) {
+    @Override public void action(P2PSigNode from, P2PSigNode to) {
       to.onSig(from, this);
     }
   }
@@ -135,12 +110,10 @@ public class OptimisticP2PSignature implements Protocol {
     }
 
 
-    @Override
-    public String toString() {
+    @Override public String toString() {
       return "P2PSigNode{" + "nodeId=" + nodeId + ", doneAt=" + doneAt + ", sigs="
-          + verifiedSignatures.cardinality() + ", msgReceived=" + msgReceived + ", msgSent="
-          + msgSent + ", KBytesSent=" + bytesSent / 1024 + ", KBytesReceived="
-          + bytesReceived / 1024 + '}';
+        + verifiedSignatures.cardinality() + ", msgReceived=" + msgReceived + ", msgSent=" + msgSent
+        + ", KBytesSent=" + bytesSent / 1024 + ", KBytesReceived=" + bytesReceived / 1024 + '}';
     }
   }
 
@@ -164,7 +137,7 @@ public class OptimisticP2PSignature implements Protocol {
     boolean printLat = false;
 
     for (int i = 1000; i < 2000; i += 1000) {
-      OptimisticP2PSignature p2ps = new OptimisticP2PSignature(i, i / 2 + 1, 13, 3, 0);
+      OptimisticP2PSignature p2ps = new OptimisticP2PSignature(i, i / 2 + 1, 13, 3);
       p2ps.network.setNetworkLatency(nl);
       P2PSigNode observer = p2ps.init();
 

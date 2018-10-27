@@ -60,7 +60,8 @@ public class P2PSignature implements Protocol {
   enum SendSigsStrategy {
     all,
     dif,
-    cmp
+    cmp,
+    cmp_diff
   }
 
 
@@ -135,46 +136,6 @@ public class P2PSignature implements Protocol {
    * @return the number of signatures to include
    */
   int compressedSize(BitSet sigs) {
-    if (sigs.length() == nodeCount) {
-      // Shortcuts: if we have all sigs, then we just send
-      //  an aggregated signature
-      return 1;
-    }
-
-    int firstOneAt = -1;
-    int sigCt = 0;
-    int pos = -1;
-    boolean compressing = false;
-    boolean wasCompressing = false;
-    while (++pos <= sigs.length() + 1) {
-      if (!sigs.get(pos)) {
-        compressing = false;
-        sigCt -= mergeRanges(firstOneAt, pos);
-        firstOneAt = -1;
-      } else if (compressing) {
-        if ((pos + 1) % sigRange == 0) {
-          // We compressed the whole range, but now we're starting a new one...
-          compressing = false;
-          wasCompressing = true;
-        }
-      } else {
-        sigCt++;
-        if (pos % sigRange == 0) {
-          compressing = true;
-          if (!wasCompressing) {
-            firstOneAt = pos;
-          } else {
-            wasCompressing = false;
-          }
-        }
-      }
-    }
-
-
-    return sigCt;
-  }
-
-  int compressedSize(BitSet sigs, BitSet knownSigs) {
     if (sigs.length() == nodeCount) {
       // Shortcuts: if we have all sigs, then we just send
       //  an aggregated signature
@@ -446,6 +407,10 @@ public class P2PSignature implements Protocol {
         } else if (sendSigsStrategy == SendSigsStrategy.cmp) {
           ss = new SendSigs((BitSet) verifiedSignatures.clone(),
               compressedSize(verifiedSignatures));
+        } else if (sendSigsStrategy == SendSigsStrategy.cmp_diff) {
+          int s1 = compressedSize(verifiedSignatures);
+          int s2 = compressedSize(toSend);
+          ss = new SendSigs((BitSet) verifiedSignatures.clone(), Math.min(s1, s2));
         } else {
           ss = new SendSigs((BitSet) verifiedSignatures.clone());
         }
@@ -574,13 +539,13 @@ public class P2PSignature implements Protocol {
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
     //NetworkLatency.NetworkLatencyByDistance nl1 = new NetworkLatency.NetworkLatencyByDistance();
-    int nodeCt = 1024;
+    int nodeCt = 16384;
     List<Graph.Series> rawResultsMin = new ArrayList<>();
     List<Graph.Series> rawResultsMax = new ArrayList<>();
     List<Graph.Series> rawResultsAvg = new ArrayList<>();
 
     P2PSignature psTemplate =
-        new P2PSignature(nodeCt, nodeCt, 15, 3, 50, true, true, SendSigsStrategy.all, 2);
+        new P2PSignature(nodeCt, nodeCt, 15, 3, 50, true, false, SendSigsStrategy.cmp_diff, 2);
     psTemplate.network.setNetworkLatency(nl);
 
     String desc =
@@ -593,7 +558,7 @@ public class P2PSignature implements Protocol {
     Graph medianGraph = new Graph("average number of signatures per time (" + desc + ")",
         "time in ms", "number of signatures");
 
-    int lastSeries = 4;
+    int lastSeries = 2;
     StatsHelper.SimpleStats s;
 
     for (int i = 0; i < lastSeries; i++) {
