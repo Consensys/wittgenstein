@@ -14,18 +14,18 @@ As it's often what happens with mock protocol implementations, it looked like th
 
 ## How to build it
 To check everything is correct:
-
+```
 gradle clean test
-
-You can build a jar with this maven command:
-
+```
+You can build a jar with gradle:
+```
 gradle clean shadowJar
-
+```
 ## How to run it
 Once built:
-
+```
 java -Xms6000m -Xmx12048m -classpath build/libs/wittgenstein-all.jar net.consensys.wittgenstein.protocol.GSFSignature
-
+```
 But you're actually supposed to write code to implement your specific scenarios today. An obvious improvement
  would be to be able to define scenarios reusable between protocols.
 
