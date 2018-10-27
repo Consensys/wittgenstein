@@ -2,13 +2,13 @@ package net.consensys.wittgenstein.protocol;
 
 
 import net.consensys.wittgenstein.core.*;
-
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
 
 /**
- * The simplest protocol to exhange signatures: just send the signatures, and do an aggregation at the end.
+ * The simplest protocol to exhange signatures: just send the signatures, and do an aggregation at
+ * the end.
  * <p>
  * Protocol: forward the message to all your peers if you have not done it already.
  * <p>
@@ -21,7 +21,8 @@ import java.util.List;
  * Sends a lot of messages so uses a lot of memory and slow to test.
  * <p>
  */
-@SuppressWarnings("WeakerAccess") public class OptimisticP2PSignature implements Protocol {
+@SuppressWarnings("WeakerAccess")
+public class OptimisticP2PSignature implements Protocol {
   /**
    * The number of nodes in the network
    */
@@ -46,7 +47,8 @@ import java.util.List;
   final P2PNetwork network;
   final Node.NodeBuilder nb;
 
-  public OptimisticP2PSignature(int nodeCount, int threshold, int connectionCount, int pairingTime) {
+  public OptimisticP2PSignature(int nodeCount, int threshold, int connectionCount,
+      int pairingTime) {
     this.nodeCount = nodeCount;
     this.threshold = threshold;
     this.connectionCount = connectionCount;
@@ -67,12 +69,14 @@ import java.util.List;
       this.sig = who.nodeId;
     }
 
-    @Override public int size() {
+    @Override
+    public int size() {
       // NodeId + sig
       return 4 + 48;
     }
 
-    @Override public void action(P2PSigNode from, P2PSigNode to) {
+    @Override
+    public void action(P2PSigNode from, P2PSigNode to) {
       to.onSig(from, this);
     }
   }
@@ -110,10 +114,12 @@ import java.util.List;
     }
 
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
       return "P2PSigNode{" + "nodeId=" + nodeId + ", doneAt=" + doneAt + ", sigs="
-        + verifiedSignatures.cardinality() + ", msgReceived=" + msgReceived + ", msgSent=" + msgSent
-        + ", KBytesSent=" + bytesSent / 1024 + ", KBytesReceived=" + bytesReceived / 1024 + '}';
+          + verifiedSignatures.cardinality() + ", msgReceived=" + msgReceived + ", msgSent="
+          + msgSent + ", KBytesSent=" + bytesSent / 1024 + ", KBytesReceived="
+          + bytesReceived / 1024 + '}';
     }
   }
 
