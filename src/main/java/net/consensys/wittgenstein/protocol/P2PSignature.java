@@ -30,7 +30,7 @@ public class P2PSignature implements Protocol {
   final int threshold;
 
   /**
-   * The typical number of peers a peer has. It can be less (but at least 3) or more.
+   * The typical number of peers a peer has. At least 3.
    */
   final int connectionCount;
 
@@ -479,7 +479,10 @@ public class P2PSignature implements Protocol {
     }
 
     /**
-     * Strategy 2: we aggregate all signatures together
+     * Strategy 2: we aggregate all signatures together and we test all of them. It's obviously
+     * faster, but if someone sent us an invalid signature we have to validate again the signatures.
+     * So if we don't need this scheme we should not use it, as it requires to implement a back-up
+     * strategy as well.
      */
     protected void checkSigs2() {
       BitSet agg = null;
