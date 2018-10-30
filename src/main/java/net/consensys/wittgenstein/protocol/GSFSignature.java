@@ -468,7 +468,7 @@ public class GSFSignature {
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
     int nodeCt = 32768 / 2;
-    GSFSignature ps1 = new GSFSignature(nodeCt, .9, 3, 100, 20, 10, .1);
+    GSFSignature ps1 = new GSFSignature(nodeCt, 1, 3, 100, 20, 100, .0);
     ps1.network.setNetworkLatency(nl);
     ps1.network.rd.setSeed(1);
     String desc = ps1.toString();

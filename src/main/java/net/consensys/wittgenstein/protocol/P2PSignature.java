@@ -13,13 +13,14 @@ import java.util.*;
  * <p>
  * A node: Sends its states to all its direct peers whenever it changes Keeps the list of the states
  * of its direct peers Sends, every x milliseconds, to one of its peers a set of missing signatures
- * Runs in parallel a task to validate the signatures sets it has received.
+ * Runs in parallel a task to validate the signatures sets it has received. Send only validated
+ * signatures to its peers.
  */
 @SuppressWarnings("WeakerAccess")
 public class P2PSignature implements Protocol {
 
   /**
-   * The nuumber of nodes in the network
+   * The number of nodes in the network
    */
   final int nodeCount;
 
@@ -48,9 +49,14 @@ public class P2PSignature implements Protocol {
    */
   final boolean doubleAggregateStrategy;
 
-
+  /**
+   * If true the nodes send their state to the peers they are connected with. If false they don't.
+   */
   final boolean withState = true;
 
+  /**
+   * Use san fermin in parallel with gossiping.
+   */
   final boolean sanFermin;
 
 
@@ -58,13 +64,16 @@ public class P2PSignature implements Protocol {
    *
    */
   enum SendSigsStrategy {
-    all,
-    dif,
-    cmp,
-    cmp_diff
+    all, // send all signatures, not taking the state into account
+    dif, // send just the diff (we need the state of the other nodes for this)
+    cmp_all, // send all the signatures, but compress them
+    cmp_diff // compress, but take into account what was already sent.
   }
 
 
+  /**
+   * For the compression scheme: we can use log 2 (the default or other values).
+   */
   final int sigRange;
 
 
@@ -84,7 +93,7 @@ public class P2PSignature implements Protocol {
     this.sigsSendPeriod = sigsSendPeriod;
     this.doubleAggregateStrategy = doubleAggregateStrategy;
     this.sanFermin = sanFermin;
-    this.sendSigsStrategy = this.sanFermin ? SendSigsStrategy.cmp : sendSigsStrategy;
+    this.sendSigsStrategy = this.sanFermin ? SendSigsStrategy.cmp_all : sendSigsStrategy;
     this.sigRange = sigRange;
     this.network = new P2PNetwork(connectionCount);
     this.nb = new Node.NodeBuilderWithRandomPosition(network.rd);
@@ -183,7 +192,7 @@ public class P2PSignature implements Protocol {
     if (firstOneAt < 0) {
       return 0;
     }
-    // We start only at the beginning of
+    // We start only at the beginning of a range
     if (firstOneAt % (sigRange * 2) != 0) {
       firstOneAt += (sigRange * 2) - (firstOneAt % (sigRange * 2));
     }
@@ -404,7 +413,7 @@ public class P2PSignature implements Protocol {
         SendSigs ss;
         if (sendSigsStrategy == SendSigsStrategy.dif) {
           ss = new SendSigs(toSend);
-        } else if (sendSigsStrategy == SendSigsStrategy.cmp) {
+        } else if (sendSigsStrategy == SendSigsStrategy.cmp_all) {
           ss = new SendSigs((BitSet) verifiedSignatures.clone(),
               compressedSize(verifiedSignatures));
         } else if (sendSigsStrategy == SendSigsStrategy.cmp_diff) {
@@ -538,8 +547,7 @@ public class P2PSignature implements Protocol {
 
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
-    //NetworkLatency.NetworkLatencyByDistance nl1 = new NetworkLatency.NetworkLatencyByDistance();
-    int nodeCt = 16384;
+    int nodeCt = 300;
     List<Graph.Series> rawResultsMin = new ArrayList<>();
     List<Graph.Series> rawResultsMax = new ArrayList<>();
     List<Graph.Series> rawResultsAvg = new ArrayList<>();
@@ -558,7 +566,7 @@ public class P2PSignature implements Protocol {
     Graph medianGraph = new Graph("average number of signatures per time (" + desc + ")",
         "time in ms", "number of signatures");
 
-    int lastSeries = 2;
+    int lastSeries = 3;
     StatsHelper.SimpleStats s;
 
     for (int i = 0; i < lastSeries; i++) {
@@ -717,7 +725,7 @@ public class P2PSignature implements Protocol {
         for (int nodeCt : new int[] {1000, 10000}) {
           for (int r : new int[] {1, 2, 4, 6, 8, 12, 14, 16}) {
             P2PSignature p2ps = new P2PSignature(nodeCt, (int) (nodeCt * 0.67), cnt, 3, sendPeriod,
-                true, false, r < 2 ? SendSigsStrategy.all : SendSigsStrategy.cmp, r);
+                true, false, r < 2 ? SendSigsStrategy.all : SendSigsStrategy.cmp_all, r);
             p2ps.network.setNetworkLatency(nl);
             P2PSigNode observer = p2ps.init();
 
