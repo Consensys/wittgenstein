@@ -536,8 +536,9 @@ public class Network<TN extends Node> {
       TN to = allNodes.get(m.getNextDestId());
       if (partitionId(from) == partitionId(to)) {
         if (!(m.getMessage() instanceof Network<?>.Task)) {
-          if (m.getMessage().size() == 0)
-            throw new IllegalStateException("wrong size: " + m);
+          if (m.getMessage().size() == 0) {
+            throw new IllegalStateException("Message size should be greater than zero: " + m);
+          }
           to.msgReceived++;
           to.bytesReceived += m.getMessage().size();
         }

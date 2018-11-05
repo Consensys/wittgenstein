@@ -13,7 +13,14 @@ public class Node {
       (int) Math.sqrt((MAX_X / 2) * (MAX_X / 2) + (MAX_Y / 2) * (MAX_Y / 2));
 
 
+  /**
+   * Sequence without any holes; starts at zero.
+   */
   public final int nodeId;
+
+  /**
+   * Many algorithms will want to identify a node by a large & unique number. We do it by default.
+   */
   public final byte[] hash256;
 
   /**
@@ -23,7 +30,7 @@ public class Node {
    */
   public final int x;
   public final int y;
-  public final boolean byzantine;
+  public final boolean byzantine; // Used in statistics only
   public boolean down; // Cannot send or receive messages
 
   protected long msgReceived = 0;
@@ -62,7 +69,6 @@ public class Node {
       } catch (NoSuchAlgorithmException e) {
         throw new IllegalStateException();
       }
-
     }
 
     protected int allocateNodeId() {
@@ -126,6 +132,9 @@ public class Node {
     this(nb, false);
   }
 
+  /**
+   * @return the distance with this node, considering a round map.
+   */
   int dist(Node n) {
     int dx = Math.min(Math.abs(x - n.x), MAX_X - Math.abs(x - n.x));
     int dy = Math.min(Math.abs(y - n.y), MAX_Y - Math.abs(y - n.y));

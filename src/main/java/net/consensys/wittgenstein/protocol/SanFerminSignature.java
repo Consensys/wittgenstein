@@ -29,8 +29,8 @@ public class SanFerminSignature implements Protocol {
   final int nodeCount;
 
   /**
-   * exponent to represent @nodeCount in base 2 nodeCount = 2 ** powerOfTwo; It is used to represent
-   * the length of the binary string of a node's id.
+   * exponent to represent @signingNodeCount in base 2 signingNodeCount = 2 ** powerOfTwo; It is
+   * used to represent the length of the binary string of a node's id.
    */
   final int powerOfTwo;
   /**

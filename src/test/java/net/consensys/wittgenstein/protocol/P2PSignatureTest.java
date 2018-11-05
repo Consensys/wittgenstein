@@ -9,7 +9,7 @@ import java.util.BitSet;
 
 public class P2PSignatureTest {
   private P2PSignature ps =
-      new P2PSignature(100, 60, 10, 2, 20, false, false, P2PSignature.SendSigsStrategy.dif, 4);
+      new P2PSignature(100, 0, 60, 10, 2, 20, false, false, P2PSignature.SendSigsStrategy.dif, 4);
   private P2PSignature.P2PSigNode n1;
   private P2PSignature.P2PSigNode n2;
 
@@ -33,9 +33,9 @@ public class P2PSignatureTest {
   @Test
   public void testRepeatability() {
     P2PSignature p1 =
-        new P2PSignature(100, 25, 10, 2, 5, false, true, P2PSignature.SendSigsStrategy.dif, 4);
+        new P2PSignature(100, 0, 25, 10, 2, 5, false, true, P2PSignature.SendSigsStrategy.dif, 4);
     P2PSignature p2 =
-        new P2PSignature(100, 25, 10, 2, 5, false, true, P2PSignature.SendSigsStrategy.dif, 4);
+        new P2PSignature(100, 0, 25, 10, 2, 5, false, true, P2PSignature.SendSigsStrategy.dif, 4);
 
     p1.init();
     p1.network.run(10);
@@ -65,7 +65,7 @@ public class P2PSignatureTest {
 
   @Test
   public void testCheckSigs() {
-    BitSet sigs = new BitSet(ps.nodeCount);
+    BitSet sigs = new BitSet(ps.signingNodeCount);
     sigs.set(n1.nodeId);
     sigs.set(0);
     n1.toVerify.add(sigs);
@@ -79,7 +79,7 @@ public class P2PSignatureTest {
 
   @Test
   public void testSigUpdate() {
-    BitSet sigs = new BitSet(ps.nodeCount);
+    BitSet sigs = new BitSet(ps.signingNodeCount);
     sigs.set(n1.nodeId);
     sigs.set(0);
 
@@ -133,16 +133,16 @@ public class P2PSignatureTest {
 
   @Test
   public void testSanFerminSetsN1() {
-    BitSet t1 = new BitSet(ps.nodeCount);
+    BitSet t1 = new BitSet(ps.signingNodeCount);
     t1.set(0);
     Assert.assertEquals(t1, n1.sanFerminPeers(1));
 
-    BitSet t2 = new BitSet(ps.nodeCount);
+    BitSet t2 = new BitSet(ps.signingNodeCount);
     t2.set(0);
     t2.set(2, 4);
     Assert.assertEquals(t2, n1.sanFerminPeers(2));
 
-    BitSet t3 = new BitSet(ps.nodeCount);
+    BitSet t3 = new BitSet(ps.signingNodeCount);
     t3.set(0);
     t3.set(2, 8);
     Assert.assertEquals(t3, n1.sanFerminPeers(3));
@@ -152,15 +152,15 @@ public class P2PSignatureTest {
   public void testSanFerminSetsN24() {
     P2PSignature.P2PSigNode n24 = (P2PSignature.P2PSigNode) ps.network.getNodeById(24);
 
-    BitSet t1 = new BitSet(ps.nodeCount);
+    BitSet t1 = new BitSet(ps.signingNodeCount);
     t1.set(25);
     Assert.assertEquals(t1, n24.sanFerminPeers(1));
 
-    BitSet t2 = new BitSet(ps.nodeCount);
+    BitSet t2 = new BitSet(ps.signingNodeCount);
     t2.set(25, 28);
     Assert.assertEquals(t2, n24.sanFerminPeers(2));
 
-    BitSet t3 = new BitSet(ps.nodeCount);
+    BitSet t3 = new BitSet(ps.signingNodeCount);
     t3.set(25, 32);
     Assert.assertEquals(t3, n24.sanFerminPeers(3));
   }
@@ -169,16 +169,16 @@ public class P2PSignatureTest {
   public void testSanFerminSetsN98() {
     P2PSignature.P2PSigNode n98 = (P2PSignature.P2PSigNode) ps.network.getNodeById(98);
 
-    BitSet t1 = new BitSet(ps.nodeCount);
+    BitSet t1 = new BitSet(ps.signingNodeCount);
     t1.set(99);
     Assert.assertEquals(t1, n98.sanFerminPeers(1));
 
-    BitSet t2 = new BitSet(ps.nodeCount);
+    BitSet t2 = new BitSet(ps.signingNodeCount);
     t2.set(99);
     t2.set(96, 98);
     Assert.assertEquals(t2, n98.sanFerminPeers(2));
 
-    BitSet t3 = new BitSet(ps.nodeCount);
+    BitSet t3 = new BitSet(ps.signingNodeCount);
     t3.set(99);
     t3.set(96, 98);
     Assert.assertEquals(t3, n98.sanFerminPeers(3));
