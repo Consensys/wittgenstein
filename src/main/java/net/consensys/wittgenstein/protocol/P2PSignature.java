@@ -574,12 +574,14 @@ public class P2PSignature implements Protocol {
     List<Graph.Series> rawResultsMax = new ArrayList<>();
     List<Graph.Series> rawResultsAvg = new ArrayList<>();
 
-    P2PSignature psTemplate = new P2PSignature(nodeCt, nodeCt * 5, nodeCt, 15, 3, 50, true, false,
-        SendSigsStrategy.cmp_diff, 2);
+    P2PSignature psTemplate = new P2PSignature(nodeCt, nodeCt * 0, nodeCt, 15, 3, 50, true, false,
+        SendSigsStrategy.all, 2);
     psTemplate.network.setNetworkLatency(nl);
 
-    String desc = "signingNodeCount=" + nodeCt + ", gossip "
-        + (psTemplate.sanFermin ? " + San Fermin" : "alone") + ", gossip period="
+    String desc = "signingNodeCount=" + nodeCt
+        + (psTemplate.sanFermin ? ""
+            : ", totalNodes=" + (psTemplate.signingNodeCount + psTemplate.relayingNodeCount))
+        + ", gossip " + (psTemplate.sanFermin ? " + San Fermin" : "alone") + ", gossip period="
         + psTemplate.sigsSendPeriod
         + (!psTemplate.sanFermin ? ", compression=" + psTemplate.sendSigsStrategy : "");
     System.out.println(nl + " " + desc);
