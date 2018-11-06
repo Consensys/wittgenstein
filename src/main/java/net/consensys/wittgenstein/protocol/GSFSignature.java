@@ -101,7 +101,6 @@ public class GSFSignature {
     final BitSet verifiedSignatures = new BitSet(nodeCount);
 
     boolean done = false;
-    long doneAt = 0;
 
     GSFNode() {
       super(nb);
@@ -509,7 +508,7 @@ public class GSFSignature {
     System.out.println("bytes rcvd: " + StatsHelper.getStatsOn(liveNodes, Node::getBytesReceived));
     System.out.println("msg sent: " + StatsHelper.getStatsOn(liveNodes, Node::getMsgSent));
     System.out.println("msg rcvd: " + StatsHelper.getStatsOn(liveNodes, Node::getMsgReceived));
-    System.out.println("done at: " + StatsHelper.getStatsOn(liveNodes, n -> ((GSFNode) n).doneAt));
+    System.out.println("done at: " + StatsHelper.getStatsOn(liveNodes, Node::getDoneAt));
     System.out.println("Simulation execution time: " + ((endAt - startAt) / 1000) + "s");
   }
 
@@ -537,7 +536,7 @@ public class GSFSignature {
       List<GSFNode> liveNodes =
           ps1.network.allNodes.stream().filter(n -> !n.down).collect(Collectors.toList());
 
-      s = StatsHelper.getStatsOn(liveNodes, n -> ((GSFNode) n).doneAt);
+      s = StatsHelper.getStatsOn(liveNodes, Node::getDoneAt);
       s1.addLine(new Graph.ReportLine(dead, s.avg));
       System.out.println("dead: " + dead + ":" + s.avg);
     }

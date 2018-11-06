@@ -265,7 +265,6 @@ public class P2PSignature implements Protocol {
     final boolean justRelay;
 
     boolean done = false;
-    long doneAt = 0;
 
     P2PSigNode(boolean justRelay) {
       super(nb);
@@ -537,7 +536,8 @@ public class P2PSignature implements Protocol {
     }
   }
 
-  void init() {
+  @Override
+  public void init() {
     Set<Integer> justRelay = new HashSet<>(relayingNodeCount);
     while (justRelay.size() < relayingNodeCount) {
       justRelay.add(network.rd.nextInt(signingNodeCount + relayingNodeCount));
@@ -565,6 +565,11 @@ public class P2PSignature implements Protocol {
     }
 
     network.setPeers();
+  }
+
+  @Override
+  public Network<P2PNode> network() {
+    return network;
   }
 
   public static void sigsPerTime() {
@@ -626,8 +631,8 @@ public class P2PSignature implements Protocol {
           .println("msg sent: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getMsgSent));
       System.out.println(
           "msg rcvd: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getMsgReceived));
-      System.out.println(
-          "done at: " + StatsHelper.getStatsOn(ps1.network.allNodes, n -> ((P2PSigNode) n).doneAt));
+      System.out
+          .println("done at: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getDoneAt));
     }
 
     try {

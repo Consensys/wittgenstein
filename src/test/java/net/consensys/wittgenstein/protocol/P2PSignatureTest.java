@@ -42,8 +42,7 @@ public class P2PSignatureTest {
     p2.init();
     p2.network.run(10);
     for (Node n : p1.network.allNodes) {
-      Assert.assertEquals(((P2PSignature.P2PSigNode) n).doneAt,
-          ((P2PSignature.P2PSigNode) p2.network.getNodeById(n.nodeId)).doneAt);
+      Assert.assertEquals(n.getDoneAt(), p2.network.getNodeById(n.nodeId).getDoneAt());
     }
   }
 

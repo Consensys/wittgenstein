@@ -1,6 +1,9 @@
 package net.consensys.wittgenstein.protocol;
 
-import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.Network;
+import net.consensys.wittgenstein.core.NetworkLatency;
+import net.consensys.wittgenstein.core.Node;
+import net.consensys.wittgenstein.core.Protocol;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.tools.Graph;
@@ -126,6 +129,10 @@ public class SanFerminSignature implements Protocol {
       network.registerTask(n::goNextLevel, 1, n);
   }
 
+  public Network<SanFerminNode> network() {
+    return network;
+  }
+
 
   /**
    * SanFerminNode is a node that carefully selects the peers he needs to contact to get the final
@@ -190,10 +197,7 @@ public class SanFerminSignature implements Protocol {
      * have we reached the threshold or not
      */
     boolean thresholdDone;
-    /**
-     * time when this node has finished the protocol entirely
-     */
-    long doneAt;
+
     /**
      * Are we done yet or not
      */
@@ -566,7 +570,7 @@ public class SanFerminSignature implements Protocol {
     System.out.println("msg sent: " + StatsHelper.getStatsOn(ps1.allNodes, Node::getMsgSent));
     System.out.println("msg rcvd: " + StatsHelper.getStatsOn(ps1.allNodes, Node::getMsgReceived));
     System.out.println("done at: " + StatsHelper.getStatsOn(ps1.network.allNodes, n -> {
-      long val = ((SanFerminNode) n).doneAt;
+      long val = n.getDoneAt();
       return val == 0 ? limit : val;
     }));
 

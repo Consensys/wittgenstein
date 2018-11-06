@@ -43,5 +43,8 @@ public class StatsHelper {
     return new SimpleStats(min, max, (tot / nodes.size()));
   }
 
+  public interface SimpleStatsGetter {
+    SimpleStats get(List<? extends Node> liveNodes);
+  }
 
 }

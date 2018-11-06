@@ -110,6 +110,18 @@ public class SanFerminCappos implements Protocol {
   final Network<SanFerminNode> network;
   final Node.NodeBuilder nb;
 
+  @Override
+  public Network<SanFerminNode> network() {
+    return network;
+  }
+
+  @Override
+  public void init() {
+
+  }
+
+
+
   /**
    * init makes each node starts swapping with each other when the network starts
    */
@@ -169,10 +181,7 @@ public class SanFerminCappos implements Protocol {
      * have we reached the threshold or not
      */
     boolean thresholdDone;
-    /**
-     * time when this node has finished the protocol entirely
-     */
-    long doneAt;
+
     /**
      * Are we done yet or not
      */
@@ -470,7 +479,7 @@ public class SanFerminCappos implements Protocol {
     System.out.println("msg sent: " + StatsHelper.getStatsOn(ps1.allNodes, Node::getMsgSent));
     System.out.println("msg rcvd: " + StatsHelper.getStatsOn(ps1.allNodes, Node::getMsgReceived));
     System.out.println("done at: " + StatsHelper.getStatsOn(ps1.network.allNodes, n -> {
-      long val = ((SanFerminNode) n).doneAt;
+      long val = n.getDoneAt();
       return val == 0 ? limit : val;
     }));
   }

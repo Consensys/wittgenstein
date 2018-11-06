@@ -3,8 +3,9 @@ package net.consensys.wittgenstein.protocol;
 import net.consensys.wittgenstein.core.Network;
 import net.consensys.wittgenstein.core.NetworkLatency;
 import net.consensys.wittgenstein.core.Node;
+import net.consensys.wittgenstein.core.Protocol;
 
-public class PingPong {
+public class PingPong implements Protocol {
   /**
    * You need a network. Nodes are added to this network. Network latency can be set later.
    */
@@ -51,11 +52,21 @@ public class PingPong {
     }
   }
 
-  PingPongNode init(int nodeCt) {
-    for (int i = 0; i < nodeCt; i++) {
+  @Override
+  public PingPong copy() {
+    return new PingPong();
+  }
+
+  @Override
+  public void init() {
+    for (int i = 0; i < 1000; i++) {
       network.addNode(new PingPongNode());
     }
-    return network.getNodeById(0);
+  }
+
+  @Override
+  public Network<PingPongNode> network() {
+    return network;
   }
 
 
@@ -65,7 +76,8 @@ public class PingPong {
     // Set the latency.
     p.network.setNetworkLatency(new NetworkLatency.NetworkLatencyByDistance());
 
-    PingPongNode witness = p.init(1000);
+    p.init();
+    PingPongNode witness = p.network.getNodeById(0);
     p.network.sendAll(new Ping(), witness);
     for (int i = 0; i < 1000; i += 100) {
       System.out.println(i + " ms, pongs received " + witness.pong);

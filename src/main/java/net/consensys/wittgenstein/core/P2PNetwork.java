@@ -1,6 +1,7 @@
 package net.consensys.wittgenstein.core;
 
 import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 public class P2PNetwork extends Network<P2PNode> {
   private final int connectionCount;
@@ -9,9 +10,6 @@ public class P2PNetwork extends Network<P2PNode> {
     this.connectionCount = connectionCount;
   }
 
-  /**
-   * @see <a href="https://github.com/ethereum/wiki/wiki/Kademlia-Peer-Selection"/>
-   */
   public void setPeers() {
     final ArrayList<P2PNode> todo = new ArrayList<>(allNodes);
     int toCreate = (todo.size() * connectionCount) / 2;
@@ -24,7 +22,7 @@ public class P2PNetwork extends Network<P2PNode> {
       } while (pp1 == pp2);
 
       // We could consider that close nodes have a greater probability to be peers, but
-      //  today's implementation don't have any mechanism for that.
+      //  today's implementation doesn't have any mechanism for that.
       createLink(todo, pp1, pp2);
     }
 
@@ -38,7 +36,6 @@ public class P2PNetwork extends Network<P2PNode> {
     }
   }
 
-
   private void createLink(ArrayList<P2PNode> todo, int pp1, int pp2) {
     P2PNode p1 = todo.get(pp1);
     P2PNode p2 = todo.get(pp2);
@@ -46,4 +43,26 @@ public class P2PNetwork extends Network<P2PNode> {
     p1.peers.add(p2);
     p2.peers.add(p1);
   }
+
+  public class FloodMessage extends Network.Message<P2PNode> {
+    private final int size;
+
+    public FloodMessage(int size) {
+      this.size = size;
+    }
+
+    @Override
+    public void action(P2PNode from, P2PNode to) {
+      if (to.received.add(this)) {
+        to.onFlood(from, this);
+        send(this, to, to.peers.stream().filter(n -> n != from).collect(Collectors.toList()));
+      }
+    }
+
+    @Override
+    public int size() {
+      return size;
+    }
+  }
+
 }

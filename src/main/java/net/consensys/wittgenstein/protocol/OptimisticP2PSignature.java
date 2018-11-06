@@ -86,7 +86,6 @@ public class OptimisticP2PSignature implements Protocol {
     final BitSet verifiedSignatures = new BitSet(nodeCount);
 
     boolean done = false;
-    long doneAt = 0;
 
     P2PSigNode() {
       super(nb);
@@ -123,18 +122,20 @@ public class OptimisticP2PSignature implements Protocol {
     }
   }
 
-  P2PSigNode init() {
-    P2PSigNode last = null;
+  @Override
+  public void init() {
     for (int i = 0; i < nodeCount; i++) {
       final P2PSigNode n = new P2PSigNode();
-      last = n;
       network.addNode(n);
       network.registerTask(() -> n.onSig(n, new SendSig(n)), 1, n);
     }
 
     network.setPeers();
+  }
 
-    return last;
+  @Override
+  public Network<?> network() {
+    return network;
   }
 
   public static void main(String... args) {
@@ -145,7 +146,8 @@ public class OptimisticP2PSignature implements Protocol {
     for (int i = 1000; i < 2000; i += 1000) {
       OptimisticP2PSignature p2ps = new OptimisticP2PSignature(i, i / 2 + 1, 13, 3);
       p2ps.network.setNetworkLatency(nl);
-      P2PSigNode observer = p2ps.init();
+      p2ps.init();
+      P2PSigNode observer = (P2PSigNode) p2ps.network.getNodeById(0);
 
       if (!printLat) {
         System.out.println("NON P2P " + NetworkLatency.estimateLatency(p2ps.network, 100000));

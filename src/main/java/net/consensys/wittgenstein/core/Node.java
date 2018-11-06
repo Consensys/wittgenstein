@@ -38,6 +38,11 @@ public class Node {
   protected long bytesSent = 0;
   protected long bytesReceived = 0;
 
+  /**
+   * The time when the protocol ended for this node 0 if it has not ended yet.
+   */
+  protected long doneAt = 0;
+
   public long getMsgReceived() {
     return msgReceived;
   }
@@ -52,6 +57,10 @@ public class Node {
 
   public long getBytesReceived() {
     return bytesReceived;
+  }
+
+  public long getDoneAt() {
+    return doneAt;
   }
 
   @Override
