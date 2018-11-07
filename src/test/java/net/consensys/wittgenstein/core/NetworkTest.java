@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class TestNetwork {
+public class NetworkTest {
   private Network<Node> network = new Network<>();
   private Node.NodeBuilder nb = new Node.NodeBuilder();
   private Node n0 = new Node(nb);

@@ -43,9 +43,9 @@ public class Network<TN extends Node> {
   int msgDiscardTime = Integer.MAX_VALUE;
 
   /**
-   * The network latency. The default one is quite pessimistic, you may want to use another one.
+   * The network latency. The default one is for a WAN
    */
-  NetworkLatency networkLatency = new NetworkLatency.EthScanNetworkLatency();
+  NetworkLatency networkLatency = new NetworkLatency.IC3NetworkLatency();
 
   /**
    * Time in ms. Using an int limits us to ~555 hours of simulation, it's acceptable, and as we have

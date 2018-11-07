@@ -60,7 +60,7 @@ public abstract class NetworkLatency {
      */
     private double distToMile(int dist) {
       final double earthPerimeter = 24_860;
-      double pointValue = (earthPerimeter / 2) / Node.MAX_DIST;
+      final double pointValue = (earthPerimeter / 2) / Node.MAX_DIST;
       return pointValue * dist;
     }
 
@@ -169,14 +169,14 @@ public abstract class NetworkLatency {
     }
   }
 
+  /**
+   * Distribution taken from: https://ethstats.net/ It should be read like this: 16% of the messages
+   * will be received in 250ms or less
+   * </p>
+   * These figures are for blocks, so they represent a worse case. As well, some of the nodes may be
+   * dead.
+   */
   public static class EthScanNetworkLatency extends NetworkLatency {
-    /**
-     * Distribution taken from: https://ethstats.net/ It should be read like this: 16% of the
-     * messages will be received in 250ms or less
-     * </p>
-     * These figures are for blocks, so they represent a worse case. As well, some of the nodes may
-     * be dead.
-     */
     public static final int[] distribProp = {16, 18, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
     public static final int[] distribVal =
         {250, 500, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750, 4500, 6000, 8500, 9750, 10000};
@@ -191,6 +191,55 @@ public abstract class NetworkLatency {
     @Override
     public String toString() {
       return "EthScanNetworkLatency{" + "networkLatency=" + networkLatency + '}';
+    }
+  }
+
+
+  /**
+   * Taken from https://fc18.ifca.ai/preproceedings/75.pdf (Decentralization in Bitcoin and Ethereum
+   * Networks) All authors are attached to the Initiative for Cryptocurrencies and Contracts (IC3),
+   * hence the name.
+   *
+   * The paper gives these numbers (proportion, milliseconds):
+   * </p>
+   * 10% 92
+   * </p>
+   * 33% 125
+   * </p>
+   * 50% 152
+   * </p>
+   * 67% 200
+   * </p>
+   * 90% 276
+   * </p>
+   *
+   * The paper does not give any variance.
+   *
+   * This latency should only be used with full random position
+   */
+  public static class IC3NetworkLatency extends NetworkLatency {
+    protected static final int S10 = 92;
+    protected static final int SW = 350;
+
+
+    @Override
+    public int getLatency(Node from, Node to, int delta) {
+      double dist = from.dist(to);
+      double surface = dist * dist * Math.PI;
+      double totalSurface = Node.MAX_X * Node.MAX_Y;
+      int position = (int) ((surface * 100) / totalSurface);
+
+      if (position <= 10)
+        return S10;
+      if (position <= 33)
+        return 125;
+      if (position <= 50)
+        return 152;
+      if (position <= 67)
+        return 200;
+      if (position <= 90)
+        return 276;
+      return SW; // The table in the paper does not show any number
     }
   }
 

@@ -78,7 +78,7 @@ public class P2PFlood implements Protocol {
   }
 
   private static void floodTime() {
-    P2PFlood p = new P2PFlood(1000, 300);
+    P2PFlood p = new P2PFlood(300, 3000);
 
     Predicate<Protocol> endWhen = p1 -> {
       for (Node n : p1.network().allNodes) {

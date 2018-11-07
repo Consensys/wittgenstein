@@ -6,7 +6,7 @@ import org.junit.Test;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class TestEnvelopeStorage {
+public class EnvelopeStorageTest {
   private Network<Node> network = new Network<>();
   private Node.NodeBuilder nb = new Node.NodeBuilder();
   private Node n0 = new Node(nb);

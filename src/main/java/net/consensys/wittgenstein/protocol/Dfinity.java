@@ -419,7 +419,6 @@ public class Dfinity {
   public static void main(String... args) {
     Dfinity bc = new Dfinity();
     bc.init();
-    //bc.network.removeNetworkLatency();
 
     bc.network.run(50);
 

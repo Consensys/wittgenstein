@@ -141,6 +141,7 @@ public class Node {
     this(nb, false);
   }
 
+
   /**
    * @return the distance with this node, considering a round map.
    */
