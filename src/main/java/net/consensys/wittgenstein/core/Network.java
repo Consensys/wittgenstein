@@ -45,14 +45,13 @@ public class Network<TN extends Node> {
   /**
    * The network latency. The default one is for a WAN
    */
-  NetworkLatency networkLatency = new NetworkLatency.IC3NetworkLatency();
+  public NetworkLatency networkLatency = new NetworkLatency.IC3NetworkLatency();
 
   /**
    * Time in ms. Using an int limits us to ~555 hours of simulation, it's acceptable, and as we have
    * billions of dated objects it saves some memory...
    */
   public int time = 0;
-
 
   public TN getNodeById(int id) {
     return allNodes.get(id);

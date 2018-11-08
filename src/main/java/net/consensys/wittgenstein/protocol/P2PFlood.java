@@ -80,7 +80,7 @@ public class P2PFlood implements Protocol {
   private static void floodTime() {
     P2PFlood p = new P2PFlood(300, 3000);
 
-    Predicate<Protocol> endWhen = p1 -> {
+    Predicate<Protocol> contIf = p1 -> {
       for (Node n : p1.network().allNodes) {
         if (!n.down && n.getDoneAt() == 0) {
           return true;
@@ -92,7 +92,7 @@ public class P2PFlood implements Protocol {
     StatsHelper.SimpleStatsGetter sg =
         liveNodes -> StatsHelper.getStatsOn(liveNodes, n -> ((P2PNode) n).received.size());
 
-    new ProgressPerTime(p, "flood with " + p.nodeCount + " nodes", "msg count", sg).run(endWhen);
+    new ProgressPerTime(p, "flood with " + p.nodeCount + " nodes", "msg count", sg).run(contIf);
   }
 
   public static void main(String... args) {

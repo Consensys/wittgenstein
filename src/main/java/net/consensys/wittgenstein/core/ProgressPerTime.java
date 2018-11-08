@@ -8,22 +8,25 @@ import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+/**
+ * This class runs a scenario for a protocol protocol
+ */
 public class ProgressPerTime {
-  private final Protocol template;
+  private final Protocol protocol;
   private final String configDesc;
   private final String yAxisDesc;
   private final StatsHelper.SimpleStatsGetter statsGetter;
 
   public ProgressPerTime(Protocol template, String configDesc, String yAxisDesc,
       StatsHelper.SimpleStatsGetter statsGetter) {
-    this.template = template;
+    this.protocol = template.copy();
     this.configDesc = configDesc;
     this.yAxisDesc = yAxisDesc;
     this.statsGetter = statsGetter;
   }
 
   public void run(Predicate<Protocol> contIf) {
-    Graph graph = new Graph(template + " " + configDesc, "time in ms", yAxisDesc);
+    Graph graph = new Graph(protocol + " " + configDesc, "time in ms", yAxisDesc);
     Graph.Series series1min = new Graph.Series("worse node");
     Graph.Series series1max = new Graph.Series("best node");
     Graph.Series series1avg = new Graph.Series("average");
@@ -31,23 +34,23 @@ public class ProgressPerTime {
     graph.addSerie(series1max);
     graph.addSerie(series1avg);
 
-    System.out.println(template + " " + configDesc);
-    template.init();
+    System.out.println(protocol + " " + configDesc);
+    protocol.init();
     List<? extends Node> liveNodes =
-        template.network().allNodes.stream().filter(n -> !n.down).collect(Collectors.toList());
+        protocol.network().allNodes.stream().filter(n -> !n.down).collect(Collectors.toList());
 
     long startAt = System.currentTimeMillis();
     StatsHelper.SimpleStats s;
     do {
-      template.network().runMs(10);
+      protocol.network().runMs(10);
       s = statsGetter.get(liveNodes);
-      series1min.addLine(new Graph.ReportLine(template.network().time, s.min));
-      series1max.addLine(new Graph.ReportLine(template.network().time, s.max));
-      series1avg.addLine(new Graph.ReportLine(template.network().time, s.avg));
-      if (template.network().time % 10000 == 0) {
-        System.out.println(" " + s.avg);
+      series1min.addLine(new Graph.ReportLine(protocol.network().time, s.min));
+      series1max.addLine(new Graph.ReportLine(protocol.network().time, s.max));
+      series1avg.addLine(new Graph.ReportLine(protocol.network().time, s.avg));
+      if (protocol.network().time % 10000 == 0) {
+        System.out.println("time goes by... Avg=" + s.avg + ", min=" + s.min);
       }
-    } while (contIf.test(template));
+    } while (contIf.test(protocol));
     long endAt = System.currentTimeMillis();
 
     try {

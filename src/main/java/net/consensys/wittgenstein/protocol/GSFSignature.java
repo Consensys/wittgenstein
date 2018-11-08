@@ -1,14 +1,13 @@
 package net.consensys.wittgenstein.protocol;
 
-import net.consensys.wittgenstein.core.Network;
-import net.consensys.wittgenstein.core.NetworkLatency;
-import net.consensys.wittgenstein.core.Node;
+import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.tools.Graph;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -18,7 +17,7 @@ import java.util.stream.Collectors;
  * Runs in parallel a task to validate the signatures sets it has received.
  */
 @SuppressWarnings("WeakerAccess")
-public class GSFSignature {
+public class GSFSignature implements Protocol {
   /**
    * The number of nodes in the network
    */
@@ -43,30 +42,42 @@ public class GSFSignature {
   final Network<GSFNode> network;
   final Node.NodeBuilder nb;
 
-  public GSFSignature(int nodeCount, double ratioThreshold, int pairingTime, int timeoutPerLevelMs,
-      int periodDurationMs, int acceleratedCallsCount, double ratioNodesDown) {
+  public GSFSignature(int nodeCount, int threshold, int pairingTime, int timeoutPerLevelMs,
+      int periodDurationMs, int acceleratedCallsCount, int nodesDown, NetworkLatency nl) {
+    /*Re-implement testing
     if (ratioNodesDown >= 1 || ratioNodesDown < 0 || ratioThreshold > 1 || ratioThreshold <= 0
-        || (ratioNodesDown + ratioThreshold > 1)) {
+      || (ratioNodesDown + ratioThreshold > 1)) {
       throw new IllegalArgumentException(
-          "ratioNodesDown=" + ratioNodesDown + ", ratioThreshold=" + ratioThreshold);
+        "ratioNodesDown=" + ratioNodesDown + ", ratioThreshold=" + ratioThreshold);
     }
+    */
+
+
     this.nodeCount = nodeCount;
+    this.threshold = threshold;
     this.pairingTime = pairingTime;
     this.timeoutPerLevelMs = timeoutPerLevelMs;
     this.periodDurationMs = periodDurationMs;
     this.acceleratedCallsCount = acceleratedCallsCount;
-    this.nodesDown = (int) (ratioNodesDown * nodeCount);
-    this.threshold = (int) (ratioThreshold * nodeCount);
-
+    this.nodesDown = nodesDown;
     this.network = new Network<>();
     this.nb = new Node.NodeBuilderWithRandomPosition(network.rd);
+    this.network.setNetworkLatency(nl);
+  }
+
+  public GSFSignature(int nodeCount, double ratioThreshold, int pairingTime, int timeoutPerLevelMs,
+      int periodDurationMs, int acceleratedCallsCount, double ratioNodesDown) {
+    this(nodeCount, (int) (ratioThreshold * nodeCount), pairingTime, timeoutPerLevelMs,
+        periodDurationMs, acceleratedCallsCount, (int) (ratioNodesDown * nodeCount),
+        new NetworkLatency.IC3NetworkLatency());
   }
 
   @Override
   public String toString() {
     return "GSFSignature, " + "nodes=" + nodeCount + ", threshold=" + threshold + ", pairing="
         + pairingTime + "ms, level timeout=" + timeoutPerLevelMs + "ms, period=" + periodDurationMs
-        + "ms, acceleratedCallsCount=" + acceleratedCallsCount + ", dead nodes=" + nodesDown;
+        + "ms, acceleratedCallsCount=" + acceleratedCallsCount + ", dead nodes=" + nodesDown
+        + ", network=" + network.networkLatency.getClass().getSimpleName();
   }
 
   static class SendSigs extends Network.Message<GSFNode> {
@@ -439,7 +450,13 @@ public class GSFSignature {
     }
   }
 
-  void init() {
+  @Override
+  public Protocol copy() {
+    return new GSFSignature(nodeCount, threshold, pairingTime, timeoutPerLevelMs, periodDurationMs,
+        acceleratedCallsCount, nodesDown, this.network.networkLatency);
+  }
+
+  public void init() {
     for (int i = 0; i < nodeCount; i++) {
       final GSFNode n = new GSFNode();
       network.addNode(n);
@@ -464,52 +481,34 @@ public class GSFSignature {
     }
   }
 
+  @Override
+  public Network<?> network() {
+    return network;
+  }
+
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
     int nodeCt = 32768 / 4;
     GSFSignature ps1 = new GSFSignature(nodeCt, 0.9, 3, 100, 20, 100, .10);
     ps1.network.setNetworkLatency(nl);
-    ps1.network.rd.setSeed(1);
     String desc = ps1.toString();
-    Graph graph = new Graph("number of signatures per time (" + desc + ")", "time in ms",
-        "number of signatures");
-    Graph.Series series1min = new Graph.Series("signatures count - worse node");
-    Graph.Series series1max = new Graph.Series("signatures count - best node");
-    Graph.Series series1avg = new Graph.Series("signatures count - average");
-    // graph.addSerie(series1min);
-    graph.addSerie(series1max);
-    graph.addSerie(series1avg);
+    StatsHelper.SimpleStatsGetter sg = liveNodes -> StatsHelper.getStatsOn(liveNodes,
+        n -> ((GSFNode) n).verifiedSignatures.cardinality());
 
-    System.out.println(nl + " " + desc);
-    ps1.init();
-    List<GSFNode> liveNodes =
-        ps1.network.allNodes.stream().filter(n -> !n.down).collect(Collectors.toList());
-    long startAt = System.currentTimeMillis();
-    StatsHelper.SimpleStats s;
-    do {
-      ps1.network.runMs(10);
-      s = StatsHelper.getStatsOn(liveNodes, n -> ((GSFNode) n).verifiedSignatures.cardinality());
-      series1min.addLine(new Graph.ReportLine(ps1.network.time, s.min));
-      series1max.addLine(new Graph.ReportLine(ps1.network.time, s.max));
-      series1avg.addLine(new Graph.ReportLine(ps1.network.time, s.avg));
-      if (ps1.network.time % 10000 == 0) {
-        System.out.println(" " + s.avg);
+    ProgressPerTime ppt = new ProgressPerTime(ps1, desc, "number of signatures", sg);
+
+    Predicate<Protocol> contIf = p1 -> {
+      for (Node n : p1.network().allNodes) {
+        GSFNode gn = (GSFNode) n;
+
+        if (!n.down && gn.verifiedSignatures.cardinality() < ps1.threshold) {
+          return true;
+        }
       }
-    } while (s.min < ps1.threshold);
-    long endAt = System.currentTimeMillis();
+      return false;
+    };
 
-    try {
-      graph.save(new File("/tmp/graph.png"));
-    } catch (IOException e) {
-      System.err.println("Can't generate the graph: " + e.getMessage());
-    }
-
-    System.out.println("bytes sent: " + StatsHelper.getStatsOn(liveNodes, Node::getBytesSent));
-    System.out.println("bytes rcvd: " + StatsHelper.getStatsOn(liveNodes, Node::getBytesReceived));
-    System.out.println("msg sent: " + StatsHelper.getStatsOn(liveNodes, Node::getMsgSent));
-    System.out.println("msg rcvd: " + StatsHelper.getStatsOn(liveNodes, Node::getMsgReceived));
-    System.out.println("done at: " + StatsHelper.getStatsOn(liveNodes, Node::getDoneAt));
-    System.out.println("Simulation execution time: " + ((endAt - startAt) / 1000) + "s");
+    ppt.run(contIf);
   }
 
 
@@ -552,9 +551,6 @@ public class GSFSignature {
   }
 
   public static void main(String... args) {
-    NetworkLatency nl = new NetworkLatency.NetworkLatencyByDistance();
-    System.out.println("" + nl);
-
     sigsPerTime();
   }
 }
