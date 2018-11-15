@@ -3,7 +3,10 @@ package net.consensys.wittgenstein.core;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
+import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
 
 @SuppressWarnings({"WeakerAccess"})
 public class Node {
@@ -37,6 +40,7 @@ public class Node {
   protected long msgSent = 0;
   protected long bytesSent = 0;
   protected long bytesReceived = 0;
+  public final Optional<String> cityName;
 
   /**
    * The time when the protocol ended for this node 0 if it has not ended yet.
@@ -92,6 +96,11 @@ public class Node {
       return 1;
     }
 
+    protected Optional<String> getCityName() {
+      return Optional.empty();
+    }
+
+
 
 
     /**
@@ -117,6 +126,22 @@ public class Node {
     public int getY() {
       return rd.nextInt(MAX_Y) + 1;
     }
+
+  }
+
+  public static class NodeBuilderWithCity extends NodeBuilder {
+    final Random rd;
+    final String city;
+
+    public NodeBuilderWithCity(Random rd, List<String> cities) {
+
+      this.rd = rd;
+      int size = cities.size();
+      city = cities.get(rd.nextInt(size)) ;
+    }
+    protected Optional<String> getCityName() {
+      return Optional.of(city);
+    }
   }
 
 
@@ -135,6 +160,7 @@ public class Node {
     }
     this.byzantine = byzantine;
     this.hash256 = nb.getHash(nodeId);
+    this.cityName=nb.getCityName();
   }
 
   public Node(NodeBuilder nb) {
