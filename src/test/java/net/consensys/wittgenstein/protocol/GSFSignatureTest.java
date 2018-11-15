@@ -1,11 +1,12 @@
 package net.consensys.wittgenstein.protocol;
 
+import net.consensys.wittgenstein.core.Network;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 public class GSFSignatureTest {
-  private GSFSignature p = new GSFSignature(32, 1, 3, 20, 10, 10, 0);
+  private GSFSignature p = new GSFSignature(new Network(), 32, 1, 3, 20, 10, 10, 0);
   private GSFSignature.GSFNode n0;
 
   @Before
@@ -55,7 +56,7 @@ public class GSFSignatureTest {
   // TODO
   //@Test
   public void testNonPowerTwoNodeCount() {
-    GSFSignature p = new GSFSignature(31, 1, 3, 20, 10, 10, 0.1);
+    GSFSignature p = new GSFSignature(new Network(), 31, 1, 3, 20, 10, 10, 0.1);
     p.init();
     GSFSignature.GSFNode n3 = p.network.getNodeById(3);
     Assert.assertEquals(6, n3.levels.size());
@@ -64,7 +65,7 @@ public class GSFSignatureTest {
 
   @Test
   public void testDeadNodes() {
-    GSFSignature p = new GSFSignature(32, 0.8, 3, 20, 10, 10, 0.1);
+    GSFSignature p = new GSFSignature(new Network(), 32, 0.8, 3, 20, 10, 10, 0.1);
     p.init();
     long dead = p.network.allNodes.stream().filter(n -> n.down).count();
     Assert.assertEquals(3, dead);

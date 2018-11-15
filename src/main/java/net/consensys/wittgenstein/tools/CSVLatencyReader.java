@@ -14,34 +14,34 @@ import java.util.*;
 public class CSVLatencyReader {
 
   private static final Path DATA_PATH = Paths.get("resources/Data");
-  private static final String CSV_FILE_SUFFIX= "Ping.csv";
+  private static final String CSV_FILE_SUFFIX = "Ping.csv";
   private static final float SAME_CITY_LATENCY = 30f;
-  private final Map<String,Map<String, Float>> latencyMatrix;
+  private final Map<String, Map<String, Float>> latencyMatrix;
   private Set<String> cities;
 
-  public CSVLatencyReader() throws IOException{
+  public CSVLatencyReader() throws IOException {
     this.cities = dirNames(DATA_PATH);
     this.latencyMatrix = makeLatencyMatrix();
     Set<String> citiesWitMissingMeasurements = citiesWithMissingMeasurements(latencyMatrix);
     latencyMatrix.keySet().removeAll(citiesWitMissingMeasurements);
   }
 
-  public CSVLatencyReader(Map<String,Map<String, Float>> latencyMatrix) throws IOException {
+  public CSVLatencyReader(Map<String, Map<String, Float>> latencyMatrix) throws IOException {
     this.latencyMatrix = latencyMatrix;
     Set<String> citiesWitMissingMeasurements = citiesWithMissingMeasurements(latencyMatrix);
     latencyMatrix.keySet().removeAll(citiesWitMissingMeasurements);
   }
 
-    public Map<String,Map<String, Float>> getLatencyMatrix(){
+  public Map<String, Map<String, Float>> getLatencyMatrix() {
     return latencyMatrix;
   }
 
-  public Set<String> cities(){
+  public Set<String> cities() {
     return latencyMatrix.keySet();
   }
 
 
-  private Map<String,Map<String, Float>> makeLatencyMatrix() throws IOException{
+  private Map<String, Map<String, Float>> makeLatencyMatrix() throws IOException {
     Map<String, Map<String, Float>> latencies = new HashMap<>();
 
     for (String city : cities) {
@@ -70,7 +70,7 @@ public class CSVLatencyReader {
     return map;
   }
 
-  private Set<String> citiesWithMissingMeasurements(Map<String,Map<String, Float>> latencyMatrix) {
+  private Set<String> citiesWithMissingMeasurements(Map<String, Map<String, Float>> latencyMatrix) {
     Set<String> allCities = latencyMatrix.keySet();
     Set<String> citiesWithMissingMeasurements = new HashSet<>();
 
@@ -89,20 +89,18 @@ public class CSVLatencyReader {
     return citiesWithMissingMeasurements;
   }
 
-  private Optional<String> processCityName(String cityAndLocation){
+  private Optional<String> processCityName(String cityAndLocation) {
 
     //Directory names have format "Name1+Name2" for two word city names, but
     //the format in the csv file is "Name1 Name2 country, region"
     //this logic normalizes the naming convention
     //returns Empty if a city is not present in the csv file
 
-    return cities
-        .stream()
-        .filter(c -> cityAndLocation.contains(c.replace('+',' ')))
-        .max(Comparator.comparing(String::length));
+    return cities.stream().filter(c -> cityAndLocation.contains(c.replace('+', ' '))).max(
+        Comparator.comparing(String::length));
   }
 
-  private Path resolvePath(String city){
+  private Path resolvePath(String city) {
     return DATA_PATH.resolve(city).resolve(city + CSV_FILE_SUFFIX);
   }
 
@@ -114,20 +112,20 @@ public class CSVLatencyReader {
 
   public static void main(String[] args) throws IOException {
     CSVLatencyReader reader = new CSVLatencyReader();
-    Map<String,Map<String, Float>> latencyMatrix = reader.latencyMatrix;
+    Map<String, Map<String, Float>> latencyMatrix = reader.latencyMatrix;
 
     Set<String> cities = latencyMatrix.keySet();
 
-    for(String cityFrom: cities){
+    for (String cityFrom : cities) {
 
 
       Map<String, Float> latenciesTo = latencyMatrix.get(cityFrom);
 
-      for(String cityTo:  cities) {
-        if(latenciesTo.containsKey(cityTo)) {
+      for (String cityTo : cities) {
+        if (latenciesTo.containsKey(cityTo)) {
           float v = latenciesTo.get(cityTo);
           System.out.println(cityFrom + " ->  " + cityTo + " = " + v);
-        }else{
+        } else {
           float v = latencyMatrix.get(cityTo).get(cityFrom);
           System.out.println(cityFrom + " ->  " + cityTo + " = " + v);
         }

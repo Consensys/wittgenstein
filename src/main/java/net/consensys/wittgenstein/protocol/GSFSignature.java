@@ -43,8 +43,9 @@ public class GSFSignature implements Protocol {
   final Network<GSFNode> network;
   final Node.NodeBuilder nb;
 
-  public GSFSignature(Node.NodeBuilder nb, Network network, int nodeCount, int threshold, int pairingTime, int timeoutPerLevelMs,
-      int periodDurationMs, int acceleratedCallsCount, int nodesDown, NetworkLatency nl) {
+  public GSFSignature(Node.NodeBuilder nb, Network network, int nodeCount, int threshold,
+      int pairingTime, int timeoutPerLevelMs, int periodDurationMs, int acceleratedCallsCount,
+      int nodesDown, NetworkLatency nl) {
     /*Re-implement testing
     if (ratioNodesDown >= 1 || ratioNodesDown < 0 || ratioThreshold > 1 || ratioThreshold <= 0
       || (ratioNodesDown + ratioThreshold > 1)) {
@@ -66,15 +67,18 @@ public class GSFSignature implements Protocol {
     this.network.setNetworkLatency(nl);
   }
 
-  public GSFSignature(Network network, int nodeCount, double ratioThreshold, int pairingTime, int timeoutPerLevelMs,
-      int periodDurationMs, int acceleratedCallsCount, double ratioNodesDown) {
-    this(new Node.NodeBuilderWithRandomPosition(network.rd), network, nodeCount, (int) (ratioThreshold * nodeCount), pairingTime, timeoutPerLevelMs,
-        periodDurationMs, acceleratedCallsCount, (int) (ratioNodesDown * nodeCount),
+  public GSFSignature(Network network, int nodeCount, double ratioThreshold, int pairingTime,
+      int timeoutPerLevelMs, int periodDurationMs, int acceleratedCallsCount,
+      double ratioNodesDown) {
+    this(new Node.NodeBuilderWithRandomPosition(network.rd), network, nodeCount,
+        (int) (ratioThreshold * nodeCount), pairingTime, timeoutPerLevelMs, periodDurationMs,
+        acceleratedCallsCount, (int) (ratioNodesDown * nodeCount),
         new NetworkLatency.IC3NetworkLatency());
   }
 
-    public GSFSignature(Node.NodeBuilder nb, Network network, int nodeCount, double ratioThreshold, int pairingTime, int timeoutPerLevelMs,
-      int periodDurationMs, int acceleratedCallsCount, double ratioNodesDown) {
+  public GSFSignature(Node.NodeBuilder nb, Network network, int nodeCount, double ratioThreshold,
+      int pairingTime, int timeoutPerLevelMs, int periodDurationMs, int acceleratedCallsCount,
+      double ratioNodesDown) {
     this(nb, network, nodeCount, (int) (ratioThreshold * nodeCount), pairingTime, timeoutPerLevelMs,
         periodDurationMs, acceleratedCallsCount, (int) (ratioNodesDown * nodeCount),
         new NetworkLatency.IC3NetworkLatency());
@@ -462,8 +466,8 @@ public class GSFSignature implements Protocol {
 
   @Override
   public Protocol copy() {
-    return new GSFSignature(nb, network,nodeCount, threshold, pairingTime, timeoutPerLevelMs, periodDurationMs,
-        acceleratedCallsCount, nodesDown, this.network.networkLatency);
+    return new GSFSignature(nb, network, nodeCount, threshold, pairingTime, timeoutPerLevelMs,
+        periodDurationMs, acceleratedCallsCount, nodesDown, this.network.networkLatency);
   }
 
   public void init() {
@@ -496,7 +500,7 @@ public class GSFSignature implements Protocol {
     return network;
   }
 
-  private static GSFSignature createGSFSignatureForDistLatencyModel(int nodeCt){
+  private static GSFSignature createGSFSignatureForDistLatencyModel(int nodeCt) {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
     Network network = new Network<>();
     Node.NodeBuilder nb = new Node.NodeBuilderWithRandomPosition(network.rd);
@@ -514,7 +518,8 @@ public class GSFSignature implements Protocol {
     CSVLatencyReader csvReader = new CSVLatencyReader();
     NetworkLatency.NetworkLatencyByCity nl = new NetworkLatency.NetworkLatencyByCity(csvReader);
     Network network = new Network<>();
-    Node.NodeBuilder nb = new Node.NodeBuilderWithCity(network.rd, new ArrayList<>(csvReader.cities()));
+    Node.NodeBuilder nb =
+        new Node.NodeBuilderWithCity(network.rd, new ArrayList<>(csvReader.cities()));
 
 
     GSFSignature ps1 = new GSFSignature(nb, network, nodeCt, 0.9, 3, 100, 20, 100, .10);
@@ -524,7 +529,7 @@ public class GSFSignature implements Protocol {
 
   }
 
-    public static void sigsPerTime() throws IOException{
+  public static void sigsPerTime() throws IOException {
     int nodeCt = 32768 / 4;
 
     GSFSignature ps1 = createGSFSignatureForCityLatencyModel(nodeCt);
@@ -587,7 +592,7 @@ public class GSFSignature implements Protocol {
     System.out.println("Simulation execution time: " + ((endAt - startAt) / 1000) + "s");
   }
 
-  public static void main(String... args) throws IOException{
+  public static void main(String... args) throws IOException {
     sigsPerTime();
   }
 }

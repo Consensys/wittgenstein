@@ -102,7 +102,6 @@ public class Node {
 
 
 
-
     /**
      * Many algo will want a hash of the node id. Be careful: sha-3 is not the ethereum v1 hash.
      */
@@ -137,8 +136,9 @@ public class Node {
 
       this.rd = rd;
       int size = cities.size();
-      city = cities.get(rd.nextInt(size)) ;
+      city = cities.get(rd.nextInt(size));
     }
+
     protected Optional<String> getCityName() {
       return Optional.of(city);
     }
@@ -160,7 +160,7 @@ public class Node {
     }
     this.byzantine = byzantine;
     this.hash256 = nb.getHash(nodeId);
-    this.cityName=nb.getCityName();
+    this.cityName = nb.getCityName();
   }
 
   public Node(NodeBuilder nb) {
