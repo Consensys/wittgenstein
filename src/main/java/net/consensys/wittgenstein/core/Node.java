@@ -130,17 +130,17 @@ public class Node {
 
   public static class NodeBuilderWithCity extends NodeBuilder {
     final Random rd;
-    final String city;
+    final List<String> cities;
+    final int size;
 
     public NodeBuilderWithCity(Random rd, List<String> cities) {
-
       this.rd = rd;
-      int size = cities.size();
-      city = cities.get(rd.nextInt(size));
+      this.cities = cities;
+      this.size=cities.size();
     }
 
     protected Optional<String> getCityName() {
-      return Optional.of(city);
+      return Optional.of(cities.get(rd.nextInt(size)));
     }
   }
 
