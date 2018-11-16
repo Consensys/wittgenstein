@@ -84,7 +84,6 @@ public abstract class NetworkLatency {
   }
 
   public static class NetworkLatencyByCity extends NetworkLatency {
-
     private final Map<String, Map<String, Float>> latencyMatrix;
 
     public NetworkLatencyByCity(CSVLatencyReader csvLatencyReader) {
@@ -92,11 +91,10 @@ public abstract class NetworkLatency {
     }
 
     public int getLatency(Node from, Node to, int delta) {
-
       String cityFrom = from.cityName;
       String cityTo = to.cityName;
 
-      if (cityFrom.equals("World") || cityTo.equals("World")) {
+      if (cityFrom.equals(Node.DEFAULT_CITY)) {
         throw new IllegalStateException(
             "Can't use NetworkLatencyByCity model with default city location");
       }

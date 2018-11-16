@@ -32,6 +32,10 @@ public class StatsHelper {
     public long get(String fieldName) {
       return val;
     }
+
+    @Override public String toString() {
+      return "Counter{" + "val=" + val + '}';
+    }
   }
 
   public static class SimpleStats implements Stat {

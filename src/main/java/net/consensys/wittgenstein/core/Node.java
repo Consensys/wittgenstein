@@ -12,6 +12,7 @@ public class Node {
   public final static int MAX_Y = 1000;
   public final static int MAX_DIST =
       (int) Math.sqrt((MAX_X / 2) * (MAX_X / 2) + (MAX_Y / 2) * (MAX_Y / 2));
+  public final static String DEFAULT_CITY = "world";
 
 
   /**
@@ -73,7 +74,7 @@ public class Node {
   public static class NodeBuilder {
     protected int nodeIds = 0;
     protected final MessageDigest digest;
-    private String cityName = "World";
+    private String cityName = DEFAULT_CITY;
 
     public NodeBuilder() {
       try {
