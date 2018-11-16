@@ -1,6 +1,8 @@
 package net.consensys.wittgenstein.core;
 
 import net.consensys.wittgenstein.core.utils.GeneralizedParetoDistribution;
+import net.consensys.wittgenstein.tools.CSVLatencyReader;
+import java.util.Map;
 import java.util.Random;
 
 @SuppressWarnings("WeakerAccess")
@@ -80,6 +82,37 @@ public abstract class NetworkLatency {
       return (int) raw;
     }
   }
+
+  public static class NetworkLatencyByCity extends NetworkLatency {
+
+    private final Map<String, Map<String, Float>> latencyMatrix;
+
+    public NetworkLatencyByCity(CSVLatencyReader csvLatencyReader) {
+      this.latencyMatrix = csvLatencyReader.getLatencyMatrix();
+    }
+
+    public int getLatency(Node from, Node to, int delta) {
+
+      String cityFrom = from.cityName;
+      String cityTo = to.cityName;
+
+      if (cityFrom.equals("World") || cityTo.equals("World")) {
+        throw new IllegalStateException(
+            "Can't use NetworkLatencyByCity model with default city location");
+      }
+
+      return Math.round(getLatency(cityFrom, cityTo));
+    }
+
+    private Float getLatency(String cityFrom, String cityTo) {
+      if (latencyMatrix.get(cityFrom).containsKey(cityTo)) {
+        return latencyMatrix.get(cityFrom).get(cityTo);
+      } else {
+        return latencyMatrix.get(cityTo).get(cityFrom);
+      }
+    }
+  }
+
 
   public static class NetworkNoLatency extends NetworkLatency {
     public int getLatency(Node from, Node to, int delta) {

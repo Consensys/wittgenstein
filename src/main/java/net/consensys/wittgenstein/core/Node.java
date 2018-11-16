@@ -3,7 +3,10 @@ package net.consensys.wittgenstein.core;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
+import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
 
 @SuppressWarnings({"WeakerAccess"})
 public class Node {
@@ -37,6 +40,7 @@ public class Node {
   protected long msgSent = 0;
   protected long bytesSent = 0;
   protected long bytesReceived = 0;
+  public String cityName;
 
   /**
    * The time when the protocol ended for this node 0 if it has not ended yet.
@@ -71,6 +75,7 @@ public class Node {
   public static class NodeBuilder {
     protected int nodeIds = 0;
     protected final MessageDigest digest;
+    private String cityName = "World";
 
     public NodeBuilder() {
       try {
@@ -90,6 +95,10 @@ public class Node {
 
     protected int getY() {
       return 1;
+    }
+
+    protected String getCityName() {
+      return cityName;
     }
 
 
@@ -117,6 +126,23 @@ public class Node {
     public int getY() {
       return rd.nextInt(MAX_Y) + 1;
     }
+
+  }
+
+  public static class NodeBuilderWithCity extends NodeBuilder {
+    final Random rd;
+    final List<String> cities;
+    final int size;
+
+    public NodeBuilderWithCity(Random rd, List<String> cities) {
+      this.rd = rd;
+      this.cities = cities;
+      this.size = cities.size();
+    }
+
+    protected String getCityName() {
+      return cities.get(rd.nextInt(size));
+    }
   }
 
 
@@ -135,6 +161,7 @@ public class Node {
     }
     this.byzantine = byzantine;
     this.hash256 = nb.getHash(nodeId);
+    this.cityName = nb.getCityName();
   }
 
   public Node(NodeBuilder nb) {
