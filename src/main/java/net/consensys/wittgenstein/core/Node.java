@@ -4,9 +4,7 @@ import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
-import java.util.Optional;
 import java.util.Random;
-import java.util.Set;
 
 @SuppressWarnings({"WeakerAccess"})
 public class Node {
@@ -89,15 +87,15 @@ public class Node {
       return nodeIds++;
     }
 
-    protected int getX() {
+    protected int getX(Random rd) {
       return 1;
     }
 
-    protected int getY() {
+    protected int getY(Random rd) {
       return 1;
     }
 
-    protected String getCityName() {
+    protected String getCityName(Random rd) {
       return cityName;
     }
 
@@ -113,46 +111,41 @@ public class Node {
 
 
   public static class NodeBuilderWithRandomPosition extends NodeBuilder {
-    final Random rd;
-
-    public NodeBuilderWithRandomPosition(Random rd) {
-      this.rd = rd;
-    }
-
-    public int getX() {
+    @Override
+    public int getX(Random rd) {
       return rd.nextInt(MAX_X) + 1;
     }
 
-    public int getY() {
+    @Override
+    public int getY(Random rd) {
       return rd.nextInt(MAX_Y) + 1;
     }
 
   }
 
   public static class NodeBuilderWithCity extends NodeBuilder {
-    final Random rd;
     final List<String> cities;
     final int size;
 
-    public NodeBuilderWithCity(Random rd, List<String> cities) {
-      this.rd = rd;
+    public NodeBuilderWithCity(List<String> cities) {
       this.cities = cities;
       this.size = cities.size();
     }
 
-    protected String getCityName() {
+    @Override
+    protected String getCityName(Random rd) {
       return cities.get(rd.nextInt(size));
     }
   }
 
 
-  public Node(NodeBuilder nb, boolean byzantine) {
+  public Node(Random rd, NodeBuilder nb, boolean byzantine) {
     this.nodeId = nb.allocateNodeId();
     if (this.nodeId < 0) {
       throw new IllegalArgumentException("bad nodeId:" + nodeId);
     }
-    this.x = nb.getX();
-    this.y = nb.getY();
+    this.x = nb.getX(rd);
+    this.y = nb.getY(rd);
     if (this.x <= 0 || this.x > MAX_X) {
       throw new IllegalArgumentException("bad x=" + x);
     }
@@ -161,11 +154,11 @@ public class Node {
     }
     this.byzantine = byzantine;
     this.hash256 = nb.getHash(nodeId);
-    this.cityName = nb.getCityName();
+    this.cityName = nb.getCityName(rd);
   }
 
-  public Node(NodeBuilder nb) {
-    this(nb, false);
+  public Node(Random rd, NodeBuilder nb) {
+    this(rd, nb, false);
   }
 
 

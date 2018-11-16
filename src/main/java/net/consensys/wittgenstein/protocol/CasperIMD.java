@@ -74,7 +74,7 @@ public class CasperIMD {
 
 
   final BlockChainNetwork network = new BlockChainNetwork();
-  final Node.NodeBuilder nb = new Node.NodeBuilderWithRandomPosition(network.rd);
+  final Node.NodeBuilder nb = new Node.NodeBuilderWithRandomPosition();
   final CasperBlock genesis = new CasperBlock();
 
   final ArrayList<Attester> attesters = new ArrayList<>();
@@ -174,7 +174,7 @@ public class CasperIMD {
     final Set<CasperBlock> blocksToReevaluate = new HashSet<>();
 
     CasperNode(boolean byzantine, CasperBlock genesis) {
-      super(nb, byzantine, genesis);
+      super(network.rd, nb, byzantine, genesis);
     }
 
     @Override

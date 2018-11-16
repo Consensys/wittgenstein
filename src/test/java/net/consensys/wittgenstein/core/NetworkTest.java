@@ -3,20 +3,17 @@ package net.consensys.wittgenstein.core;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class NetworkTest {
   private Network<Node> network = new Network<>();
   private Node.NodeBuilder nb = new Node.NodeBuilder();
-  private Node n0 = new Node(nb);
-  private Node n1 = new Node(nb);
-  private Node n2 = new Node(nb);
-  private Node n3 = new Node(nb);
+  private Node n0 = new Node(network.rd, nb);
+  private Node n1 = new Node(network.rd, nb);
+  private Node n2 = new Node(network.rd, nb);
+  private Node n3 = new Node(network.rd, nb);
 
   @Before
   public void before() {
@@ -205,14 +202,15 @@ public class NetworkTest {
     Network<Node> net = new Network<>();
     AtomicInteger ai = new AtomicInteger(0);
     Node.NodeBuilder nb = new Node.NodeBuilder() {
-      protected int getX() {
+      @Override
+      protected int getX(Random rd) {
         return ai.addAndGet(Node.MAX_X / 10);
       }
     };
-    Node n0 = new Node(nb);
-    Node n1 = new Node(nb);
-    Node n2 = new Node(nb);
-    Node n3 = new Node(nb);
+    Node n0 = new Node(network.rd, nb);
+    Node n1 = new Node(network.rd, nb);
+    Node n2 = new Node(network.rd, nb);
+    Node n3 = new Node(network.rd, nb);
 
     AtomicInteger ab = new AtomicInteger(0);
     Network.Message<Node> act = new Network.Message<Node>() {

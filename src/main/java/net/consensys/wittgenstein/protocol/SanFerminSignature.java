@@ -97,7 +97,7 @@ public class SanFerminSignature implements Protocol {
     this.shuffledLists = shuffledLists;
 
     this.network = new Network<>();
-    this.nb = new Node.NodeBuilderWithRandomPosition(network.rd);
+    this.nb = new Node.NodeBuilderWithRandomPosition();
 
     this.allNodes = new ArrayList<>(nodeCount);
     for (int i = 0; i < nodeCount; i++) {
@@ -214,7 +214,7 @@ public class SanFerminSignature implements Protocol {
 
 
     public SanFerminNode(NodeBuilder nb) {
-      super(nb);
+      super(network.rd, nb);
 
       this.binaryId = SanFerminHelper.toBinaryID(this, nodeCount);
       this.usedCandidates = new HashMap<>();

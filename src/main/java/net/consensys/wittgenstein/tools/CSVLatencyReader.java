@@ -12,7 +12,6 @@ import java.nio.file.Paths;
 import java.util.*;
 
 public class CSVLatencyReader {
-
   private static final Path DATA_PATH = Paths.get("resources/Data");
   private static final String CSV_FILE_SUFFIX = "Ping.csv";
   private static final float SAME_CITY_LATENCY = 30f;
@@ -36,8 +35,8 @@ public class CSVLatencyReader {
     return latencyMatrix;
   }
 
-  public Set<String> cities() {
-    return latencyMatrix.keySet();
+  public List<String> cities() {
+    return new ArrayList<>(latencyMatrix.keySet());
   }
 
 

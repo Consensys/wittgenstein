@@ -51,8 +51,8 @@ public class Dfinity {
     this.attestationConstructionTime = attestationConstructionTime;
     this.percentageDeadAttester = percentageDeadAttester;
 
-    this.nb = new Node.NodeBuilderWithRandomPosition(network.rd);
-    this.network.addObserver(new DfinityNode(genesis) {});
+    this.nb = new Node.NodeBuilderWithRandomPosition();
+    this.network.addObserver(new DfinityNode(network.rd, genesis) {});
   }
 
   final BlockChainNetwork network = new BlockChainNetwork();
@@ -174,8 +174,8 @@ public class Dfinity {
       return blockComparator.compare(o1, o2) >= 0 ? o1 : o2;
     }
 
-    DfinityNode(DfinityBlock genesis) {
-      super(nb, false, genesis);
+    DfinityNode(Random rd, DfinityBlock genesis) {
+      super(rd, nb, false, genesis);
     }
 
     public void onVote(Node voter, DfinityBlock voteFor) {}
@@ -199,7 +199,7 @@ public class Dfinity {
     int waitForBlockHeight; // If we're supposed to create a block but we don"t have the parent yet
 
     BlockProducerNode(final int myRound, DfinityBlock genesis) {
-      super(genesis);
+      super(network.rd, genesis);
       this.myRound = myRound;
       this.waitForBlockHeight = -1;
     }
@@ -248,7 +248,7 @@ public class Dfinity {
     int voteForHeight = -1;
 
     AttesterNode(int myRound, DfinityBlock genesis) {
-      super(genesis);
+      super(network.rd, genesis);
       this.myRound = myRound;
     }
 
@@ -328,7 +328,7 @@ public class Dfinity {
     Map<Integer, Set<Integer>> exchanged = new HashMap<>();
 
     RandomBeaconNode(DfinityBlock genesis) {
-      super(genesis);
+      super(network.rd, genesis);
     }
 
     /**

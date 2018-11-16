@@ -37,16 +37,16 @@ public class P2PFlood implements Protocol {
 
 
   private final P2PNetwork network = new P2PNetwork(10);
-  private final Node.NodeBuilder nb = new Node.NodeBuilderWithRandomPosition(network.rd);
+  private final Node.NodeBuilder nb = new Node.NodeBuilderWithRandomPosition();
 
   class P2PFloodNode extends P2PNode {
 
     P2PFloodNode(NodeBuilder nb) {
-      super(nb);
+      super(network.rd, nb);
     }
 
     P2PFloodNode(NodeBuilder nb, boolean byzantine) {
-      super(nb, byzantine);
+      super(network.rd, nb, byzantine);
     }
 
     @Override

@@ -3,16 +3,18 @@ package net.consensys.wittgenstein.core;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class EnvelopeStorageTest {
   private Network<Node> network = new Network<>();
   private Node.NodeBuilder nb = new Node.NodeBuilder();
-  private Node n0 = new Node(nb);
-  private Node n1 = new Node(nb);
-  private Node n2 = new Node(nb);
-  private Node n3 = new Node(nb);
+  private Random rd = new Random(0);
+  private Node n0 = new Node(rd, nb);
+  private Node n1 = new Node(rd, nb);
+  private Node n2 = new Node(rd, nb);
+  private Node n3 = new Node(rd, nb);
 
   private Network.Message<Node> dummy = new Network.Message<Node>() {
     @Override

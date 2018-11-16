@@ -1,9 +1,6 @@
 package net.consensys.wittgenstein.core;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @SuppressWarnings("WeakerAccess")
 public abstract class BlockChainNode<TB extends Block> extends Node {
@@ -18,8 +15,8 @@ public abstract class BlockChainNode<TB extends Block> extends Node {
 
   public TB head;
 
-  public BlockChainNode(NodeBuilder nb, boolean byzantine, TB genesis) {
-    super(nb, byzantine);
+  public BlockChainNode(Random rd, NodeBuilder nb, boolean byzantine, TB genesis) {
+    super(rd, nb, byzantine);
     this.genesis = genesis;
     this.head = genesis;
     this.blocksReceivedByBlockId.put(genesis.id, genesis);

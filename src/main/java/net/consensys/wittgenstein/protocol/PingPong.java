@@ -14,7 +14,7 @@ public class PingPong implements Protocol {
   /**
    * Nodes have positions. This position is chosen by the builder.
    */
-  private final Node.NodeBuilder nb = new Node.NodeBuilderWithRandomPosition(network.rd);
+  private final Node.NodeBuilder nb = new Node.NodeBuilderWithRandomPosition();
 
   /**
    * Messages, exchanged on the network, are specific to the protocol.
@@ -40,7 +40,7 @@ public class PingPong implements Protocol {
     int pong;
 
     PingPongNode() {
-      super(nb);
+      super(network.rd, nb);
     }
 
     void onPing(PingPongNode from) {

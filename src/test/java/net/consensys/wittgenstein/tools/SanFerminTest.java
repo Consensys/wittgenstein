@@ -17,7 +17,7 @@ public class SanFerminTest {
     Node.NodeBuilder nb = new Node.NodeBuilder();
     int count = 8;
     for (int i = 0; i < count; i++)
-      allNodes.add(new Node(nb));
+      allNodes.add(new Node(new Random(0), nb));
   }
 
   @Test

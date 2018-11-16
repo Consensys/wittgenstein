@@ -111,7 +111,7 @@ public class P2PSignature implements Protocol {
     this.sendSigsStrategy = this.sanFermin ? SendSigsStrategy.cmp_all : sendSigsStrategy;
     this.sigRange = sigRange;
     this.network = new P2PNetwork(connectionCount);
-    this.nb = new Node.NodeBuilderWithRandomPosition(network.rd);
+    this.nb = new Node.NodeBuilderWithRandomPosition();
   }
 
   static class State extends Network.Message<P2PSigNode> {
@@ -267,7 +267,7 @@ public class P2PSignature implements Protocol {
     boolean done = false;
 
     P2PSigNode(boolean justRelay) {
-      super(nb);
+      super(network.rd, nb);
       this.justRelay = justRelay;
       if (!justRelay) {
         verifiedSignatures.set(nodeId, true);
