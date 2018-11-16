@@ -63,6 +63,15 @@ public class Network<TN extends Node> {
     return this;
   }
 
+  public void reset() {
+    time = 0;
+    partitionsInX.clear();
+    msgs.clear();
+    allNodes.clear();
+    rd.setSeed(0);
+    conditionalTasks.clear();
+  }
+
 
   /**
    * A desperate attempt to have something less memory consuming than a PriorityQueue or a guava

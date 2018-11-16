@@ -44,14 +44,11 @@ public class GSFSignature implements Protocol {
 
   public GSFSignature(int nodeCount, int threshold, int pairingTime, int timeoutPerLevelMs,
       int periodDurationMs, int acceleratedCallsCount, int nodesDown, NetworkLatency nl) {
-    /*Re-implement testing
-    if (ratioNodesDown >= 1 || ratioNodesDown < 0 || ratioThreshold > 1 || ratioThreshold <= 0
-      || (ratioNodesDown + ratioThreshold > 1)) {
-      throw new IllegalArgumentException(
-        "ratioNodesDown=" + ratioNodesDown + ", ratioThreshold=" + ratioThreshold);
-    }
-    */
 
+    if (nodesDown >= nodeCount || nodesDown < 0 || threshold > nodeCount
+        || (nodesDown + threshold > nodeCount)) {
+      throw new IllegalArgumentException("nodeCount=" + nodeCount + ", threshold=" + threshold);
+    }
 
     this.nodeCount = nodeCount;
     this.threshold = threshold;
@@ -492,10 +489,23 @@ public class GSFSignature implements Protocol {
     GSFSignature ps1 = new GSFSignature(nodeCt, 0.9, 3, 100, 20, 100, .10);
     ps1.network.setNetworkLatency(nl);
     String desc = ps1.toString();
-    StatsHelper.SimpleStatsGetter sg = liveNodes -> StatsHelper.getStatsOn(liveNodes,
-        n -> ((GSFNode) n).verifiedSignatures.cardinality());
 
-    ProgressPerTime ppt = new ProgressPerTime(ps1, desc, "number of signatures", sg);
+    StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
+      final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
+
+      @Override
+      public List<String> fields() {
+        return fields;
+      }
+
+      @Override
+      public StatsHelper.Stat get(List<? extends Node> liveNodes) {
+        return StatsHelper.getStatsOn(liveNodes,
+            n -> ((GSFNode) n).verifiedSignatures.cardinality());
+      }
+    };
+
+    ProgressPerTime ppt = new ProgressPerTime(ps1, desc, "number of signatures", sg, 1);
 
     Predicate<Protocol> contIf = p1 -> {
       for (Node n : p1.network().allNodes) {

@@ -49,6 +49,11 @@ public class Graph {
       this.description = description;
     }
 
+    public Series() {
+      this.description = "no description";
+    }
+
+
     public void addLine(ReportLine rl) {
       vals.add(rl);
 

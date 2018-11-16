@@ -4,67 +4,85 @@ import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.tools.Graph;
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
- * This class runs a scenario for a protocol protocol
+ * This class runs a scenario for a protocol
  */
 public class ProgressPerTime {
   private final Protocol protocol;
   private final String configDesc;
   private final String yAxisDesc;
-  private final StatsHelper.SimpleStatsGetter statsGetter;
+  private final StatsHelper.StatsGetter statsGetter;
+  private final int roundCount;
 
   public ProgressPerTime(Protocol template, String configDesc, String yAxisDesc,
-      StatsHelper.SimpleStatsGetter statsGetter) {
+      StatsHelper.StatsGetter statsGetter, int roundCount) {
     this.protocol = template.copy();
     this.configDesc = configDesc;
     this.yAxisDesc = yAxisDesc;
     this.statsGetter = statsGetter;
+    this.roundCount = roundCount;
   }
 
   public void run(Predicate<Protocol> contIf) {
-    Graph graph = new Graph(protocol + " " + configDesc, "time in ms", yAxisDesc);
-    Graph.Series series1min = new Graph.Series("worse node");
-    Graph.Series series1max = new Graph.Series("best node");
-    Graph.Series series1avg = new Graph.Series("average");
-    graph.addSerie(series1min);
-    graph.addSerie(series1max);
-    graph.addSerie(series1avg);
 
-    System.out.println(protocol + " " + configDesc);
-    protocol.init();
-    List<? extends Node> liveNodes =
-        protocol.network().allNodes.stream().filter(n -> !n.down).collect(Collectors.toList());
+    Map<String, ArrayList<Graph.Series>> rawResults = new HashMap<>();
+    for (String field : statsGetter.fields()) {
+      rawResults.put(field, new ArrayList<>());
+    }
 
-    long startAt = System.currentTimeMillis();
-    StatsHelper.SimpleStats s;
-    do {
-      protocol.network().runMs(10);
-      s = statsGetter.get(liveNodes);
-      series1min.addLine(new Graph.ReportLine(protocol.network().time, s.min));
-      series1max.addLine(new Graph.ReportLine(protocol.network().time, s.max));
-      series1avg.addLine(new Graph.ReportLine(protocol.network().time, s.avg));
-      if (protocol.network().time % 10000 == 0) {
-        System.out.println("time goes by... Avg=" + s.avg + ", min=" + s.min);
+    for (int r = 0; r < roundCount; r++) {
+      System.out.println("round=" + r + ", " + protocol + " " + configDesc);
+
+      Map<String, Graph.Series> rawResult = new HashMap<>();
+      for (String field : statsGetter.fields()) {
+        Graph.Series gs = new Graph.Series();
+        rawResult.put(field, gs);
+        rawResults.get(field).add(gs);
       }
-    } while (contIf.test(protocol));
-    long endAt = System.currentTimeMillis();
+
+      Protocol p = protocol.copy();
+      p.network().rd.setSeed(r);
+      p.init();
+      List<? extends Node> liveNodes =
+          p.network().allNodes.stream().filter(n -> !n.down).collect(Collectors.toList());
+
+      long startAt = System.currentTimeMillis();
+      StatsHelper.Stat s;
+      do {
+        p.network().runMs(10);
+        s = statsGetter.get(liveNodes);
+        for (String field : statsGetter.fields()) {
+          rawResult.get(field).addLine(new Graph.ReportLine(p.network().time, s.get(field)));
+        }
+        if (p.network().time % 10000 == 0) {
+          System.out.println("time goes by... time=" + (p.network().time / 1000) + ", stats=" + s);
+        }
+      } while (contIf.test(p));
+      long endAt = System.currentTimeMillis();
+
+      System.out.println("bytes sent: " + StatsHelper.getStatsOn(liveNodes, Node::getBytesSent));
+      System.out
+          .println("bytes rcvd: " + StatsHelper.getStatsOn(liveNodes, Node::getBytesReceived));
+      System.out.println("msg sent: " + StatsHelper.getStatsOn(liveNodes, Node::getMsgSent));
+      System.out.println("msg rcvd: " + StatsHelper.getStatsOn(liveNodes, Node::getMsgReceived));
+      System.out.println("done at: " + StatsHelper.getStatsOn(liveNodes, Node::getDoneAt));
+      System.out.println("Simulation execution time: " + ((endAt - startAt) / 1000) + "s");
+    }
+
+    Graph graph = new Graph(protocol + " " + configDesc, "time in ms", yAxisDesc);
+
+    for (String field : statsGetter.fields()) {
+      graph.addSerie(Graph.averageSeries(field, rawResults.get(field)));
+    }
 
     try {
       graph.save(new File("/tmp/graph.png"));
     } catch (IOException e) {
       System.err.println("Can't generate the graph: " + e.getMessage());
     }
-
-    System.out.println("bytes sent: " + StatsHelper.getStatsOn(liveNodes, Node::getBytesSent));
-    System.out.println("bytes rcvd: " + StatsHelper.getStatsOn(liveNodes, Node::getBytesReceived));
-    System.out.println("msg sent: " + StatsHelper.getStatsOn(liveNodes, Node::getMsgSent));
-    System.out.println("msg rcvd: " + StatsHelper.getStatsOn(liveNodes, Node::getMsgReceived));
-    System.out.println("done at: " + StatsHelper.getStatsOn(liveNodes, Node::getDoneAt));
-    System.out.println("Simulation execution time: " + ((endAt - startAt) / 1000) + "s");
   }
-
 }

@@ -13,5 +13,9 @@ public class P2PNode extends Node {
     super(nb);
   }
 
+  public P2PNode(NodeBuilder nb, boolean byzantine) {
+    super(nb, byzantine);
+  }
+
   protected void onFlood(P2PNode from, P2PNetwork.FloodMessage floodMessage) {}
 }
