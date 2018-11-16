@@ -10,13 +10,36 @@ public class StatsHelper {
     long get(Node n);
   }
 
+  public interface Stat {
+    List<String> fields();
 
-  public static class SimpleStats {
+    long get(String fieldName);
+  }
+
+  public static class Counter implements Stat {
+    final long val;
+
+    public Counter(long val) {
+      this.val = val;
+    }
+
+    @Override
+    public List<String> fields() {
+      return List.of("count");
+    }
+
+    @Override
+    public long get(String fieldName) {
+      return val;
+    }
+  }
+
+  public static class SimpleStats implements Stat {
     public final long min;
     public final long max;
     public final long avg;
 
-    SimpleStats(long min, long max, long avg) {
+    public SimpleStats(long min, long max, long avg) {
       this.min = min;
       this.max = max;
       this.avg = avg;
@@ -24,6 +47,24 @@ public class StatsHelper {
 
     public String toString() {
       return "min: " + min + ", max:" + max + ", avg:" + avg;
+    }
+
+    @Override
+    public List<String> fields() {
+      return List.of("min", "max", "avg");
+    }
+
+    @Override
+    public long get(String fieldName) {
+      switch (fieldName) {
+        case "min":
+          return min;
+        case "max":
+          return max;
+        case "avg":
+          return avg;
+      }
+      throw new IllegalStateException(fieldName);
     }
   }
 
@@ -43,8 +84,10 @@ public class StatsHelper {
     return new SimpleStats(min, max, (tot / nodes.size()));
   }
 
-  public interface SimpleStatsGetter {
-    SimpleStats get(List<? extends Node> liveNodes);
+  public interface StatsGetter {
+    List<String> fields();
+
+    Stat get(List<? extends Node> liveNodes);
   }
 
 }

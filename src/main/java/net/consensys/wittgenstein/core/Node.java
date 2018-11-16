@@ -45,7 +45,7 @@ public class Node {
   /**
    * The time when the protocol ended for this node 0 if it has not ended yet.
    */
-  protected long doneAt = 0;
+  public long doneAt = 0;
 
   public long getMsgReceived() {
     return msgReceived;
