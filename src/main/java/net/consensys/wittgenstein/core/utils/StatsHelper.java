@@ -33,7 +33,8 @@ public class StatsHelper {
       return val;
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
       return "Counter{" + "val=" + val + '}';
     }
   }
