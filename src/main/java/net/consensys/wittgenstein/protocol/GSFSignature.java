@@ -533,7 +533,7 @@ public class GSFSignature implements Protocol {
   public static void sigsPerTime() throws IOException {
     int nodeCt = 32768 / 4;
 
-    GSFSignature ps1 = createGSFSignatureForCityLatencyModel(nodeCt);
+    GSFSignature ps1 = createGSFSignatureForDistLatencyModel(nodeCt);
     String desc = ps1.toString();
     StatsHelper.SimpleStatsGetter sg = liveNodes -> StatsHelper.getStatsOn(liveNodes,
         n -> ((GSFNode) n).verifiedSignatures.cardinality());

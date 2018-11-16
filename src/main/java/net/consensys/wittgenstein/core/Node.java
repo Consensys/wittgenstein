@@ -40,7 +40,7 @@ public class Node {
   protected long msgSent = 0;
   protected long bytesSent = 0;
   protected long bytesReceived = 0;
-  public final Optional<String> cityName;
+  public String cityName;
 
   /**
    * The time when the protocol ended for this node 0 if it has not ended yet.
@@ -75,6 +75,7 @@ public class Node {
   public static class NodeBuilder {
     protected int nodeIds = 0;
     protected final MessageDigest digest;
+    private String cityName = "World";
 
     public NodeBuilder() {
       try {
@@ -96,8 +97,8 @@ public class Node {
       return 1;
     }
 
-    protected Optional<String> getCityName() {
-      return Optional.empty();
+    protected String getCityName() {
+      return cityName;
     }
 
 
@@ -139,8 +140,8 @@ public class Node {
       this.size = cities.size();
     }
 
-    protected Optional<String> getCityName() {
-      return Optional.of(cities.get(rd.nextInt(size)));
+    protected String getCityName() {
+      return cities.get(rd.nextInt(size));
     }
   }
 

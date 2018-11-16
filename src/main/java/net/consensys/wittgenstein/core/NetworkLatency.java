@@ -93,8 +93,13 @@ public abstract class NetworkLatency {
 
     public int getLatency(Node from, Node to, int delta) {
 
-      String cityFrom = from.cityName.get();
-      String cityTo = to.cityName.get();
+      String cityFrom = from.cityName;
+      String cityTo = to.cityName;
+
+      if (cityFrom.equals("World") || cityTo.equals("World")) {
+        throw new IllegalStateException(
+            "Can't use NetworkLatencyByCity model with default city location");
+      }
 
       return Math.round(getLatency(cityFrom, cityTo));
     }
