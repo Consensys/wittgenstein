@@ -57,16 +57,13 @@ public class CSVLatencyReader {
 
     try (Reader reader = Files.newBufferedReader(path);
         CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withHeader());) {
-
       for (CSVRecord csvRecord : csvParser) {
         String cityAndLocation = csvRecord.get(0);
         Optional<String> city = processCityName(cityAndLocation);
         Float latency = Float.valueOf(csvRecord.get(4));
-
         city.ifPresent(c -> map.put(c, latency));
       }
     }
-
     return map;
   }
 
@@ -77,7 +74,6 @@ public class CSVLatencyReader {
     for (String cityFrom : allCities) {
       for (String cityTo : allCities) {
         Map<String, Float> latencyTo = latencyMatrix.get(cityFrom);
-
         if (!latencyTo.containsKey(cityTo)) {
           Map<String, Float> latencyFrom = latencyMatrix.get(cityTo);
           if (!latencyFrom.containsKey(cityFrom)) {
@@ -106,19 +102,15 @@ public class CSVLatencyReader {
 
   private static Set<String> dirNames(Path path) {
     File file = path.toFile();
-
     return new HashSet<>(Arrays.asList(file.list()));
   }
 
   public static void main(String[] args) throws IOException {
     CSVLatencyReader reader = new CSVLatencyReader();
     Map<String, Map<String, Float>> latencyMatrix = reader.latencyMatrix;
-
     Set<String> cities = latencyMatrix.keySet();
 
     for (String cityFrom : cities) {
-
-
       Map<String, Float> latenciesTo = latencyMatrix.get(cityFrom);
 
       for (String cityTo : cities) {

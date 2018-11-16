@@ -6,7 +6,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class GSFSignatureTest {
-  private GSFSignature p = new GSFSignature(new Network(), 32, 1, 3, 20, 10, 10, 0);
+  private GSFSignature p = new GSFSignature(new Network<>(), 32, 1, 3, 20, 10, 10, 0);
   private GSFSignature.GSFNode n0;
 
   @Before

@@ -136,7 +136,7 @@ public class Node {
     public NodeBuilderWithCity(Random rd, List<String> cities) {
       this.rd = rd;
       this.cities = cities;
-      this.size=cities.size();
+      this.size = cities.size();
     }
 
     protected Optional<String> getCityName() {
