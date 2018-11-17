@@ -81,10 +81,11 @@ public class P2PFlood implements Protocol {
     this.msgCount = msgCount;
   }
 
-  @Override public String toString() {
+  @Override
+  public String toString() {
     return "P2PFlood{" + "nodeCount=" + nodeCount + ", deadNodeCount=" + deadNodeCount
-      + ", delayBeforeResent=" + delayBeforeResent + ", msgCount=" + msgCount + ", peersCount="
-      + peersCount + '}';
+        + ", delayBeforeResent=" + delayBeforeResent + ", msgCount=" + msgCount + ", peersCount="
+        + peersCount + '}';
   }
 
   @Override
