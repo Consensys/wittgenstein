@@ -27,7 +27,7 @@ public class NetworkLatencyTest {
     NetworkLatency nl = new NetworkLatency.IC3NetworkLatency();
 
     Node a0 = new Node(new Random(0), new Node.NodeBuilder());
-    Assert.assertEquals(NetworkLatency.IC3NetworkLatency.S10, nl.getLatency(a0, a0, 0));
+    Assert.assertEquals(NetworkLatency.IC3NetworkLatency.S10 / 2, nl.getLatency(a0, a0, 0));
 
     Node.NodeBuilder nb = new Node.NodeBuilder() {
       @Override
@@ -41,8 +41,8 @@ public class NetworkLatencyTest {
       }
     };
     Node a1 = new Node(new Random(0), nb);
-    Assert.assertEquals(NetworkLatency.IC3NetworkLatency.SW, nl.getLatency(a0, a1, 0));
-    Assert.assertEquals(NetworkLatency.IC3NetworkLatency.SW, nl.getLatency(a1, a0, 0));
+    Assert.assertEquals(NetworkLatency.IC3NetworkLatency.SW / 2, nl.getLatency(a0, a1, 0));
+    Assert.assertEquals(NetworkLatency.IC3NetworkLatency.SW / 2, nl.getLatency(a1, a0, 0));
   }
 
   @Test

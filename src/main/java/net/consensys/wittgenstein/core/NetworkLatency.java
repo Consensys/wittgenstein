@@ -5,6 +5,10 @@ import net.consensys.wittgenstein.tools.CSVLatencyReader;
 import java.util.Map;
 import java.util.Random;
 
+/**
+ * Latency is sometimes the round-trip-time (RTT) sometimes the time for a single trip. Here it's
+ * the time for a single packet.
+ */
 @SuppressWarnings("WeakerAccess")
 public abstract class NetworkLatency {
   /**
@@ -27,6 +31,7 @@ public abstract class NetworkLatency {
    * @see <a href="https://pdfs.semanticscholar.org/ff13/5d221678e6b542391c831e87fca56e830a73.pdf"/>
    *      Latency vs. distance: y = 0.022x + 4.862
    *      </p>
+   *      It's a roundtrip, so we have to divide by two to get a single packet time.
    * @see <a href="https://www.jstage.jst.go.jp/article/ipsjjip/22/3/22_435/_pdf"/> variance with
    *      ARIMA
    *      </p>
@@ -34,25 +39,8 @@ public abstract class NetworkLatency {
    *      - location μ [ms] = −0,3 - scale σ [ms] = 0.35 - shape ξ [-] = 1.4
    *      "The constant delays ts and tp has been subtracted"
    *      "A single model isapplicable to all considered lengths of packets." It's for an ADSLv2+
-   *      system, so they don't take into account the distance.
+   *      system, so they don't take into account the distance. Again it's a roundtrip time.
    *      <p>
-   *      Here are the results by quantile, not that great in our case. TODO: This does not seem to
-   *      match our case. GPD could be good as a model, but we need other data to have the right
-   *      model
-   *      <p>
-   *      0 -0.3 1 -0.29645751870684156 2 -0.2928281063750007 3 -0.2891087096885191 4
-   *      -0.28529613509832147 5 -0.28138704083443744 [...] 38 -0.06180689273798645 39
-   *      -0.05056584458776098 40 -0.03887366470983794 41 -0.026704268331683878 42
-   *      -0.014029585091834773 43 -8.193702810404546E-4 44 0.012959005564730341 45
-   *      0.027340791642455564 46 0.04236411981076765 47 0.058070299386147994 [...] 81
-   *      2.0067305885282534 82 2.2077729124238217 83 2.43752479733014 84 2.7021609664135657 85
-   *      3.009690552818672 86 3.370674235256015 87 3.7992995050751803 88 4.315038306782648 89
-   *      4.94528535995752 90 5.729716078773951 91 6.7278063481168795 92 8.032504244579048 93
-   *      9.796721337967568 94 12.288913064025722 95 16.02227008669991 96 22.09936448992795 97
-   *      33.332094707414804 98 59.22203123687722 99 157.18933612004804
-   *
-   *      <p>
-   *      TODO: we could take the message size into account....
    */
   public static class NetworkLatencyByDistance extends NetworkLatency {
     final GeneralizedParetoDistribution gpd = new GeneralizedParetoDistribution(1.4, -0.3, 0.35);
@@ -79,7 +67,7 @@ public abstract class NetworkLatency {
       checkDelta(delta);
       double raw = getFixedLatency(from.dist(to)) + getVariableLatency(delta);
 
-      return (int) raw;
+      return (int) Math.max(1, raw / 2);
     }
   }
 
@@ -102,7 +90,7 @@ public abstract class NetworkLatency {
       return Math.round(getLatency(cityFrom, cityTo));
     }
 
-    private Float getLatency(String cityFrom, String cityTo) {
+    private float getLatency(String cityFrom, String cityTo) {
       if (latencyMatrix.get(cityFrom).containsKey(cityTo)) {
         return latencyMatrix.get(cityFrom).get(cityTo);
       } else {
@@ -132,7 +120,7 @@ public abstract class NetworkLatency {
       for (int i = 0; i < proportions.length; i++) {
         if (proportions[i] == 0) {
           cur = values[i];
-          continue; // todo
+          continue;
         }
         sum += proportions[i];
         int step = (values[i] - cur) / proportions[i];
@@ -244,9 +232,12 @@ public abstract class NetworkLatency {
    * 90% 276
    * </p>
    *
-   * The paper does not give any variance.
+   * The paper does not give any number on latency variation. As well it's unclear if it's a RTT or
+   * a single message latency. As they explain they used 'ping' to calculate the time, as as ping
+   * gives the RTT time, we consider that's what they measured.
    *
-   * This latency should only be used with full random position
+   * This latency should only be used with full random position.
+   *
    */
   public static class IC3NetworkLatency extends NetworkLatency {
     protected static final int S10 = 92;
@@ -261,16 +252,16 @@ public abstract class NetworkLatency {
       int position = (int) ((surface * 100) / totalSurface);
 
       if (position <= 10)
-        return S10;
+        return S10 / 2;
       if (position <= 33)
-        return 125;
+        return 125 / 2;
       if (position <= 50)
-        return 152;
+        return 152 / 2;
       if (position <= 67)
-        return 200;
+        return 200 / 2;
       if (position <= 90)
-        return 276;
-      return SW; // The table in the paper does not show any number
+        return 276 / 2;
+      return SW / 2; // The table in the paper does not show any number
     }
   }
 

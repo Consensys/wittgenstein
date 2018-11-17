@@ -35,8 +35,13 @@ public class P2PFlood implements Protocol {
    */
   private final int msgCount;
 
+  /**
+   *
+   */
+  private final int peersCount = 15;
 
-  private final P2PNetwork network = new P2PNetwork(10);
+
+  private final P2PNetwork network = new P2PNetwork(peersCount);
   private final Node.NodeBuilder nb = new Node.NodeBuilderWithRandomPosition();
 
   class P2PFloodNode extends P2PNode {
@@ -76,10 +81,10 @@ public class P2PFlood implements Protocol {
     this.msgCount = msgCount;
   }
 
-  @Override
-  public String toString() {
+  @Override public String toString() {
     return "P2PFlood{" + "nodeCount=" + nodeCount + ", deadNodeCount=" + deadNodeCount
-        + ", delayBeforeResent=" + delayBeforeResent + ", msgCount=" + msgCount + '}';
+      + ", delayBeforeResent=" + delayBeforeResent + ", msgCount=" + msgCount + ", peersCount="
+      + peersCount + '}';
   }
 
   @Override
@@ -118,9 +123,10 @@ public class P2PFlood implements Protocol {
 
   private static void floodTime() {
     P2PFlood p = new P2PFlood(4500, 4000, 500, 1);
+    p.network.setNetworkLatency(new NetworkLatency.IC3NetworkLatency());
 
     Predicate<Protocol> contIf = p1 -> {
-      if (p1.network().time > 20000) {
+      if (p1.network().time > 40000) {
         return false;
       }
 
@@ -146,7 +152,7 @@ public class P2PFlood implements Protocol {
       }
     };
 
-    new ProgressPerTime(p, "flood with " + p.nodeCount + " nodes", "msg count", sg, 10).run(contIf);
+    new ProgressPerTime(p, "flood with " + p.nodeCount + " nodes", "node count", sg, 1).run(contIf);
   }
 
   public static void main(String... args) {
