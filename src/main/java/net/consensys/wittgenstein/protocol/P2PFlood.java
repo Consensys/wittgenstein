@@ -36,9 +36,14 @@ public class P2PFlood implements Protocol {
   private final int msgCount;
 
   /**
-   *
+   * Average number of peers
    */
-  private final int peersCount = 15;
+  private final int peersCount = 50;
+
+  /**
+   * Average number of peers
+   */
+  private final int delayBetweenSends = 0;
 
 
   private final P2PNetwork network = new P2PNetwork(peersCount);
@@ -108,7 +113,8 @@ public class P2PFlood implements Protocol {
       int nodeId = network.rd.nextInt(nodeCount);
       P2PFloodNode from = (P2PFloodNode) network.getNodeById(nodeId);
       if (!from.down && senders.add(nodeId)) {
-        P2PNetwork.FloodMessage m = network.new FloodMessage(48, delayBeforeResent);
+        P2PNetwork.FloodMessage m =
+            network.new FloodMessage(1, delayBeforeResent, delayBetweenSends);
         m.kickoff(from);
         if (msgCount == 1) {
           from.doneAt = 1;
@@ -127,7 +133,7 @@ public class P2PFlood implements Protocol {
     p.network.setNetworkLatency(new NetworkLatency.IC3NetworkLatency());
 
     Predicate<Protocol> contIf = p1 -> {
-      if (p1.network().time > 40000) {
+      if (p1.network().time > 30000) {
         return false;
       }
 
@@ -153,7 +159,8 @@ public class P2PFlood implements Protocol {
       }
     };
 
-    new ProgressPerTime(p, "flood with " + p.nodeCount + " nodes", "node count", sg, 1).run(contIf);
+    new ProgressPerTime(p, "flood with " + p.nodeCount + " nodes", "node count", sg, 50)
+        .run(contIf);
   }
 
   public static void main(String... args) {

@@ -402,6 +402,11 @@ public class Network<TN extends Node> {
     }
 
     @Override
+    public String toString() {
+      return "MessageArrival{" + "dest=" + dest + ", arrival=" + arrival + '}';
+    }
+
+    @Override
     public int compareTo(Network.MessageArrival o) {
       return Long.compare(arrival, o.arrival);
     }
@@ -410,6 +415,7 @@ public class Network<TN extends Node> {
   public boolean hasMessage() {
     return msgs.size() != 0;
   }
+
 
   public void send(Message<? extends TN> m, int sendTime, TN fromNode,
       Collection<? extends Node> dests) {
@@ -444,7 +450,6 @@ public class Network<TN extends Node> {
     return da;
   }
 
-
   private MessageArrival createMessageArrival(Message<?> m, Node fromNode, Node toNode,
       int sendTime, int randomSeed) {
     if (sendTime <= time) {
@@ -466,7 +471,8 @@ public class Network<TN extends Node> {
   }
 
   /**
-   * @return always the same number, between 0 and 99, uniformly distributed.
+   * @return always the same number for the same parameters, between 0 and 99, uniformly
+   *         distributed.
    */
   public static int getPseudoRandom(int nodeId, int randomSeed) {
     int x = hash(nodeId) ^ randomSeed;
