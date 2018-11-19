@@ -32,7 +32,7 @@ But you're actually supposed to write code to implement your specific scenarios 
 ## How to implement a new protocol
 Here is an example:
 ```java
-public class PingPong {
+public class PingPong implements Protocol{
     /**
      * You need a network. Nodes are added to this network.
      * Network latency can be set later.
