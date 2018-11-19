@@ -1,8 +1,6 @@
 package net.consensys.wittgenstein.core;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class P2PNetwork extends Network<P2PNode> {
@@ -30,7 +28,12 @@ public class P2PNetwork extends Network<P2PNode> {
       }
     }
 
-    for (P2PNode n : allNodes) {
+    // We need to go through the list in a random order, if not we can
+    //  have some side effects if all the dead nodes are at the beginning for example.
+    // For this reason we work on a shuffled version of the node list.
+    ArrayList<P2PNode> an = new ArrayList<>(allNodes);
+    Collections.shuffle(an, rd);
+    for (P2PNode n : an) {
       while (n.peers.size() < (minimum ? connectionCount : Math.min(3, this.connectionCount))) {
         int pp2 = rd.nextInt(allNodes.size());
         createLink(existingLinks, n.nodeId, pp2);
@@ -54,6 +57,18 @@ public class P2PNetwork extends Network<P2PNode> {
 
     p1.peers.add(p2);
     p2.peers.add(p1);
+  }
+
+  public int avgPeers() {
+    if (allNodes.isEmpty()) {
+      return 0;
+    }
+
+    long tot = 0;
+    for (P2PNode n : allNodes) {
+      tot += n.peers.size();
+    }
+    return (int) (tot / allNodes.size());
   }
 
   /**

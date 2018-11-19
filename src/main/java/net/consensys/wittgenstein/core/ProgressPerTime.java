@@ -38,7 +38,11 @@ public class ProgressPerTime {
     }
 
     for (int r = 0; r < roundCount; r++) {
-      System.out.println("round=" + r + ", " + protocol + " " + configDesc);
+      Protocol p = protocol.copy();
+      p.network().rd.setSeed(r);
+      p.init();
+
+      System.out.println("round=" + r + ", " + p + " " + configDesc);
 
       Map<String, Graph.Series> rawResult = new HashMap<>();
       for (String field : statsGetter.fields()) {
@@ -47,9 +51,6 @@ public class ProgressPerTime {
         rawResults.get(field).add(gs);
       }
 
-      Protocol p = protocol.copy();
-      p.network().rd.setSeed(r);
-      p.init();
       List<? extends Node> liveNodes =
           p.network().allNodes.stream().filter(n -> !n.down).collect(Collectors.toList());
 
@@ -76,7 +77,9 @@ public class ProgressPerTime {
       System.out.println("Simulation execution time: " + ((endAt - startAt) / 1000) + "s");
     }
 
-    Graph graph = new Graph(protocol + " " + configDesc, "time in ms", yAxisDesc);
+    Protocol forString = protocol.copy();
+    forString.init();
+    Graph graph = new Graph(forString + " " + configDesc, "time in ms", yAxisDesc);
 
     for (String field : statsGetter.fields()) {
       graph.addSerie(Graph.averageSeries(field, rawResults.get(field)));

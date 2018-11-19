@@ -82,9 +82,9 @@ public class P2PFlood implements Protocol {
   @Override
   public String toString() {
     return "nodes=" + nodeCount + ", deadNodes=" + deadNodeCount + ", delayBeforeResent="
-        + delayBeforeResent + "ms, msgSent=" + msgCount + ", peers=" + peersCount
-        + ", delayBetweenSends=" + delayBetweenSends + "ms, latency="
-        + network.networkLatency.getClass().getSimpleName();
+        + delayBeforeResent + "ms, msgSent=" + msgCount + ", peers(minimum)=" + peersCount
+        + ", peers(avg)=" + network.avgPeers() + ", delayBetweenSends=" + delayBetweenSends
+        + "ms, latency=" + network.networkLatency.getClass().getSimpleName();
   }
 
   @Override
@@ -120,7 +120,7 @@ public class P2PFlood implements Protocol {
   }
 
   private static void floodTime() {
-    P2PFlood p = new P2PFlood(2500, 2000, 500, 1, 50, 200, new NetworkLatency.IC3NetworkLatency());
+    P2PFlood p = new P2PFlood(4500, 4000, 500, 1, 13, 0, new NetworkLatency.IC3NetworkLatency());
 
     Predicate<Protocol> contIf = p1 -> {
       if (p1.network().time > 30000) {
