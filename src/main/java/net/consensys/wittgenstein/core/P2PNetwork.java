@@ -7,23 +7,31 @@ import java.util.stream.Collectors;
 
 public class P2PNetwork extends Network<P2PNode> {
   private final int connectionCount;
+  private final boolean minimum;
 
-  public P2PNetwork(int connectionCount) {
+  /**
+   * @param connectionCount - the target for the number of connection
+   * @param minimum - if true, connectionCount is the minimum number of connections per node. If
+   *        false, it's the average number of nodes, with a minimum of 3 connections per node.
+   */
+  public P2PNetwork(int connectionCount, boolean minimum) {
     this.connectionCount = connectionCount;
+    this.minimum = minimum;
   }
 
   public void setPeers() {
-    int toCreate = (allNodes.size() * connectionCount) / 2;
     Set<Long> existingLinks = new HashSet<>();
-
-    while (toCreate != existingLinks.size()) {
-      int pp1 = rd.nextInt(allNodes.size());
-      int pp2 = rd.nextInt(allNodes.size());
-      createLink(existingLinks, pp1, pp2);
+    if (!minimum) {
+      int toCreate = (allNodes.size() * connectionCount) / 2;
+      while (toCreate != existingLinks.size()) {
+        int pp1 = rd.nextInt(allNodes.size());
+        int pp2 = rd.nextInt(allNodes.size());
+        createLink(existingLinks, pp1, pp2);
+      }
     }
 
     for (P2PNode n : allNodes) {
-      while (n.peers.size() < Math.min(3, this.connectionCount)) {
+      while (n.peers.size() < (minimum ? connectionCount : Math.min(3, this.connectionCount))) {
         int pp2 = rd.nextInt(allNodes.size());
         createLink(existingLinks, n.nodeId, pp2);
       }

@@ -75,7 +75,7 @@ public class P2PFlood implements Protocol {
     this.msgCount = msgCount;
     this.peersCount = peersCount;
     this.delayBetweenSends = delayBetweenSends;
-    this.network = new P2PNetwork(peersCount);
+    this.network = new P2PNetwork(peersCount, true);
     this.network.setNetworkLatency(nl);
   }
 

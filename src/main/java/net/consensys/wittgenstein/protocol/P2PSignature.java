@@ -110,7 +110,7 @@ public class P2PSignature implements Protocol {
     this.sanFermin = sanFermin;
     this.sendSigsStrategy = this.sanFermin ? SendSigsStrategy.cmp_all : sendSigsStrategy;
     this.sigRange = sigRange;
-    this.network = new P2PNetwork(connectionCount);
+    this.network = new P2PNetwork(connectionCount, false);
     this.nb = new Node.NodeBuilderWithRandomPosition();
   }
 
