@@ -68,7 +68,7 @@ public class P2PFlood implements Protocol {
   }
 
   private P2PFlood(int nodeCount, int deadNodeCount, int delayBeforeResent, int msgCount,
-      int peersCount, int delayBetweenSends) {
+      int peersCount, int delayBetweenSends, NetworkLatency nl) {
     this.nodeCount = nodeCount;
     this.deadNodeCount = deadNodeCount;
     this.delayBeforeResent = delayBeforeResent;
@@ -76,19 +76,21 @@ public class P2PFlood implements Protocol {
     this.peersCount = peersCount;
     this.delayBetweenSends = delayBetweenSends;
     this.network = new P2PNetwork(peersCount);
+    this.network.setNetworkLatency(nl);
   }
 
   @Override
   public String toString() {
     return "nodes=" + nodeCount + ", deadNodes=" + deadNodeCount + ", delayBeforeResent="
         + delayBeforeResent + "ms, msgSent=" + msgCount + ", peers=" + peersCount
-        + ", delayBetweenSends=" + delayBetweenSends + "ms";
+        + ", delayBetweenSends=" + delayBetweenSends + "ms, latency="
+        + network.networkLatency.getClass().getSimpleName();
   }
 
   @Override
   public Protocol copy() {
     return new P2PFlood(nodeCount, deadNodeCount, delayBeforeResent, msgCount, peersCount,
-        delayBetweenSends);
+        delayBetweenSends, network.networkLatency);
   }
 
   public void init() {
@@ -118,8 +120,7 @@ public class P2PFlood implements Protocol {
   }
 
   private static void floodTime() {
-    P2PFlood p = new P2PFlood(4500, 4000, 500, 1, 13, 0);
-    p.network.setNetworkLatency(new NetworkLatency.IC3NetworkLatency());
+    P2PFlood p = new P2PFlood(2500, 2000, 500, 1, 50, 200, new NetworkLatency.IC3NetworkLatency());
 
     Predicate<Protocol> contIf = p1 -> {
       if (p1.network().time > 30000) {
@@ -148,7 +149,7 @@ public class P2PFlood implements Protocol {
       }
     };
 
-    new ProgressPerTime(p, "", "node count", sg, 1000).run(contIf);
+    new ProgressPerTime(p, "", "node count", sg, 200).run(contIf);
   }
 
   public static void main(String... args) {
