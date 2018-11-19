@@ -50,9 +50,9 @@ public class P2PFlood implements Protocol {
 
   class P2PFloodNode extends P2PNode {
     /**
-     * @param down - if the node is marked down, it won't send/receive messages, but will still
-     *             be included in the peers. As such it's a byzantine behavior: officially
-     *             available but actually not participating.
+     * @param down - if the node is marked down, it won't send/receive messages, but will still be
+     *        included in the peers. As such it's a byzantine behavior: officially available but
+     *        actually not participating.
      */
     P2PFloodNode(NodeBuilder nb, boolean down) {
       super(network.rd, nb, down);
@@ -68,7 +68,7 @@ public class P2PFlood implements Protocol {
   }
 
   private P2PFlood(int nodeCount, int deadNodeCount, int delayBeforeResent, int msgCount,
-    int peersCount, int delayBetweenSends) {
+      int peersCount, int delayBetweenSends) {
     this.nodeCount = nodeCount;
     this.deadNodeCount = deadNodeCount;
     this.delayBeforeResent = delayBeforeResent;
@@ -78,20 +78,22 @@ public class P2PFlood implements Protocol {
     this.network = new P2PNetwork(peersCount);
   }
 
-  @Override public String toString() {
-    return "nodes=" + nodeCount + ", deadNodes=" + deadNodeCount
-      + ", delayBeforeResent=" + delayBeforeResent + "ms, msgSent=" + msgCount + ", peers="
-      + peersCount + ", delayBetweenSends=" + delayBetweenSends + "ms";
+  @Override
+  public String toString() {
+    return "nodes=" + nodeCount + ", deadNodes=" + deadNodeCount + ", delayBeforeResent="
+        + delayBeforeResent + "ms, msgSent=" + msgCount + ", peers=" + peersCount
+        + ", delayBetweenSends=" + delayBetweenSends + "ms";
   }
 
   @Override
   public Protocol copy() {
-    return new P2PFlood(nodeCount, deadNodeCount, delayBeforeResent, msgCount, peersCount, delayBetweenSends);
+    return new P2PFlood(nodeCount, deadNodeCount, delayBeforeResent, msgCount, peersCount,
+        delayBetweenSends);
   }
 
   public void init() {
     for (int i = 0; i < nodeCount; i++) {
-        network.addNode(new P2PFloodNode(nb, i < deadNodeCount));
+      network.addNode(new P2PFloodNode(nb, i < deadNodeCount));
     }
     network.setPeers();
 
@@ -146,8 +148,7 @@ public class P2PFlood implements Protocol {
       }
     };
 
-    new ProgressPerTime(p, "", "node count", sg, 1000)
-        .run(contIf);
+    new ProgressPerTime(p, "", "node count", sg, 1000).run(contIf);
   }
 
   public static void main(String... args) {
