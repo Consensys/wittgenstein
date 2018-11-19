@@ -87,6 +87,7 @@ public class ProgressPerTime {
       graph.addSerie(s.max);
       graph.addSerie(s.avg);
     }
+    graph.cleanSeries();
 
     try {
       graph.save(new File("/tmp/graph.png"));

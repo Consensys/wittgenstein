@@ -7,17 +7,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class GraphTest {
-
-  Graph.Series series1 = new Graph.Series("Test Series 1");
-  Graph.Series series2 = new Graph.Series("Test Series 2");
-  Graph.Series series3 = new Graph.Series("Test Series 3");
-  Graph.Series series4 = new Graph.Series("Test Series 3");
-  Graph.Series series5 = new Graph.Series("Test Series 3");
-  List<Graph.Series> testSeries = new ArrayList<>();
-  List<Graph.Series> testSeries2 = new ArrayList<>();
-  List<Graph.Series> testSeries3 = new ArrayList<>();
-  List<Graph.Series> testSeries4 = new ArrayList<>();
-  List<Graph.Series> testSeries5 = new ArrayList<>();
+  private Graph.Series series1 = new Graph.Series("Test Series 1");
+  private Graph.Series series2 = new Graph.Series("Test Series 2");
+  private Graph.Series series3 = new Graph.Series("Test Series 3");
+  private Graph.Series series4 = new Graph.Series("Test Series 3");
+  private Graph.Series series5 = new Graph.Series("Test Series 3");
+  private List<Graph.Series> testSeries = new ArrayList<>();
+  private List<Graph.Series> testSeries2 = new ArrayList<>();
+  private List<Graph.Series> testSeries3 = new ArrayList<>();
+  private List<Graph.Series> testSeries4 = new ArrayList<>();
+  private List<Graph.Series> testSeries5 = new ArrayList<>();
 
   @Before
   public void setup() {
@@ -34,35 +33,33 @@ public class GraphTest {
     testSeries5.add(series1);
   }
 
-  public void generateSeries(Graph.Series s, int x, int y, int incrementX, int incrementY,
+  private void generateSeries(Graph.Series s, int x, int y, int incrementX, int incrementY,
       int length) {
     for (int i = 0; i < length; i++) {
       s.addLine(new Graph.ReportLine(x * (1 + i * incrementX), y * (1 + i * incrementY)));
     }
-
   }
 
-  /*
-  * Verifying that Illegal Argument Exception is thrown when series have incomplete values
-  * i.e. x values are not consistently equal
-  * */
+  /**
+   * Verifying that Illegal Argument Exception is thrown when series have incomplete values i.e. x
+   * values are not consistently equal
+   */
   @Test(expected = IllegalArgumentException.class)
   public void testSeriesMissingValues() {
-    Graph.averageSeries("test", testSeries);
+    Graph.statSeries("test", testSeries);
   }
 
-  /*
-  * Verifying function for averages returns and empty series return if an empty series is passed
-  * */
+  /**
+   * Verifying function for averages returns and empty series return if an empty series is passed
+   */
   @Test
   public void checkEmptySeries() {
     Assert.assertTrue(series5.vals.isEmpty());
-    Assert.assertTrue(Graph.averageSeries("test", testSeries4).vals.isEmpty());
+    Assert.assertTrue(Graph.statSeries("test", testSeries4).avg.vals.isEmpty());
   }
 
-  /*
+  /**
    * The average of 1 series is itself
-   *
    */
   @Test
   public void averageOfOneSeries() {
@@ -71,7 +68,7 @@ public class GraphTest {
     average.addLine(new Graph.ReportLine(40, 50));
     average.addLine(new Graph.ReportLine(70, 90));
     average.addLine(new Graph.ReportLine(100, 130));
-    Graph.Series calculatedAvg = Graph.averageSeries("test2", testSeries5);
+    Graph.Series calculatedAvg = Graph.statSeries("test2", testSeries5).avg;
     Assert.assertEquals(average.vals.get(0).x, calculatedAvg.vals.get(0).x, 0.00001);
     Assert.assertEquals(average.vals.get(1).x, calculatedAvg.vals.get(1).x, 0.00001);
     Assert.assertEquals(average.vals.get(2).x, calculatedAvg.vals.get(2).x, 0.00001);
@@ -80,12 +77,11 @@ public class GraphTest {
     Assert.assertEquals(average.vals.get(1).y, calculatedAvg.vals.get(1).y, 0.00001);
     Assert.assertEquals(average.vals.get(2).y, calculatedAvg.vals.get(2).y, 0.00001);
     Assert.assertEquals(average.vals.get(3).y, calculatedAvg.vals.get(3).y, 0.00001);
-
   }
 
-  /*
-  * Verify average values are calculated correctly when series are of equal length
-  * */
+  /**
+   * Verify average values are calculated correctly when series are of equal length
+   */
   @Test
   public void calculateAverageSameLength() {
     Graph.Series average = new Graph.Series("Test Series average 1 and 3");
@@ -93,7 +89,7 @@ public class GraphTest {
     average.addLine(new Graph.ReportLine(40, 75));
     average.addLine(new Graph.ReportLine(70, 135));
     average.addLine(new Graph.ReportLine(100, 195));
-    Graph.Series calculatedAvg = Graph.averageSeries("test2", testSeries2);
+    Graph.Series calculatedAvg = Graph.statSeries("test2", testSeries2).avg;
     Assert.assertEquals(average.vals.get(0).x, calculatedAvg.vals.get(0).x, 0.00001);
     Assert.assertEquals(average.vals.get(1).x, calculatedAvg.vals.get(1).x, 0.00001);
     Assert.assertEquals(average.vals.get(2).x, calculatedAvg.vals.get(2).x, 0.00001);
@@ -104,17 +100,17 @@ public class GraphTest {
     Assert.assertEquals(average.vals.get(3).y, calculatedAvg.vals.get(3).y, 0.00001);
   }
 
-  /*
-   * Verify average values are calculated correctly when series are different size
-   * by taking the previous (index i-1) value and adding that
-   * */
+  /**
+   * Verify average values are calculated correctly when series are different size by taking the
+   * previous (index i-1) value and adding that
+   */
   @Test
   public void calculateAverageIrregularSeries() {
     Graph.Series average = new Graph.Series("Test Series average 1 and 4");
     average.addLine(new Graph.ReportLine(10, 15));
     average.addLine(new Graph.ReportLine(40, 75));
     average.addLine(new Graph.ReportLine(70, 135));
-    Graph.Series calculatedAvg = Graph.averageSeries("test2", testSeries3);
+    Graph.Series calculatedAvg = Graph.statSeries("test2", testSeries3).avg;
     Assert.assertEquals(average.vals.get(0).x, calculatedAvg.vals.get(0).x, 0.00001);
     Assert.assertEquals(average.vals.get(1).x, calculatedAvg.vals.get(1).x, 0.00001);
     Assert.assertEquals(average.vals.get(2).x, calculatedAvg.vals.get(2).x, 0.00001);

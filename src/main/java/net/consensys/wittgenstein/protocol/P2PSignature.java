@@ -642,9 +642,9 @@ public class P2PSignature implements Protocol {
     }
 
     Graph.Series seriesAvgmax =
-        Graph.averageSeries("Signatures count average - best node", rawResultsMax);
+        Graph.statSeries("Signatures count average - best node", rawResultsMax).avg;
     Graph.Series seriesAvgavg =
-        Graph.averageSeries("Signatures count average - average", rawResultsAvg);
+        Graph.statSeries("Signatures count average - average", rawResultsAvg).avg;
     medianGraph.addSerie(seriesAvgmax);
     medianGraph.addSerie(seriesAvgavg);
 

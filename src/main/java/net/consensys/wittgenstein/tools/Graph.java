@@ -16,6 +16,7 @@ import java.util.List;
  * Generate a graph (an image file) from a list of report lines per period.
  */
 public class Graph {
+  private final static double EPS = 0.00001;
   private final List<Series> series = new ArrayList<>();
 
   private final String graphTitle;
@@ -84,14 +85,6 @@ public class Graph {
   public static class ReportLine {
     final double x;
     final double y;
-
-    public double getY() {
-      return y;
-    }
-
-    public double getX() {
-      return x;
-    }
 
     public ReportLine(double x, double y) {
       this.x = x;
@@ -166,42 +159,34 @@ public class Graph {
   }
 
   /**
-   * TODO
-   * 
-   * @param title - the title of the series to be created
-   * @param series - all the series must have the same value for 'x' at the same index. We allow
-   *        missing values at the end
-   * @return the aggregated series
+   * Remove the last entries from the series if they have all the same values. All the series in the
+   * graph must have the same size.
    */
-  public static Graph.Series averageSeries(String title, List<Graph.Series> series) {
-    Graph.Series seriesAvg = new Graph.Series(title);
-
-    Graph.Series largest = null;
-    for (Graph.Series s : series) {
-      if (largest == null || s.vals.size() > largest.vals.size()) {
-        largest = s;
+  public void cleanSeries() {
+    final int uniqueSize = series.get(0).vals.size();
+    double[] last = new double[series.size()];
+    for (int i = 0; i < series.size(); i++) {
+      Graph.Series s = series.get(i);
+      if (s.vals.size() != uniqueSize) {
+        throw new IllegalArgumentException(
+            "different size uniqueSize=" + uniqueSize + ", size=" + s.vals.size());
       }
+      last[i] = s.vals.get(uniqueSize - 1).y;
     }
 
-    for (int i = 0; largest != null && i < largest.vals.size(); i++) {
-      double x = largest.vals.get(i).x;
-      double sum = 0;
-      for (Series s : series) {
-        if (i < s.vals.size()) {
-          double lx = s.vals.get(i).x;
-          if (Math.abs(x - lx) > 0.00001) {
-            throw new IllegalArgumentException(
-                "We need the indexes to be the same, x=" + x + ", lx=" + lx);
-          }
-          sum += s.vals.get(i).getY();
-        } else {
-          sum += s.vals.get(s.vals.size() - 1).getY();
+    for (int i = uniqueSize - 2; i > 1; i--) {
+      for (int ii = 0; ii < series.size(); ii++) {
+        Graph.Series s = series.get(ii);
+        double nv = s.vals.get(i).y;
+        if (Math.abs(last[ii] - nv) > EPS) {
+          return;
         }
       }
-      seriesAvg.addLine(new Graph.ReportLine(x, sum / series.size()));
+      for (Graph.Series s : series) {
+        s.vals.remove(s.vals.size() - 1);
+        s.maxX = s.vals.get(s.vals.size() - 1).x;
+      }
     }
-
-    return seriesAvg;
   }
 
   public static class StatSeries {
@@ -209,7 +194,7 @@ public class Graph {
     public final Graph.Series max;
     public final Graph.Series avg;
 
-    public StatSeries(Series min, Series max, Series avg) {
+    private StatSeries(Series min, Series max, Series avg) {
       this.min = min;
       this.max = max;
       this.avg = avg;
@@ -244,15 +229,15 @@ public class Graph {
       for (Series s : series) {
         if (i < s.vals.size()) {
           double lx = s.vals.get(i).x;
-          if (Math.abs(x - lx) > 0.00001) {
+          if (Math.abs(x - lx) > EPS) {
             throw new IllegalArgumentException(
                 "We need the indexes to be the same, x=" + x + ", lx=" + lx);
           }
-          min = Math.min(min, s.vals.get(i).getY());
-          max = Math.max(max, s.vals.get(i).getY());
-          sum += s.vals.get(i).getY();
+          min = Math.min(min, s.vals.get(i).y);
+          max = Math.max(max, s.vals.get(i).y);
+          sum += s.vals.get(i).y;
         } else {
-          sum += s.vals.get(s.vals.size() - 1).getY();
+          sum += s.vals.get(s.vals.size() - 1).y;
         }
       }
       seriesMin.addLine(new Graph.ReportLine(x, min));
