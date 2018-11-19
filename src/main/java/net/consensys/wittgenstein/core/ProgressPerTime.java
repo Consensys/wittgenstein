@@ -82,7 +82,10 @@ public class ProgressPerTime {
     Graph graph = new Graph(forString + " " + configDesc, "time in ms", yAxisDesc);
 
     for (String field : statsGetter.fields()) {
-      graph.addSerie(Graph.averageSeries(field, rawResults.get(field)));
+      Graph.StatSeries s = Graph.statSeries(field, rawResults.get(field));
+      graph.addSerie(s.min);
+      graph.addSerie(s.max);
+      graph.addSerie(s.avg);
     }
 
     try {

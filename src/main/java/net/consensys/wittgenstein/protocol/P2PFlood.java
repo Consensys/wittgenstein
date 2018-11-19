@@ -149,7 +149,7 @@ public class P2PFlood implements Protocol {
       }
     };
 
-    new ProgressPerTime(p, "", "node count", sg, 200).run(contIf);
+    new ProgressPerTime(p, "", "node count", sg, 1000).run(contIf);
   }
 
   public static void main(String... args) {

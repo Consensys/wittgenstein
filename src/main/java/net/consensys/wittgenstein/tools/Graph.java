@@ -204,4 +204,63 @@ public class Graph {
     return seriesAvg;
   }
 
+  public static class StatSeries {
+    public final Graph.Series min;
+    public final Graph.Series max;
+    public final Graph.Series avg;
+
+    public StatSeries(Series min, Series max, Series avg) {
+      this.min = min;
+      this.max = max;
+      this.avg = avg;
+    }
+  }
+
+  /**
+   * TODO
+   *
+   * @param title - the title of the series to be created
+   * @param series - all the series must have the same value for 'x' at the same index. We allow
+   *        missing values at the end
+   * @return the aggregated series
+   */
+  public static StatSeries statSeries(String title, List<Graph.Series> series) {
+    Graph.Series seriesMin = new Graph.Series(title + "(min)");
+    Graph.Series seriesMax = new Graph.Series(title + "(max)");
+    Graph.Series seriesAvg = new Graph.Series(title + "(avg)");
+
+    Graph.Series largest = null;
+    for (Graph.Series s : series) {
+      if (largest == null || s.vals.size() > largest.vals.size()) {
+        largest = s;
+      }
+    }
+
+    for (int i = 0; largest != null && i < largest.vals.size(); i++) {
+      double x = largest.vals.get(i).x;
+      double sum = 0;
+      double min = Double.MAX_VALUE;
+      double max = Double.MIN_VALUE;
+      for (Series s : series) {
+        if (i < s.vals.size()) {
+          double lx = s.vals.get(i).x;
+          if (Math.abs(x - lx) > 0.00001) {
+            throw new IllegalArgumentException(
+                "We need the indexes to be the same, x=" + x + ", lx=" + lx);
+          }
+          min = Math.min(min, s.vals.get(i).getY());
+          max = Math.max(max, s.vals.get(i).getY());
+          sum += s.vals.get(i).getY();
+        } else {
+          sum += s.vals.get(s.vals.size() - 1).getY();
+        }
+      }
+      seriesMin.addLine(new Graph.ReportLine(x, min));
+      seriesMax.addLine(new Graph.ReportLine(x, max));
+      seriesAvg.addLine(new Graph.ReportLine(x, sum / series.size()));
+    }
+
+    return new StatSeries(seriesMin, seriesMax, seriesAvg);
+  }
+
 }
