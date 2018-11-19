@@ -77,9 +77,8 @@ public class ProgressPerTime {
       System.out.println("Simulation execution time: " + ((endAt - startAt) / 1000) + "s");
     }
 
-    Protocol forString = protocol.copy();
-    forString.init();
-    Graph graph = new Graph(forString + " " + configDesc, "time in ms", yAxisDesc);
+    protocol.init();
+    Graph graph = new Graph(protocol + " " + configDesc, "time in ms", yAxisDesc);
 
     for (String field : statsGetter.fields()) {
       Graph.StatSeries s = Graph.statSeries(field, rawResults.get(field));

@@ -71,7 +71,7 @@ public class Node {
     return "Node{" + "nodeId=" + nodeId + '}';
   }
 
-  public static class NodeBuilder {
+  public static class NodeBuilder implements Cloneable {
     protected int nodeIds = 0;
     protected final MessageDigest digest;
     private String cityName = DEFAULT_CITY;
@@ -81,6 +81,16 @@ public class Node {
         digest = MessageDigest.getInstance("SHA-256");
       } catch (NoSuchAlgorithmException e) {
         throw new IllegalStateException();
+      }
+    }
+
+    public NodeBuilder copy() {
+      try {
+        NodeBuilder nb = (NodeBuilder) this.clone();
+        nb.nodeIds = 0;
+        return nb;
+      } catch (CloneNotSupportedException e) {
+        throw new IllegalStateException(e);
       }
     }
 

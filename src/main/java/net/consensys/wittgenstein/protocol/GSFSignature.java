@@ -3,7 +3,6 @@ package net.consensys.wittgenstein.protocol;
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
-import net.consensys.wittgenstein.tools.CSVLatencyReader;
 import net.consensys.wittgenstein.tools.Graph;
 import java.io.File;
 import java.io.IOException;
@@ -452,7 +451,7 @@ public class GSFSignature implements Protocol {
   @Override
   public Protocol copy() {
     return new GSFSignature(nodeCount, threshold, pairingTime, timeoutPerLevelMs, periodDurationMs,
-        acceleratedCallsCount, nodesDown, nb, this.network.networkLatency);
+        acceleratedCallsCount, nodesDown, nb.copy(), this.network.networkLatency);
   }
 
   public void init() {
@@ -485,33 +484,13 @@ public class GSFSignature implements Protocol {
     return network;
   }
 
-  private static GSFSignature createGSFSignatureForDistLatencyModel(int nodeCt) {
-    NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
+  public static void sigsPerTime() {
+    int nodeCt = 32768 / 4;
+    NetworkLatency nl = new NetworkLatency.IC3NetworkLatency();
     Node.NodeBuilder nb = new Node.NodeBuilderWithRandomPosition();
 
     int ts = (int) (0.9 * nodeCt);
-    GSFSignature ps1 = new GSFSignature(nodeCt, ts, 3, 100, 20, 100, nodeCt - ts, nb, nl);
-
-    return ps1;
-  }
-
-  private static GSFSignature createGSFSignatureForCityLatencyModel(int nodeCt) throws IOException {
-    CSVLatencyReader csvReader = new CSVLatencyReader();
-    Node.NodeBuilder nb = new Node.NodeBuilderWithCity(csvReader.cities());
-    NetworkLatency.NetworkLatencyByCity nl = new NetworkLatency.NetworkLatencyByCity(csvReader);
-
-    int ts = (int) (0.9 * nodeCt);
-    GSFSignature ps1 = new GSFSignature(nodeCt, ts, 3, 100, 20, 100, nodeCt - ts, nb, nl);
-
-    return ps1;
-
-  }
-
-  public static void sigsPerTime() throws IOException {
-    int nodeCt = 32768 / 4;
-
-    GSFSignature ps1 = createGSFSignatureForDistLatencyModel(nodeCt);
-    String desc = ps1.toString();
+    GSFSignature p = new GSFSignature(nodeCt, ts, 3, 100, 20, 100, nodeCt - ts, nb, nl);
 
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
       final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
@@ -528,13 +507,13 @@ public class GSFSignature implements Protocol {
       }
     };
 
-    ProgressPerTime ppt = new ProgressPerTime(ps1, desc, "number of signatures", sg, 1);
+    ProgressPerTime ppt = new ProgressPerTime(p, "", "number of signatures", sg, 10);
 
     Predicate<Protocol> contIf = p1 -> {
       for (Node n : p1.network().allNodes) {
         GSFNode gn = (GSFNode) n;
 
-        if (!n.down && gn.verifiedSignatures.cardinality() < ps1.threshold) {
+        if (!n.down && gn.verifiedSignatures.cardinality() < p.threshold) {
           return true;
         }
       }
