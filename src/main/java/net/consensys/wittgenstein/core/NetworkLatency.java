@@ -87,7 +87,7 @@ public abstract class NetworkLatency {
             "Can't use NetworkLatencyByCity model with default city location");
       }
 
-      return Math.round(getLatency(cityFrom, cityTo));
+      return Math.round(0.5f*getLatency(cityFrom, cityTo));
     }
 
     private float getLatency(String cityFrom, String cityTo) {
