@@ -4,14 +4,14 @@ import java.util.*;
 
 public class SlushSnowflake {
   private static final int NODES_NB = 100;
-  private static final int BYZANTINE_NODES_NB = 10;
+  private static final int BYZANTINE_NODES_NB = 61;
   private static final int COLOR_NB = 2;
 
 
   /**
    * (for slush only) Finally, the node decides the color it ended up with at time m.
    */
-  private static final int M = 3;
+  private static final int M = 1;
 
   /**
    * To perform a query, a node picks a small, constant sized (k) sample of the network uniformly at
