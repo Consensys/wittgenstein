@@ -109,7 +109,7 @@ public class Slush implements Protocol {
     public void receiveQuery(Query qa) {
       if (myColor == 0) {
         myColor = qa.color;
-        sendQuery(qa.color,qa.answerId);
+        //sendQuery(qa.color,qa.answerId);
       }
 
 
