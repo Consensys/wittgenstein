@@ -13,7 +13,8 @@ public class Slush implements Protocol {
   private static final int COLOR_NB = 2;
 
   /**
-   * m is the number of rounds
+   * M is the number of rounds. "Finally, the node decides the color it ended up with at time m []
+   * we will show that m grows logarithmically with n."
    */
   private final int M = 5;
 
@@ -132,8 +133,8 @@ public class Slush implements Protocol {
           myColor = otherColor();
         }
 
-        if (asw.countInM < M) {
-          sendQuery(asw.countInM + 1);
+        if (asw.round < M) {
+          sendQuery(asw.round + 1);
         }
       }
     }
@@ -146,11 +147,11 @@ public class Slush implements Protocol {
   }
 
   static class Answer {
-    final int countInM;
+    final int round;
     private final int[] colorsFound = new int[COLOR_NB + 1];
 
-    Answer(int countInM) {
-      this.countInM = countInM;
+    Answer(int round) {
+      this.round = round;
     }
 
     int answerCount() {
@@ -186,7 +187,7 @@ public class Slush implements Protocol {
     sp.network.runMs(20000);
     System.out.println("Finished, " + sp.network.msgs.size() + " messages");
 
-    System.out.println("N=" + NODES_AV + ", K=" + K + ", AK=" + AK + " M=" + sp.M);
+    System.out.println("N=" + NODES_AV + ", K=" + K + ", AK=" + AK + ", M=" + sp.M);
     int[] res = new int[COLOR_NB + 1];
     for (SlushNode n : sp.network.allNodes) {
       res[n.myColor]++;
