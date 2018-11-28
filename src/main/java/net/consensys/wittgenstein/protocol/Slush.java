@@ -22,12 +22,12 @@ public class Slush implements Protocol {
   /**
    * K is the sample size you take
    */
-  private static final int K = 7;
+  private static final int K = 17;
 
   /**
    * A stands for the alpha treshold
    */
-  private static final int AK = 4;
+  private static final int AK = 9;
 
   private Slush() {
     this.nb = new Node.NodeBuilderWithRandomPosition();
@@ -90,21 +90,16 @@ public class Slush implements Protocol {
     }
 
     List<SlushNode> getRandomRemotes() {
-      List<Integer> res = new ArrayList<>(K);
+      List<SlushNode> res = new ArrayList<>(K);
 
       while (res.size() != K) {
         int r = network.rd.nextInt(NODES_AV);
-        if (r != nodeId && !res.contains(r)) {
-          res.add(r);
+        if (r != nodeId && !res.contains(network.getNodeById(r))) {
+          res.add(network.getNodeById(r));
         }
       }
 
-      List<SlushNode> nodes = new ArrayList<>();
-      for (int r : res) {
-        nodes.add(network.getNodeById(r));
-      }
-
-      return nodes;
+      return res;
     }
 
     private int otherColor() {
