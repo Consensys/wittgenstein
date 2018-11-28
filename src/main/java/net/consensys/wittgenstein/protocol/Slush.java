@@ -174,69 +174,7 @@ public class Slush implements Protocol {
       return sum;
     }
   }
-  /*
-  class QueryAnswer {
-    private final int[] colorsFound = new int[COLOR_NB + 1];
-
-    int answerCount() {
-      int sum = 0;
-      for (int i : colorsFound)
-        sum += i;
-      return sum;
-    }
-  }
-
-  abstract class Action {
-    protected final SlushNode orig;
-    protected final SlushNode dest;
-
-    abstract void run();
-
-    Action(SlushNode orig, SlushNode dest) {
-      this.orig = orig;
-      this.dest = dest;
-    }
-  }
-
-  class QueryAnswerAction extends Action {
-    final int color;
-    final int answerId;
-    final QueryAction cause;
-
-
-    @Override
-    public void run() {
-      if (dest != null)
-        dest.receiveQueryAnswer(this);
-    }
-
-    QueryAnswerAction(QueryAction cause, int color) {
-      super(cause.dest, cause.orig);
-      this.cause = cause;
-      this.answerId = cause.answerId;
-      this.color = color;
-    }
-  }
-
-  class QueryAction extends Action {
-    final int answerId;
-    final int color;
-
-    @Override
-    public void run() {
-      dest.receiveQuery(this);
-    }
-
-    public QueryAction(SlushNode orig, SlushNode dest, int answerId, int color) {
-      super(orig, dest);
-      this.answerId = answerId;
-      this.color = color;
-    }
-
-  }
-
-  private LinkedList<Action> inProgress = new LinkedList<>();
-*/
+ 
   public static void main(String... args) {
 
     NetworkLatency nl = new NetworkLatency.NetworkLatencyByDistance();
