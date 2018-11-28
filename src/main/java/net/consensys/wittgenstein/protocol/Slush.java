@@ -68,6 +68,7 @@ public class Slush implements Protocol {
     public SendQuery(Query query) {
       this.querySent = query;
     }
+
     @Override
     public void action(SlushNode from, SlushNode to) {
       to.sendQuery(querySent);
@@ -113,7 +114,7 @@ public class Slush implements Protocol {
 
     void sendAnswer(Query qa) {
       ++myQueryNonce;
-      Answer aa = new Answer(qa.color,qa.answerId);
+      Answer aa = new Answer(qa.color, qa.answerId);
       answerIP.put(myQueryNonce, aa);
     }
 
@@ -130,13 +131,13 @@ public class Slush implements Protocol {
       if (myColor == 0) {
         myColor = qa.color;
         //sendQuery(to,qa.color,qa.answerId);
-        network.send(new SendQuery(qa),this,to);
+        network.send(new SendQuery(qa), this, to);
       }
       //Send your color
       Answer qaaa = new Answer(to.myColor, qa.answerId);
       network.send(new AnswerQuery(qaaa), to, this);
 
-     // receiveQueryAnswer(qaaa);
+      // receiveQueryAnswer(qaaa);
 
     }
 
@@ -164,7 +165,7 @@ public class Slush implements Protocol {
 
     void sendQuery(Query query) {
       ++myQueryNonce;
-      Answer asw = new Answer(query.color,query.answerId);
+      Answer asw = new Answer(query.color, query.answerId);
       answerIP.put(myQueryNonce, asw);
       for (int r : getRandomRemotes()) {
         receiveQuery(asw, nodes[r]);
@@ -185,12 +186,14 @@ public class Slush implements Protocol {
 
   }
 
-  static class Answer extends Query{
+  static class Answer extends Query {
 
     private final int[] colorsFound = new int[COLOR_NB + 1];
-    Answer(int color,int answerId){
-      super(color,answerId);
+
+    Answer(int color, int answerId) {
+      super(color, answerId);
     }
+
     int answerCount() {
       int sum = 0;
       for (int i : colorsFound)
@@ -210,8 +213,8 @@ public class Slush implements Protocol {
         std++;
 
     }
-    System.out.println("N=" + nodes.length + ", K=" + K + ", AK=" + AK );
-    System.out.println("Nodes: standards=" + std + ", adversary=" + byz );
+    System.out.println("N=" + nodes.length + ", K=" + K + ", AK=" + AK);
+    System.out.println("Nodes: standards=" + std + ", adversary=" + byz);
 
 
     int[] res = new int[COLOR_NB + 1];
@@ -224,6 +227,7 @@ public class Slush implements Protocol {
       System.out.println(i + ":" + res[i]);
     }
   }
+
   public static void main(String... args) {
     NetworkLatency nl = new NetworkLatency.NetworkLatencyByDistance();
 
@@ -238,12 +242,12 @@ public class Slush implements Protocol {
     SlushNode uncolored1 = sp.network().getNodeById(0);
     SlushNode uncolored2 = sp.network().getNodeById(1);
 
-      sp.network.send(new SendQuery(new Query(1,-1)), uncolored2, uncolored1);
-      sp.network.send(new SendQuery(new Query(2,-1)), uncolored1, uncolored2);
-      sp.network.runMs(10000);
+    sp.network.send(new SendQuery(new Query(1, -1)), uncolored2, uncolored1);
+    sp.network.send(new SendQuery(new Query(2, -1)), uncolored1, uncolored2);
+    sp.network.runMs(10000);
     System.out.println("Finished");
 
-    System.out.println("N=" + sp.nodes.length + ", K=" + K + ", AK=" + AK );
+    System.out.println("N=" + sp.nodes.length + ", K=" + K + ", AK=" + AK);
     int[] res = new int[COLOR_NB + 1];
     for (SlushNode n : sp.nodes) {
       res[n.myColor]++;
