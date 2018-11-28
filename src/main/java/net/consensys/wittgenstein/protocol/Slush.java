@@ -11,8 +11,6 @@ public class Slush implements Protocol {
   private final Network<SlushNode> network = new Network<>();
   final Node.NodeBuilder nb;
   private static final int COLOR_NB = 2;
-  private int count = 0;
-  private int actionCt = 0;
 
   /**
    * m is the number of rounds
@@ -22,12 +20,12 @@ public class Slush implements Protocol {
   /**
    * K is the sample size you take
    */
-  private static final int K = 17;
+  private static final int K = 7;
 
   /**
-   * A stands for the alpha treshold
+   * A stands for the alpha threshold
    */
-  private static final int AK = 9;
+  private static final int AK = 4;
 
   private Slush() {
     this.nb = new Node.NodeBuilderWithRandomPosition();
@@ -86,7 +84,7 @@ public class Slush implements Protocol {
     final Map<Integer, Answer> answerIP = new HashMap<>();
 
     SlushNode(Random rd, NodeBuilder nb) {
-      super(rd, nb, false);
+      super(rd, nb);
     }
 
     List<SlushNode> getRandomRemotes() {
@@ -114,7 +112,7 @@ public class Slush implements Protocol {
     void onQuery(Query qa, SlushNode from) {
       if (myColor == 0) {
         myColor = qa.color;
-        sendQuery();
+        sendQuery(1);
       }
       network.send(new AnswerQuery(qa, myColor), this, from);
     }
@@ -133,23 +131,27 @@ public class Slush implements Protocol {
         if (asw.colorsFound[otherColor()] > AK) {
           myColor = otherColor();
         }
-        count++;
+
+        if (asw.countInM < M) {
+          sendQuery(asw.countInM + 1);
+        }
       }
-      if (count < M) {
-        sendQuery();
-      }
-      actionCt++;
     }
 
-    void sendQuery() {
+    void sendQuery(int countInM) {
       Query q = new Query(++myQueryNonce, myColor);
-      answerIP.put(q.id, new Answer());
+      answerIP.put(q.id, new Answer(countInM));
       network.send(q, this, getRandomRemotes());
     }
   }
 
   static class Answer {
+    final int countInM;
     private final int[] colorsFound = new int[COLOR_NB + 1];
+
+    Answer(int countInM) {
+      this.countInM = countInM;
+    }
 
     int answerCount() {
       int sum = 0;
@@ -176,24 +178,22 @@ public class Slush implements Protocol {
     SlushNode uncolored2 = sp.network().getNodeById(1);
 
     uncolored1.myColor = 1;
-    uncolored1.sendQuery();
+    uncolored1.sendQuery(1);
 
     uncolored2.myColor = 2;
-    uncolored2.sendQuery();
+    uncolored2.sendQuery(1);
 
-    sp.network.runMs(10000);
-    System.out.println("Finished");
+    sp.network.runMs(20000);
+    System.out.println("Finished, " + sp.network.msgs.size() + " messages");
 
-    System.out.println("N=" + NODES_AV + ", K=" + K + ", AK=" + AK);
+    System.out.println("N=" + NODES_AV + ", K=" + K + ", AK=" + AK + " M=" + sp.M);
     int[] res = new int[COLOR_NB + 1];
     for (SlushNode n : sp.network.allNodes) {
       res[n.myColor]++;
     }
 
-    System.out.println("actions count:" + sp.actionCt);
     for (int i = 0; i < COLOR_NB + 1; i++) {
       System.out.println(i + ":" + res[i]);
     }
   }
-
 }
