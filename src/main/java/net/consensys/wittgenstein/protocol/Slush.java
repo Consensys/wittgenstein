@@ -6,7 +6,6 @@ import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.core.Protocol;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.tools.Graph;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -167,10 +166,11 @@ public class Slush implements Protocol {
       return sum;
     }
   }
-  private static int[] getColorSum(Slush sp ){
+
+  private static int[] getColorSum(Slush sp) {
     int[] colorsSum = new int[COLOR_NB + 1];
-    for(SlushNode n:sp.network.allNodes){
-        colorsSum[n.myColor]++;
+    for (SlushNode n : sp.network.allNodes) {
+      colorsSum[n.myColor]++;
     }
     return colorsSum;
   }
@@ -186,15 +186,16 @@ public class Slush implements Protocol {
     Slush spTemplate = new Slush();
     // Set network latency
     spTemplate.network.setNetworkLatency(nl);
-    String desc = "Slush Protocol color metastasis by time periods in ms with K=" + spTemplate.K + " rounds M= "+spTemplate.M;
+    String desc = "Slush Protocol color metastasis by time periods in ms with K=" + spTemplate.K
+        + " rounds M= " + spTemplate.M;
     Graph graph = new Graph(desc, "time in ms", "number of colored nodes");
     Graph medianGraph = new Graph("average number of colored nodes per time (" + desc + ")",
-            "time in ms", "number of nodes colored by color");
+        "time in ms", "number of nodes colored by color");
 
     //Initialize with 100 nodes
     spTemplate.init();
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 100; i++) {
       Slush sp = spTemplate.copy();
       sp.network.setNetworkLatency(nl);
       sp.network.rd.setSeed(i);
@@ -226,8 +227,8 @@ public class Slush implements Protocol {
 
         //System.out.println("Finished, " + sp.network.msgs.size() + " messages");
         t++;
-      } while (t < sp.network.allNodes.size() +50 );
-      System.out.println("Simulation number "+i);
+      } while (t < sp.network.allNodes.size() + 50);
+      System.out.println("Simulation number " + i);
       graph.addSerie(curCol1);
       graph.addSerie(curCol2);
       graph.addSerie(curUnCol);
@@ -252,11 +253,11 @@ public class Slush implements Protocol {
     }
 
     Graph.Series seriesCol1 =
-            Graph.statSeries("Number of Nodes color 1 - average", rawResultsCol1).avg;
+        Graph.statSeries("Number of Nodes color 1 - average", rawResultsCol1).avg;
     Graph.Series seriesCol2 =
-            Graph.statSeries("Number of Nodes color 2 - average", rawResultsCol2).avg;
+        Graph.statSeries("Number of Nodes color 2 - average", rawResultsCol2).avg;
     Graph.Series seriesUnCol =
-            Graph.statSeries("Number of uncolored Nodes  - average", rawResultsUnCol).avg;
+        Graph.statSeries("Number of uncolored Nodes  - average", rawResultsUnCol).avg;
     medianGraph.addSerie(seriesUnCol);
     medianGraph.addSerie(seriesCol1);
     medianGraph.addSerie(seriesCol2);
@@ -267,6 +268,6 @@ public class Slush implements Protocol {
       System.err.println("Can't generate the graph: " + e.getMessage());
     }
 
-    }
+  }
 
 }
