@@ -37,7 +37,7 @@ public class SlushSnowflake {
 
   private int actionCt = 0;
 
-  private static final Random rd = new Random();
+  private static final Random rd = new Random(3);
   private SlushNode[] nodes = new SlushNode[NODES_NB];
 
 
@@ -247,9 +247,9 @@ public class SlushSnowflake {
 
 
   void play() {
-    int badNodes = BYZANTINE_NODES_NB;
+    int badNodes = 0;
     for (int i = 0; i < NODES_NB; i++) {
-      SlushNode n = badNodes-- > 0 ? new ByzantineNode(i) : new SnowflakeNode(i);
+      SlushNode n = badNodes-- > 0 ? new ByzantineNode(i) : new SlushNode(i);
       nodes[i] = n;
     }
 
@@ -295,4 +295,3 @@ public class SlushSnowflake {
   }
 
 }
-
