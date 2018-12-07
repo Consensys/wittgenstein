@@ -30,6 +30,9 @@ But you're actually supposed to write code to implement your specific scenarios 
  would be to be able to define scenarios reusable between protocols.
 
 ## How to implement a new protocol
+
+For a complete description go to the wiki.
+
 Here is an example:
 ```java
 public class PingPong implements Protocol {
