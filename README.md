@@ -32,75 +32,82 @@ But you're actually supposed to write code to implement your specific scenarios 
 ## How to implement a new protocol
 Here is an example:
 ```java
-public class PingPong implements Protocol{
-    /**
-     * You need a network. Nodes are added to this network.
-     * Network latency can be set later.
-     */
-    private final Network<PingPongNode> network = new Network<>();
+public class PingPong implements Protocol {
+  /**
+   * You need a network. Nodes are added to this network. Network latency can be set later.
+   */
+  private final Network<PingPongNode> network = new Network<>();
 
-    /**
-     * Nodes have positions. This position is chosen by the builder.
-     */
-    private final Node.NodeBuilder nb = new Node.NodeBuilderWithRandomPosition(network.rd);
+  /**
+   * Nodes have positions. This position is chosen by the builder.
+   */
+  private final Node.NodeBuilder nb = new Node.NodeBuilderWithRandomPosition();
 
-    /**
-     * Messages, exchanged on the network, are specific to the protocol.
-     */
-    static class Ping extends Network.Message<PingPongNode> {
-        @Override
-        public void action(PingPongNode from, PingPongNode to) {
-            to.onPing(from);
-        }
+  /**
+   * Messages, exchanged on the network, are specific to the protocol.
+   */
+  static class Ping extends Network.Message<PingPongNode> {
+    @Override
+    public void action(PingPongNode from, PingPongNode to) {
+      to.onPing(from);
+    }
+  }
+
+  static class Pong extends Network.Message<PingPongNode> {
+    @Override
+    public void action(PingPongNode from, PingPongNode to) {
+      to.onPong();
+    }
+  }
+
+ 
+  class PingPongNode extends Node {
+    int pong;
+
+    PingPongNode() {
+      super(network.rd, nb);
     }
 
-    static class Pong extends Network.Message<PingPongNode> {
-        @Override
-        public void action(PingPongNode from, PingPongNode to) {
-            to.onPong(from);
-        }
+    void onPing(PingPongNode from) {
+      network.send(new Pong(), this, from);
     }
 
-    /**
-     * Nodes are specialized for the protocol.
-     */
-    class PingPongNode extends Node {
-        int pong;
-
-        PingPongNode() {
-            super(nb);
-        }
-
-        void onPing(PingPongNode from) {
-            network.send(new Pong(), this, from);
-        }
-
-        void onPong(PingPongNode from) {
-            pong++;
-        }
+    void onPong() {
+      pong++;
     }
+  }
 
-    PingPongNode init(int nodeCt) {
-        for (int i = 0; i < nodeCt; i++) {
-            network.addNode(new PingPongNode());
-        }
-        return network.getNodeById(0);
+  @Override
+  public PingPong copy() {
+    return new PingPong();
+  }
+
+  @Override
+  public void init() {
+    for (int i = 0; i < 1000; i++) {
+      network.addNode(new PingPongNode());
     }
+  }
+
+  @Override
+  public Network<PingPongNode> network() {
+    return network;
+  }
 
 
-    public static void main(String... args) {
-        PingPong p = new PingPong();
+  public static void main(String... args) {
+    PingPong p = new PingPong();
+    
+    p.network.setNetworkLatency(new NetworkLatency.NetworkLatencyByDistance());
 
-        // Set the latency.
-        p.network.setNetworkLatency(new NetworkLatency.NetworkLatencyByDistance());
-
-        PingPongNode witness = p.init(1000);
-        p.network.sendAll(new Ping(), witness);
-        for (int i = 0; i < 1000; i += 100) {
-            System.out.println(i + " ms, pongs received " + witness.pong);
-            p.network.runMs(100);
-        }
+    p.init();
+    PingPongNode witness = p.network.getNodeById(0);
+    p.network.sendAll(new Ping(), witness);
+    for (int i = 0; i < 1000; i += 100) {
+      System.out.println(i + " ms, pongs received " + witness.pong);
+      p.network.runMs(100);
     }
+  }
 }
 ```
 This will print:
