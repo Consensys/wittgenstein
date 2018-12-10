@@ -6,6 +6,7 @@ import net.consensys.wittgenstein.tools.Graph;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.function.Predicate;
 
 public class Slush implements Protocol {
   private static final int NODES_AV = 100;
@@ -27,15 +28,16 @@ public class Slush implements Protocol {
   /**
    * A stands for the alpha threshold
    */
-  private final float A;
-  private final float AK;
+  private final double A;
+  private  double AK;
 
-  private Slush(int M, int K, float A) {
+  private Slush(int M, int K, double A, NetworkLatency nl) {
     this.M = M;
     this.K = K;
     this.A = A;
     this.AK = K * A;
     this.nb = new Node.NodeBuilderWithRandomPosition();
+    this.network.setNetworkLatency(nl);
   }
 
   @Override
@@ -43,6 +45,13 @@ public class Slush implements Protocol {
     for (int i = 0; i < NODES_AV; i++) {
       network.addNode(new SlushNode(network.rd, nb));
     }
+    SlushNode uncolored1 = network().getNodeById(0);
+    SlushNode uncolored2 = network().getNodeById(1);
+    uncolored1.myColor = 1;
+    uncolored1.sendQuery(1);
+
+    uncolored2.myColor = 2;
+    uncolored2.sendQuery(1);
   }
 
   @Override
@@ -52,7 +61,7 @@ public class Slush implements Protocol {
 
   @Override
   public Slush copy() {
-    return new Slush(M, K, A);
+    return new Slush(M, K, A, network.networkLatency);
   }
 
   static class Query extends Network.Message<SlushNode> {
@@ -177,11 +186,13 @@ public class Slush implements Protocol {
     return colorsSum;
   }
 
-  private void play1() {
-    Slush sl = new Slush(5, 7, 4 / 7);
+  private static void play1() {
+    NetworkLatency nl = new NetworkLatency.NetworkLatencyByDistance();
+    Slush sl = new Slush(5, 7, 4.0 / 7.0, new NetworkLatency.NetworkLatencyByDistance());
     String desc =
-        "Slush Protocol color metastasis by time periods in ms with K=" + K + " rounds M= " + sl.M;
+            "Slush Protocol color metastasis by time periods in ms with K=" + sl.K + " rounds M= " + sl.M;
 
+    // sl.network.setNetworkLatency(nl);
     StatsHelper.StatsGetter stats = new StatsHelper.StatsGetter() {
       final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
 
@@ -192,13 +203,41 @@ public class Slush implements Protocol {
 
       @Override
       public StatsHelper.Stat get(List<? extends Node> liveNodes) {
-        return StatsHelper.getStatsOn(liveNodes, n -> ((SlushNode) n).myColor);
+
+        int[] colors = getDominantColor(liveNodes);
+        System.out.println("Colored nodes by the numbers: "+colors[0]+" remain uncolored "+colors[1]+" are red "+colors[2]+" are blue.");
+        return StatsHelper.getStatsOn(liveNodes,n ->colors[((SlushNode)n).myColor] );
       }
     };
     ProgressPerTime ppt = new ProgressPerTime(sl, desc, "Number of y-Colored Nodes", stats, 10);
+
+    Predicate<Protocol> contIf = p1 -> {
+      int [] colors ;
+      for(Node n : p1.network().allNodes){
+        SlushNode gn = (SlushNode) n;
+        colors = getDominantColor(p1.network().allNodes);
+        if(gn.myColor==0 || (colors[1] <95  && colors[2]>95) || (colors[1] >95  && colors[2]<95)){
+          return true;
+        }
+      }
+
+      return false;
+    };
+
+    ppt.run(contIf);
   }
 
-  private void play2() {
+  private static int[] getDominantColor(List<? extends Node> ps){
+    int [] colors = new int[3];
+    for(Node n: ps){
+      SlushNode sn = (SlushNode)n;
+      colors[sn.myColor]++;
+    }
+
+    return colors;
+  }
+
+  private static void play2() {
     NetworkLatency nl = new NetworkLatency.NetworkLatencyByDistance();
     List<Graph.Series> rawResultsCol1 = new ArrayList<>();
     List<Graph.Series> rawResultsCol2 = new ArrayList<>();
@@ -207,20 +246,20 @@ public class Slush implements Protocol {
     System.out.println("" + nl);
 
     //Instantiate protocol
-    Slush spTemplate = new Slush(5, 7, 4 / 7);
-    //ProgressPerTime ppt = new ProgressPerTime(spTemplate,)
+    Slush spTemplate = new Slush(5, 7, 4.0 / 7.0,nl);
+
     // Set network latency
     spTemplate.network.setNetworkLatency(nl);
-    String desc = "Slush Protocol color metastasis by time periods in ms with K=" + K
-        + " rounds M= " + spTemplate.M;
+    String desc = "Slush Protocol color metastasis by time periods in ms with K=" + spTemplate.K
+            + " rounds M= " + spTemplate.M;
     Graph graph = new Graph(desc, "time in ms", "number of colored nodes");
     Graph medianGraph = new Graph("average number of colored nodes per time (" + desc + ")",
-        "time in ms", "number of nodes colored by color");
+            "time in ms", "number of nodes colored by color");
 
     //Initialize with 100 nodes
     spTemplate.init();
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 1; i++) {
       Slush sp = spTemplate.copy();
       sp.network.setNetworkLatency(nl);
       sp.network.rd.setSeed(i);
@@ -232,14 +271,7 @@ public class Slush implements Protocol {
       rawResultsCol2.add(curCol2);
       rawResultsUnCol.add(curUnCol);
 
-      SlushNode uncolored1 = sp.network().getNodeById(0);
-      SlushNode uncolored2 = sp.network().getNodeById(1);
       int t = 0;
-      uncolored1.myColor = 1;
-      uncolored1.sendQuery(1);
-
-      uncolored2.myColor = 2;
-      uncolored2.sendQuery(1);
       do {
         int[] colors = new int[COLOR_NB + 1];
 
@@ -252,7 +284,7 @@ public class Slush implements Protocol {
 
         //System.out.println("Finished, " + sp.network.msgs.size() + " messages");
         t++;
-      } while (t < sp.network.allNodes.size() + 50);
+      } while (t < sp.network.allNodes.size() + 100);
       System.out.println("Simulation number " + i);
       graph.addSerie(curCol1);
       graph.addSerie(curCol2);
@@ -260,7 +292,7 @@ public class Slush implements Protocol {
       //add each series to list so average can be calculated
       //add simulation loop
 
-      System.out.println("N=" + NODES_AV + ", K=" + K + ", AK=" + AK + ", M=" + sp.M);
+      System.out.println("N=" + NODES_AV + ", K=" + sp.K + ", AK=" + sp.AK + ", M=" + sp.M);
       int[] res = new int[COLOR_NB + 1];
       for (SlushNode n : sp.network.allNodes) {
         res[n.myColor]++;
@@ -278,11 +310,11 @@ public class Slush implements Protocol {
     }
 
     Graph.Series seriesCol1 =
-        Graph.statSeries("Number of Nodes color 1 - average", rawResultsCol1).avg;
+            Graph.statSeries("Number of Nodes color 1 - average", rawResultsCol1).avg;
     Graph.Series seriesCol2 =
-        Graph.statSeries("Number of Nodes color 2 - average", rawResultsCol2).avg;
+            Graph.statSeries("Number of Nodes color 2 - average", rawResultsCol2).avg;
     Graph.Series seriesUnCol =
-        Graph.statSeries("Number of uncolored Nodes  - average", rawResultsUnCol).avg;
+            Graph.statSeries("Number of uncolored Nodes  - average", rawResultsUnCol).avg;
     medianGraph.addSerie(seriesUnCol);
     medianGraph.addSerie(seriesCol1);
     medianGraph.addSerie(seriesCol2);
@@ -295,8 +327,8 @@ public class Slush implements Protocol {
   }
 
   public static void main(String... args) {
-    new Slush(5, 7, 4 / 7).play1();
-    new Slush(5, 7, 4 / 7).play2();
+    play1();
+    play2();
 
   }
 
