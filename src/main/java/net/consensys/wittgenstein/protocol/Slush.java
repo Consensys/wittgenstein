@@ -1,14 +1,9 @@
 package net.consensys.wittgenstein.protocol;
 
-import net.consensys.wittgenstein.core.Network;
-import net.consensys.wittgenstein.core.NetworkLatency;
-import net.consensys.wittgenstein.core.Node;
-import net.consensys.wittgenstein.core.Protocol;
+import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
-import net.consensys.wittgenstein.tools.Graph;
-import java.io.File;
-import java.io.IOException;
 import java.util.*;
+import java.util.function.Predicate;
 
 public class Slush implements Protocol {
   private static final int NODES_AV = 100;
@@ -20,19 +15,24 @@ public class Slush implements Protocol {
    * M is the number of rounds. "Finally, the node decides the color it ended up with at time m []
    * we will show that m grows logarithmically with n."
    */
-  private final int M = 5;
+  private final int M;
 
   /**
    * K is the sample size you take
    */
-  private static final int K = 7;
+  private final int K;
 
   /**
    * A stands for the alpha threshold
    */
-  private static final int AK = 4;
+  private final double A;
+  private double AK;
 
-  private Slush() {
+  private Slush(int M, int K, double A) {
+    this.M = M;
+    this.K = K;
+    this.A = A;
+    this.AK = K * A;
     this.nb = new Node.NodeBuilderWithRandomPosition();
   }
 
@@ -41,6 +41,13 @@ public class Slush implements Protocol {
     for (int i = 0; i < NODES_AV; i++) {
       network.addNode(new SlushNode(network.rd, nb));
     }
+    SlushNode uncolored1 = network().getNodeById(0);
+    SlushNode uncolored2 = network().getNodeById(1);
+    uncolored1.myColor = 1;
+    uncolored1.sendQuery(1);
+
+    uncolored2.myColor = 2;
+    uncolored2.sendQuery(1);
   }
 
   @Override
@@ -50,7 +57,7 @@ public class Slush implements Protocol {
 
   @Override
   public Slush copy() {
-    return new Slush();
+    return new Slush(M, K, A);
   }
 
   static class Query extends Network.Message<SlushNode> {
@@ -86,6 +93,7 @@ public class Slush implements Protocol {
   class SlushNode extends Node {
     int myColor = 0;
     int myQueryNonce;
+    int round = 0;
     final Map<Integer, Answer> answerIP = new HashMap<>();
 
     SlushNode(Random rd, NodeBuilder nb) {
@@ -137,7 +145,8 @@ public class Slush implements Protocol {
           myColor = otherColor();
         }
 
-        if (asw.round < M) {
+        if (round < M) {
+          round++;
           sendQuery(asw.round + 1);
         }
       }
@@ -158,7 +167,7 @@ public class Slush implements Protocol {
       this.round = round;
     }
 
-    int answerCount() {
+    private int answerCount() {
       int sum = 0;
       for (int i : colorsFound) {
         sum += i;
@@ -167,107 +176,57 @@ public class Slush implements Protocol {
     }
   }
 
-  private static int[] getColorSum(Slush sp) {
-    int[] colorsSum = new int[COLOR_NB + 1];
-    for (SlushNode n : sp.network.allNodes) {
-      colorsSum[n.myColor]++;
+  private void play() {
+
+    String desc = "Slush Protocol color metastasis by time periods in ms with K=" + this.K
+        + " rounds M= " + this.M;
+
+    // sl.network.setNetworkLatency(nl);
+    StatsHelper.StatsGetter stats = new StatsHelper.StatsGetter() {
+      final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
+
+      @Override
+      public List<String> fields() {
+        return fields;
+      }
+
+      @Override
+      public StatsHelper.Stat get(List<? extends Node> liveNodes) {
+
+        int[] colors = getDominantColor(liveNodes);
+        System.out.println("Colored nodes by the numbers: " + colors[0] + " remain uncolored "
+            + colors[1] + " are red " + colors[2] + " are blue.");
+        return StatsHelper.getStatsOn(liveNodes, n -> colors[((SlushNode) n).myColor]);
+      }
+    };
+    ProgressPerTime ppt = new ProgressPerTime(this, desc, "Number of y-Colored Nodes", stats, 10);
+
+    Predicate<Protocol> contIf = p1 -> {
+      int[] colors;
+      for (Node n : p1.network().allNodes) {
+        SlushNode gn = (SlushNode) n;
+        colors = getDominantColor(p1.network().allNodes);
+        if ((gn.round < this.M && colors[1] != 100) || (gn.round < this.M && colors[2] != 100)) {
+          return true;
+        }
+      }
+
+      return false;
+    };
+    ppt.run(contIf);
+  }
+
+  private static int[] getDominantColor(List<? extends Node> ps) {
+    int[] colors = new int[3];
+    for (Node n : ps) {
+      SlushNode sn = (SlushNode) n;
+      colors[sn.myColor]++;
     }
-    return colorsSum;
+    return colors;
   }
 
   public static void main(String... args) {
-    NetworkLatency nl = new NetworkLatency.NetworkLatencyByDistance();
-    List<Graph.Series> rawResultsCol1 = new ArrayList<>();
-    List<Graph.Series> rawResultsCol2 = new ArrayList<>();
-    List<Graph.Series> rawResultsUnCol = new ArrayList<>();
-
-    System.out.println("" + nl);
-    //Instantiate protocol
-    Slush spTemplate = new Slush();
-    // Set network latency
-    spTemplate.network.setNetworkLatency(nl);
-    String desc = "Slush Protocol color metastasis by time periods in ms with K=" + spTemplate.K
-        + " rounds M= " + spTemplate.M;
-    Graph graph = new Graph(desc, "time in ms", "number of colored nodes");
-    Graph medianGraph = new Graph("average number of colored nodes per time (" + desc + ")",
-        "time in ms", "number of nodes colored by color");
-
-    //Initialize with 100 nodes
-    spTemplate.init();
-
-    for (int i = 0; i < 100; i++) {
-      Slush sp = spTemplate.copy();
-      sp.network.setNetworkLatency(nl);
-      sp.network.rd.setSeed(i);
-      sp.init();
-      Graph.Series curCol1 = new Graph.Series("Color 1 count - series " + i);
-      Graph.Series curCol2 = new Graph.Series("Color 2 count - seriess " + i);
-      Graph.Series curUnCol = new Graph.Series("Uncolored Nodes count -  series " + i);
-      rawResultsCol1.add(curCol1);
-      rawResultsCol2.add(curCol2);
-      rawResultsUnCol.add(curUnCol);
-
-      SlushNode uncolored1 = sp.network().getNodeById(0);
-      SlushNode uncolored2 = sp.network().getNodeById(1);
-      int t = 0;
-      uncolored1.myColor = 1;
-      uncolored1.sendQuery(1);
-
-      uncolored2.myColor = 2;
-      uncolored2.sendQuery(1);
-      do {
-        int[] colors = new int[COLOR_NB + 1];
-
-        colors = getColorSum(sp);
-        sp.network.runMs(10);
-        //Need a function that calculates the sum of all colored nodes
-        curUnCol.addLine(new Graph.ReportLine(sp.network.time, colors[0]));
-        curCol1.addLine(new Graph.ReportLine(sp.network.time, colors[1]));
-        curCol2.addLine(new Graph.ReportLine(sp.network.time, colors[2]));
-
-        //System.out.println("Finished, " + sp.network.msgs.size() + " messages");
-        t++;
-      } while (t < sp.network.allNodes.size() + 50);
-      System.out.println("Simulation number " + i);
-      graph.addSerie(curCol1);
-      graph.addSerie(curCol2);
-      graph.addSerie(curUnCol);
-      //add each series to list so average can be calculated
-      //add simulation loop
-
-      System.out.println("N=" + NODES_AV + ", K=" + K + ", AK=" + AK + ", M=" + sp.M);
-      int[] res = new int[COLOR_NB + 1];
-      for (SlushNode n : sp.network.allNodes) {
-        res[n.myColor]++;
-      }
-
-      for (int j = 0; j < COLOR_NB + 1; j++) {
-        System.out.println(j + ":" + res[j]);
-      }
-    }
-
-    try {
-      graph.save(new File("/tmp/graph1.png"));
-    } catch (IOException e) {
-      System.err.println("Can't generate the graph: " + e.getMessage());
-    }
-
-    Graph.Series seriesCol1 =
-        Graph.statSeries("Number of Nodes color 1 - average", rawResultsCol1).avg;
-    Graph.Series seriesCol2 =
-        Graph.statSeries("Number of Nodes color 2 - average", rawResultsCol2).avg;
-    Graph.Series seriesUnCol =
-        Graph.statSeries("Number of uncolored Nodes  - average", rawResultsUnCol).avg;
-    medianGraph.addSerie(seriesUnCol);
-    medianGraph.addSerie(seriesCol1);
-    medianGraph.addSerie(seriesCol2);
-
-    try {
-      medianGraph.save(new File("/tmp/graph_avg.png"));
-    } catch (IOException e) {
-      System.err.println("Can't generate the graph: " + e.getMessage());
-    }
-
+    new Slush(5, 7, 4.0 / 7.0).play();
   }
 
 }
