@@ -120,7 +120,7 @@ public class Graph {
         .build();
 
     chart.getStyler().setLegendPosition(Styler.LegendPosition.InsideNW);
-    chart.getStyler().setDefaultSeriesRenderStyle(XYSeries.XYSeriesRenderStyle.Area);
+    chart.getStyler().setDefaultSeriesRenderStyle(XYSeries.XYSeriesRenderStyle.Line);
 
     double minX = Double.MAX_VALUE;
     double maxX = Double.MIN_VALUE;
