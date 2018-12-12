@@ -157,6 +157,13 @@ public class Slush implements Protocol {
       answerIP.put(q.id, new Answer(countInM));
       network.send(q, this, getRandomRemotes());
     }
+
+    @Override
+    public String toString() {
+      return "SanFerminNode{" + "nodeId=" + nodeId + ", thresholdAt=" + K + ", doneAt=" + doneAt
+          + ", msgReceived=" + msgReceived + ", msgSent=" + msgSent + ", KBytesSent="
+          + bytesSent / 1024 + ", KBytesReceived=" + bytesReceived / 1024 + '}';
+    }
   }
 
   static class Answer {

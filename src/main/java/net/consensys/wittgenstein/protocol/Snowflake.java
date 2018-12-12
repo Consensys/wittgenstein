@@ -132,9 +132,13 @@ public class Snowflake implements Protocol {
     }
 
     /**
-     * Once the querying node collects k responses, it checks if a fraction ≥ αk are for the same
-     * color, where α > 0.5 is a protocol parameter. If the αk threshold is met and the sampled
-     * color differs from the node’s own color, the node flips to that color.
+     * 1: procedure snowflakeLoop(u, col0 ∈ {R, B, ⊥}) 2: col := col0, cnt := 0 3: while undecided
+     * do 4: if col = ⊥ then continue 5: K := sample(N \ u, k) 6: P := [query(v, col) for v ∈ K] 7:
+     * for col' ∈ {R, B} do 8: if P.count(col') ≥ α · k then 9: if col' != col then 10: col := col'
+     * , cnt := 0 11: else 12: if ++cnt > β then accept(col)
+     * <p>
+     * What's not very clear is what happens during the process: are we returning the color in
+     * progress.
      */
     void onAnswer(int queryId, int color) {
       Answer asw = answerIP.get(queryId);
@@ -160,6 +164,13 @@ public class Snowflake implements Protocol {
       Query q = new Query(++myQueryNonce, myColor);
       answerIP.put(q.id, new Answer(countInM));
       network.send(q, this, getRandomRemotes());
+    }
+
+    @Override
+    public String toString() {
+      return "SanFerminNode{" + "nodeId=" + nodeId + ", thresholdAt=" + K + ", doneAt=" + doneAt
+          + ", msgReceived=" + msgReceived + ", msgSent=" + msgSent + ", KBytesSent="
+          + bytesSent / 1024 + ", KBytesReceived=" + bytesReceived / 1024 + '}';
     }
 
   }
