@@ -28,7 +28,7 @@ public class Slush implements Protocol {
   private final double A;
   private double AK;
 
-  private Slush(int M, int K, double A) {
+  public Slush(int M, int K, double A) {
     this.M = M;
     this.K = K;
     this.A = A;
