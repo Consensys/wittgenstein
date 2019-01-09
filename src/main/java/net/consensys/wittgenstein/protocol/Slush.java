@@ -177,13 +177,12 @@ public class Slush implements Protocol {
   }
 
   private void play() {
-
     String desc = "Slush Protocol color metastasis by time periods in ms with K=" + this.K
         + " rounds M= " + this.M;
 
     // sl.network.setNetworkLatency(nl);
     StatsHelper.StatsGetter stats = new StatsHelper.StatsGetter() {
-      final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
+      final List<String> fields = new StatsHelper.Counter(0).fields();
 
       @Override
       public List<String> fields() {
@@ -192,11 +191,10 @@ public class Slush implements Protocol {
 
       @Override
       public StatsHelper.Stat get(List<? extends Node> liveNodes) {
-
         int[] colors = getDominantColor(liveNodes);
         System.out.println("Colored nodes by the numbers: " + colors[0] + " remain uncolored "
             + colors[1] + " are red " + colors[2] + " are blue.");
-        return StatsHelper.getStatsOn(liveNodes, n -> colors[((SlushNode) n).myColor]);
+        return StatsHelper.getStatsOn (liveNodes,  n -> colors[((SlushNode) n).myColor]);
       }
     };
     ProgressPerTime ppt = new ProgressPerTime(this, desc, "Number of y-Colored Nodes", stats, 10);
