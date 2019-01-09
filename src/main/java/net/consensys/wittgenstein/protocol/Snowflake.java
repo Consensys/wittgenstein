@@ -1,13 +1,16 @@
 package net.consensys.wittgenstein.protocol;
 
-import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.Network;
+import net.consensys.wittgenstein.core.Node;
+import net.consensys.wittgenstein.core.ProgressPerTime;
+import net.consensys.wittgenstein.core.Protocol;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import java.util.*;
 import java.util.function.Predicate;
 
-public class Slush implements Protocol {
+public class Snowflake implements Protocol {
   private static final int NODES_AV = 100;
-  private final Network<SlushNode> network = new Network<>();
+  private Network<SnowflakeNode> network = new Network<>();
   final Node.NodeBuilder nb;
   private static final int COLOR_NB = 2;
 
@@ -27,22 +30,29 @@ public class Slush implements Protocol {
    */
   private final double A;
   private double AK;
+  private final int B;
 
-  public Slush(int M, int K, double A) {
+  private Snowflake(int M, int K, double A, int B) {
     this.M = M;
     this.K = K;
     this.A = A;
-    this.AK = K * A;
+    this.B = B;
+    this.AK = A * K;
     this.nb = new Node.NodeBuilderWithRandomPosition();
+  }
+
+  @Override
+  public Protocol copy() {
+    return new Snowflake(M, K, A, B);
   }
 
   @Override
   public void init() {
     for (int i = 0; i < NODES_AV; i++) {
-      network.addNode(new SlushNode(network.rd, nb));
+      network.addNode(new SnowflakeNode(network.rd, nb));
     }
-    SlushNode uncolored1 = network().getNodeById(0);
-    SlushNode uncolored2 = network().getNodeById(1);
+    SnowflakeNode uncolored1 = network().getNodeById(0);
+    SnowflakeNode uncolored2 = network().getNodeById(1);
     uncolored1.myColor = 1;
     uncolored1.sendQuery(1);
 
@@ -51,16 +61,11 @@ public class Slush implements Protocol {
   }
 
   @Override
-  public Network<SlushNode> network() {
+  public Network<SnowflakeNode> network() {
     return network;
   }
 
-  @Override
-  public Slush copy() {
-    return new Slush(M, K, A);
-  }
-
-  static class Query extends Network.Message<SlushNode> {
+  static class Query extends Network.Message<SnowflakeNode> {
     final int id;
     final int color;
 
@@ -70,12 +75,12 @@ public class Slush implements Protocol {
     }
 
     @Override
-    public void action(SlushNode from, SlushNode to) {
+    public void action(SnowflakeNode from, SnowflakeNode to) {
       to.onQuery(this, from);
     }
   }
 
-  static class AnswerQuery extends Network.Message<SlushNode> {
+  static class AnswerQuery extends Network.Message<SnowflakeNode> {
     final Query originalQuery;
     final int color;
 
@@ -85,23 +90,24 @@ public class Slush implements Protocol {
     }
 
     @Override
-    public void action(SlushNode from, SlushNode to) {
+    public void action(SnowflakeNode from, SnowflakeNode to) {
       to.onAnswer(originalQuery.id, color);
     }
   }
 
-  class SlushNode extends Node {
+  class SnowflakeNode extends Node {
+
     int myColor = 0;
     int myQueryNonce;
-    int round = 0;
+    int cnt = 0;
     final Map<Integer, Answer> answerIP = new HashMap<>();
 
-    SlushNode(Random rd, NodeBuilder nb) {
+    SnowflakeNode(Random rd, NodeBuilder nb) {
       super(rd, nb);
     }
 
-    List<SlushNode> getRandomRemotes() {
-      List<SlushNode> res = new ArrayList<>(K);
+    List<SnowflakeNode> getRandomRemotes() {
+      List<SnowflakeNode> res = new ArrayList<>(K);
 
       while (res.size() != K) {
         int r = network.rd.nextInt(NODES_AV);
@@ -117,12 +123,7 @@ public class Slush implements Protocol {
       return myColor == 1 ? 2 : 1;
     }
 
-    /**
-     * Upon receiving a query, an uncolored node adopts the color in the query, responds with that
-     * color, and initiates its own query, whereas a colored node simply responds with its current
-     * color.
-     */
-    void onQuery(Query qa, SlushNode from) {
+    void onQuery(Query qa, SnowflakeNode from) {
       if (myColor == 0) {
         myColor = qa.color;
         sendQuery(1);
@@ -131,9 +132,13 @@ public class Slush implements Protocol {
     }
 
     /**
-     * Once the querying node collects k responses, it checks if a fraction ≥ αk are for the same
-     * color, where α > 0.5 is a protocol parameter. If the αk threshold is met and the sampled
-     * color differs from the node’s own color, the node flips to that color.
+     * 1: procedure snowflakeLoop(u, col0 ∈ {R, B, ⊥}) 2: col := col0, cnt := 0 3: while undecided
+     * do 4: if col = ⊥ then continue 5: K := sample(N \ u, k) 6: P := [query(v, col) for v ∈ K] 7:
+     * for col' ∈ {R, B} do 8: if P.count(col') ≥ α · k then 9: if col' != col then 10: col := col'
+     * , cnt := 0 11: else 12: if ++cnt > β then accept(col)
+     * <p>
+     * What's not very clear is what happens during the process: are we returning the color in
+     * progress.
      */
     void onAnswer(int queryId, int color) {
       Answer asw = answerIP.get(queryId);
@@ -143,10 +148,13 @@ public class Slush implements Protocol {
         answerIP.remove(queryId);
         if (asw.colorsFound[otherColor()] > AK) {
           myColor = otherColor();
+          cnt = 0;
+        } else {
+          if (asw.colorsFound[myColor] > AK) {
+            cnt++;
+          }
         }
-
-        if (round < M) {
-          round++;
+        if (cnt <= B) {
           sendQuery(asw.round + 1);
         }
       }
@@ -164,8 +172,8 @@ public class Slush implements Protocol {
           + ", msgReceived=" + msgReceived + ", msgSent=" + msgSent + ", KBytesSent="
           + bytesSent / 1024 + ", KBytesReceived=" + bytesReceived / 1024 + '}';
     }
-  }
 
+  }
   static class Answer {
     final int round;
     private final int[] colorsFound = new int[COLOR_NB + 1];
@@ -184,12 +192,13 @@ public class Slush implements Protocol {
   }
 
   private void play() {
+
     String desc = "Slush Protocol color metastasis by time periods in ms with K=" + this.K
         + " rounds M= " + this.M;
 
     // sl.network.setNetworkLatency(nl);
     StatsHelper.StatsGetter stats = new StatsHelper.StatsGetter() {
-      final List<String> fields = new StatsHelper.Counter(0).fields();
+      final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
 
       @Override
       public List<String> fields() {
@@ -198,10 +207,11 @@ public class Slush implements Protocol {
 
       @Override
       public StatsHelper.Stat get(List<? extends Node> liveNodes) {
+
         int[] colors = getDominantColor(liveNodes);
         System.out.println("Colored nodes by the numbers: " + colors[0] + " remain uncolored "
             + colors[1] + " are red " + colors[2] + " are blue.");
-        return StatsHelper.getStatsOn (liveNodes,  n -> colors[((SlushNode) n).myColor]);
+        return StatsHelper.getStatsOn(liveNodes, n -> colors[((SnowflakeNode) n).myColor]);
       }
     };
     ProgressPerTime ppt = new ProgressPerTime(this, desc, "Number of y-Colored Nodes", stats, 10);
@@ -209,9 +219,9 @@ public class Slush implements Protocol {
     Predicate<Protocol> contIf = p1 -> {
       int[] colors;
       for (Node n : p1.network().allNodes) {
-        SlushNode gn = (SlushNode) n;
+        SnowflakeNode gn = (SnowflakeNode) n;
         colors = getDominantColor(p1.network().allNodes);
-        if ((gn.round < this.M && colors[1] != 100) || (gn.round < this.M && colors[2] != 100)) {
+        if ((gn.cnt < B && colors[1] != 100) || (gn.cnt < B && colors[2] != 100)) {
           return true;
         }
       }
@@ -224,14 +234,13 @@ public class Slush implements Protocol {
   private static int[] getDominantColor(List<? extends Node> ps) {
     int[] colors = new int[3];
     for (Node n : ps) {
-      SlushNode sn = (SlushNode) n;
+      SnowflakeNode sn = (SnowflakeNode) n;
       colors[sn.myColor]++;
     }
     return colors;
   }
 
   public static void main(String... args) {
-    new Slush(5, 7, 4.0 / 7.0).play();
+    new Snowflake(5, 7, 4.0 / 7.0, 3).play();
   }
-
 }
