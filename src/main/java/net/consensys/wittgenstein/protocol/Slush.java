@@ -201,7 +201,7 @@ public class Slush implements Protocol {
         int[] colors = getDominantColor(liveNodes);
         System.out.println("Colored nodes by the numbers: " + colors[0] + " remain uncolored "
             + colors[1] + " are red " + colors[2] + " are blue.");
-        return StatsHelper.getStatsOn (liveNodes,  n -> colors[((SlushNode) n).myColor]);
+        return StatsHelper.getStatsOn(liveNodes, n -> colors[((SlushNode) n).myColor]);
       }
     };
     ProgressPerTime ppt = new ProgressPerTime(this, desc, "Number of y-Colored Nodes", stats, 10);
