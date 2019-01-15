@@ -204,7 +204,8 @@ public class Slush implements Protocol {
         return StatsHelper.getStatsOn(liveNodes, n -> colors[((SlushNode) n).myColor]);
       }
     };
-    ProgressPerTime ppt = new ProgressPerTime(this, desc, "Number of y-Colored Nodes", stats, 10);
+    ProgressPerTime ppt =
+        new ProgressPerTime(this, desc, "Number of y-Colored Nodes", stats, 10, null);
 
     Predicate<Protocol> contIf = p1 -> {
       int[] colors;

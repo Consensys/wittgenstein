@@ -106,6 +106,8 @@ public class GSFSignature implements Protocol {
     final BitSet verifiedSignatures = new BitSet(nodeCount);
 
     boolean done = false;
+    int sigChecked = 0;
+    int sigQueueSize = 0;
 
     GSFNode() {
       super(network.rd, nb);
@@ -455,6 +457,8 @@ public class GSFSignature implements Protocol {
 
       if (best != null) {
         toVerify.remove(best);
+        sigChecked++;
+        sigQueueSize += toVerify.size();
         final SendSigs tBest = best;
         network.registerTask(() -> GSFNode.this.updateVerifiedSignatures(tBest.level, tBest.sigs),
             network.time + pairingTime * 2, GSFNode.this);
@@ -513,8 +517,8 @@ public class GSFSignature implements Protocol {
     NetworkLatency nl = new NetworkLatency.NetworkLatencyByDistance();
     Node.NodeBuilder nb = new Node.NodeBuilderWithRandomPosition();
 
-    int ts = (int) (0.66 * nodeCt);
-    GSFSignature p = new GSFSignature(nodeCt, ts, 3, 100, 10, 10, 100, nb, nl);
+    int ts = (int) (.80 * nodeCt);
+    GSFSignature p = new GSFSignature(nodeCt, ts, 3, 50, 10, 10, nodeCt - ts, nb, nl);
 
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
       final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
@@ -531,7 +535,20 @@ public class GSFSignature implements Protocol {
       }
     };
 
-    ProgressPerTime ppt = new ProgressPerTime(p, "", "number of signatures", sg, 1);
+
+    ProgressPerTime.OnSingleRunEnd cb = p12 -> {
+      StatsHelper.SimpleStats ss =
+          StatsHelper.getStatsOn(p12.network().liveNodes(), n -> ((GSFNode) n).sigChecked);
+      System.out.println("sigChecked=" + ss.avg);
+
+      ss = StatsHelper.getStatsOn(p12.network().liveNodes(),
+          n -> ((GSFNode) n).sigQueueSize / ((GSFNode) n).sigChecked);
+      System.out.println("avgQueueSize=" + ss.avg);
+
+
+    };
+
+    ProgressPerTime ppt = new ProgressPerTime(p, "", "number of signatures", sg, 1, cb);
 
     Predicate<Protocol> contIf = p1 -> {
       for (Node n : p1.network().allNodes) {

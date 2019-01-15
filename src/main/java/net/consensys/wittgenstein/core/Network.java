@@ -1,6 +1,7 @@
 package net.consensys.wittgenstein.core;
 
 import java.util.*;
+import java.util.stream.Collectors;
 import net.consensys.wittgenstein.protocol.Slush;
 
 /**
@@ -588,6 +589,10 @@ public class Network<TN extends Node> {
       allNodes.add(null);
     }
     allNodes.set(node.nodeId, node);
+  }
+
+  public List<TN> liveNodes() {
+    return allNodes.stream().filter(n -> !n.down).collect(Collectors.toList());
   }
 
 

@@ -106,6 +106,7 @@ public abstract class NetworkLatency {
     }
   }
 
+
   public static class MeasuredNetworkLatency extends NetworkLatency {
     final int[] longDistrib = new int[100];
 
@@ -188,6 +189,7 @@ public abstract class NetworkLatency {
     }
   }
 
+
   /**
    * Distribution taken from: https://ethstats.net/ It should be read like this: 16% of the messages
    * will be received in 250ms or less
@@ -218,7 +220,7 @@ public abstract class NetworkLatency {
    * Taken from https://fc18.ifca.ai/preproceedings/75.pdf (Decentralization in Bitcoin and Ethereum
    * Networks) All authors are attached to the Initiative for Cryptocurrencies and Contracts (IC3),
    * hence the name.
-   *
+   * <p>
    * The paper gives these numbers (proportion, milliseconds):
    * </p>
    * 10% 92
@@ -231,18 +233,16 @@ public abstract class NetworkLatency {
    * </p>
    * 90% 276
    * </p>
-   *
+   * <p>
    * The paper does not give any number on latency variation. As well it's unclear if it's a RTT or
    * a single message latency. As they explain they used 'ping' to calculate the time, as as ping
    * gives the RTT time, we consider that's what they measured.
-   *
+   * <p>
    * This latency should only be used with full random position.
-   *
    */
   public static class IC3NetworkLatency extends NetworkLatency {
     protected static final int S10 = 92;
     protected static final int SW = 350;
-
 
     @Override
     public int getLatency(Node from, Node to, int delta) {

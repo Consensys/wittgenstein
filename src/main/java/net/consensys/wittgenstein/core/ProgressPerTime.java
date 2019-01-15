@@ -20,14 +20,20 @@ public class ProgressPerTime {
   private final String yAxisDesc;
   private final StatsHelper.StatsGetter statsGetter;
   private final int roundCount;
+  private final OnSingleRunEnd endCallaback;
 
   public ProgressPerTime(Protocol template, String configDesc, String yAxisDesc,
-      StatsHelper.StatsGetter statsGetter, int roundCount) {
+      StatsHelper.StatsGetter statsGetter, int roundCount, OnSingleRunEnd endCallaback) {
     this.protocol = template.copy();
     this.configDesc = configDesc;
     this.yAxisDesc = yAxisDesc;
     this.statsGetter = statsGetter;
     this.roundCount = roundCount;
+    this.endCallaback = endCallaback;
+  }
+
+  public interface OnSingleRunEnd {
+    void end(Protocol p);
   }
 
   public void run(Predicate<Protocol> contIf) {
@@ -68,6 +74,9 @@ public class ProgressPerTime {
       } while (contIf.test(p));
       long endAt = System.currentTimeMillis();
 
+      if (endCallaback != null) {
+        endCallaback.end(p);
+      }
       System.out.println("bytes sent: " + StatsHelper.getStatsOn(liveNodes, Node::getBytesSent));
       System.out
           .println("bytes rcvd: " + StatsHelper.getStatsOn(liveNodes, Node::getBytesReceived));
