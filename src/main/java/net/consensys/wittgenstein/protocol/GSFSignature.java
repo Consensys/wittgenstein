@@ -25,7 +25,7 @@ public class GSFSignature implements Protocol {
   final int threshold;
 
   /**
-   * The time it takes to do a pairing for a node.
+   * The minimum time it takes to do a pairing for a node.
    */
   final int pairingTime;
 
@@ -104,6 +104,7 @@ public class GSFSignature implements Protocol {
     final Set<SendSigs> toVerify = new HashSet<>();
     final List<SFLevel> levels = new ArrayList<>();
     final BitSet verifiedSignatures = new BitSet(nodeCount);
+    final int nodePairingTime = (int) (pairingTime * speedRatio);
 
     boolean done = false;
     int sigChecked = 0;
@@ -461,7 +462,7 @@ public class GSFSignature implements Protocol {
         sigQueueSize += toVerify.size();
         final SendSigs tBest = best;
         network.registerTask(() -> GSFNode.this.updateVerifiedSignatures(tBest.level, tBest.sigs),
-            network.time + pairingTime * 2, GSFNode.this);
+            network.time + nodePairingTime, GSFNode.this);
       }
     }
 
@@ -501,7 +502,7 @@ public class GSFSignature implements Protocol {
       if (!n.down) {
         n.initLevel();
         network.registerPeriodicTask(n::doCycle, 1, periodDurationMs, n);
-        network.registerConditionalTask(n::checkSigs, 1, pairingTime, n,
+        network.registerConditionalTask(n::checkSigs, 1, n.nodePairingTime, n,
             () -> !n.toVerify.isEmpty(), () -> !n.done);
       }
     }
@@ -515,10 +516,11 @@ public class GSFSignature implements Protocol {
   public static void sigsPerTime() {
     int nodeCt = 32768 / 16;
     NetworkLatency nl = new NetworkLatency.NetworkLatencyByDistance();
-    Node.NodeBuilder nb = new Node.NodeBuilderWithRandomPosition();
+    final Node.SpeedModel sm = new Node.ParetoSpeed(1, 0.2, 0.4, 3);
+    Node.NodeBuilder nb = new Node.NodeBuilderWithRandomPosition(sm);
 
     int ts = (int) (.80 * nodeCt);
-    GSFSignature p = new GSFSignature(nodeCt, ts, 3, 50, 10, 10, nodeCt - ts, nb, nl);
+    GSFSignature p = new GSFSignature(nodeCt, ts, 3, 50, 10, 10, nodeCt - (ts + 30), nb, nl);
 
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
       final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
@@ -535,17 +537,18 @@ public class GSFSignature implements Protocol {
       }
     };
 
-
     ProgressPerTime.OnSingleRunEnd cb = p12 -> {
       StatsHelper.SimpleStats ss =
-          StatsHelper.getStatsOn(p12.network().liveNodes(), n -> ((GSFNode) n).sigChecked);
-      System.out.println("sigChecked=" + ss.avg);
+          StatsHelper.getStatsOn(p12.network().liveNodes(), n -> (int) ((GSFNode) n).speedRatio);
+      System.out
+          .println("min/avg/max speedRatio (" + sm + ")=" + ss.min + "/" + ss.avg + "/" + ss.max);
+
+      ss = StatsHelper.getStatsOn(p12.network().liveNodes(), n -> ((GSFNode) n).sigChecked);
+      System.out.println("min/avg/max sigChecked=" + ss.min + "/" + ss.avg + "/" + ss.max);
 
       ss = StatsHelper.getStatsOn(p12.network().liveNodes(),
           n -> ((GSFNode) n).sigQueueSize / ((GSFNode) n).sigChecked);
-      System.out.println("avgQueueSize=" + ss.avg);
-
-
+      System.out.println("min/avg/max queueSize=" + ss.min + "/" + ss.avg + "/" + ss.max);
     };
 
     ProgressPerTime ppt = new ProgressPerTime(p, "", "number of signatures", sg, 1, cb);

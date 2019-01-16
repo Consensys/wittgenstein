@@ -1,5 +1,6 @@
 package net.consensys.wittgenstein.core;
 
+import net.consensys.wittgenstein.core.utils.GeneralizedParetoDistribution;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -11,9 +12,8 @@ public class Node {
   public final static int MAX_X = 1000;
   public final static int MAX_Y = 1000;
   public final static int MAX_DIST =
-      (int) Math.sqrt((MAX_X / 2) * (MAX_X / 2) + (MAX_Y / 2) * (MAX_Y / 2));
+      (int) Math.sqrt((MAX_X / 2.0) * (MAX_X / 2.0) + (MAX_Y / 2.0) * (MAX_Y / 2.0));
   public final static String DEFAULT_CITY = "world";
-
 
   /**
    * Sequence without any holes; starts at zero.
@@ -32,8 +32,30 @@ public class Node {
    */
   public final int x;
   public final int y;
-  public final boolean byzantine; // Used in statistics only
-  public boolean down; // Cannot send or receive messages
+
+  /**
+   * A protocol implementation may want to implement some byzantine behavior for some nodes. This
+   * boolean marks, for statistics only, that this node is a byzantine node. It's not use anywhere
+   * else in the framework.
+   */
+  public final boolean byzantine;
+
+  /**
+   * A basic error scenario is a node down. When a node is down it cannot receive not send messages,
+   * but the other nodes don't know about this.
+   */
+  public boolean down;
+
+  /**
+   * Some scenarios are interesting when the nodes are heterogeneous: Having some nodes lagging
+   * behind in the network can be very troublesome for some protocols. A speed ratio of 1 (the
+   * default) means this node is standard. It's possible to have faster or slower nodes. It's up to
+   * the protocol implementer to use this parameter in its implementation. This parameter is NOT
+   * used in the network layer itself: use the latency models if you want to act at the network
+   * layer. A number greater then 1 represents a node slower than the standard.
+   */
+  public double speedRatio = 1;
+
 
   protected long msgReceived = 0;
   protected long msgSent = 0;
@@ -71,12 +93,56 @@ public class Node {
     return "Node{" + "nodeId=" + nodeId + '}';
   }
 
+  public interface SpeedModel {
+    double getSpeedRatio(Random rd);
+  }
+
+
+  public static class ConstantSpeed implements SpeedModel {
+    @Override
+    public double getSpeedRatio(Random rd) {
+      return 1.0;
+    }
+
+    @Override
+    public String toString() {
+      return this.getClass().getSimpleName();
+    }
+  }
+
+
+  public static class ParetoSpeed implements SpeedModel {
+    final GeneralizedParetoDistribution gpd;
+    final double max;
+
+    public ParetoSpeed(double shape, double location, double scale, double max) {
+      this.gpd = new GeneralizedParetoDistribution(shape, location, scale);
+      this.max = max;
+    }
+
+    @Override
+    public double getSpeedRatio(Random rd) {
+      return Math.min(max, 1.0 + gpd.inverseF(rd.nextDouble()));
+    }
+
+    @Override
+    public String toString() {
+      return "GeneralizedParetoDistributionSpeed, max=" + max + ", " + gpd;
+    }
+  }
+
+
   public static class NodeBuilder implements Cloneable {
     protected int nodeIds = 0;
     protected final MessageDigest digest;
-    private String cityName = DEFAULT_CITY;
+    private final SpeedModel speedModel;
 
     public NodeBuilder() {
+      this(new ConstantSpeed());
+    }
+
+    public NodeBuilder(SpeedModel speedModel) {
+      this.speedModel = speedModel;
       try {
         digest = MessageDigest.getInstance("SHA-256");
       } catch (NoSuchAlgorithmException e) {
@@ -84,6 +150,10 @@ public class Node {
       }
     }
 
+    /**
+     * Same node builder with the node ids reset to zero, allowing to construct another network with
+     * the same parameters.
+     */
     public NodeBuilder copy() {
       try {
         NodeBuilder nb = (NodeBuilder) this.clone();
@@ -107,13 +177,15 @@ public class Node {
     }
 
     protected String getCityName(Random rd) {
-      return cityName;
+      return DEFAULT_CITY;
     }
 
-
+    protected double getSpeedRatio(Random rd) {
+      return speedModel.getSpeedRatio(rd);
+    }
 
     /**
-     * Many algo will want a hash of the node id. Be careful: sha-3 is not the ethereum v1 hash.
+     * Many algo will want a hash of the node id.
      */
     protected byte[] getHash(int nodeId) {
       return digest.digest(ByteBuffer.allocate(4).putInt(nodeId).array());
@@ -122,6 +194,13 @@ public class Node {
 
 
   public static class NodeBuilderWithRandomPosition extends NodeBuilder {
+
+    public NodeBuilderWithRandomPosition() {}
+
+    public NodeBuilderWithRandomPosition(SpeedModel speedModel) {
+      super(speedModel);
+    }
+
     @Override
     public int getX(Random rd) {
       return rd.nextInt(MAX_X) + 1;
@@ -134,11 +213,17 @@ public class Node {
 
   }
 
+
   public static class NodeBuilderWithCity extends NodeBuilder {
     final List<String> cities;
     final int size;
 
     public NodeBuilderWithCity(List<String> cities) {
+      this(new ConstantSpeed(), cities);
+    }
+
+    public NodeBuilderWithCity(SpeedModel speedModel, List<String> cities) {
+      super(speedModel);
       this.cities = cities;
       this.size = cities.size();
     }
@@ -166,6 +251,7 @@ public class Node {
     this.byzantine = byzantine;
     this.hash256 = nb.getHash(nodeId);
     this.cityName = nb.getCityName(rd);
+    this.speedRatio = nb.getSpeedRatio(rd);
   }
 
   public Node(Random rd, NodeBuilder nb) {

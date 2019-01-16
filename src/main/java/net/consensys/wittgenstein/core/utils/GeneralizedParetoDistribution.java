@@ -5,17 +5,19 @@ public class GeneralizedParetoDistribution {
    * shape ξ
    */
   private final double shape;
+
   /**
    * location μ
    */
   private final double location;
+
   /**
    * scale σ
    */
   private final double scale;
 
-  final private double ONE = 0.999999;
-  final private double ZERO = 0.000001;
+  final static private double ONE = 0.999999;
+  final static private double ZERO = 0.000001;
 
   public GeneralizedParetoDistribution(double shape, double location, double scale) {
     if (scale <= 0.0) {
@@ -47,5 +49,10 @@ public class GeneralizedParetoDistribution {
       return location - scale * Math.log1p(-y);
     }
     return location + scale / shape * (-1 + Math.pow(1 - y, -shape));
+  }
+
+  @Override
+  public String toString() {
+    return "ξ=" + shape + ", μ=" + location + ", σ=" + scale;
   }
 }
