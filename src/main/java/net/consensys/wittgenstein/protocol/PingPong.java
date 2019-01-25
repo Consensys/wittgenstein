@@ -17,8 +17,8 @@ public class PingPong implements Protocol {
   private final Node.NodeBuilder nb = new Node.NodeBuilderWithRandomPosition();
 
   /**
-   * Messages, exchanged on the network, are specific to the protocol.
-   * Here we have two messages: Ping & Pong.
+   * Messages, exchanged on the network, are specific to the protocol. Here we have two messages:
+   * Ping & Pong.
    */
   static class Ping extends Network.Message<PingPongNode> {
     @Override
