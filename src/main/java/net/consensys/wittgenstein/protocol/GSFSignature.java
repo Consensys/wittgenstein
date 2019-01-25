@@ -146,7 +146,6 @@ public class GSFSignature implements Protocol {
       return res;
     }
 
-
     public void doCycle() {
       // We send the last finished level because if we are more advanced
       //  than our counterparty we can send the full set of signature without risking
@@ -523,13 +522,17 @@ public class GSFSignature implements Protocol {
   }
 
   public static void sigsPerTime() {
-    int nodeCt = 32768 / 16;
-    NetworkLatency nl = new NetworkLatency.NetworkLatencyByDistance();
-    final Node.SpeedModel sm = new Node.ParetoSpeed(1, 0.2, 0.4, 3);
-    Node.NodeBuilder nb = new Node.NodeBuilderWithRandomPosition(sm);
+    int nodeCt = 32768 / 32;
 
-    int ts = (int) (.80 * nodeCt);
-    GSFSignature p = new GSFSignature(nodeCt, ts, 3, 50, 10, 10, nodeCt - (ts + 30), nb, nl);
+    NetworkLatency nl = new NetworkLatency.AwsRegionNetworkLatency();
+    final Node.SpeedModel sm = new Node.ParetoSpeed(1, 0.2, 0.4, 3);
+    Node.NodeBuilder nb = new Node.NodeBuilderWithCity(NetworkLatency.AwsRegionNetworkLatency.cities());
+
+    nl = new NetworkLatency.NetworkLatencyByDistance();
+    nb =new Node.NodeBuilderWithRandomPosition();
+
+    int ts = (int) (.99 * nodeCt);
+    GSFSignature p = new GSFSignature(nodeCt, ts, 3, 50, 10, 10, 0, nb, nl);
 
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
       final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
@@ -565,7 +568,8 @@ public class GSFSignature implements Protocol {
     Predicate<Protocol> contIf = p1 -> {
       for (Node n : p1.network().allNodes) {
         GSFNode gn = (GSFNode) n;
-        // All up nodes must have reached the threshold
+        // All up nodes must have reached the threshold, so if one live
+        //  node has not reached it we continue
         if (!n.down && gn.verifiedSignatures.cardinality() < p.threshold) {
           return true;
         }

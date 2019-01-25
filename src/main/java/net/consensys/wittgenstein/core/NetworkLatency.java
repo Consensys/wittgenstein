@@ -178,7 +178,7 @@ public abstract class NetworkLatency {
 
 
   public static class MeasuredNetworkLatency extends NetworkLatency {
-    private final int[] longDistrib = new int[100];
+    final int[] longDistrib = new int[100];
 
     /**
      * @param proportions - the proportions in percentage. Must sumup to 100

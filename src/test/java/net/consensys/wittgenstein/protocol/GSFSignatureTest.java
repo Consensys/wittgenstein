@@ -83,4 +83,14 @@ public class GSFSignatureTest {
     Assert.assertEquals(4, n0.getLastFinishedLevel().cardinality());
   }
 
+  @Test
+  public void testSimpleRun(){
+    GSFSignature p = new GSFSignature(32, 1, 3,
+      20, 10, 10, 0);
+    p.init();
+    p.network.run(10);
+    for  (GSFSignature.GSFNode n : p.network.allNodes){
+      Assert.assertEquals(32, n.verifiedSignatures.cardinality());
+    }
+  }
 }
