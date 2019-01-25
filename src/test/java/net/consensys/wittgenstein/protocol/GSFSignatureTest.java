@@ -88,6 +88,7 @@ public class GSFSignatureTest {
     GSFSignature p = new GSFSignature(32, 1, 3, 20, 10, 10, 0);
     p.init();
     p.network.run(10);
+    Assert.assertEquals(32, p.network().allNodes.size());
     for (GSFSignature.GSFNode n : p.network.allNodes) {
       Assert.assertEquals(32, n.verifiedSignatures.cardinality());
     }
@@ -98,6 +99,8 @@ public class GSFSignatureTest {
     GSFSignature p = new GSFSignature(64, .50, 3, 20, 10, 10, .2);
     p.init();
     p.network.run(10);
+
+    Assert.assertEquals(64, p.network().allNodes.size());
     for (GSFSignature.GSFNode n : p.network.allNodes) {
       if (n.down) {
         Assert.assertEquals(1, n.verifiedSignatures.cardinality());
