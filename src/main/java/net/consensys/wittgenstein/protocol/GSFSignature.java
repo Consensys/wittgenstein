@@ -3,6 +3,8 @@ package net.consensys.wittgenstein.protocol;
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
+import net.consensys.wittgenstein.tools.CSVLatencyReader;
+
 import java.util.*;
 import java.util.function.Predicate;
 
@@ -313,11 +315,11 @@ public class GSFSignature implements Protocol {
      */
     void updateVerifiedSignatures(int level, BitSet sigs) {
       SFLevel sfl = levels.get(level);
-
+/*
       if (sigs.cardinality() == 1) {
         sfl.individualSignatures.or(sigs);
       }
-      sigs.or(sfl.individualSignatures);
+      sigs.or(sfl.individualSignatures);*/
 
       // These lines remove Olivier's optimisation
       //sigs = (BitSet) sigs.clone();
@@ -409,14 +411,7 @@ public class GSFSignature implements Protocol {
      * Nothing much to do when we receive a sig set: we just add it to our toVerify list.
      */
     void onNewSig(GSFNode from, SendSigs ssigs) {
-      SFLevel sfl = levels.get(ssigs.level);
       toVerify.add(ssigs);
-
-      if (ssigs.sigs.cardinality() != 1) {
-        BitSet indiv = new BitSet();
-        indiv.set(from.sigQueueSize);
-        toVerify.add(new SendSigs(indiv, sfl));
-      }
     }
 
     public void checkSigs() {
@@ -521,15 +516,75 @@ public class GSFSignature implements Protocol {
     return network;
   }
 
+
+  /*
+round=0, GSFSignature, nodes=128, threshold=126, pairing=3ms, level timeout=50ms, period=10ms, acceleratedCallsCount=10, dead nodes=0, network=AwsRegionNetworkLatency
+min/avg/max speedRatio (GeneralizedParetoDistributionSpeed, max=3.0, ξ=1.0, μ=0.2, σ=0.4)=1/1/1
+min/avg/max sigChecked=7/10/15
+min/avg/max queueSize=0/0/1
+bytes sent: min: 7557, max:10646, avg:9210
+bytes rcvd: min: 4365, max:7960, avg:6270
+msg sent: min: 76, max:106, avg:91
+msg rcvd: min: 44, max:80, avg:62
+done at: min: 210, max:312, avg:255
+
+round=0, GSFSignature, nodes=128, threshold=126, pairing=3ms, level timeout=50ms, period=10ms, acceleratedCallsCount=10, dead nodes=0, network=NetworkNoLatency
+min/avg/max speedRatio (GeneralizedParetoDistributionSpeed, max=3.0, ξ=1.0, μ=0.2, σ=0.4)=1/1/1
+min/avg/max sigChecked=13/13/13
+min/avg/max queueSize=4/5/6
+bytes sent: min: 5695, max:5695, avg:5695
+bytes rcvd: min: 4764, max:6933, avg:5695
+msg sent: min: 57, max:57, avg:57
+msg rcvd: min: 48, max:69, avg:57
+done at: min: 54, max:54, avg:54
+
+round=0, GSFSignature, nodes=128, threshold=126, pairing=3ms, level timeout=50ms, period=10ms, acceleratedCallsCount=10, dead nodes=0, network=NetworkLatencyByDistance
+min/avg/max speedRatio (GeneralizedParetoDistributionSpeed, max=3.0, ξ=1.0, μ=0.2, σ=0.4)=1/1/3
+min/avg/max sigChecked=7/9/14
+min/avg/max queueSize=0/0/1
+bytes sent: min: 8610, max:11198, avg:9806
+bytes rcvd: min: 5641, max:8067, avg:6915
+msg sent: min: 86, max:112, avg:98
+msg rcvd: min: 57, max:81, avg:69
+done at: min: 320, max:398, avg:356
+
+round=0, GSFSignature, nodes=128, threshold=126, pairing=3ms, level timeout=50ms, period=10ms, acceleratedCallsCount=10, dead nodes=0, network=IC3NetworkLatency
+min/avg/max speedRatio (GeneralizedParetoDistributionSpeed, max=3.0, ξ=1.0, μ=0.2, σ=0.4)=1/1/3
+min/avg/max sigChecked=9/15/22
+min/avg/max queueSize=0/0/1
+bytes sent: min: 11931, max:14372, avg:12876
+bytes rcvd: min: 7527, max:10858, avg:9266
+msg sent: min: 119, max:144, avg:128
+msg rcvd: min: 76, max:109, avg:93
+done at: min: 414, max:487, avg:445
+
+round=0, GSFSignature, nodes=128, threshold=126, pairing=3ms, level timeout=50ms, period=10ms, acceleratedCallsCount=10, dead nodes=0, network=NetworkLatencyByCity
+min/avg/max speedRatio (GeneralizedParetoDistributionSpeed, max=3.0, ξ=1.0, μ=0.2, σ=0.4)=1/1/1
+min/avg/max sigChecked=9/12/20
+min/avg/max queueSize=0/0/0
+bytes sent: min: 9626, max:13928, avg:11706
+bytes rcvd: min: 5270, max:11294, avg:8992
+msg sent: min: 96, max:139, avg:116
+msg rcvd: min: 53, max:113, avg:90
+done at: min: 286, max:433, avg:336
+
+
+   */
+
   public static void sigsPerTime() {
-    int nodeCt = 32768 / 32;
+    int nodeCt = 32768 / 256;
 
     NetworkLatency nl = new NetworkLatency.AwsRegionNetworkLatency();
     final Node.SpeedModel sm = new Node.ParetoSpeed(1, 0.2, 0.4, 3);
     Node.NodeBuilder nb = new Node.NodeBuilderWithCity(NetworkLatency.AwsRegionNetworkLatency.cities());
-
+/*
     nl = new NetworkLatency.NetworkLatencyByDistance();
-    nb =new Node.NodeBuilderWithRandomPosition();
+    nb =new Node.NodeBuilderWithRandomPosition(sm);
+    //nl = new NetworkLatency.NetworkNoLatency();
+   // nl = new NetworkLatency.IC3NetworkLatency();
+*/
+    nl = new NetworkLatency.NetworkLatencyByCity(new CSVLatencyReader());
+    nb =new Node.NodeBuilderWithCity(new CSVLatencyReader().cities());
 
     int ts = (int) (.99 * nodeCt);
     GSFSignature p = new GSFSignature(nodeCt, ts, 3, 50, 10, 10, 0, nb, nl);

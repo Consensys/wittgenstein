@@ -8,14 +8,12 @@ public class GSFSignatureTest {
   private GSFSignature p = new GSFSignature(32, 1, 3, 20, 10, 10, 0);
   private GSFSignature.GSFNode n0;
 
-  @Before
-  public void before() {
+  @Before public void before() {
     p.init();
     n0 = p.network.getNodeById(0);
   }
 
-  @Test
-  public void testInit() {
+  @Test public void testInit() {
     Assert.assertEquals(6, n0.levels.size());
 
     Assert.assertEquals(0, n0.levels.get(0).peers.size());
@@ -35,8 +33,7 @@ public class GSFSignatureTest {
     Assert.assertEquals(0, n0.levels.get(5).verifiedSignatures.cardinality());
   }
 
-  @Test
-  public void testMaxSigInLevel() {
+  @Test public void testMaxSigInLevel() {
     Assert.assertEquals(1, n0.levels.get(0).expectedSigs());
     Assert.assertEquals(1, n0.levels.get(1).expectedSigs()); // send 0, wait for 1
     Assert.assertEquals(2, n0.levels.get(2).expectedSigs()); // send 0 1, wait for 2 3
@@ -45,8 +42,7 @@ public class GSFSignatureTest {
     Assert.assertEquals(16, n0.levels.get(5).expectedSigs());
   }
 
-  @Test
-  public void testSend() {
+  @Test public void testSend() {
     p.network.runMs(1);
     // Each node has sent its signature to its peer.
     Assert.assertEquals(64, p.network.msgs.size());
@@ -62,16 +58,14 @@ public class GSFSignatureTest {
     Assert.assertEquals(16, n3.levels.get(5).expectedSigs());
   }
 
-  @Test
-  public void testDeadNodes() {
+  @Test public void testDeadNodes() {
     GSFSignature p = new GSFSignature(32, 0.8, 3, 20, 10, 10, 0.1);
     p.init();
     long dead = p.network.allNodes.stream().filter(n -> n.down).count();
     Assert.assertEquals(3, dead);
   }
 
-  @Test
-  public void testGetLastFinishedLevel() {
+  @Test public void testGetLastFinishedLevel() {
     Assert.assertEquals(1, n0.getLastFinishedLevel().cardinality());
     n0.levels.get(1).verifiedSignatures.or(n0.levels.get(1).waitedSigs);
     Assert.assertEquals(2, n0.getLastFinishedLevel().cardinality());
@@ -83,14 +77,26 @@ public class GSFSignatureTest {
     Assert.assertEquals(4, n0.getLastFinishedLevel().cardinality());
   }
 
-  @Test
-  public void testSimpleRun(){
-    GSFSignature p = new GSFSignature(32, 1, 3,
-      20, 10, 10, 0);
+  @Test public void testSimpleRun() {
+    GSFSignature p = new GSFSignature(32, 1, 3, 20, 10, 10, 0);
     p.init();
     p.network.run(10);
-    for  (GSFSignature.GSFNode n : p.network.allNodes){
+    for (GSFSignature.GSFNode n : p.network.allNodes) {
       Assert.assertEquals(32, n.verifiedSignatures.cardinality());
+    }
+  }
+
+  @Test public void testSimpleThreshold() {
+    GSFSignature p = new GSFSignature(64, .50, 3, 20, 10, 10, .2);
+    p.init();
+    p.network.run(10);
+    for (GSFSignature.GSFNode n : p.network.allNodes) {
+      if (n.down) {
+        Assert.assertEquals(1, n.verifiedSignatures.cardinality());
+      } else {
+        Assert.assertTrue(n.verifiedSignatures.cardinality() >= 32);
+        Assert.assertTrue(n.verifiedSignatures.cardinality() <= 64);
+      }
     }
   }
 }

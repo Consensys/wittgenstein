@@ -18,14 +18,14 @@ public class CSVLatencyReader {
   private final Map<String, Map<String, Float>> latencyMatrix;
   private Set<String> cities;
 
-  public CSVLatencyReader() throws IOException {
+  public CSVLatencyReader() {
     this.cities = dirNames(DATA_PATH);
     this.latencyMatrix = makeLatencyMatrix();
     Set<String> citiesWitMissingMeasurements = citiesWithMissingMeasurements(latencyMatrix);
     latencyMatrix.keySet().removeAll(citiesWitMissingMeasurements);
   }
 
-  public CSVLatencyReader(Map<String, Map<String, Float>> latencyMatrix) throws IOException {
+  public CSVLatencyReader(Map<String, Map<String, Float>> latencyMatrix) {
     this.latencyMatrix = latencyMatrix;
     Set<String> citiesWitMissingMeasurements = citiesWithMissingMeasurements(latencyMatrix);
     latencyMatrix.keySet().removeAll(citiesWitMissingMeasurements);
@@ -40,7 +40,7 @@ public class CSVLatencyReader {
   }
 
 
-  private Map<String, Map<String, Float>> makeLatencyMatrix() throws IOException {
+  private Map<String, Map<String, Float>> makeLatencyMatrix() {
     Map<String, Map<String, Float>> latencies = new HashMap<>();
 
     for (String city : cities) {
@@ -51,17 +51,19 @@ public class CSVLatencyReader {
     return latencies;
   }
 
-  private Map<String, Float> latenciesForCity(Path path) throws IOException {
+  private Map<String, Float> latenciesForCity(Path path) {
     Map<String, Float> map = new HashMap<>();
 
     try (Reader reader = Files.newBufferedReader(path);
-        CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withHeader());) {
+        CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withHeader())) {
       for (CSVRecord csvRecord : csvParser) {
         String cityAndLocation = csvRecord.get(0);
         Optional<String> city = processCityName(cityAndLocation);
         Float latency = Float.valueOf(csvRecord.get(4));
         city.ifPresent(c -> map.put(c, latency));
       }
+    } catch (IOException e) {
+      throw new IllegalStateException(e);
     }
     return map;
   }
@@ -101,6 +103,9 @@ public class CSVLatencyReader {
 
   private static Set<String> dirNames(Path path) {
     File file = path.toFile();
+    if (file == null || file.list() == null) {
+      throw  new IllegalStateException("Can't get file for path="+path);
+    }
     return new HashSet<>(Arrays.asList(file.list()));
   }
 
