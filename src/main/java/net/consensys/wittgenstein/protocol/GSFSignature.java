@@ -3,7 +3,6 @@ package net.consensys.wittgenstein.protocol;
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
-
 import java.util.*;
 import java.util.function.Predicate;
 
@@ -408,9 +407,8 @@ public class GSFSignature implements Protocol {
     }
 
     /**
-     * Evaluate the interest to verify a signature by setting a score
-     * The higher the score the more interesting the signature is.
-     * 0 means the signature is not interesting and can be discarded.
+     * Evaluate the interest to verify a signature by setting a score The higher the score the more
+     * interesting the signature is. 0 means the signature is not interesting and can be discarded.
      */
     private int evaluateSig(SFLevel l, BitSet sig) {
       int newTotal = 0; // The number of signatures in our new best
@@ -421,7 +419,7 @@ public class GSFSignature implements Protocol {
         return 0;
       }
 
-      BitSet withIndiv = (BitSet)l.indivVerifiedSig.clone();
+      BitSet withIndiv = (BitSet) l.indivVerifiedSig.clone();
       withIndiv.or(sig);
 
       if (l.verifiedSignatures.cardinality() == 0) {
@@ -430,7 +428,7 @@ public class GSFSignature implements Protocol {
         addedSigs = newTotal;
         combineCt = 0;
       } else {
-        if (sig.intersects(l.verifiedSignatures)){
+        if (sig.intersects(l.verifiedSignatures)) {
           // We can't merge, it's a replace
           newTotal = withIndiv.cardinality();
           addedSigs = newTotal - l.verifiedSignatures.cardinality();
@@ -441,7 +439,7 @@ public class GSFSignature implements Protocol {
           withIndiv.or(l.verifiedSignatures);
           newTotal = withIndiv.cardinality();
           addedSigs = newTotal - l.verifiedSignatures.cardinality();
-          combineCt =  newTotal;
+          combineCt = newTotal;
         }
       }
 
@@ -460,7 +458,7 @@ public class GSFSignature implements Protocol {
 
       // It adds value, but does not complete a level. We
       //  favorize the older level but take into account the number of sigs we receive as well.
-      return 100000 - l.level*100 + addedSigs;
+      return 100000 - l.level * 100 + addedSigs;
     }
 
 
@@ -623,10 +621,10 @@ public class GSFSignature implements Protocol {
     nb =new Node.NodeBuilderWithRandomPosition(sm);
     //nl = new NetworkLatency.NetworkNoLatency();
        // nl = new NetworkLatency.IC3NetworkLatency();
-
+    
     nl = new NetworkLatency.NetworkLatencyByCity(new CSVLatencyReader());
     nb = new Node.NodeBuilderWithCity(new CSVLatencyReader().cities());
-*/
+    */
     int ts = (int) (.99 * nodeCt);
     GSFSignature p = new GSFSignature(nodeCt, ts, 3, 50, 10, 10, 0, nb, nl);
 
