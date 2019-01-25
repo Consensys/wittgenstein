@@ -24,6 +24,11 @@ public class ProgressPerTime {
 
   public ProgressPerTime(Protocol template, String configDesc, String yAxisDesc,
       StatsHelper.StatsGetter statsGetter, int roundCount, OnSingleRunEnd endCallaback) {
+    if (roundCount <= 0) {
+      throw new IllegalArgumentException(
+          "roundCount must be greater than 0. roundCount=" + roundCount);
+    }
+
     this.protocol = template.copy();
     this.configDesc = configDesc;
     this.yAxisDesc = yAxisDesc;

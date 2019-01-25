@@ -14,9 +14,11 @@ public class P2PFloodTest {
     NetworkLatency nl = new NetworkLatency.NetworkNoLatency();
     NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
 
-    P2PFlood p = new P2PFlood(100, 10, 50, 1, 10, 30, nb, nl);
+    P2PFlood po = new P2PFlood(100, 10, 50, 1, 10, 30, nb, nl);
+    Protocol p = po.copy();
     p.init();
-    p.network().run(10);
+    p.network().run(20);
+    po.init();
 
     Assert.assertEquals(100, p.network().allNodes.size());
     for (Node nn : p.network().allNodes) {
@@ -35,10 +37,11 @@ public class P2PFloodTest {
     NodeBuilder nb =
         new NodeBuilder.NodeBuilderWithCity(NetworkLatency.AwsRegionNetworkLatency.cities());
 
-    Protocol p = new P2PFlood(4500, 4000, 500, 1, 50, 300, nb, nl);
-    p = p.copy();
+    Protocol po = new P2PFlood(4500, 4000, 500, 1, 50, 300, nb, nl);
+    Protocol p = po.copy();
     p.init();
     p.network().run(2000);
+    po.init();
 
     Assert.assertEquals(4500, p.network().allNodes.size());
     for (Node nn : p.network().allNodes) {
