@@ -1,10 +1,10 @@
 package net.consensys.wittgenstein.protocol;
 
-import net.consensys.wittgenstein.core.Network;
-import net.consensys.wittgenstein.core.NetworkLatency;
-import net.consensys.wittgenstein.core.Node;
-import net.consensys.wittgenstein.core.Protocol;
+import net.consensys.wittgenstein.core.*;
 
+/**
+ * A simulation of a trivial protocol to be used as a sample.
+ */
 public class PingPong implements Protocol {
   /**
    * You need a network. Nodes are added to this network. Network latency can be set later.
@@ -18,6 +18,7 @@ public class PingPong implements Protocol {
 
   /**
    * Messages, exchanged on the network, are specific to the protocol.
+   * Here we have two messages: Ping & Pong.
    */
   static class Ping extends Network.Message<PingPongNode> {
     @Override
