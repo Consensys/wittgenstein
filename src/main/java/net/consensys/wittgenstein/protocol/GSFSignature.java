@@ -3,7 +3,7 @@ package net.consensys.wittgenstein.protocol;
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
-import net.consensys.wittgenstein.tools.CSVLatencyReader;
+
 import java.util.*;
 import java.util.function.Predicate;
 
@@ -174,7 +174,8 @@ public class GSFSignature implements Protocol {
       final List<GSFNode> peers; // The peers when we have all signatures for this level.
       final BitSet waitedSigs; // 1 for the signatures we should have at this level
       final BitSet verifiedSignatures = new BitSet(); // The signatures verified in this level
-      final BitSet individualSignatures = new BitSet(); // The individual signatures checked
+      final BitSet individualSignatures = new BitSet(); // The individual signatures received
+      final BitSet indivVerifiedSig = new BitSet(); // The individual signatures verified
 
       /**
        * We're going to contact all nodes, one after the other. That's our position in the peers'
@@ -241,8 +242,9 @@ public class GSFSignature implements Protocol {
         //  our peers at this level have already finished on their side, even if
         //  some nodes from older levels are not finished yet
         // see https://github.com/ConsenSys/handel/issues/34
-        if (previousLevelReceiveOk)
+        /*if (previousLevelReceiveOk)
           return true;
+        */
 
         return false;
       }
@@ -314,11 +316,11 @@ public class GSFSignature implements Protocol {
      */
     void updateVerifiedSignatures(int level, BitSet sigs) {
       SFLevel sfl = levels.get(level);
-      /*
+
       if (sigs.cardinality() == 1) {
-        sfl.individualSignatures.or(sigs);
+        sfl.indivVerifiedSig.or(sigs);
       }
-      sigs.or(sfl.individualSignatures);*/
+      sigs.or(sfl.indivVerifiedSig);
 
       // These lines remove Olivier's optimisation
       //sigs = (BitSet) sigs.clone();
@@ -405,56 +407,95 @@ public class GSFSignature implements Protocol {
       }
     }
 
+    /**
+     * Evaluate the interest to verify a signature by setting a score
+     * The higher the score the more interesting the signature is.
+     * 0 means the signature is not interesting and can be discarded.
+     */
+    private int evaluateSig(SFLevel l, BitSet sig) {
+      int newTotal = 0; // The number of signatures in our new best
+      int addedSigs = 0; // The number of sigs we add with our new best compared to the existing one. Can be negative
+      int combineCt = 0; // The number of sigs in our new best that come from combining it with individual sigs
+
+      if (l.verifiedSignatures.cardinality() >= l.expectedSigs()) {
+        return 0;
+      }
+
+      BitSet withIndiv = (BitSet)l.indivVerifiedSig.clone();
+      withIndiv.or(sig);
+
+      if (l.verifiedSignatures.cardinality() == 0) {
+        // the best is the new multi-sig combined with the ind. sigs
+        newTotal = sig.cardinality();
+        addedSigs = newTotal;
+        combineCt = 0;
+      } else {
+        if (sig.intersects(l.verifiedSignatures)){
+          // We can't merge, it's a replace
+          newTotal = withIndiv.cardinality();
+          addedSigs = newTotal - l.verifiedSignatures.cardinality();
+          combineCt = newTotal;
+        } else {
+          // We can merge our current best and the new ms. We also add individual
+          //  signatures that we previously verified
+          withIndiv.or(l.verifiedSignatures);
+          newTotal = withIndiv.cardinality();
+          addedSigs = newTotal - l.verifiedSignatures.cardinality();
+          combineCt =  newTotal;
+        }
+      }
+
+      if (addedSigs <= 0) {
+        if (sig.cardinality() == 1 && !sig.intersects(l.indivVerifiedSig)) {
+          return 1;
+        }
+        return 0;
+      }
+
+      if (newTotal == l.expectedSigs()) {
+        // This completes a level! That's the best options for us. We give
+        //  a greater value to the first levels/
+        return 1000000 - l.level * 10;
+      }
+
+      // It adds value, but does not complete a level. We
+      //  favorize the older level but take into account the number of sigs we receive as well.
+      return 100000 - l.level*100 + addedSigs;
+    }
+
 
     /**
      * Nothing much to do when we receive a sig set: we just add it to our toVerify list.
      */
     void onNewSig(GSFNode from, SendSigs ssigs) {
+      SFLevel l = levels.get(ssigs.level);
+
       toVerify.add(ssigs);
+
+      // We add the individual signature as a way to resist byzantine attacks
+      if (!l.individualSignatures.get(from.nodeId)) {
+        BitSet indiv = new BitSet();
+        indiv.set(from.nodeId);
+        SendSigs si = new SendSigs(indiv, l);
+        toVerify.add(si);
+        l.individualSignatures.set(from.nodeId);
+      }
+
     }
 
     public void checkSigs() {
       SendSigs best = null;
-      int levelFinished = Integer.MAX_VALUE;
+      int score = 0;
       Iterator<SendSigs> it = toVerify.iterator();
-
-      while (it.hasNext() && levelFinished > 2) {
+      while (it.hasNext()) {
         SendSigs cur = it.next();
         SFLevel l = levels.get(cur.level);
-
-        if (l.expectedSigs() == l.verifiedSignatures.cardinality()) {
-          // We have already completed this level.
-          it.remove();
-          continue;
-        }
-
-        if (include(verifiedSignatures, cur.sigs) && cur.sigs.cardinality() != 1) {
-          it.remove();
-          continue;
-        }
-        if (cur.sigs.cardinality() == 1 && cur.sigs.intersects(l.verifiedSignatures)) {
-          it.remove();
-          continue;
-        }
-
-        if (best == null) {
+        int ns = evaluateSig(l, cur.sigs);
+        if (ns > score) {
+          score = ns;
           best = cur;
-        }
-
-        if (cur.sigs.cardinality() > l.expectedSigs()) {
-          best = cur;
-          levelFinished = 2;
-          continue;
-        }
-
-        if (!cur.sigs.intersects(l.verifiedSignatures)) {
-          if (cur.sigs.cardinality() + l.verifiedSignatures.cardinality() == l.waitedSigs
-              .cardinality()) {
-            if (levelFinished > cur.level) {
-              best = cur;
-              levelFinished = cur.level;
-            }
-          }
+        } else if (ns == 0) {
+          it.remove();
         }
       }
 
@@ -571,7 +612,7 @@ public class GSFSignature implements Protocol {
    */
 
   public static void sigsPerTime() {
-    int nodeCt = 32768 / 256;
+    int nodeCt = 32768 / 32;
 
     NetworkLatency nl = new NetworkLatency.AwsRegionNetworkLatency();
     final Node.SpeedModel sm = new Node.ParetoSpeed(1, 0.2, 0.4, 3);
@@ -582,10 +623,10 @@ public class GSFSignature implements Protocol {
     nb =new Node.NodeBuilderWithRandomPosition(sm);
     //nl = new NetworkLatency.NetworkNoLatency();
        // nl = new NetworkLatency.IC3NetworkLatency();
-    */
+
     nl = new NetworkLatency.NetworkLatencyByCity(new CSVLatencyReader());
     nb = new Node.NodeBuilderWithCity(new CSVLatencyReader().cities());
-
+*/
     int ts = (int) (.99 * nodeCt);
     GSFSignature p = new GSFSignature(nodeCt, ts, 3, 50, 10, 10, 0, nb, nl);
 
