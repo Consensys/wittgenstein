@@ -2,7 +2,6 @@ package net.consensys.wittgenstein.core;
 
 import net.consensys.wittgenstein.core.utils.GeneralizedParetoDistribution;
 import net.consensys.wittgenstein.tools.CSVLatencyReader;
-
 import java.util.*;
 
 /**
@@ -73,49 +72,51 @@ public abstract class NetworkLatency {
 
 
   /**
-   * Latencies observed end of January 2019 between AWS region / nano systems
-   * See as well https://www.cloudping.co/
-   * Ping can vary a lot other time. We include the variation from NetworkLatencyByDistance.
-   *
-   * To use this model, you need to put the nodes in one of the cities
+   * Latencies observed end of January 2019 between AWS region / nano systems See as well
+   * https://www.cloudping.co : this web site gives the latest ping measured. Ping can vary a lot
+   * other time. We include the variation from NetworkLatencyByDistance.
+   * <p>
+   * 
+   * @see net.consensys.wittgenstein.core.Node.NodeBuilderWithCity
    */
-  public static class NetworkLatencyByAwsRegion extends NetworkLatency {
+  public static class AwsRegionNetworkLatency extends NetworkLatency {
     private static HashMap<String, Integer> regionPerCity = new HashMap<>();
     private NetworkLatencyByDistance var = new NetworkLatencyByDistance();
 
-    static List<String> cities(){
+    static {
+      regionPerCity.put("Oregon", 0);
+      regionPerCity.put("Virginia", 1);
+      regionPerCity.put("Mumbai", 2);
+      regionPerCity.put("Seoul", 3);
+      regionPerCity.put("Singapour", 4);
+      regionPerCity.put("Sydney", 5);
+      regionPerCity.put("Tokyo", 6);
+      regionPerCity.put("Canada central", 7);
+      regionPerCity.put("Frankfurt", 8);
+      regionPerCity.put("Ireland", 9);
+      regionPerCity.put("London", 10);
+    }
+
+    public static List<String> cities() {
       // We need to sort to ensure test repeatability
-      List<String> cities = Collections.list(regionPerCity.keySet().toArray();
+      List<String> cities = new ArrayList<>(regionPerCity.keySet());
       Collections.sort(cities);
       return cities;
     }
 
-    static {
-      regionPerCity.put("Portland", 0); // Oregon
-      regionPerCity.put("Richmond", 1); // Virginia
-      regionPerCity.put("New+Delhi", 2); // Mumbai
-      regionPerCity.put("Seoul", 3); // Seoul
-      regionPerCity.put("Singapour", 4); // Singapour
-      regionPerCity.put("Sydney", 5); // Sydney
-      regionPerCity.put("Tokyo", 6); // Tokyo
-      regionPerCity.put("Toronto", 7); // Canada central
-      regionPerCity.put("Frankfurt", 8); // Frankfurt
-      regionPerCity.put("Dublin", 9); // Ireland
-      regionPerCity.put("London", 10); // London
-    }
 
+    // That's ping time, we will need to divide by two to get the oneway latency.
     private int[][] latencies =
-        new int[][] {new int[] {81, 216, 126, 165, 138, 97, 64, 164, 131, 141}, // Oregon
-            new int[] {0, 182, 181, 232, 195, 167, 13, 88, 80, 75,}, // Virginia
-            new int[] {0, 0, 152, 62, 223, 123, 194, 111, 122, 113}, // Mumbai
-            new int[] {0, 0, 0, 97, 133, 35, 184, 259, 254, 264}, // Seoul
-            new int[] {0, 0, 0, 0, 169, 69, 218, 162, 174, 171}, // Singapour
-            new int[] {0, 0, 0, 0, 0, 105, 210, 282, 269, 271}, // Sydney
-            new int[] {0, 0, 0, 0, 0, 0, 156, 235, 222, 234}, // Tokyo
-            new int[] {0, 0, 0, 0, 0, 0, 0, 101, 78, 87,}, // Canada central
-            new int[] {0, 0, 0, 0, 0, 0, 0, 0, 24, 13}, // Frankfurt
-            new int[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 12},// Ireland
-        // London
+        new int[][] {new int[] {0, 81, 216, 126, 165, 138, 97, 64, 164, 131, 141}, // Oregon
+            new int[] {0, 0, 182, 181, 232, 195, 167, 13, 88, 80, 75,}, // Virginia
+            new int[] {0, 0, 0, 152, 62, 223, 123, 194, 111, 122, 113}, // Mumbai
+            new int[] {0, 0, 0, 0, 97, 133, 35, 184, 259, 254, 264}, // Seoul
+            new int[] {0, 0, 0, 0, 0, 169, 69, 218, 162, 174, 171}, // Singapour
+            new int[] {0, 0, 0, 0, 0, 0, 105, 210, 282, 269, 271}, // Sydney
+            new int[] {0, 0, 0, 0, 0, 0, 0, 156, 235, 222, 234}, // Tokyo
+            new int[] {0, 0, 0, 0, 0, 0, 0, 0, 101, 78, 87,}, // Canada central
+            new int[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 13}, // Frankfurt
+            new int[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12},// Ireland
         };
 
     private int getLatency(int reg1, int reg2, int delta) {
@@ -125,16 +126,20 @@ public abstract class NetworkLatency {
       int minReg = Math.min(reg1, reg2);
       int maxReg = Math.max(reg1, reg2);
 
-      return latencies[minReg][maxReg] + (int)var.getVariableLatency(delta);
+      return Math.max(1, latencies[minReg][maxReg] / 2 + (int) var.getVariableLatency(delta));
     }
 
     public int getLatency(Node from, Node to, int delta) {
       Integer reg1 = regionPerCity.get(from.cityName);
-      Integer reg2 = regionPerCity.get(from.cityName);
+      Integer reg2 = regionPerCity.get(to.cityName);
+
+      if (reg1 == null || reg2 == null) {
+        throw new IllegalArgumentException(from + " or " + to + " not in our aws cities list");
+      }
+
       return getLatency(reg1, reg2, delta);
     }
   }
-
 
   public static class NetworkLatencyByCity extends NetworkLatency {
     private final Map<String, Map<String, Float>> latencyMatrix;
@@ -173,7 +178,7 @@ public abstract class NetworkLatency {
 
 
   public static class MeasuredNetworkLatency extends NetworkLatency {
-    final int[] longDistrib = new int[100];
+    private final int[] longDistrib = new int[100];
 
     /**
      * @param proportions - the proportions in percentage. Must sumup to 100
@@ -300,7 +305,7 @@ public abstract class NetworkLatency {
    * </p>
    * <p>
    * The paper does not give any number on latency variation. As well it's unclear if it's a RTT or
-   * a single message latency. As they explain they used 'ping' to calculate the time, as as ping
+   * a single message latency. As they explain they used 'ping' to calculate the time, and as ping
    * gives the RTT time, we consider that's what they measured.
    * <p>
    * This latency should only be used with full random position.

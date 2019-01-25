@@ -54,7 +54,7 @@ public class Node {
    * used in the network layer itself: use the latency models if you want to act at the network
    * layer. A number greater then 1 represents a node slower than the standard.
    */
-  public double speedRatio = 1;
+  public double speedRatio;
 
 
   protected long msgReceived = 0;
@@ -93,10 +93,15 @@ public class Node {
     return "Node{" + "nodeId=" + nodeId + '}';
   }
 
+  /**
+   * The SpeedModel allows model slow vs. fast nodes. By default, all the node have the same speed
+   * ration (1.0), but it's possible to configure a network with slow (speed ratio > 1.0) or fast
+   * (speed ratio < 1.0) nodes. It's up to the protocol to use this when it modelize its internal
+   * calculations.
+   */
   public interface SpeedModel {
     double getSpeedRatio(Random rd);
   }
-
 
   public static class ConstantSpeed implements SpeedModel {
     @Override
@@ -109,7 +114,6 @@ public class Node {
       return this.getClass().getSimpleName();
     }
   }
-
 
   public static class ParetoSpeed implements SpeedModel {
     final GeneralizedParetoDistribution gpd;
