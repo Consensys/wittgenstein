@@ -83,8 +83,8 @@ public class GSFSignature implements Protocol {
     public SendSigs(BitSet sigs, GSFNode.SFLevel l) {
       this.sigs = (BitSet) sigs.clone();
       this.level = l.level;
-      // Size = level + bit field + the signatures included
-      this.size = 1 + l.expectedSigs() / 8 + 48;
+      // Size = level + bit field + the signatures included + our own sig
+      this.size = 1 + l.expectedSigs() / 8 + 96;
       this.levelFinished = l.verifiedSignatures.equals(l.waitedSigs);
     }
 
@@ -174,7 +174,7 @@ public class GSFSignature implements Protocol {
       final List<GSFNode> peers; // The peers when we have all signatures for this level.
       final BitSet waitedSigs; // 1 for the signatures we should have at this level
       final BitSet verifiedSignatures = new BitSet(); // The signatures verified in this level
-      final Set<GSFNode> finishedPeers = new HashSet<>();
+      final BitSet individualSignatures = new BitSet(); // The individual signatures checked
 
       /**
        * We're going to contact all nodes, one after the other. That's our position in the peers'
@@ -252,24 +252,22 @@ public class GSFSignature implements Protocol {
           return;
         }
 
-        List<GSFNode> dest = getRemainingPeers(toSend, 1);
+        List<GSFNode> dest = getRemainingPeers(1);
         if (!dest.isEmpty()) {
           SendSigs ss = new SendSigs(toSend, this);
           network.send(ss, GSFNode.this, dest.get(0));
         }
       }
 
-      List<GSFNode> getRemainingPeers(BitSet toSend, int peersCt) {
+      List<GSFNode> getRemainingPeers(int peersCt) {
         List<GSFNode> res = new ArrayList<>(peersCt);
 
         while (peersCt > 0 && remainingCalls > 0) {
           remainingCalls--;
 
           GSFNode p = peers.get(posInLevel++);
-          if (!finishedPeers.contains(p)) {
-            res.add(p);
-            peersCt--;
-          }
+          res.add(p);
+          peersCt--;
           if (posInLevel >= peers.size()) {
             posInLevel = 0;
           }
@@ -316,6 +314,11 @@ public class GSFSignature implements Protocol {
      */
     void updateVerifiedSignatures(int level, BitSet sigs) {
       SFLevel sfl = levels.get(level);
+
+      if (sigs.cardinality() == 1) {
+        sfl.individualSignatures.or(sigs);
+      }
+      sigs.or(sfl.individualSignatures);
 
       // These lines remove Olivier's optimisation
       //sigs = (BitSet) sigs.clone();
@@ -371,8 +374,7 @@ public class GSFSignature implements Protocol {
           while (include(bestToSend, sfl.waitedSigs) && sfl.level < levels.size() - 1) {
             sfl = levels.get(sfl.level + 1);
             SendSigs sendSigs = new SendSigs(bestToSend, sfl);
-            List<GSFNode> peers =
-                sfl.getRemainingPeers(sfl.verifiedSignatures, acceleratedCallsCount);
+            List<GSFNode> peers = sfl.getRemainingPeers(acceleratedCallsCount);
             if (!peers.isEmpty()) {
               network.send(sendSigs, this, peers);
             }
@@ -410,8 +412,11 @@ public class GSFSignature implements Protocol {
     void onNewSig(GSFNode from, SendSigs ssigs) {
       SFLevel sfl = levels.get(ssigs.level);
       toVerify.add(ssigs);
-      if (ssigs.levelFinished) {
-        sfl.finishedPeers.add(from);
+
+      if (ssigs.sigs.cardinality() != 1) {
+        BitSet indiv = new BitSet();
+        indiv.set(from.sigQueueSize);
+        toVerify.add(new SendSigs(indiv, sfl));
       }
     }
 
@@ -430,7 +435,11 @@ public class GSFSignature implements Protocol {
           continue;
         }
 
-        if (include(verifiedSignatures, cur.sigs)) {
+        if (include(verifiedSignatures, cur.sigs) && cur.sigs.cardinality() != 1) {
+          it.remove();
+          continue;
+        }
+        if (cur.sigs.cardinality() == 1 && cur.sigs.intersects(l.verifiedSignatures)) {
           it.remove();
           continue;
         }

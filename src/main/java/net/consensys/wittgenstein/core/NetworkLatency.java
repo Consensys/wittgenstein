@@ -2,8 +2,8 @@ package net.consensys.wittgenstein.core;
 
 import net.consensys.wittgenstein.core.utils.GeneralizedParetoDistribution;
 import net.consensys.wittgenstein.tools.CSVLatencyReader;
-import java.util.Map;
-import java.util.Random;
+
+import java.util.*;
 
 /**
  * Latency is sometimes the round-trip-time (RTT) sometimes the time for a single trip. Here it's
@@ -70,6 +70,71 @@ public abstract class NetworkLatency {
       return (int) Math.max(1, raw / 2);
     }
   }
+
+
+  /**
+   * Latencies observed end of January 2019 between AWS region / nano systems
+   * See as well https://www.cloudping.co/
+   * Ping can vary a lot other time. We include the variation from NetworkLatencyByDistance.
+   *
+   * To use this model, you need to put the nodes in one of the cities
+   */
+  public static class NetworkLatencyByAwsRegion extends NetworkLatency {
+    private static HashMap<String, Integer> regionPerCity = new HashMap<>();
+    private NetworkLatencyByDistance var = new NetworkLatencyByDistance();
+
+    static List<String> cities(){
+      // We need to sort to ensure test repeatability
+      List<String> cities = Collections.list(regionPerCity.keySet().toArray();
+      Collections.sort(cities);
+      return cities;
+    }
+
+    static {
+      regionPerCity.put("Portland", 0); // Oregon
+      regionPerCity.put("Richmond", 1); // Virginia
+      regionPerCity.put("New+Delhi", 2); // Mumbai
+      regionPerCity.put("Seoul", 3); // Seoul
+      regionPerCity.put("Singapour", 4); // Singapour
+      regionPerCity.put("Sydney", 5); // Sydney
+      regionPerCity.put("Tokyo", 6); // Tokyo
+      regionPerCity.put("Toronto", 7); // Canada central
+      regionPerCity.put("Frankfurt", 8); // Frankfurt
+      regionPerCity.put("Dublin", 9); // Ireland
+      regionPerCity.put("London", 10); // London
+    }
+
+    private int[][] latencies =
+        new int[][] {new int[] {81, 216, 126, 165, 138, 97, 64, 164, 131, 141}, // Oregon
+            new int[] {0, 182, 181, 232, 195, 167, 13, 88, 80, 75,}, // Virginia
+            new int[] {0, 0, 152, 62, 223, 123, 194, 111, 122, 113}, // Mumbai
+            new int[] {0, 0, 0, 97, 133, 35, 184, 259, 254, 264}, // Seoul
+            new int[] {0, 0, 0, 0, 169, 69, 218, 162, 174, 171}, // Singapour
+            new int[] {0, 0, 0, 0, 0, 105, 210, 282, 269, 271}, // Sydney
+            new int[] {0, 0, 0, 0, 0, 0, 156, 235, 222, 234}, // Tokyo
+            new int[] {0, 0, 0, 0, 0, 0, 0, 101, 78, 87,}, // Canada central
+            new int[] {0, 0, 0, 0, 0, 0, 0, 0, 24, 13}, // Frankfurt
+            new int[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 12},// Ireland
+        // London
+        };
+
+    private int getLatency(int reg1, int reg2, int delta) {
+      if (reg1 == reg2) {
+        return 1;
+      }
+      int minReg = Math.min(reg1, reg2);
+      int maxReg = Math.max(reg1, reg2);
+
+      return latencies[minReg][maxReg] + (int)var.getVariableLatency(delta);
+    }
+
+    public int getLatency(Node from, Node to, int delta) {
+      Integer reg1 = regionPerCity.get(from.cityName);
+      Integer reg2 = regionPerCity.get(from.cityName);
+      return getLatency(reg1, reg2, delta);
+    }
+  }
+
 
   public static class NetworkLatencyByCity extends NetworkLatency {
     private final Map<String, Map<String, Float>> latencyMatrix;
