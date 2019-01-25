@@ -1,8 +1,7 @@
-package net.consensys.wittgenstein.tools;
+package net.consensys.wittgenstein.protocol;
 
 import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.core.NodeBuilder;
-import net.consensys.wittgenstein.protocol.SanFerminHelper;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
