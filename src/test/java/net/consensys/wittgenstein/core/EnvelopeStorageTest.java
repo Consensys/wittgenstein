@@ -16,7 +16,7 @@ public class EnvelopeStorageTest {
   private Node n2 = new Node(rd, nb);
   private Node n3 = new Node(rd, nb);
 
-  private Network.Message<Node> dummy = new Network.Message<Node>() {
+  private Network.Message<Node> dummy = new Network.Message<>() {
     @Override
     public void action(Node from, Node to) {}
   };
@@ -58,7 +58,7 @@ public class EnvelopeStorageTest {
   @Test
   public void testAction() {
     AtomicBoolean ab = new AtomicBoolean(false);
-    Network.Message<Node> act = new Network.Message<Node>() {
+    Network.Message<Node> act = new Network.Message<>() {
       @Override
       public void action(Node from, Node to) {
         ab.set(true);
@@ -83,7 +83,7 @@ public class EnvelopeStorageTest {
   @Test
   public void testMsgArrival() {
     AtomicLong ab = new AtomicLong(0);
-    Network.Message<Node> act = new Network.Message<Node>() {
+    Network.Message<Node> act = new Network.Message<>() {
       @Override
       public void action(Node from, Node to) {
         ab.set(network.time);

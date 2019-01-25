@@ -55,6 +55,11 @@ public class P2PNetwork extends Network<P2PNode> {
     P2PNode p1 = allNodes.get(pp1);
     P2PNode p2 = allNodes.get(pp2);
 
+    if (p1 == null || p2 == null) {
+      throw new IllegalStateException(
+          "should not be null: p1=" + p1 + ", p2=" + p2 + ", pp1=" + pp1 + ", pp2=" + pp2);
+    }
+
     p1.peers.add(p2);
     p2.peers.add(p1);
   }

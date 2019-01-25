@@ -4,7 +4,6 @@ package net.consensys.wittgenstein.tools;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -17,7 +16,7 @@ public class CSVLatencyReaderTest {
   private final String city4 = "city4";
 
   @Before
-  public void setup() throws IOException {
+  public void setup() {
     Map<String, Map<String, Float>> latencyMatrix = makeLatencyMatrix();
     reader = new CSVLatencyReader(latencyMatrix);
   }
@@ -61,7 +60,7 @@ public class CSVLatencyReaderTest {
     latencyMatrix.put(city1, c1Map);
     latencyMatrix.put(city2, c2Map);
     latencyMatrix.put(city3, c3Map);
-    latencyMatrix.put(city4, c3Map);
+    latencyMatrix.put(city4, c3Map); //todo; why we don't put c3 here?
 
     return latencyMatrix;
   }

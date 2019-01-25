@@ -390,11 +390,7 @@ public class CasperIMD {
             Set<Attestation> sa = res.computeIfAbsent(a.height, k -> new HashSet<>());
             sa.add(a);
 
-            Set<Attestation> aa = res.get(a.height);
-            if (aa == null) {
-              aa = new HashSet<>();
-              res.put(a.height, aa);
-            }
+            Set<Attestation> aa = res.computeIfAbsent(a.height, k -> new HashSet<>());
             aa.add(a);
           }
         }

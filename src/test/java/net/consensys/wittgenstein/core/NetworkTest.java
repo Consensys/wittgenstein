@@ -29,7 +29,7 @@ public class NetworkTest {
     AtomicInteger a1 = new AtomicInteger(-1);
     AtomicInteger a2 = new AtomicInteger(-1);
 
-    Network.Message<Node> act = new Network.Message<Node>() {
+    Network.Message<Node> act = new Network.Message<>() {
       @Override
       public void action(Node from, Node to) {
         a1.set(from.nodeId);
@@ -64,7 +64,7 @@ public class NetworkTest {
     AtomicInteger a1 = new AtomicInteger(0);
     AtomicInteger a2 = new AtomicInteger(0);
 
-    Network.Message<Node> act = new Network.Message<Node>() {
+    Network.Message<Node> act = new Network.Message<>() {
       @Override
       public void action(Node from, Node to) {
         a1.addAndGet(from.nodeId);
@@ -91,7 +91,7 @@ public class NetworkTest {
   @Test
   public void testMultipleMessage() {
     AtomicInteger ab = new AtomicInteger(0);
-    Network.Message<Node> act = new Network.Message<Node>() {
+    Network.Message<Node> act = new Network.Message<>() {
       @Override
       public void action(Node from, Node to) {
         ab.incrementAndGet();
@@ -109,7 +109,7 @@ public class NetworkTest {
 
   @Test
   public void testStats() {
-    Network.Message<Node> act = new Network.Message<Node>() {
+    Network.Message<Node> act = new Network.Message<>() {
       @Override
       public void action(Node from, Node to) {}
     };
@@ -141,7 +141,7 @@ public class NetworkTest {
 
   @Test
   public void testSortedArrivals() {
-    Network.Message<Node> act = new Network.Message<Node>() {
+    Network.Message<Node> act = new Network.Message<>() {
       @Override
       public void action(Node from, Node to) {}
     };
@@ -176,7 +176,7 @@ public class NetworkTest {
   @Test
   public void testDelays() {
     network.setNetworkLatency(new NetworkLatency.EthScanNetworkLatency());
-    Network.Message<Node> act = new Network.Message<Node>() {
+    Network.Message<Node> act = new Network.Message<>() {
       @Override
       public void action(Node from, Node to) {}
     };
@@ -213,7 +213,7 @@ public class NetworkTest {
     Node n3 = new Node(network.rd, nb);
 
     AtomicInteger ab = new AtomicInteger(0);
-    Network.Message<Node> act = new Network.Message<Node>() {
+    Network.Message<Node> act = new Network.Message<>() {
       @Override
       public void action(Node from, Node to) {
         ab.incrementAndGet();

@@ -46,7 +46,8 @@ public class P2PFlood implements Protocol {
   private final int delayBetweenSends;
 
   private final P2PNetwork network;
-  private final NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
+  private final NodeBuilder nb;
+
 
   class P2PFloodNode extends P2PNode {
     /**
@@ -67,8 +68,8 @@ public class P2PFlood implements Protocol {
     }
   }
 
-  private P2PFlood(int nodeCount, int deadNodeCount, int delayBeforeResent, int msgCount,
-      int peersCount, int delayBetweenSends, NetworkLatency nl) {
+  public P2PFlood(int nodeCount, int deadNodeCount, int delayBeforeResent, int msgCount,
+      int peersCount, int delayBetweenSends, NodeBuilder nb, NetworkLatency nl) {
     this.nodeCount = nodeCount;
     this.deadNodeCount = deadNodeCount;
     this.delayBeforeResent = delayBeforeResent;
@@ -76,6 +77,7 @@ public class P2PFlood implements Protocol {
     this.peersCount = peersCount;
     this.delayBetweenSends = delayBetweenSends;
     this.network = new P2PNetwork(peersCount, true);
+    this.nb = nb;
     this.network.setNetworkLatency(nl);
   }
 
@@ -90,7 +92,7 @@ public class P2PFlood implements Protocol {
   @Override
   public Protocol copy() {
     return new P2PFlood(nodeCount, deadNodeCount, delayBeforeResent, msgCount, peersCount,
-        delayBetweenSends, network.networkLatency);
+        delayBetweenSends, nb, network.networkLatency);
   }
 
   public void init() {
@@ -120,7 +122,12 @@ public class P2PFlood implements Protocol {
   }
 
   private static void floodTime() {
-    P2PFlood p = new P2PFlood(4500, 4000, 500, 1, 50, 300, new NetworkLatency.IC3NetworkLatency());
+    NetworkLatency nl = new NetworkLatency.AwsRegionNetworkLatency();
+    NodeBuilder nb =
+        new NodeBuilder.NodeBuilderWithCity(NetworkLatency.AwsRegionNetworkLatency.cities());
+    new NetworkLatency.IC3NetworkLatency();
+
+    P2PFlood p = new P2PFlood(4500, 4000, 500, 1, 50, 300, nb, nl);
 
     Predicate<Protocol> contIf = p1 -> {
       if (p1.network().time > 50000) {
@@ -149,7 +156,7 @@ public class P2PFlood implements Protocol {
       }
     };
 
-    new ProgressPerTime(p, "", "node count", sg, 1000, null).run(contIf);
+    new ProgressPerTime(p, "", "node count", sg, 1, null).run(contIf);
   }
 
   public static void main(String... args) {
