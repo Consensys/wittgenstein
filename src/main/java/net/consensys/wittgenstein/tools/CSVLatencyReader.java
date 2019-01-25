@@ -16,7 +16,7 @@ public class CSVLatencyReader {
   private static final String CSV_FILE_SUFFIX = "Ping.csv";
   private static final float SAME_CITY_LATENCY = 30f;
   private final Map<String, Map<String, Float>> latencyMatrix;
-  private Set<String> cities;
+  private List<String> cities;
 
   public CSVLatencyReader() {
     this.cities = dirNames(DATA_PATH);
@@ -101,15 +101,17 @@ public class CSVLatencyReader {
     return DATA_PATH.resolve(city).resolve(city + CSV_FILE_SUFFIX);
   }
 
-  private static Set<String> dirNames(Path path) {
+  private static List<String> dirNames(Path path) {
     File file = path.toFile();
     if (file == null || file.list() == null) {
-      throw  new IllegalStateException("Can't get file for path="+path);
+      throw new IllegalStateException("Can't get file for path=" + path);
     }
-    return new HashSet<>(Arrays.asList(file.list()));
+    List<String> res = Arrays.asList(file.list());
+    Collections.sort(res);
+    return res;
   }
 
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) {
     CSVLatencyReader reader = new CSVLatencyReader();
     Map<String, Map<String, Float>> latencyMatrix = reader.latencyMatrix;
     Set<String> cities = latencyMatrix.keySet();
@@ -120,10 +122,19 @@ public class CSVLatencyReader {
       for (String cityTo : cities) {
         if (latenciesTo.containsKey(cityTo)) {
           float v = latenciesTo.get(cityTo);
-          System.out.println(cityFrom + " ->  " + cityTo + " = " + v);
+          // System.out.println(cityFrom + " ->  " + cityTo + " = " + v);
+          if (v <= 1) {
+            System.err.println(
+                "Strange latency for " + cityTo + ", latency is " + v + ", from " + cityFrom);
+          }
         } else {
           float v = latencyMatrix.get(cityTo).get(cityFrom);
-          System.out.println(cityFrom + " ->  " + cityTo + " = " + v);
+          //System.out.println(cityFrom + " ->  " + cityTo + " = " + v);
+          if (v <= 1) {
+            System.err.println(
+                "Strange latency for " + cityTo + ", latency is " + v + ", from " + cityFrom);
+          }
+
         }
       }
     }

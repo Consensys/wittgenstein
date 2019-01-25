@@ -76,7 +76,7 @@ public abstract class NetworkLatency {
    * https://www.cloudping.co : this web site gives the latest ping measured. Ping can vary a lot
    * other time. We include the variation from NetworkLatencyByDistance.
    * <p>
-   * 
+   *
    * @see net.consensys.wittgenstein.core.Node.NodeBuilderWithCity
    */
   public static class AwsRegionNetworkLatency extends NetworkLatency {
@@ -141,6 +141,7 @@ public abstract class NetworkLatency {
     }
   }
 
+
   public static class NetworkLatencyByCity extends NetworkLatency {
     private final Map<String, Map<String, Float>> latencyMatrix;
 
@@ -149,15 +150,19 @@ public abstract class NetworkLatency {
     }
 
     public int getLatency(Node from, Node to, int delta) {
+      if (from.nodeId == to.nodeId) {
+        return 1;
+      }
+
       String cityFrom = from.cityName;
       String cityTo = to.cityName;
 
-      if (cityFrom.equals(Node.DEFAULT_CITY)) {
+      if (cityFrom.equals(Node.DEFAULT_CITY) || cityTo.equals(Node.DEFAULT_CITY)) {
         throw new IllegalStateException(
             "Can't use NetworkLatencyByCity model with default city location");
       }
 
-      return Math.round(0.5f * getLatency(cityFrom, cityTo));
+      return Math.max(1, Math.round(0.5f * getLatency(cityFrom, cityTo)));
     }
 
     private float getLatency(String cityFrom, String cityTo) {

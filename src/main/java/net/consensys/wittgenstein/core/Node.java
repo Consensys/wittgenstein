@@ -93,6 +93,12 @@ public class Node {
     return "Node{" + "nodeId=" + nodeId + '}';
   }
 
+  public String fullToString() {
+    return "id=" + nodeId + ", city=" + cityName + ", posX=" + x + ", posY=" + y;
+  }
+
+
+
   /**
    * The SpeedModel allows model slow vs. fast nodes. By default, all the node have the same speed
    * ration (1.0), but it's possible to configure a network with slow (speed ratio > 1.0) or fast
@@ -102,6 +108,7 @@ public class Node {
   public interface SpeedModel {
     double getSpeedRatio(Random rd);
   }
+
 
   public static class ConstantSpeed implements SpeedModel {
     @Override
@@ -114,6 +121,7 @@ public class Node {
       return this.getClass().getSimpleName();
     }
   }
+
 
   public static class ParetoSpeed implements SpeedModel {
     final GeneralizedParetoDistribution gpd;

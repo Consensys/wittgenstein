@@ -1,8 +1,11 @@
 package net.consensys.wittgenstein.core;
 
+import net.consensys.wittgenstein.tools.CSVLatencyReader;
 import org.junit.Assert;
 import org.junit.Test;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -65,6 +68,35 @@ public class NetworkLatencyTest {
     Node a1 = new Node(new Random(0), nb);
     Assert.assertEquals(NetworkLatency.IC3NetworkLatency.SW / 2, nl.getLatency(a0, a1, 0));
     Assert.assertEquals(NetworkLatency.IC3NetworkLatency.SW / 2, nl.getLatency(a1, a0, 0));
+  }
+
+  @Test
+  public void testCitiesLatency() {
+    CSVLatencyReader lr = new CSVLatencyReader();
+    Assert.assertTrue(lr.cities().size() > 0);
+
+    Node.NodeBuilder nb = new Node.NodeBuilderWithCity(lr.cities());
+    NetworkLatency nl = new NetworkLatency.NetworkLatencyByCity(lr);
+
+    Random rd = new Random();
+    List<Node> ln = new ArrayList<>();
+    for (int i = 0; i < 100; i++) {
+      ln.add(new Node(rd, nb));
+    }
+
+    for (Node f : ln) {
+      for (Node t : ln) {
+        int l = nl.getLatency(f, t, 1);
+        if (f == t) {
+          Assert.assertEquals(1, l);
+        } else if (f.cityName.equals(t.cityName)) {
+          Assert.assertTrue(l > 0);
+        } else {
+          Assert.assertTrue("l=" + l + ", from=" + f.fullToString() + ", to=" + t.fullToString(),
+              l > 0);
+        }
+      }
+    }
   }
 
   @Test

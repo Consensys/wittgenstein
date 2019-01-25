@@ -2,7 +2,6 @@ package net.consensys.wittgenstein.core;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import net.consensys.wittgenstein.protocol.Slush;
 
 /**
  * There is a single network for a simulation.

@@ -1,6 +1,9 @@
 package net.consensys.wittgenstein.protocol;
 
-import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.Network;
+import net.consensys.wittgenstein.core.Node;
+import net.consensys.wittgenstein.core.ProgressPerTime;
+import net.consensys.wittgenstein.core.Protocol;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import java.util.*;
 import java.util.function.Predicate;
