@@ -1,4 +1,4 @@
-package net.consensys.wittgenstein.tools;
+package net.consensys.wittgenstein.protocol;
 
 import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.core.utils.MoreMath;
