@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class NetworkLatencyTest {
   private final AtomicInteger ai = new AtomicInteger(1);
-  private final Node.NodeBuilder nb = new Node.NodeBuilder() {
+  private final NodeBuilder nb = new NodeBuilder() {
     @Override
     public int getX(Random rd) {
       return ai.getAndAdd(Node.MAX_X / 2);
@@ -32,10 +32,10 @@ public class NetworkLatencyTest {
     Random rd = new Random();
 
     for (String r1 : NetworkLatency.AwsRegionNetworkLatency.cities()) {
-      Node.NodeBuilder b1 = new Node.NodeBuilderWithCity(Collections.singletonList(r1));
+      NodeBuilder b1 = new NodeBuilder.NodeBuilderWithCity(Collections.singletonList(r1));
       Node n1 = new Node(rd, b1);
       for (String r2 : NetworkLatency.AwsRegionNetworkLatency.cities()) {
-        Node.NodeBuilder b2 = new Node.NodeBuilderWithCity(Collections.singletonList(r2));
+        NodeBuilder b2 = new NodeBuilder.NodeBuilderWithCity(Collections.singletonList(r2));
         Node n2 = new Node(rd, b2);
         int l = nl.getLatency(n1, n2, 0);
         if (r1.equals(r2)) {
@@ -51,10 +51,10 @@ public class NetworkLatencyTest {
   public void testIC3NetworkLatency() {
     NetworkLatency nl = new NetworkLatency.IC3NetworkLatency();
 
-    Node a0 = new Node(new Random(0), new Node.NodeBuilder());
+    Node a0 = new Node(new Random(0), new NodeBuilder());
     Assert.assertEquals(NetworkLatency.IC3NetworkLatency.S10 / 2, nl.getLatency(a0, a0, 0));
 
-    Node.NodeBuilder nb = new Node.NodeBuilder() {
+    NodeBuilder nb = new NodeBuilder() {
       @Override
       public int getX(Random rd) {
         return Node.MAX_X / 2;
@@ -75,7 +75,7 @@ public class NetworkLatencyTest {
     CSVLatencyReader lr = new CSVLatencyReader();
     Assert.assertTrue(lr.cities().size() > 0);
 
-    Node.NodeBuilder nb = new Node.NodeBuilderWithCity(lr.cities());
+    NodeBuilder nb = new NodeBuilder.NodeBuilderWithCity(lr.cities());
     NetworkLatency nl = new NetworkLatency.NetworkLatencyByCity(lr);
 
     Random rd = new Random();
@@ -104,7 +104,7 @@ public class NetworkLatencyTest {
     NetworkLatency nl = new NetworkLatency.EthScanNetworkLatency();
     Network<Node> network = new Network<>();
     network.setNetworkLatency(nl);
-    Node.NodeBuilder nb = new Node.NodeBuilder();
+    NodeBuilder nb = new NodeBuilder();
     for (int i = 0; i < 1000; i++) {
       network.addNode(new Node(new Random(0), nb));
     }

@@ -74,7 +74,7 @@ public class CasperIMD {
 
 
   final BlockChainNetwork network = new BlockChainNetwork();
-  final Node.NodeBuilder nb = new Node.NodeBuilderWithRandomPosition();
+  final NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
   final CasperBlock genesis = new CasperBlock();
 
   final ArrayList<Attester> attesters = new ArrayList<>();

@@ -1,9 +1,6 @@
 package net.consensys.wittgenstein.protocol;
 
-import net.consensys.wittgenstein.core.Network;
-import net.consensys.wittgenstein.core.NetworkLatency;
-import net.consensys.wittgenstein.core.Node;
-import net.consensys.wittgenstein.core.Protocol;
+import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.tools.Graph;
@@ -97,7 +94,7 @@ public class SanFerminSignature implements Protocol {
     this.shuffledLists = shuffledLists;
 
     this.network = new Network<>();
-    this.nb = new Node.NodeBuilderWithRandomPosition();
+    this.nb = new NodeBuilder.NodeBuilderWithRandomPosition();
 
     this.allNodes = new ArrayList<>(nodeCount);
     for (int i = 0; i < nodeCount; i++) {
@@ -119,7 +116,7 @@ public class SanFerminSignature implements Protocol {
   }
 
   final Network<SanFerminNode> network;
-  final Node.NodeBuilder nb;
+  final NodeBuilder nb;
 
   /**
    * init makes each node starts swapping with each other when the network starts

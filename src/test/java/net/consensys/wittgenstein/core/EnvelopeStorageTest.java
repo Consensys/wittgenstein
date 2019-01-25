@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class EnvelopeStorageTest {
   private Network<Node> network = new Network<>();
-  private Node.NodeBuilder nb = new Node.NodeBuilder();
+  private NodeBuilder nb = new NodeBuilder();
   private Random rd = new Random(0);
   private Node n0 = new Node(rd, nb);
   private Node n1 = new Node(rd, nb);

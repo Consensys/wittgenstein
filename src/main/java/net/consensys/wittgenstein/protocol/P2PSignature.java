@@ -95,7 +95,7 @@ public class P2PSignature implements Protocol {
 
 
   final P2PNetwork network;
-  final Node.NodeBuilder nb;
+  final NodeBuilder nb;
 
   public P2PSignature(int signingNodeCount, int relayingNodeCount, int threshold,
       int connectionCount, int pairingTime, int sigsSendPeriod, boolean doubleAggregateStrategy,
@@ -111,7 +111,7 @@ public class P2PSignature implements Protocol {
     this.sendSigsStrategy = this.sanFermin ? SendSigsStrategy.cmp_all : sendSigsStrategy;
     this.sigRange = sigRange;
     this.network = new P2PNetwork(connectionCount, false);
-    this.nb = new Node.NodeBuilderWithRandomPosition();
+    this.nb = new NodeBuilder.NodeBuilderWithRandomPosition();
   }
 
   static class State extends Network.Message<P2PSigNode> {

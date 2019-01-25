@@ -36,10 +36,10 @@ public class GSFSignature implements Protocol {
   final int nodesDown;
 
   final Network<GSFNode> network;
-  Node.NodeBuilder nb;
+  NodeBuilder nb;
 
   public GSFSignature(int nodeCount, int threshold, int pairingTime, int timeoutPerLevelMs,
-      int periodDurationMs, int acceleratedCallsCount, int nodesDown, Node.NodeBuilder nb,
+      int periodDurationMs, int acceleratedCallsCount, int nodesDown, NodeBuilder nb,
       NetworkLatency nl) {
 
     if (nodesDown >= nodeCount || nodesDown < 0 || threshold > nodeCount
@@ -63,7 +63,7 @@ public class GSFSignature implements Protocol {
       int periodDurationMs, int acceleratedCallsCount, double ratioNodesDown) {
     this(nodeCount, (int) (ratioThreshold * nodeCount), pairingTime, timeoutPerLevelMs,
         periodDurationMs, acceleratedCallsCount, (int) (ratioNodesDown * nodeCount),
-        new Node.NodeBuilderWithRandomPosition(), new NetworkLatency.IC3NetworkLatency());
+        new NodeBuilder.NodeBuilderWithRandomPosition(), new NetworkLatency.IC3NetworkLatency());
   }
 
   @Override
@@ -614,8 +614,8 @@ public class GSFSignature implements Protocol {
 
     NetworkLatency nl = new NetworkLatency.AwsRegionNetworkLatency();
     final Node.SpeedModel sm = new Node.ParetoSpeed(1, 0.2, 0.4, 3);
-    Node.NodeBuilder nb =
-        new Node.NodeBuilderWithCity(NetworkLatency.AwsRegionNetworkLatency.cities());
+    NodeBuilder nb =
+        new NodeBuilder.NodeBuilderWithCity(NetworkLatency.AwsRegionNetworkLatency.cities());
     /*
     nl = new NetworkLatency.NetworkLatencyByDistance();
     nb =new Node.NodeBuilderWithRandomPosition(sm);

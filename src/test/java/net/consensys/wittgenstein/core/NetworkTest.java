@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class NetworkTest {
   private Network<Node> network = new Network<>();
-  private Node.NodeBuilder nb = new Node.NodeBuilder();
+  private NodeBuilder nb = new NodeBuilder();
   private Node n0 = new Node(network.rd, nb);
   private Node n1 = new Node(network.rd, nb);
   private Node n2 = new Node(network.rd, nb);
@@ -201,7 +201,7 @@ public class NetworkTest {
   public void testPartition() {
     Network<Node> net = new Network<>();
     AtomicInteger ai = new AtomicInteger(0);
-    Node.NodeBuilder nb = new Node.NodeBuilder() {
+    NodeBuilder nb = new NodeBuilder() {
       @Override
       protected int getX(Random rd) {
         return ai.addAndGet(Node.MAX_X / 10);

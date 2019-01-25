@@ -1,9 +1,6 @@
 package net.consensys.wittgenstein.protocol;
 
-import net.consensys.wittgenstein.core.Network;
-import net.consensys.wittgenstein.core.Node;
-import net.consensys.wittgenstein.core.ProgressPerTime;
-import net.consensys.wittgenstein.core.Protocol;
+import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import java.util.*;
 import java.util.function.Predicate;
@@ -11,7 +8,7 @@ import java.util.function.Predicate;
 public class Slush implements Protocol {
   private static final int NODES_AV = 100;
   private final Network<SlushNode> network = new Network<>();
-  final Node.NodeBuilder nb;
+  final NodeBuilder nb;
   private static final int COLOR_NB = 2;
 
   /**
@@ -36,7 +33,7 @@ public class Slush implements Protocol {
     this.K = K;
     this.A = A;
     this.AK = K * A;
-    this.nb = new Node.NodeBuilderWithRandomPosition();
+    this.nb = new NodeBuilder.NodeBuilderWithRandomPosition();
   }
 
   @Override

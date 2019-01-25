@@ -24,7 +24,7 @@ public class Dfinity {
 
   final int majority;
 
-  final Node.NodeBuilder nb;
+  final NodeBuilder nb;
 
   public Dfinity copy() {
     return new Dfinity(blockProducersCount, attestersCount, attestersPerRound,
@@ -51,7 +51,7 @@ public class Dfinity {
     this.attestationConstructionTime = attestationConstructionTime;
     this.percentageDeadAttester = percentageDeadAttester;
 
-    this.nb = new Node.NodeBuilderWithRandomPosition();
+    this.nb = new NodeBuilder.NodeBuilderWithRandomPosition();
     this.network.addObserver(new DfinityNode(network.rd, genesis) {});
   }
 

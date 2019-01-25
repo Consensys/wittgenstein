@@ -77,7 +77,7 @@ public abstract class NetworkLatency {
    * other time. We include the variation from NetworkLatencyByDistance.
    * <p>
    *
-   * @see net.consensys.wittgenstein.core.Node.NodeBuilderWithCity
+   * @see NodeBuilder.NodeBuilderWithCity
    */
   public static class AwsRegionNetworkLatency extends NetworkLatency {
     private static HashMap<String, Integer> regionPerCity = new HashMap<>();

@@ -45,7 +45,7 @@ public class OptimisticP2PSignature implements Protocol {
 
 
   final P2PNetwork network;
-  final Node.NodeBuilder nb;
+  final NodeBuilder nb;
 
   public OptimisticP2PSignature(int nodeCount, int threshold, int connectionCount,
       int pairingTime) {
@@ -55,7 +55,7 @@ public class OptimisticP2PSignature implements Protocol {
     this.pairingTime = pairingTime;
 
     this.network = new P2PNetwork(connectionCount, false);
-    this.nb = new Node.NodeBuilderWithRandomPosition();
+    this.nb = new NodeBuilder.NodeBuilderWithRandomPosition();
   }
 
   public OptimisticP2PSignature copy() {

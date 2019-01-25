@@ -1,6 +1,7 @@
 package net.consensys.wittgenstein.tools;
 
 import net.consensys.wittgenstein.core.Node;
+import net.consensys.wittgenstein.core.NodeBuilder;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -14,7 +15,7 @@ public class SanFerminTest {
   @Before
   public void setup() {
     allNodes = new ArrayList<>();
-    Node.NodeBuilder nb = new Node.NodeBuilder();
+    NodeBuilder nb = new NodeBuilder();
     int count = 8;
     for (int i = 0; i < count; i++)
       allNodes.add(new Node(new Random(0), nb));

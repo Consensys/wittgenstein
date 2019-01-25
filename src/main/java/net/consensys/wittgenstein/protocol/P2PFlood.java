@@ -46,7 +46,7 @@ public class P2PFlood implements Protocol {
   private final int delayBetweenSends;
 
   private final P2PNetwork network;
-  private final Node.NodeBuilder nb = new Node.NodeBuilderWithRandomPosition();
+  private final NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
 
   class P2PFloodNode extends P2PNode {
     /**

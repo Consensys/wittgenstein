@@ -14,7 +14,7 @@ public class PingPong implements Protocol {
   /**
    * Nodes have positions. This position is chosen by the builder.
    */
-  private final Node.NodeBuilder nb = new Node.NodeBuilderWithRandomPosition();
+  private final NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
 
   /**
    * Messages, exchanged on the network, are specific to the protocol. Here we have two messages:
