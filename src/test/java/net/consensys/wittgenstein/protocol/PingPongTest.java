@@ -13,8 +13,7 @@ public class PingPongTest {
     p.network().run(10);
 
     Assert.assertEquals(p.nodeCt, p.network().allNodes.size());
-    for (Node nn : p.network().allNodes) {
-      PingPong.PingPongNode n = (PingPong.PingPongNode) nn;
+    for (PingPong.PingPongNode n : p.network().allNodes) {
       Assert.assertFalse(n.down);
       Assert.assertTrue(n.pong == 0 || n.pong == 1000);
     }
@@ -32,10 +31,10 @@ public class PingPongTest {
     p2.init();
     p2.network().runMs(200);
 
-    for (Node n1 : p1.network().allNodes) {
-      Node n2 = p2.network().getNodeById(n1.nodeId);
+    for (PingPong.PingPongNode n1 : p1.network().allNodes) {
+      PingPong.PingPongNode n2 = p2.network().getNodeById(n1.nodeId);
       Assert.assertNotNull(n2);
-      Assert.assertEquals(((PingPong.PingPongNode) n1).pong, ((PingPong.PingPongNode) n2).pong);
+      Assert.assertEquals(n1.pong, n2.pong);
     }
   }
 }
