@@ -14,7 +14,7 @@ public class P2PFloodTest {
     NetworkLatency nl = new NetworkLatency.NetworkNoLatency();
     NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
 
-    P2PFlood po = new P2PFlood(100, 10, 50, 1, 10, 30, nb, nl);
+    P2PFlood po = new P2PFlood(100, 10, 50, 1, 1, 10, 30, nb, nl);
     Protocol p = po.copy();
     p.init();
     p.network().run(20);
@@ -37,7 +37,7 @@ public class P2PFloodTest {
     NodeBuilder nb =
         new NodeBuilder.NodeBuilderWithCity(NetworkLatency.AwsRegionNetworkLatency.cities());
 
-    Protocol po = new P2PFlood(4500, 4000, 500, 1, 50, 300, nb, nl);
+    Protocol po = new P2PFlood(4500, 4000, 500, 1, 1, 50, 300, nb, nl);
     Protocol p = po.copy();
     p.init();
     p.network().run(2000);

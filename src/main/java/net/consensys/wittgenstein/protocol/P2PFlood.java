@@ -36,6 +36,11 @@ public class P2PFlood implements Protocol {
   private final int msgCount;
 
   /**
+   * The number of messages to receive for a node to consider the protocol finished
+   */
+  private final int msgToReceive;
+
+  /**
    * Average number of peers
    */
   private final int peersCount;
@@ -69,11 +74,12 @@ public class P2PFlood implements Protocol {
   }
 
   public P2PFlood(int nodeCount, int deadNodeCount, int delayBeforeResent, int msgCount,
-      int peersCount, int delayBetweenSends, NodeBuilder nb, NetworkLatency nl) {
+      int msgToReceive, int peersCount, int delayBetweenSends, NodeBuilder nb, NetworkLatency nl) {
     this.nodeCount = nodeCount;
     this.deadNodeCount = deadNodeCount;
     this.delayBeforeResent = delayBeforeResent;
     this.msgCount = msgCount;
+    this.msgToReceive = msgToReceive;
     this.peersCount = peersCount;
     this.delayBetweenSends = delayBetweenSends;
     this.network = new P2PNetwork(peersCount, true);
@@ -84,15 +90,16 @@ public class P2PFlood implements Protocol {
   @Override
   public String toString() {
     return "nodes=" + nodeCount + ", deadNodes=" + deadNodeCount + ", delayBeforeResent="
-        + delayBeforeResent + "ms, msgSent=" + msgCount + ", peers(minimum)=" + peersCount
-        + ", peers(avg)=" + network.avgPeers() + ", delayBetweenSends=" + delayBetweenSends
-        + "ms, latency=" + network.networkLatency.getClass().getSimpleName();
+        + delayBeforeResent + "ms, msgSent=" + msgCount + ", msgToReceive=" + msgToReceive
+        + ", peers(minimum)=" + peersCount + ", peers(avg)=" + network.avgPeers()
+        + ", delayBetweenSends=" + delayBetweenSends + "ms, latency="
+        + network.networkLatency.getClass().getSimpleName();
   }
 
   @Override
   public Protocol copy() {
-    return new P2PFlood(nodeCount, deadNodeCount, delayBeforeResent, msgCount, peersCount,
-        delayBetweenSends, nb.copy(), network.networkLatency);
+    return new P2PFlood(nodeCount, deadNodeCount, delayBeforeResent, msgCount, msgToReceive,
+        peersCount, delayBetweenSends, nb.copy(), network.networkLatency);
   }
 
   public void init() {
@@ -121,28 +128,16 @@ public class P2PFlood implements Protocol {
     return network;
   }
 
-  /**
-   * round=0, nodes=2000, deadNodes=0, delayBeforeResent=1ms, msgSent=2000, peers(minimum)=15,
-   * peers(avg)=18, delayBetweenSends=1ms, latency=IC3NetworkLatency bytes sent: min: 28001,
-   * max:62001, avg:35785 bytes rcvd: min: 12725, max:43525, avg:24684 msg sent: min: 28001,
-   * max:62001, avg:35785 msg rcvd: min: 12725, max:43525, avg:24684 done at: min: 282, max:364,
-   * avg:322
-   *
-   * round=0, nodes=2000, deadNodes=0, delayBeforeResent=1ms, msgSent=2000, peers(minimum)=15,
-   * peers(avg)=18, delayBetweenSends=1ms, latency=AwsRegionNetworkLatency bytes sent: min: 28001,
-   * max:62001, avg:35915 bytes rcvd: min: 16950, max:51365, avg:30102 msg sent: min: 28001,
-   * max:62001, avg:35915 msg rcvd: min: 16950, max:51365, avg:30102 done at: min: 150, max:250,
-   * avg:185
-   */
-
   private static void floodTime() {
     NetworkLatency nl = new NetworkLatency.AwsRegionNetworkLatency();
     NodeBuilder nb =
         new NodeBuilder.NodeBuilderWithCity(NetworkLatency.AwsRegionNetworkLatency.cities());
-    //nl = new NetworkLatency.IC3NetworkLatency();
-    // nb = new NodeBuilder.NodeBuilderWithRandomPosition();
+    nl = new NetworkLatency.IC3NetworkLatency();
+    nb = new NodeBuilder.NodeBuilderWithRandomPosition();
 
-    P2PFlood p = new P2PFlood(2000, 0, 1, 2000, 15, 1, nb, nl);
+    int liveNodes = 4000;
+    final int threshold = (int) (0.99 * liveNodes);
+    P2PFlood p = new P2PFlood(liveNodes, 0, 1, 4000, threshold, 15, 1, nb, nl);
 
     Predicate<Protocol> contIf = p1 -> {
       if (p1.network().time > 50000) {
