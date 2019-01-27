@@ -6,7 +6,7 @@ import java.util.*;
 import java.util.function.Predicate;
 
 public class Slush implements Protocol {
-  private static final int NODES_AV = 100;
+  private final int NODES_AV;
   private final Network<SlushNode> network = new Network<>();
   final NodeBuilder nb;
   private static final int COLOR_NB = 2;
@@ -28,7 +28,8 @@ public class Slush implements Protocol {
   private final double A;
   private double AK;
 
-  public Slush(int M, int K, double A) {
+  public Slush(int NODES_AV, int M, int K, double A) {
+    this.NODES_AV = NODES_AV;
     this.M = M;
     this.K = K;
     this.A = A;
@@ -57,7 +58,7 @@ public class Slush implements Protocol {
 
   @Override
   public Slush copy() {
-    return new Slush(M, K, A);
+    return new Slush(NODES_AV, M, K, A);
   }
 
   static class Query extends Network.Message<SlushNode> {
@@ -232,7 +233,7 @@ public class Slush implements Protocol {
   }
 
   public static void main(String... args) {
-    new Slush(5, 7, 4.0 / 7.0).play();
+    new Slush(100, 5, 7, 4.0 / 7.0).play();
   }
 
 }

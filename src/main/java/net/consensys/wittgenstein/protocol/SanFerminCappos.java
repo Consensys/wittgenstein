@@ -265,8 +265,8 @@ public class SanFerminCappos implements Protocol {
         throw new IllegalStateException();
       });
 
-      print(" send Swaps to " + String.join(" - ",
-          candidates.stream().map(n -> n.binaryId).collect(Collectors.toList())));
+      print(" send Swaps to "
+          + candidates.stream().map(n -> n.binaryId).collect(Collectors.joining(" - ")));
       this.sendSwap(candidates, this.currentPrefixLength,
           this.totalNumberOfSigs(this.currentPrefixLength + 1), true);
 
@@ -341,8 +341,8 @@ public class SanFerminCappos implements Protocol {
           .entrySet()
           .stream()
           .filter(entry -> entry.getKey() >= level)
-          .map(entry -> entry.getValue())
-          .map(list -> list.stream().max(Integer::max).get())
+          .map(Map.Entry::getValue)
+          .map(list -> list.stream().max(Comparator.naturalOrder()).get())
           .reduce(0, Integer::sum) + 1; // +1 for own sig
     }
 
@@ -376,10 +376,6 @@ public class SanFerminCappos implements Protocol {
         thresholdDone = true;
         thresholdAt = network.time + pairingTime * 2;
       }
-    }
-
-    public long getThresholdAt() {
-      return thresholdAt;
     }
 
     public long getDoneAt() {
@@ -481,85 +477,7 @@ public class SanFerminCappos implements Protocol {
   }
 
   public static void main(String... args) {
-
-    if (true)
-      sigsPerTime();
-
-
-    int[] distribProp = {1, 33, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
-    int[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
-    for (int i = 0; i < distribVal.length; i++)
-      distribVal[i] += 50; // more or less the latency we had before the refactoring
-
-    SanFerminCappos p2ps;
-
-
-    p2ps = new SanFerminCappos(32, 4, 4, 48, 100, 3);
-    //p2ps = new SanFerminCappos(1024, 800, 4, 48, 100, 50);
-    //p2ps = new SanFerminCappos(16384, 8192, 4, 48, 100, 50);
-    p2ps.verbose = true;
-    p2ps.network.setNetworkLatency(distribProp, distribVal).setMsgDiscardTime(1000);
-    //p2ps.network.removeNetworkLatency();
-
-    p2ps.StartAll();
-    p2ps.network.run(30);
-
-    int max = 10;
-    // print results first reached threshold
-    System.out.println(" --- First reaching threshold ---");
-    p2ps.finishedNodes
-        .stream()
-        .sorted(Comparator.comparingLong(SanFerminNode::getThresholdAt))
-        .limit(max)
-        .forEach(System.out::println);
-
-    System.out.println(" --- First reaching full sig ---");
-    p2ps.finishedNodes
-        .stream()
-        .sorted(Comparator.comparingLong(SanFerminNode::getDoneAt))
-        .limit(max)
-        .forEach(System.out::println);
-
-
-    System.out.println(" --- Unfinished nodes ---");
-    p2ps.allNodes.stream().filter(n -> !n.done).limit(max).forEach(System.out::println);
-    p2ps.network.printNetworkLatency();
+    sigsPerTime();
   }
 }
 
-/**
- * --- First reaching threshold --- SanFerminNode{nodeId=01111001011111, thresholdAt=877,
- * doneAt=1016, sigs=16384, msgReceived=2099, msgSent=2148, KBytesSent=109, KBytesReceived=106}
- * SanFerminNode{nodeId=01011001000110, thresholdAt=877, doneAt=1030, sigs=16384, msgReceived=2141,
- * msgSent=2190, KBytesSent=111, KBytesReceived=108} SanFerminNode{nodeId=01101000101100,
- * thresholdAt=879, doneAt=1073, sigs=16384, msgReceived=2104, msgSent=2164, KBytesSent=109,
- * KBytesReceived=106} SanFerminNode{nodeId=00010001100100, thresholdAt=880, doneAt=947, sigs=16384,
- * msgReceived=2332, msgSent=2386, KBytesSent=121, KBytesReceived=118}
- * SanFerminNode{nodeId=00010001001000, thresholdAt=880, doneAt=947, sigs=16384, msgReceived=2914,
- * msgSent=2971, KBytesSent=150, KBytesReceived=147} SanFerminNode{nodeId=00100001100100,
- * thresholdAt=880, doneAt=947, sigs=16384, msgReceived=3135, msgSent=3185, KBytesSent=161,
- * KBytesReceived=159} SanFerminNode{nodeId=00110000111000, thresholdAt=880, doneAt=947, sigs=16384,
- * msgReceived=2979, msgSent=3030, KBytesSent=153, KBytesReceived=151}
- * SanFerminNode{nodeId=00100001100011, thresholdAt=880, doneAt=947, sigs=16384, msgReceived=4460,
- * msgSent=4508, KBytesSent=228, KBytesReceived=226} SanFerminNode{nodeId=00100001010000,
- * thresholdAt=880, doneAt=947, sigs=16384, msgReceived=4366, msgSent=4409, KBytesSent=223,
- * KBytesReceived=221} SanFerminNode{nodeId=00000001100100, thresholdAt=880, doneAt=947, sigs=16384,
- * msgReceived=7963, msgSent=8010, KBytesSent=406, KBytesReceived=404} --- First reaching full sig
- * --- SanFerminNode{nodeId=10001001011011, thresholdAt=945, doneAt=945, sigs=16384,
- * msgReceived=2017, msgSent=2061, KBytesSent=104, KBytesReceived=102}
- * SanFerminNode{nodeId=00101000101010, thresholdAt=946, doneAt=946, sigs=16384, msgReceived=2175,
- * msgSent=2225, KBytesSent=112, KBytesReceived=110} SanFerminNode{nodeId=00010001100100,
- * thresholdAt=880, doneAt=947, sigs=16384, msgReceived=2332, msgSent=2386, KBytesSent=121,
- * KBytesReceived=118} SanFerminNode{nodeId=00010000011010, thresholdAt=943, doneAt=947, sigs=16384,
- * msgReceived=3006, msgSent=3071, KBytesSent=155, KBytesReceived=152}
- * SanFerminNode{nodeId=00010001001000, thresholdAt=880, doneAt=947, sigs=16384, msgReceived=2914,
- * msgSent=2971, KBytesSent=150, KBytesReceived=147} SanFerminNode{nodeId=00010001010100,
- * thresholdAt=943, doneAt=947, sigs=16384, msgReceived=3023, msgSent=3069, KBytesSent=155,
- * KBytesReceived=153} SanFerminNode{nodeId=00101000100011, thresholdAt=943, doneAt=947, sigs=16384,
- * msgReceived=2159, msgSent=2227, KBytesSent=113, KBytesReceived=109}
- * SanFerminNode{nodeId=00100001100100, thresholdAt=880, doneAt=947, sigs=16384, msgReceived=3135,
- * msgSent=3185, KBytesSent=161, KBytesReceived=159} SanFerminNode{nodeId=00110000111000,
- * thresholdAt=880, doneAt=947, sigs=16384, msgReceived=2979, msgSent=3030, KBytesSent=153,
- * KBytesReceived=151} SanFerminNode{nodeId=00110001011110, thresholdAt=943, doneAt=947, sigs=16384,
- * msgReceived=2985, msgSent=3039, KBytesSent=154, KBytesReceived=151}
- */

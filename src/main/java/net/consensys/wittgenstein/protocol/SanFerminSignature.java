@@ -573,50 +573,6 @@ public class SanFerminSignature implements Protocol {
   }
 
   public static void main(String... args) {
-
-    if (false) {
-      sigsPerTime();
-      return;
-    }
-
-
-    int[] distribProp = {1, 33, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
-    int[] distribVal = {12, 15, 19, 32, 35, 37, 40, 42, 45, 87, 155, 160, 185, 297, 1200};
-
-
-    SanFerminSignature p2ps;
-    //p2ps = new SanFerminSignature(1024, 10,512, 2,48,300,1,false);
-    //p2ps = new SanFerminSignature(512, 9,256, 2,48,300,1,false);
-    p2ps = new SanFerminSignature(4096, 2048, 2, 48, 300, 1, false);
-
-    //p2ps = new SanFerminSignature(8, 3,4,48,300,1,false);
-
-
-    //p2ps.verbose = true;
-    p2ps.network.setNetworkLatency(distribProp, distribVal);
-    //p2ps.network.removeNetworkLatency();
-
-    p2ps.init();
-    p2ps.network.run(30);
-    int max = 10;
-    // print results first reached threshold
-    System.out.println(" --- First reaching threshold ---");
-    p2ps.finishedNodes
-        .stream()
-        .sorted(Comparator.comparingLong(SanFerminNode::getThresholdAt))
-        .limit(max)
-        .forEach(System.out::println);
-
-    System.out.println(" --- First reaching full sig ---");
-    p2ps.finishedNodes
-        .stream()
-        .sorted(Comparator.comparingLong(SanFerminNode::getDoneAt))
-        .limit(max)
-        .forEach(System.out::println);
-
-
-    System.out.println(" --- Unfinished nodes ---");
-    p2ps.allNodes.stream().filter(n -> !n.done).limit(max).forEach(System.out::println);
-    p2ps.network.printNetworkLatency();
+    sigsPerTime();
   }
 }

@@ -34,7 +34,7 @@ public class PingPong implements Protocol {
     }
   }
 
-  public final int nodeCt = 1000;
+  final int nodeCt = 1000;
 
   /**
    * Nodes are specialized for the protocol.
