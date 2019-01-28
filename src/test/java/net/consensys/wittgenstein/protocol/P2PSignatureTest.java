@@ -16,8 +16,8 @@ public class P2PSignatureTest {
   @Before
   public void before() {
     ps.init();
-    n1 = (P2PSignature.P2PSigNode) ps.network.getNodeById(1);
-    n2 = (P2PSignature.P2PSigNode) ps.network.getNodeById(2);
+    n1 = ps.network.getNodeById(1);
+    n2 = ps.network.getNodeById(2);
   }
 
   @Test
@@ -149,7 +149,7 @@ public class P2PSignatureTest {
 
   @Test
   public void testSanFerminSetsN24() {
-    P2PSignature.P2PSigNode n24 = (P2PSignature.P2PSigNode) ps.network.getNodeById(24);
+    P2PSignature.P2PSigNode n24 = ps.network.getNodeById(24);
 
     BitSet t1 = new BitSet(ps.signingNodeCount);
     t1.set(25);
@@ -166,7 +166,7 @@ public class P2PSignatureTest {
 
   @Test
   public void testSanFerminSetsN98() {
-    P2PSignature.P2PSigNode n98 = (P2PSignature.P2PSigNode) ps.network.getNodeById(98);
+    P2PSignature.P2PSigNode n98 = ps.network.getNodeById(98);
 
     BitSet t1 = new BitSet(ps.signingNodeCount);
     t1.set(99);
