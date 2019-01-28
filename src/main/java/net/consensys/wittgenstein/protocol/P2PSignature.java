@@ -94,7 +94,7 @@ public class P2PSignature implements Protocol {
   final SendSigsStrategy sendSigsStrategy;
 
 
-  final P2PNetwork network;
+  final P2PNetwork<P2PSigNode> network;
   final NodeBuilder nb;
 
   public P2PSignature(int signingNodeCount, int relayingNodeCount, int threshold,
@@ -110,7 +110,7 @@ public class P2PSignature implements Protocol {
     this.sanFermin = sanFermin;
     this.sendSigsStrategy = this.sanFermin ? SendSigsStrategy.cmp_all : sendSigsStrategy;
     this.sigRange = sigRange;
-    this.network = new P2PNetwork(connectionCount, false);
+    this.network = new P2PNetwork<>(connectionCount, false);
     this.nb = new NodeBuilder.NodeBuilderWithRandomPosition();
   }
 
@@ -258,7 +258,7 @@ public class P2PSignature implements Protocol {
   }
 
 
-  public class P2PSigNode extends P2PNode {
+  public class P2PSigNode extends P2PNode<P2PSigNode> {
     final BitSet verifiedSignatures = new BitSet(signingNodeCount);
     final Set<BitSet> toVerify = new HashSet<>();
     final Map<Integer, State> peersState = new HashMap<>();
@@ -334,7 +334,7 @@ public class P2PSignature implements Protocol {
                 nextRound.andNot(nodesAtRound);
 
                 //We contact two nodes.
-                List<Node> dest = randomSubset(nextRound, 2);
+                List<P2PSigNode> dest = randomSubset(nextRound, 2);
 
                 // here we can send:
                 // - all the signatures -- good for fault tolerance, bad for message size
@@ -363,8 +363,8 @@ public class P2PSignature implements Protocol {
       }
     }
 
-    private List<Node> randomSubset(BitSet nodes, int nodeCt) {
-      List<Node> res = new ArrayList<>();
+    private List<P2PSigNode> randomSubset(BitSet nodes, int nodeCt) {
+      List<P2PSigNode> res = new ArrayList<>();
       int pos = 0;
       do {
         int cur = nodes.nextSetBit(pos);
@@ -376,7 +376,7 @@ public class P2PSignature implements Protocol {
         }
       } while (true);
 
-      for (Node n : peers) {
+      for (P2PSigNode n : peers) {
         res.remove(n);
       }
 
@@ -423,7 +423,7 @@ public class P2PSignature implements Protocol {
       }
 
       if (!withState) {
-        found = new State((P2PSigNode) peers.get(network.rd.nextInt(peers.size())));
+        found = new State(peers.get(network.rd.nextInt(peers.size())));
       }
 
 
@@ -557,7 +557,7 @@ public class P2PSignature implements Protocol {
 
     if (sanFermin) {
       for (int i = 0; i < signingNodeCount; i++) {
-        final P2PSigNode n = (P2PSigNode) network.getNodeById(i);
+        final P2PSigNode n = network.getNodeById(i);
         SendSigs sigs = new SendSigs(n.verifiedSignatures);
         int peerId = n.sanFerminPeers(1).length() - 1;
         network.send(sigs, 1, n, network.getNodeById(peerId));
@@ -568,7 +568,7 @@ public class P2PSignature implements Protocol {
   }
 
   @Override
-  public Network<P2PNode> network() {
+  public Network<P2PSigNode> network() {
     return network;
   }
 

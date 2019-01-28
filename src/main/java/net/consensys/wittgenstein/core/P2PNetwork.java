@@ -3,7 +3,7 @@ package net.consensys.wittgenstein.core;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class P2PNetwork extends Network<P2PNode> {
+public class P2PNetwork<TN extends P2PNode<TN>> extends Network<TN> {
   private final int connectionCount;
   private final boolean minimum;
 
@@ -31,9 +31,9 @@ public class P2PNetwork extends Network<P2PNode> {
     // We need to go through the list in a random order, if not we can
     //  have some side effects if all the dead nodes are at the beginning for example.
     // For this reason we work on a shuffled version of the node list.
-    ArrayList<P2PNode> an = new ArrayList<>(allNodes);
+    ArrayList<TN> an = new ArrayList<>(allNodes);
     Collections.shuffle(an, rd);
-    for (P2PNode n : an) {
+    for (TN n : an) {
       while (n.peers.size() < (minimum ? connectionCount : Math.min(3, this.connectionCount))) {
         int pp2 = rd.nextInt(allNodes.size());
         createLink(existingLinks, n.nodeId, pp2);
@@ -52,8 +52,8 @@ public class P2PNetwork extends Network<P2PNode> {
       return;
     }
 
-    P2PNode p1 = allNodes.get(pp1);
-    P2PNode p2 = allNodes.get(pp2);
+    TN p1 = allNodes.get(pp1);
+    TN p2 = allNodes.get(pp2);
 
     if (p1 == null || p2 == null) {
       throw new IllegalStateException(
@@ -70,7 +70,7 @@ public class P2PNetwork extends Network<P2PNode> {
     }
 
     long tot = 0;
-    for (P2PNode n : allNodes) {
+    for (TN n : allNodes) {
       tot += n.peers.size();
     }
     return (int) (tot / allNodes.size());
@@ -79,7 +79,7 @@ public class P2PNetwork extends Network<P2PNode> {
   /**
    * A P2P node supports flood by default.
    */
-  public class FloodMessage extends Network.Message<P2PNode> {
+  public class FloodMessage extends Network.Message<TN> {
     private final int size;
     private final int localDelay;
     private final int delayBetweenPeers;
@@ -91,15 +91,15 @@ public class P2PNetwork extends Network<P2PNode> {
     }
 
     @Override
-    public void action(P2PNode from, P2PNode to) {
+    public void action(TN from, TN to) {
       if (to.received.add(this)) {
         to.onFlood(from, this);
-        List<P2PNode> peers = to.peers.stream().filter(n -> n != from).collect(Collectors.toList());
+        List<TN> peers = to.peers.stream().filter(n -> n != from).collect(Collectors.toList());
         if (delayBetweenPeers == 0) {
           send(this, time + 1 + localDelay, to, peers);
         } else {
           int delay = localDelay + 1;
-          for (P2PNode n : peers) {
+          for (TN n : peers) {
             send(this, time + delay, to, n);
             delay += delayBetweenPeers;
           }
@@ -112,7 +112,7 @@ public class P2PNetwork extends Network<P2PNode> {
       return size;
     }
 
-    public void kickoff(P2PNode from) {
+    public void kickoff(TN from) {
       from.received.add(this);
       send(this, time + 1, from, from.peers);
     }

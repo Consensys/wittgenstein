@@ -2,8 +2,8 @@ package net.consensys.wittgenstein.core;
 
 import java.util.*;
 
-public class P2PNode extends Node {
-  public final List<P2PNode> peers = new ArrayList<>();
+public class P2PNode<TN extends P2PNode> extends Node {
+  public final List<TN> peers = new ArrayList<>();
   public Set<P2PNetwork.FloodMessage> received = new HashSet<>();
 
   public P2PNode(Random rd, NodeBuilder nb) {
@@ -14,5 +14,7 @@ public class P2PNode extends Node {
     super(rd, nb, byzantine);
   }
 
-  protected void onFlood(P2PNode from, P2PNetwork.FloodMessage floodMessage) {}
+  protected void onFlood(TN from, P2PNetwork.FloodMessage floodMessage) {}
 }
+
+

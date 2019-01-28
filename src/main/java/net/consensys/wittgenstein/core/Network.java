@@ -85,7 +85,6 @@ public class Network<TN extends Node> {
   private final class MsgsSlot {
     final int startTime;
     final int endTime;
-    @SuppressWarnings("unchecked")
     final Envelope<?>[] msgsByMs = new Envelope[duration];
 
     public MsgsSlot(int startTime) {
@@ -521,7 +520,6 @@ public class Network<TN extends Node> {
   }
 
   void receiveUntil(int until) {
-    //noinspection ConstantConditions
     int previousTime = time;
     Envelope<?> next = nextMessage(until);
     while (next != null) {

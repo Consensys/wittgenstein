@@ -50,11 +50,11 @@ public class P2PFlood implements Protocol {
    */
   private final int delayBetweenSends;
 
-  private final P2PNetwork network;
+  private final P2PNetwork<P2PFloodNode> network;
   private final NodeBuilder nb;
 
 
-  class P2PFloodNode extends P2PNode {
+  class P2PFloodNode extends P2PNode<P2PFloodNode> {
     /**
      * @param down - if the node is marked down, it won't send/receive messages, but will still be
      *        included in the peers. As such it's a byzantine behavior: officially available but
@@ -66,7 +66,7 @@ public class P2PFlood implements Protocol {
     }
 
     @Override
-    protected void onFlood(P2PNode from, P2PNetwork.FloodMessage floodMessage) {
+    protected void onFlood(P2PFloodNode from, P2PNetwork.FloodMessage floodMessage) {
       if (received.size() == msgCount) {
         doneAt = network.time;
       }
@@ -82,7 +82,7 @@ public class P2PFlood implements Protocol {
     this.msgToReceive = msgToReceive;
     this.peersCount = peersCount;
     this.delayBetweenSends = delayBetweenSends;
-    this.network = new P2PNetwork(peersCount, true);
+    this.network = new P2PNetwork<>(peersCount, true);
     this.nb = nb;
     this.network.setNetworkLatency(nl);
   }
@@ -111,9 +111,9 @@ public class P2PFlood implements Protocol {
     Set<Integer> senders = new HashSet<>(msgCount);
     while (senders.size() < msgCount) {
       int nodeId = network.rd.nextInt(nodeCount);
-      P2PFloodNode from = (P2PFloodNode) network.getNodeById(nodeId);
+      P2PFloodNode from = network.getNodeById(nodeId);
       if (!from.down && senders.add(nodeId)) {
-        P2PNetwork.FloodMessage m =
+        P2PNetwork<P2PFloodNode>.FloodMessage m =
             network.new FloodMessage(1, delayBeforeResent, delayBetweenSends);
         m.kickoff(from);
         if (msgCount == 1) {
@@ -129,11 +129,8 @@ public class P2PFlood implements Protocol {
   }
 
   private static void floodTime() {
-    NetworkLatency nl = new NetworkLatency.AwsRegionNetworkLatency();
-    NodeBuilder nb =
-        new NodeBuilder.NodeBuilderWithCity(NetworkLatency.AwsRegionNetworkLatency.cities());
-    nl = new NetworkLatency.IC3NetworkLatency();
-    nb = new NodeBuilder.NodeBuilderWithRandomPosition();
+    NetworkLatency nl = new NetworkLatency.IC3NetworkLatency();
+    NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
 
     int liveNodes = 4000;
     final int threshold = (int) (0.99 * liveNodes);

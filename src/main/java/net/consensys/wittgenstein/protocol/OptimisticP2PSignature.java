@@ -44,7 +44,7 @@ public class OptimisticP2PSignature implements Protocol {
   final int pairingTime;
 
 
-  final P2PNetwork network;
+  final P2PNetwork<P2PSigNode> network;
   final NodeBuilder nb;
 
   public OptimisticP2PSignature(int nodeCount, int threshold, int connectionCount,
@@ -54,7 +54,7 @@ public class OptimisticP2PSignature implements Protocol {
     this.connectionCount = connectionCount;
     this.pairingTime = pairingTime;
 
-    this.network = new P2PNetwork(connectionCount, false);
+    this.network = new P2PNetwork<>(connectionCount, false);
     this.nb = new NodeBuilder.NodeBuilderWithRandomPosition();
   }
 
@@ -82,7 +82,7 @@ public class OptimisticP2PSignature implements Protocol {
   }
 
 
-  public class P2PSigNode extends P2PNode {
+  public class P2PSigNode extends P2PNode<P2PSigNode> {
     final BitSet verifiedSignatures = new BitSet(nodeCount);
 
     boolean done = false;
@@ -97,8 +97,8 @@ public class OptimisticP2PSignature implements Protocol {
 
         // It's better to use a list than a set here, because it makes the simulation
         //  repeatable: there's no order in a set.
-        List<Node> dests = new ArrayList<>(peers.size() - 1);
-        for (Node n : peers) {
+        List<P2PSigNode> dests = new ArrayList<>(peers.size() - 1);
+        for (P2PSigNode n : peers) {
           if (n != from) {
             dests.add(n);
           }
@@ -147,7 +147,7 @@ public class OptimisticP2PSignature implements Protocol {
       OptimisticP2PSignature p2ps = new OptimisticP2PSignature(i, i / 2 + 1, 13, 3);
       p2ps.network.setNetworkLatency(nl);
       p2ps.init();
-      P2PSigNode observer = (P2PSigNode) p2ps.network.getNodeById(0);
+      P2PSigNode observer = p2ps.network.getNodeById(0);
 
       if (!printLat) {
         System.out.println("NON P2P " + NetworkLatency.estimateLatency(p2ps.network, 100000));

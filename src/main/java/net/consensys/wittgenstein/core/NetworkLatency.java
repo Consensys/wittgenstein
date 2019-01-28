@@ -370,10 +370,10 @@ public abstract class NetworkLatency {
   /**
    * Estimation for a p2p network, we only look at direct peers
    */
-  public static MeasuredNetworkLatency estimateP2PLatency(P2PNetwork net, final int rounds) {
+  public static MeasuredNetworkLatency estimateP2PLatency(P2PNetwork<?> net, final int rounds) {
     return estimateLatency(net, n -> {
       Random rd = new Random(0);
-      P2PNode pn = (P2PNode) n;
+      P2PNode<?> pn = (P2PNode) n;
       Node res = n;
       while (res == n) {
         res = pn.peers.get(rd.nextInt(pn.peers.size()));
