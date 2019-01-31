@@ -134,7 +134,6 @@ public class CSVLatencyReader {
             System.err.println(
                 "Strange latency for " + cityTo + ", latency is " + v + ", from " + cityFrom);
           }
-
         }
       }
     }

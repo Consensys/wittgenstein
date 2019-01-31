@@ -26,7 +26,6 @@ public class CSVLatencyReaderTest {
     Assert.assertTrue(reader.cities().contains(city1));
     Assert.assertTrue(reader.cities().contains(city2));
     Assert.assertTrue(reader.cities().contains(city3));
-
     Assert.assertFalse(reader.cities().contains(city4));
   }
 
@@ -51,16 +50,10 @@ public class CSVLatencyReaderTest {
     c3Map.put(city2, 180f);
     c3Map.put(city3, 30f);
 
-    Map<String, Float> c4Map = new HashMap<>();
-    c4Map.put(city1, 247f);
-    c4Map.put(city2, 180f);
-    c4Map.put(city3, 300f);
-    c4Map.put(city4, 30f);
-
     latencyMatrix.put(city1, c1Map);
     latencyMatrix.put(city2, c2Map);
     latencyMatrix.put(city3, c3Map);
-    latencyMatrix.put(city4, c3Map); //todo; why we don't put c3 here?
+    latencyMatrix.put(city4, c3Map);
 
     return latencyMatrix;
   }

@@ -77,6 +77,8 @@ public abstract class NetworkLatency {
    * other time. We include the variation from NetworkLatencyByDistance.
    * <p>
    *
+   * Some data can be wrong sometimes. We set a minimum value of 1.
+   *
    * @see NodeBuilder.NodeBuilderWithCity
    */
   public static class AwsRegionNetworkLatency extends NetworkLatency {
@@ -174,13 +176,11 @@ public abstract class NetworkLatency {
     }
   }
 
-
   public static class NetworkNoLatency extends NetworkLatency {
     public int getLatency(Node from, Node to, int delta) {
       return 1;
     }
   }
-
 
   public static class MeasuredNetworkLatency extends NetworkLatency {
     final int[] longDistrib = new int[100];
