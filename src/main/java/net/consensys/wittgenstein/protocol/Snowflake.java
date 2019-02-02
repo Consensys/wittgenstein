@@ -6,7 +6,7 @@ import java.util.*;
 import java.util.function.Predicate;
 
 public class Snowflake implements Protocol {
-  private static final int NODES_AV = 100;
+  private final int NODES_AV;
   private Network<SnowflakeNode> network = new Network<>();
   final NodeBuilder nb;
   private static final int COLOR_NB = 2;
@@ -27,9 +27,11 @@ public class Snowflake implements Protocol {
    */
   private final double A;
   private double AK;
+
   private final int B;
 
-  private Snowflake(int M, int K, double A, int B) {
+  Snowflake(int nodeAv, int M, int K, double A, int B) {
+    this.NODES_AV = nodeAv;
     this.M = M;
     this.K = K;
     this.A = A;
@@ -39,8 +41,8 @@ public class Snowflake implements Protocol {
   }
 
   @Override
-  public Protocol copy() {
-    return new Snowflake(M, K, A, B);
+  public Snowflake copy() {
+    return new Snowflake(NODES_AV, M, K, A, B);
   }
 
   @Override
@@ -77,6 +79,7 @@ public class Snowflake implements Protocol {
     }
   }
 
+
   static class AnswerQuery extends Network.Message<SnowflakeNode> {
     final Query originalQuery;
     final int color;
@@ -91,6 +94,7 @@ public class Snowflake implements Protocol {
       to.onAnswer(originalQuery.id, color);
     }
   }
+
 
   class SnowflakeNode extends Node {
 
@@ -171,6 +175,8 @@ public class Snowflake implements Protocol {
     }
 
   }
+
+
   static class Answer {
     final int round;
     private final int[] colorsFound = new int[COLOR_NB + 1];
@@ -239,6 +245,6 @@ public class Snowflake implements Protocol {
   }
 
   public static void main(String... args) {
-    new Snowflake(5, 7, 4.0 / 7.0, 3).play();
+    new Snowflake(100, 5, 7, 4.0 / 7.0, 3).play();
   }
 }
