@@ -26,6 +26,14 @@ public class Dfinity implements Protocol {
 
   final NodeBuilder nb;
 
+  final BlockChainNetwork network = new BlockChainNetwork();
+  final DfinityBlock genesis = DfinityBlock.createGenesis();
+  final DfinityBlockComparator blockComparator = new DfinityBlockComparator();
+
+  final Set<AttesterNode> attesters = new HashSet<>();
+  final Set<BlockProducerNode> bps = new HashSet<>();
+  final Set<RandomBeaconNode> rds = new HashSet<>();
+
   @Override
   public Network<?> network() {
     return network;
@@ -59,14 +67,6 @@ public class Dfinity implements Protocol {
     this.nb = new NodeBuilder.NodeBuilderWithRandomPosition();
     this.network.addObserver(new DfinityNode(network.rd, genesis) {});
   }
-
-  final BlockChainNetwork network = new BlockChainNetwork();
-  final DfinityBlock genesis = DfinityBlock.createGenesis();
-  final DfinityBlockComparator blockComparator = new DfinityBlockComparator();
-
-  final Set<AttesterNode> attesters = new HashSet<>();
-  final Set<BlockProducerNode> bps = new HashSet<>();
-  final Set<RandomBeaconNode> rds = new HashSet<>();
 
   static class DfinityBlock extends Block<DfinityBlock> {
     public DfinityBlock(BlockProducerNode blockProducerNode, int height, DfinityBlock head,
@@ -244,7 +244,6 @@ public class Dfinity implements Protocol {
       }
     }
   }
-
 
   class AttesterNode extends DfinityNode {
     final Map<Long, Set<Integer>> votes = new HashMap<>();

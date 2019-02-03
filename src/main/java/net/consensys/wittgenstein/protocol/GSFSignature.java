@@ -518,7 +518,7 @@ public class GSFSignature implements Protocol {
   }
 
   @Override
-  public Protocol copy() {
+  public GSFSignature copy() {
     return new GSFSignature(nodeCount, threshold, pairingTime, timeoutPerLevelMs, periodDurationMs,
         acceleratedCallsCount, nodesDown, nb.copy(), this.network.networkLatency);
   }

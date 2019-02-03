@@ -53,4 +53,33 @@ public class P2PFloodTest {
       }
     }
   }
+
+  /**
+   * Test that two runs gives exactly the same result.
+   */
+  @Test
+  public void testCopy() {
+    NetworkLatency nl = new NetworkLatency.NetworkLatencyByDistance();
+    NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
+
+    P2PFlood p1 = new P2PFlood(2000, 10, 50, 1, 1, 10, 30, nb, nl);
+    P2PFlood p2 = p1.copy();
+    p1.init();
+    p1.network().runMs(1000);
+    p2.init();
+    p2.network().runMs(1000);
+
+    for (Node nn1 : p1.network().allNodes) {
+      P2PFlood.P2PFloodNode n1 = (P2PFlood.P2PFloodNode) nn1;
+      P2PFlood.P2PFloodNode n2 = (P2PFlood.P2PFloodNode) p2.network().getNodeById(n1.nodeId);
+      Assert.assertNotNull(n2);
+      Assert.assertEquals(n1.doneAt, n2.doneAt);
+      Assert.assertEquals(n1.down, n2.down);
+      Assert.assertEquals(n1.received.size(), n2.received.size());
+      Assert.assertEquals(n1.x, n2.x);
+      Assert.assertEquals(n1.y, n2.y);
+      Assert.assertEquals(n1.peers, n2.peers);
+    }
+  }
+
 }

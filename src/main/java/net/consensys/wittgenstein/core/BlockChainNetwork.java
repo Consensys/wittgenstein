@@ -7,7 +7,7 @@ import java.util.*;
  * Adds some concept to a standard network: it's about to send blocks between nodes. Blockchain
  * nodes have a head, a method to choose between blocks and so on.
  */
-@SuppressWarnings({"WeakerAccess", "SameParameterValue", "FieldCanBeLocal", "unused"})
+@SuppressWarnings({"SameParameterValue", "FieldCanBeLocal", "unused"})
 public class BlockChainNetwork extends Network<BlockChainNode<? extends Block>> {
   /**
    * The node we use as an observer for the final stats
@@ -51,7 +51,6 @@ public class BlockChainNetwork extends Network<BlockChainNode<? extends Block>> 
       sendAll(sb, n);
     }
   }
-
 
   public void printStat(boolean small) {
     HashMap<Integer, Set<Block>> productionCount = new HashMap<>();

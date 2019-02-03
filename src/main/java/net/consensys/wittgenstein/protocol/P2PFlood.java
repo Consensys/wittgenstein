@@ -97,7 +97,7 @@ public class P2PFlood implements Protocol {
   }
 
   @Override
-  public Protocol copy() {
+  public P2PFlood copy() {
     return new P2PFlood(nodeCount, deadNodeCount, delayBeforeResent, msgCount, msgToReceive,
         peersCount, delayBetweenSends, nb.copy(), network.networkLatency);
   }

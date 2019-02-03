@@ -97,8 +97,6 @@ public class P2PSignatureTest {
     return bitset;
   }
 
-
-
   @Test
   public void testCompressedSize() {
     Assert.assertEquals(1, ps.compressedSize(fromString("1111")));
@@ -181,6 +179,26 @@ public class P2PSignatureTest {
     t3.set(99);
     t3.set(96, 98);
     Assert.assertEquals(t3, n98.sanFerminPeers(3));
+  }
+
+  @Test
+  public void testCopy() {
+    P2PSignature p1 =
+        new P2PSignature(500, 2, 60, 10, 2, 20, false, false, P2PSignature.SendSigsStrategy.dif, 4);
+
+    P2PSignature p2 = p1.copy();
+    p1.init();
+    p1.network().runMs(500);
+    p2.init();
+    p2.network().runMs(500);
+
+    for (P2PSignature.P2PSigNode n1 : p1.network().allNodes) {
+      P2PSignature.P2PSigNode n2 = p2.network().getNodeById(n1.nodeId);
+      Assert.assertNotNull(n2);
+      Assert.assertEquals(n1.doneAt, n2.doneAt);
+      Assert.assertEquals(n1.verifiedSignatures, n2.verifiedSignatures);
+      Assert.assertEquals(n1.toVerify, n2.toVerify);
+    }
   }
 
 }

@@ -172,4 +172,12 @@ public class Node {
     int dy = Math.min(Math.abs(y - n.y), MAX_Y - Math.abs(y - n.y));
     return (int) Math.sqrt(dx * dx + dy * dy);
   }
+
+  @Override
+  public boolean equals(Object n) {
+    if (!(n instanceof Node)) {
+      return false;
+    }
+    return ((Node) n).nodeId == nodeId;
+  }
 }

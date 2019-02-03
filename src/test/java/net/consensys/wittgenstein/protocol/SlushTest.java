@@ -18,9 +18,6 @@ public class SlushTest {
     }
   }
 
-  /**
-   * Test that two runs gives exactly the same result.
-   */
   @Test
   public void testCopy() {
     Slush p1 = new Slush(60, 5, 7, 4.0 / 7.0);

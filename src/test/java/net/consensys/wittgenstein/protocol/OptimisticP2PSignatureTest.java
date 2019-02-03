@@ -23,9 +23,6 @@ public class OptimisticP2PSignatureTest {
     }
   }
 
-  /**
-   * Test that two runs gives exactly the same result.
-   */
   @Test
   public void testCopy() {
     OptimisticP2PSignature p1 = new OptimisticP2PSignature(200, 160, 10, 2);

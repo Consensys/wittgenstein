@@ -18,9 +18,6 @@ public class SnowflakeTest {
     }
   }
 
-  /**
-   * Test that two runs gives exactly the same result.
-   */
   @Test
   public void testCopy() {
     Snowflake p1 = new Snowflake(60, 5, 7, 4.0 / 7.0, 3);

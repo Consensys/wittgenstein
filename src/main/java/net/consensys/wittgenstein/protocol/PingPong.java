@@ -65,6 +65,7 @@ public class PingPong implements Protocol {
     for (int i = 0; i < nodeCt; i++) {
       network.addNode(new PingPongNode());
     }
+    network.sendAll(new Ping(), network.getNodeById(0));
   }
 
   @Override
@@ -76,14 +77,11 @@ public class PingPong implements Protocol {
   public static void main(String... args) {
     PingPong p = new PingPong();
 
-    // Set the latency.
     p.network.setNetworkLatency(new NetworkLatency.NetworkLatencyByDistance());
-
     p.init();
-    PingPongNode witness = p.network.getNodeById(0);
-    p.network.sendAll(new Ping(), witness);
+
     for (int i = 0; i < 1000; i += 100) {
-      System.out.println(i + " ms, pongs received " + witness.pong);
+      System.out.println(i + " ms, pongs received " + p.network.getNodeById(0).pong);
       p.network.runMs(100);
     }
   }
