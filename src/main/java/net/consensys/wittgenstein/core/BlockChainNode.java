@@ -34,7 +34,8 @@ public abstract class BlockChainNode<TB extends Block> extends Node {
     if (this.blocksReceivedByBlockId.put(b.id, b) != null) {
       return false; // If we have already received this block
     }
-    Set<TB> pa = this.blocksReceivedByFatherId.computeIfAbsent(b.parent.id, k -> new HashSet<>());
+    Set<TB> pa =
+        this.blocksReceivedByFatherId.computeIfAbsent(b.parent.id, k -> new LinkedHashSet<>());
     pa.add(b);
     blocksReceivedByHeight.put(b.height, b);
 

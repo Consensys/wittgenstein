@@ -1,6 +1,7 @@
 package net.consensys.wittgenstein.protocol;
 
 
+import net.consensys.wittgenstein.core.Node;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -252,4 +253,28 @@ public class CasperIMDTest {
     bp2.reevaluateHead();
     Assert.assertEquals(b2, bp2.head);
   }
+
+  @Test
+  public void testCopy() {
+    CasperIMD p1 = new CasperIMD(5, false, 5, 80, 1000, 1);
+    CasperIMD p2 = p1.copy();
+    p1.init();
+    p2.init();
+
+    while (p1.network.time < 20000) {
+      p1.network().runMs(10);
+      p2.network().runMs(10);
+      for (Node nn1 : p1.network().allNodes) {
+        CasperIMD.CasperNode n1 = (CasperIMD.CasperNode) nn1;
+        CasperIMD.CasperNode n2 = (CasperIMD.CasperNode) p2.network().getNodeById(n1.nodeId);
+        Assert.assertNotNull(n2);
+        Assert.assertEquals(n1.doneAt, n2.doneAt);
+        Assert.assertEquals(n1.down, n2.down);
+        Assert.assertEquals(n1.head.proposalTime, n2.head.proposalTime);
+        Assert.assertEquals(n1.attestationsByHead.size(), n2.attestationsByHead.size());
+        Assert.assertEquals(n1.getMsgReceived(), n2.getMsgReceived());
+      }
+    }
+  }
+
 }

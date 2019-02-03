@@ -11,7 +11,7 @@ import java.util.*;
  * https://ethresear.ch/t/beacon-chain-casper-ffg-rpj-mini-spec/2760
  */
 @SuppressWarnings({"WeakerAccess", "SameParameterValue", "unused"})
-public class CasperIMD {
+public class CasperIMD implements Protocol {
   final int SLOT_DURATION = 8000;
 
   /**
@@ -54,6 +54,10 @@ public class CasperIMD {
         blockConstructionTime, attestationConstructionTime);
   }
 
+  public BlockChainNetwork network() {
+    return network;
+  }
+
   public CasperIMD() {
     this(5, true, 5, 80, 1000, 1);
   }
@@ -77,8 +81,8 @@ public class CasperIMD {
   final NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
   final CasperBlock genesis = new CasperBlock();
 
-  final ArrayList<Attester> attesters = new ArrayList<>();
-  final ArrayList<BlockProducer> bps = new ArrayList<>();
+  final List<Attester> attesters = new ArrayList<>();
+  final List<BlockProducer> bps = new ArrayList<>();
 
 
   // Spec: attestation, [current_slot,h1,h2....h64], where h1...h64 are the hashes
@@ -440,6 +444,11 @@ public class CasperIMD {
     }
   }
 
+  @Override
+  public void init() {
+    ByzBlockProducer badNode = this.new ByzBlockProducerWF(0, this.genesis);
+    init(badNode);
+  }
 
   void init(CasperIMD.ByzBlockProducer byzantineNode) {
     bps.add(byzantineNode);
