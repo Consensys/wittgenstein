@@ -1,7 +1,6 @@
 package net.consensys.wittgenstein.protocol;
 
 
-import net.consensys.wittgenstein.core.Node;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -264,9 +263,8 @@ public class CasperIMDTest {
     while (p1.network.time < 20000) {
       p1.network().runMs(10);
       p2.network().runMs(10);
-      for (Node nn1 : p1.network().allNodes) {
-        CasperIMD.CasperNode n1 = (CasperIMD.CasperNode) nn1;
-        CasperIMD.CasperNode n2 = (CasperIMD.CasperNode) p2.network().getNodeById(n1.nodeId);
+      for (CasperIMD.CasperNode n1 : p1.network().allNodes) {
+        CasperIMD.CasperNode n2 = p2.network().getNodeById(n1.nodeId);
         Assert.assertNotNull(n2);
         Assert.assertEquals(n1.doneAt, n2.doneAt);
         Assert.assertEquals(n1.down, n2.down);

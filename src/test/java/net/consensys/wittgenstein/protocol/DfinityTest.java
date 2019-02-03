@@ -1,7 +1,6 @@
 package net.consensys.wittgenstein.protocol;
 
 import net.consensys.wittgenstein.core.NetworkLatency;
-import net.consensys.wittgenstein.core.Node;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -32,9 +31,8 @@ public class DfinityTest {
       p1.network().runMs(10);
       p2.network().runMs(10);
       System.out.println("" + p1.network.time);
-      for (Node nn1 : p1.network().allNodes) {
-        Dfinity.DfinityNode n1 = (Dfinity.DfinityNode) nn1;
-        Dfinity.DfinityNode n2 = (Dfinity.DfinityNode) p2.network().getNodeById(n1.nodeId);
+      for (Dfinity.DfinityNode n1 : p1.network().allNodes) {
+        Dfinity.DfinityNode n2 = p2.network().getNodeById(n1.nodeId);
         Assert.assertNotNull(n2);
         Assert.assertEquals(n1.doneAt, n2.doneAt);
         Assert.assertEquals(n1.down, n2.down);

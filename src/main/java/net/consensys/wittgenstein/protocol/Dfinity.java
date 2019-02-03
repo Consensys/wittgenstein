@@ -26,7 +26,7 @@ public class Dfinity implements Protocol {
 
   final NodeBuilder nb;
 
-  final BlockChainNetwork network = new BlockChainNetwork();
+  final BlockChainNetwork<DfinityBlock, DfinityNode> network = new BlockChainNetwork<>();
   final DfinityBlock genesis = DfinityBlock.createGenesis();
   final DfinityBlockComparator blockComparator = new DfinityBlockComparator();
 
@@ -35,7 +35,7 @@ public class Dfinity implements Protocol {
   final List<RandomBeaconNode> rds = new ArrayList<>();
 
   @Override
-  public BlockChainNetwork network() {
+  public BlockChainNetwork<DfinityBlock, DfinityNode> network() {
     return network;
   }
 
@@ -270,7 +270,7 @@ public class Dfinity implements Protocol {
       committeeMajorityBlocks.add(voteFor.id);
       committeeMajorityHeight.add(voteFor.height);
       voteForHeight = -1;
-      network.sendAll(new BlockChainNetwork.SendBlock<DfinityBlock, DfinityNode>(voteFor), this);
+      network.sendAll(new BlockChainNetwork.SendBlock<>(voteFor), this);
     }
 
     /**

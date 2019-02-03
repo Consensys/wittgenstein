@@ -54,7 +54,7 @@ public class CasperIMD implements Protocol {
         blockConstructionTime, attestationConstructionTime);
   }
 
-  public BlockChainNetwork network() {
+  public BlockChainNetwork<CasperBlock, CasperNode> network() {
     return network;
   }
 
@@ -77,7 +77,7 @@ public class CasperIMD implements Protocol {
   }
 
 
-  final BlockChainNetwork network = new BlockChainNetwork();
+  final BlockChainNetwork<CasperBlock, CasperNode> network = new BlockChainNetwork<>();
   final NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
   final CasperBlock genesis = new CasperBlock();
 

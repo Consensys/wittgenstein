@@ -14,7 +14,7 @@ abstract public class Block<TB extends Block> {
   public final long lastTxId;
   public final long id;
   public final TB parent;
-  public final BlockChainNode producer;
+  public final BlockChainNode<TB> producer;
 
   public final boolean valid;
 
@@ -36,7 +36,7 @@ abstract public class Block<TB extends Block> {
   }
 
 
-  public Block(BlockChainNode producer, int height, TB parent, boolean valid, int time) {
+  public Block(BlockChainNode<TB> producer, int height, TB parent, boolean valid, int time) {
     if (height <= 0) {
       throw new IllegalArgumentException("Only the genesis block has a special height");
     }

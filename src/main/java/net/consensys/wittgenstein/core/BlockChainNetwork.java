@@ -8,13 +8,14 @@ import java.util.*;
  * nodes have a head, a method to choose between blocks and so on.
  */
 @SuppressWarnings({"SameParameterValue", "FieldCanBeLocal", "unused"})
-public class BlockChainNetwork extends Network<BlockChainNode<? extends Block>> {
+public class BlockChainNetwork<TB extends Block, TN extends BlockChainNode<TB>>
+    extends Network<TN> {
   /**
    * The node we use as an observer for the final stats
    */
-  public BlockChainNode<? extends Block> observer;
+  public TN observer;
 
-  public void addObserver(BlockChainNode<? extends Block> observer) {
+  public void addObserver(TN observer) {
     this.observer = observer;
     addNode(observer);
   }
@@ -46,15 +47,15 @@ public class BlockChainNetwork extends Network<BlockChainNode<? extends Block>> 
   public void endPartition() {
     super.endPartition();
 
-    for (BlockChainNode<? extends Block> n : allNodes) {
-      SendBlock<Block, BlockChainNode<Block>> sb = new BlockChainNetwork.SendBlock<>(n.head);
+    for (TN n : allNodes) {
+      SendBlock<TB, TN> sb = new BlockChainNetwork.SendBlock<>(n.head);
       sendAll(sb, n);
     }
   }
 
   public void printStat(boolean small) {
     HashMap<Integer, Set<Block>> productionCount = new HashMap<>();
-    Set<BlockChainNode> blockProducers = new HashSet<>();
+    Set<BlockChainNode<?>> blockProducers = new HashSet<>();
 
     Block cur = observer.head;
 
@@ -80,7 +81,7 @@ public class BlockChainNetwork extends Network<BlockChainNode<? extends Block>> 
     List<BlockChainNode> bps = new ArrayList<>(blockProducers);
     bps.sort(Comparator.comparingInt(o -> o.nodeId));
 
-    for (BlockChainNode bp : bps) {
+    for (BlockChainNode<?> bp : bps) {
       int bpTx = 0;
       for (Block b : productionCount.get(bp.nodeId)) {
         bpTx += b.txCount();
