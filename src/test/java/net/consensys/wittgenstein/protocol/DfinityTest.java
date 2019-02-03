@@ -20,7 +20,7 @@ public class DfinityTest {
     Assert.assertEquals(3, dfinity.network.observer.head.height);
   }
 
-  //TODO @Test
+  //@Test
   public void testCopy() {
     Dfinity p1 = new Dfinity(10, 50, 25, 100, 1, 5);
     Dfinity p2 = p1.copy();

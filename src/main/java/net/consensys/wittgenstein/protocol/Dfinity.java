@@ -30,9 +30,9 @@ public class Dfinity implements Protocol {
   final DfinityBlock genesis = DfinityBlock.createGenesis();
   final DfinityBlockComparator blockComparator = new DfinityBlockComparator();
 
-  final Set<AttesterNode> attesters = new HashSet<>();
-  final Set<BlockProducerNode> bps = new HashSet<>();
-  final Set<RandomBeaconNode> rds = new HashSet<>();
+  final List<AttesterNode> attesters = new ArrayList<>();
+  final List<BlockProducerNode> bps = new ArrayList<>();
+  final List<RandomBeaconNode> rds = new ArrayList<>();
 
   @Override
   public Network<?> network() {
@@ -169,8 +169,8 @@ public class Dfinity implements Protocol {
 
 
   abstract class DfinityNode extends BlockChainNode<DfinityBlock> {
-    final Set<Long> committeeMajorityBlocks = new HashSet<>();
-    final Set<Integer> committeeMajorityHeight = new HashSet<>();
+    final Set<Long> committeeMajorityBlocks = new LinkedHashSet<>();
+    final Set<Integer> committeeMajorityHeight = new LinkedHashSet<>();
     int lastRandomBeacon;
 
 
@@ -247,7 +247,7 @@ public class Dfinity implements Protocol {
 
   class AttesterNode extends DfinityNode {
     final Map<Long, Set<Integer>> votes = new HashMap<>();
-    final Set<DfinityBlock> proposals = new HashSet<>();
+    final List<DfinityBlock> proposals = new ArrayList<>();
     final int myRound;
     int voteForHeight = -1;
 
@@ -258,7 +258,7 @@ public class Dfinity implements Protocol {
 
     @Override
     public void onVote(Node voter, DfinityBlock voteFor) {
-      Set<Integer> voters = votes.computeIfAbsent(voteFor.id, k -> new HashSet<>());
+      Set<Integer> voters = votes.computeIfAbsent(voteFor.id, k -> new LinkedHashSet<>());
       if (voteForHeight == voteFor.height) {
         if (voters.add(voter.nodeId) && voters.size() >= majority) {
           sendBlock(voteFor);
@@ -280,7 +280,7 @@ public class Dfinity implements Protocol {
      */
     void onProposal(DfinityBlock b) {
       if (voteForHeight == b.height) {
-        Set<Integer> voters = votes.computeIfAbsent(b.id, k -> new HashSet<>());
+        Set<Integer> voters = votes.computeIfAbsent(b.id, k -> new LinkedHashSet<>());
 
         if (voters.add(this.nodeId)) {
           if (voters.size() >= majority) {
@@ -341,7 +341,7 @@ public class Dfinity implements Protocol {
      */
     public void onRandomBeaconExchange(RandomBeaconNode from, int height) {
       if (height >= this.height && height > lastRDSent) {
-        Set<Integer> voters = exchanged.computeIfAbsent(height, k -> new HashSet<>());
+        Set<Integer> voters = exchanged.computeIfAbsent(height, k -> new LinkedHashSet<>());
         if (voters.add(from.nodeId) && height == this.height && voters.size() >= majority) {
           sendRB();
         }
@@ -365,7 +365,7 @@ public class Dfinity implements Protocol {
       if (head.height == height) {
         height++;
 
-        Set<Integer> voters = exchanged.computeIfAbsent(height, k -> new HashSet<>());
+        Set<Integer> voters = exchanged.computeIfAbsent(height, k -> new LinkedHashSet<>());
         if (voters.add(this.nodeId) && voters.size() >= majority) {
           sendRB();
         } else {

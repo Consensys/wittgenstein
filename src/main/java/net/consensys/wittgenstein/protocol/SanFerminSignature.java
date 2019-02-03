@@ -418,10 +418,8 @@ public class SanFerminSignature implements Protocol {
 
     private void sendSwapReply(SanFerminNode n, Status s, int level, int value) {
       SwapReply r = new SwapReply(s, level, value);
-      network.send(r, SanFerminNode.this, Collections.singleton(n));
+      network.send(r, SanFerminNode.this, List.of(n));
     }
-
-
 
     /**
      * Transition prevents any more aggregation at this level, and launch the "verification routine"
@@ -525,8 +523,6 @@ public class SanFerminSignature implements Protocol {
     }
   }
 
-
-
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
     int nodeCt = 32768 / 2;
@@ -569,7 +565,6 @@ public class SanFerminSignature implements Protocol {
       long val = n.getDoneAt();
       return val == 0 ? limit : val;
     }));
-
   }
 
   public static void main(String... args) {

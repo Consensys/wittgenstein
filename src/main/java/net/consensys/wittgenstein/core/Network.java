@@ -372,7 +372,7 @@ public class Network<TN extends Node> {
    * Send a message to a collection of nodes. The message is considered as sent immediately, and
    * will arrive at a time depending on the network latency.
    */
-  public void send(Message<? extends TN> m, TN fromNode, Collection<TN> dests) {
+  public void send(Message<? extends TN> m, TN fromNode, List<TN> dests) {
     send(m, time + 1, fromNode, dests);
   }
 
@@ -416,8 +416,7 @@ public class Network<TN extends Node> {
   }
 
 
-  public void send(Message<? extends TN> m, int sendTime, TN fromNode,
-      Collection<? extends Node> dests) {
+  public void send(Message<? extends TN> m, int sendTime, TN fromNode, List<? extends Node> dests) {
     int randomSeed = rd.nextInt();
 
     List<MessageArrival> da = createMessageArrivals(m, sendTime, fromNode, dests, randomSeed);
@@ -436,7 +435,7 @@ public class Network<TN extends Node> {
   }
 
   List<MessageArrival> createMessageArrivals(Message<? extends TN> m, int sendTime, TN fromNode,
-      Collection<? extends Node> dests, int randomSeed) {
+      List<? extends Node> dests, int randomSeed) {
     ArrayList<MessageArrival> da = new ArrayList<>(dests.size());
     for (Node n : dests) {
       MessageArrival ma = createMessageArrival(m, fromNode, n, sendTime, randomSeed);
