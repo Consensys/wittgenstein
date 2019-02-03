@@ -550,7 +550,7 @@ public class GSFSignature implements Protocol {
   }
 
   @Override
-  public Network<?> network() {
+  public Network<GSFNode> network() {
     return network;
   }
 

@@ -123,9 +123,8 @@ public class GSFSignatureTest {
       p1.network().runMs(1);
       p2.network().runMs(1);
       Assert.assertEquals(p1.network.msgs.size(), p2.network.msgs.size());
-      for (Node nn1 : p1.network().allNodes) {
-        GSFSignature.GSFNode n1 = (GSFSignature.GSFNode) nn1;
-        GSFSignature.GSFNode n2 = (GSFSignature.GSFNode) p2.network().getNodeById(n1.nodeId);
+      for (GSFSignature.GSFNode n1 : p1.network().allNodes) {
+        GSFSignature.GSFNode n2 = p2.network().getNodeById(n1.nodeId);
         Assert.assertNotNull(n2);
         Assert.assertEquals(n1.doneAt, n2.doneAt);
         Assert.assertEquals(n1.verifiedSignatures, n2.verifiedSignatures);
