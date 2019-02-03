@@ -54,9 +54,6 @@ public class P2PFloodTest {
     }
   }
 
-  /**
-   * Test that two runs gives exactly the same result.
-   */
   @Test
   public void testCopy() {
     NetworkLatency nl = new NetworkLatency.NetworkLatencyByDistance();
@@ -69,9 +66,8 @@ public class P2PFloodTest {
     p2.init();
     p2.network().runMs(1000);
 
-    for (Node nn1 : p1.network().allNodes) {
-      P2PFlood.P2PFloodNode n1 = (P2PFlood.P2PFloodNode) nn1;
-      P2PFlood.P2PFloodNode n2 = (P2PFlood.P2PFloodNode) p2.network().getNodeById(n1.nodeId);
+    for (P2PFlood.P2PFloodNode n1 : p1.network().allNodes) {
+      P2PFlood.P2PFloodNode n2 = p2.network().getNodeById(n1.nodeId);
       Assert.assertNotNull(n2);
       Assert.assertEquals(n1.doneAt, n2.doneAt);
       Assert.assertEquals(n1.down, n2.down);

@@ -134,7 +134,7 @@ public class OptimisticP2PSignature implements Protocol {
   }
 
   @Override
-  public Network<?> network() {
+  public Network<P2PSigNode> network() {
     return network;
   }
 

@@ -35,7 +35,7 @@ public class Dfinity implements Protocol {
   final List<RandomBeaconNode> rds = new ArrayList<>();
 
   @Override
-  public Network<?> network() {
+  public BlockChainNetwork network() {
     return network;
   }
 

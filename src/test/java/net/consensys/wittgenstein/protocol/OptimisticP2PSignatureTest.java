@@ -32,10 +32,8 @@ public class OptimisticP2PSignatureTest {
     p2.init();
     p2.network().runMs(200);
 
-    for (Node nc1 : p1.network().allNodes) {
-      OptimisticP2PSignature.P2PSigNode n1 = (OptimisticP2PSignature.P2PSigNode) nc1;
-      OptimisticP2PSignature.P2PSigNode n2 =
-          (OptimisticP2PSignature.P2PSigNode) p2.network().getNodeById(n1.nodeId);
+    for (OptimisticP2PSignature.P2PSigNode n1 : p1.network().allNodes) {
+      OptimisticP2PSignature.P2PSigNode n2 = p2.network().getNodeById(n1.nodeId);
       Assert.assertNotNull(n2);
       Assert.assertEquals(n1.done, n2.done);
       Assert.assertEquals(n1.doneAt, n2.doneAt);

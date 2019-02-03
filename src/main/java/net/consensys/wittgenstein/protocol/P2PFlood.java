@@ -124,7 +124,7 @@ public class P2PFlood implements Protocol {
   }
 
   @Override
-  public Network<?> network() {
+  public Network<P2PFloodNode> network() {
     return network;
   }
 
