@@ -112,10 +112,9 @@ public class GSFSignatureTest {
     }
   }
 
-
-  //TODO @Test
+  @Test
   public void testCopy() {
-    GSFSignature p1 = new GSFSignature(128, .75, 6, 50, 20, 10, .2);
+    GSFSignature p1 = new GSFSignature(128, .75, 6, 10, 5, 10, .2);
     GSFSignature p2 = p1.copy();
     p1.init();
     p2.init();
@@ -123,7 +122,6 @@ public class GSFSignatureTest {
     while (p1.network.time < 2000) {
       p1.network().runMs(1);
       p2.network().runMs(1);
-      System.out.println("" + p1.network.time);
       Assert.assertEquals(p1.network.msgs.size(), p2.network.msgs.size());
       for (Node nn1 : p1.network().allNodes) {
         GSFSignature.GSFNode n1 = (GSFSignature.GSFNode) nn1;

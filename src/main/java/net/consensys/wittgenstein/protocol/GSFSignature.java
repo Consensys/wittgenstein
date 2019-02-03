@@ -101,7 +101,7 @@ public class GSFSignature implements Protocol {
 
 
   public class GSFNode extends Node {
-    final Set<SendSigs> toVerify = new HashSet<>();
+    final ArrayList<SendSigs> toVerify = new ArrayList<>();
     final List<SFLevel> levels = new ArrayList<>();
     final BitSet verifiedSignatures = new BitSet(nodeCount);
     final int nodePairingTime = (int) (pairingTime * speedRatio);
