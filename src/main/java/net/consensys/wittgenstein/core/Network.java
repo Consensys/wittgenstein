@@ -591,16 +591,6 @@ public class Network<TN extends Node> {
     return allNodes.stream().filter(n -> !n.down).collect(Collectors.toList());
   }
 
-
-  /**
-   * Set the network latency to a min value. This allows to test the protocol independently of the
-   * network variability.
-   */
-  public Network<TN> removeNetworkLatency() {
-    networkLatency = new NetworkLatency.NetworkNoLatency();
-    return setNetworkLatency(new NetworkLatency.NetworkNoLatency());
-  }
-
   public Network<TN> setNetworkLatency(int[] distribProp, int[] distribVal) {
     return setNetworkLatency(new NetworkLatency.MeasuredNetworkLatency(distribProp, distribVal));
   }

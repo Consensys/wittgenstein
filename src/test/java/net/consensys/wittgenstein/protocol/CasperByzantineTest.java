@@ -1,5 +1,6 @@
 package net.consensys.wittgenstein.protocol;
 
+import net.consensys.wittgenstein.core.NetworkLatency;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -8,7 +9,7 @@ public class CasperByzantineTest {
 
   @Test
   public void testByzantineWF() {
-    ci.network.removeNetworkLatency();
+    ci.network.networkLatency = new NetworkLatency.NetworkNoLatency();
 
     CasperIMD.ByzBlockProducerWF byz = ci.new ByzBlockProducerWF(0, ci.genesis);
     ci.init(byz);
@@ -34,7 +35,7 @@ public class CasperByzantineTest {
 
   @Test
   public void testByzantineWFWithDelay() {
-    ci.network.removeNetworkLatency();
+    ci.network.networkLatency = new NetworkLatency.NetworkNoLatency();
 
     CasperIMD.ByzBlockProducerWF byz = ci.new ByzBlockProducerWF(-2000, ci.genesis);
     ci.init(byz);

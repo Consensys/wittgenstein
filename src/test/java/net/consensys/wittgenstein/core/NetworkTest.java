@@ -98,7 +98,7 @@ public class NetworkTest {
       }
     };
 
-    network.removeNetworkLatency();
+    network.networkLatency = new NetworkLatency.NetworkNoLatency();
     network.send(act, 1, n0, Arrays.asList(n1, n2, n3));
 
     network.runMs(2);
