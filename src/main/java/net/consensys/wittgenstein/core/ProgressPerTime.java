@@ -20,10 +20,10 @@ public class ProgressPerTime {
   private final String yAxisDesc;
   private final StatsHelper.StatsGetter statsGetter;
   private final int roundCount;
-  private final OnSingleRunEnd endCallaback;
+  private final OnSingleRunEnd endCallback;
 
   public ProgressPerTime(Protocol template, String configDesc, String yAxisDesc,
-      StatsHelper.StatsGetter statsGetter, int roundCount, OnSingleRunEnd endCallaback) {
+      StatsHelper.StatsGetter statsGetter, int roundCount, OnSingleRunEnd endCallback) {
     if (roundCount <= 0) {
       throw new IllegalArgumentException(
           "roundCount must be greater than 0. roundCount=" + roundCount);
@@ -34,7 +34,7 @@ public class ProgressPerTime {
     this.yAxisDesc = yAxisDesc;
     this.statsGetter = statsGetter;
     this.roundCount = roundCount;
-    this.endCallaback = endCallaback;
+    this.endCallback = endCallback;
   }
 
   public interface OnSingleRunEnd {
@@ -79,8 +79,8 @@ public class ProgressPerTime {
       } while (contIf.test(p));
       long endAt = System.currentTimeMillis();
 
-      if (endCallaback != null) {
-        endCallaback.end(p);
+      if (endCallback != null) {
+        endCallback.end(p);
       }
       System.out.println("bytes sent: " + StatsHelper.getStatsOn(liveNodes, Node::getBytesSent));
       System.out

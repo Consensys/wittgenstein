@@ -82,7 +82,6 @@ public class NodeBuilder implements Cloneable {
     public int getY(Random rd) {
       return rd.nextInt(Node.MAX_Y) + 1;
     }
-
   }
 
 
