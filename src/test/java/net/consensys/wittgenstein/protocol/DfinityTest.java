@@ -28,16 +28,16 @@ public class DfinityTest {
     p2.init();
 
     while (p1.network.time < 20000) {
-      p1.network().runMs(10);
-      p2.network().runMs(10);
-      System.out.println("" + p1.network.time);
+      p1.network().runMs(1);
+      p2.network().runMs(1);
+      Assert.assertEquals(p1.network.msgs.size(), p2.network.msgs.size());
       for (Dfinity.DfinityNode n1 : p1.network().allNodes) {
         Dfinity.DfinityNode n2 = p2.network().getNodeById(n1.nodeId);
         Assert.assertNotNull(n2);
         Assert.assertEquals(n1.down, n2.down);
         Assert.assertEquals(n1.head.proposalTime, n2.head.proposalTime);
         Assert.assertEquals(n1.committeeMajorityHeight, n2.committeeMajorityHeight);
-        Assert.assertEquals(n1.committeeMajorityBlocks, n2.committeeMajorityBlocks);
+        Assert.assertEquals("" + n1, n1.committeeMajorityBlocks, n2.committeeMajorityBlocks);
         Assert.assertEquals(n1.lastRandomBeacon, n2.lastRandomBeacon);
       }
     }

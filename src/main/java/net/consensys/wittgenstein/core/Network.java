@@ -64,16 +64,6 @@ public class Network<TN extends Node> {
     return this;
   }
 
-  public void reset() {
-    time = 0;
-    partitionsInX.clear();
-    msgs.clear();
-    allNodes.clear();
-    rd.setSeed(0);
-    conditionalTasks.clear();
-  }
-
-
   /**
    * A desperate attempt to have something less memory consuming than a PriorityQueue or a guava
    * multimap, by using raw array. The idea is to optimize the case when there are multiple messages
@@ -579,10 +569,12 @@ public class Network<TN extends Node> {
     return pId;
   }
 
-
   public void addNode(TN node) {
     while (allNodes.size() <= node.nodeId) {
       allNodes.add(null);
+    }
+    if (allNodes.get(node.nodeId) != null) {
+      throw new IllegalStateException("There is already a node with this id (" + node.nodeId + ")");
     }
     allNodes.set(node.nodeId, node);
   }

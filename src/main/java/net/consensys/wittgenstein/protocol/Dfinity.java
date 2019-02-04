@@ -169,8 +169,8 @@ public class Dfinity implements Protocol {
 
 
   abstract class DfinityNode extends BlockChainNode<DfinityBlock> {
-    final Set<Long> committeeMajorityBlocks = new LinkedHashSet<>();
-    final Set<Integer> committeeMajorityHeight = new LinkedHashSet<>();
+    final Set<Long> committeeMajorityBlocks = new HashSet<>();
+    final Set<Integer> committeeMajorityHeight = new HashSet<>();
     int lastRandomBeacon;
 
 
@@ -216,8 +216,10 @@ public class Dfinity implements Protocol {
 
       DfinityBlock newBlock = new DfinityBlock(this, height, head, true, network.time);
 
+      List<DfinityNode> attestersS = new ArrayList<>(attesters);
+      Collections.shuffle(attestersS, network.rd);
       network.send(new BlockProposal(newBlock), network.time + blockConstructionTime, this,
-          attesters);
+          attestersS);
       waitForBlockHeight = -1;
     }
 
@@ -258,7 +260,7 @@ public class Dfinity implements Protocol {
 
     @Override
     public void onVote(Node voter, DfinityBlock voteFor) {
-      Set<Integer> voters = votes.computeIfAbsent(voteFor.id, k -> new LinkedHashSet<>());
+      Set<Integer> voters = votes.computeIfAbsent(voteFor.id, k -> new HashSet<>());
       if (voteForHeight == voteFor.height) {
         if (voters.add(voter.nodeId) && voters.size() >= majority) {
           sendBlock(voteFor);
@@ -280,14 +282,16 @@ public class Dfinity implements Protocol {
      */
     void onProposal(DfinityBlock b) {
       if (voteForHeight == b.height) {
-        Set<Integer> voters = votes.computeIfAbsent(b.id, k -> new LinkedHashSet<>());
+        Set<Integer> voters = votes.computeIfAbsent(b.id, k -> new HashSet<>());
 
         if (voters.add(this.nodeId)) {
           if (voters.size() >= majority) {
             sendBlock(b);
           } else {
             Vote v = new Vote(b);
-            network.send(v, network.time + attestationConstructionTime, this, attesters);
+            List<DfinityNode> attestersS = new ArrayList<>(attesters);
+            Collections.shuffle(attestersS, network.rd);
+            network.send(v, network.time + attestationConstructionTime, this, attestersS);
           }
         }
       } else if (b.height > head.height) {
@@ -315,10 +319,14 @@ public class Dfinity implements Protocol {
     void onRandomBeaconOnce(int h, long rd) {
       if (rd % attestersRound == myRound && !committeeMajorityHeight.contains(h)) {
         voteForHeight = h;
+        HashSet<DfinityBlock> sent = new HashSet<>();
         for (DfinityBlock b : proposals) {
-          if (b.height == h) {
+          if (b.height == h && !sent.contains(b)) {
+            sent.add(b);
             Vote v = new Vote(b);
-            network.send(v, network.time + attestationConstructionTime, this, attesters);
+            List<DfinityNode> attestersS = new ArrayList<>(attesters);
+            Collections.shuffle(attestersS, network.rd);
+            network.send(v, network.time + attestationConstructionTime, this, attestersS);
           }
         }
         proposals.clear();
@@ -342,7 +350,7 @@ public class Dfinity implements Protocol {
      */
     public void onRandomBeaconExchange(RandomBeaconNode from, int height) {
       if (height >= this.height && height > lastRDSent) {
-        Set<Integer> voters = exchanged.computeIfAbsent(height, k -> new LinkedHashSet<>());
+        Set<Integer> voters = exchanged.computeIfAbsent(height, k -> new HashSet<>());
         if (voters.add(from.nodeId) && height == this.height && voters.size() >= majority) {
           sendRB();
         }
@@ -361,12 +369,14 @@ public class Dfinity implements Protocol {
      */
     @Override
     public boolean onBlock(DfinityBlock b) {
-      if (!super.onBlock(b))
+      if (!super.onBlock(b)) {
         return true;
+      }
+
       if (head.height == height) {
         height++;
 
-        Set<Integer> voters = exchanged.computeIfAbsent(height, k -> new LinkedHashSet<>());
+        Set<Integer> voters = exchanged.computeIfAbsent(height, k -> new HashSet<>());
         if (voters.add(this.nodeId) && voters.size() >= majority) {
           sendRB();
         } else {
@@ -375,7 +385,10 @@ public class Dfinity implements Protocol {
           if (wt <= network.time)
             wt = network.time + attestationConstructionTime;
           RandomBeaconExchange rbe = new RandomBeaconExchange(height);
-          network.send(rbe, wt, this, rds);
+
+          List<DfinityNode> rdsSends = new ArrayList<>(rds);
+          Collections.shuffle(rdsSends, network.rd);
+          network.send(rbe, wt, this, rdsSends);
         }
       }
       return false;
@@ -395,7 +408,6 @@ public class Dfinity implements Protocol {
     }
   }
 
-
   public void init() {
     for (int i = 0; i < attestersCount; i++) {
       AttesterNode n = new AttesterNode(i % attestersRound, genesis);
@@ -414,6 +426,8 @@ public class Dfinity implements Protocol {
       rds.add(n);
       network.addNode(n);
     }
+
+    Collections.shuffle(bps, network.rd);
 
     for (RandomBeaconNode n : rds) {
       n.sendRB();
