@@ -300,8 +300,9 @@ public class Dfinity implements Protocol {
 
     @Override
     public boolean onBlock(DfinityBlock b) {
-      if (!super.onBlock(b))
+      if (!super.onBlock(b)) {
         return false;
+      }
       committeeMajorityBlocks.add(b.id);
       committeeMajorityHeight.add(b.height);
       if (voteForHeight == b.height) { // We have a full block, not need to continue voting for this height

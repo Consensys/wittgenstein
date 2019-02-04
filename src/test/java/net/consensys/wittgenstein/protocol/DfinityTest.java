@@ -34,7 +34,6 @@ public class DfinityTest {
       for (Dfinity.DfinityNode n1 : p1.network().allNodes) {
         Dfinity.DfinityNode n2 = p2.network().getNodeById(n1.nodeId);
         Assert.assertNotNull(n2);
-        Assert.assertEquals(n1.doneAt, n2.doneAt);
         Assert.assertEquals(n1.down, n2.down);
         Assert.assertEquals(n1.head.proposalTime, n2.head.proposalTime);
         Assert.assertEquals(n1.committeeMajorityHeight, n2.committeeMajorityHeight);
