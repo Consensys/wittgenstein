@@ -69,7 +69,7 @@ public class StatsHelper {
         case "avg":
           return avg;
       }
-      throw new IllegalStateException(fieldName);
+      throw new IllegalStateException("field name not known in stats:" + fieldName);
     }
   }
 
