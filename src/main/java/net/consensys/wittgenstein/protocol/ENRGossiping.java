@@ -2,7 +2,6 @@ package net.consensys.wittgenstein.protocol;
 
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
-
 import java.util.*;
 import java.util.function.Predicate;
 
@@ -19,7 +18,7 @@ public class ENRGossiping implements Protocol {
   private final int discardTime;
   private final int timeToLeave;
   private final int totalPeers;
-  final static Random rd= new Random();
+  final static Random rd = new Random();
 
   private ENRGossiping(int totalPeers, int timeToChange, int capGossipTime, int discardTime,
       int timeToLeave, NodeBuilder nb, NetworkLatency nl) {
@@ -46,34 +45,34 @@ public class ENRGossiping implements Protocol {
 
   //Generate new capabilities for new nodes or nodes that periodically change.
   private static Map<Byte, Integer> generateCap(int i) {
-      Random rd = new Random();
+    Random rd = new Random();
     Map<Byte, Integer> k_v = new HashMap<Byte, Integer>();
     k_v.put(Byte.valueOf("id"), 4);
     k_v.put(Byte.valueOf("secp256k1"), i);
-    k_v.put(Byte.valueOf("ip"), rd.nextInt()*100000);
-    k_v.put(Byte.valueOf("tcp"), rd.nextInt()*1000);
-    k_v.put(Byte.valueOf("udp"), rd.nextInt()*1000);
+    k_v.put(Byte.valueOf("ip"), rd.nextInt() * 100000);
+    k_v.put(Byte.valueOf("tcp"), rd.nextInt() * 1000);
+    k_v.put(Byte.valueOf("udp"), rd.nextInt() * 1000);
     return k_v;
   }
 
-    private static Map<Byte, Integer> generateCap(int i, List<Byte> keys) {
-        Random rd = new Random();
-        Map<Byte, Integer> k_v = new HashMap<Byte, Integer>();
-       for(Byte b: keys){
-           k_v.put(b,rd.nextInt()*1000);
-       }
-        return k_v;
+  private static Map<Byte, Integer> generateCap(int i, List<Byte> keys) {
+    Random rd = new Random();
+    Map<Byte, Integer> k_v = new HashMap<Byte, Integer>();
+    for (Byte b : keys) {
+      k_v.put(b, rd.nextInt() * 1000);
     }
+    return k_v;
+  }
 
 
-    @Override
+  @Override
   public void init() {
-      Map<Byte, Integer> k_v = new HashMap<Byte, Integer>();
+    Map<Byte, Integer> k_v = new HashMap<Byte, Integer>();
 
     for (int i = 0; i < totalPeers; i++) {
-        if(i == 1){
+      if (i == 1) {
 
-        }
+      }
       network.addNode(new ETHNode(network.rd, this.nb, generateCap(i)));
     }
     network.setPeers();
@@ -124,13 +123,14 @@ public class ENRGossiping implements Protocol {
 
     @Override
     protected void onFlood(ETHNode from, P2PNetwork.FloodMessage floodMessage) {
-        capFound = this.capabilities.equals(from.capabilities);
+      capFound = this.capabilities.equals(from.capabilities);
       if (capFound) {
         doneAt = network.time;
       }
     }
-    void findCap(){
-        network.send(new FindRecord(1,this.capabilities),this,this.peers);
+
+    void findCap() {
+      network.send(new FindRecord(1, this.capabilities), this, this.peers);
     }
 
     void onLeaving() {
@@ -148,37 +148,37 @@ public class ENRGossiping implements Protocol {
     NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
     Random rd = new Random();
     ENRGossiping p = new ENRGossiping(4000, 10, 10, 10, 10, nb, nl);
-      Predicate<Protocol> contIf = p1 -> {
+    Predicate<Protocol> contIf = p1 -> {
 
-          if (p1.network().time > 50000) {
-              return false;
-          }
-          if(p1.network().getNodeById(1).doneAt == 0){
-              return true;
-          }
-          return false;
-      };
+      if (p1.network().time > 50000) {
+        return false;
+      }
+      if (p1.network().getNodeById(1).doneAt == 0) {
+        return true;
+      }
+      return false;
+    };
 
-      StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
-          final List<String> fields = new StatsHelper.Counter(0).fields();
+    StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
+      final List<String> fields = new StatsHelper.Counter(0).fields();
 
-          @Override
-          public List<String> fields() {
-              return fields;
-          }
+      @Override
+      public List<String> fields() {
+        return fields;
+      }
 
-          @Override
-          public StatsHelper.Stat get(List<? extends Node> liveNodes) {
-              return new StatsHelper.Counter(liveNodes.stream().filter(n -> n.getDoneAt() > 0).count());
-          }
-      };
+      @Override
+      public StatsHelper.Stat get(List<? extends Node> liveNodes) {
+        return new StatsHelper.Counter(liveNodes.stream().filter(n -> n.getDoneAt() > 0).count());
+      }
+    };
 
-          new ProgressPerTime(p,"","Messages sent",sg,1,null).run(contIf);
-      };
+    new ProgressPerTime(p, "", "Messages sent", sg, 1, null).run(contIf);
+  };
 
-    public static void main(String... args){
-        capSearch();
-    }
+  public static void main(String... args) {
+    capSearch();
   }
+}
 
 
