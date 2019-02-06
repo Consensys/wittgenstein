@@ -1,7 +1,10 @@
 package net.consensys.wittgenstein.protocol;
 
 import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.utils.StatsHelper;
+
 import java.util.*;
+import java.util.function.Predicate;
 
 /**
  * A Protocol that uses p2p flooding to gather data on time needed to find desired node capabilities
@@ -11,14 +14,14 @@ import java.util.*;
 public class ENRGossiping implements Protocol {
   private final P2PNetwork<ETHNode> network;
   private final NodeBuilder nb;
-  long signature;
   private final int timeToChange;
   private final int capGossipTime;
   private final int discardTime;
   private final int timeToLeave;
   private final int totalPeers;
+  final static Random rd= new Random();
 
-  public ENRGossiping(int totalPeers, int timeToChange, int capGossipTime, int discardTime,
+  private ENRGossiping(int totalPeers, int timeToChange, int capGossipTime, int discardTime,
       int timeToLeave, NodeBuilder nb, NetworkLatency nl) {
     this.totalPeers = totalPeers;
     this.timeToChange = timeToChange;
@@ -42,23 +45,40 @@ public class ENRGossiping implements Protocol {
   }
 
   //Generate new capabilities for new nodes or nodes that periodically change.
-  Map<Byte, Integer> generateCap(int i) {
+  private static Map<Byte, Integer> generateCap(int i) {
+      Random rd = new Random();
     Map<Byte, Integer> k_v = new HashMap<Byte, Integer>();
     k_v.put(Byte.valueOf("id"), 4);
     k_v.put(Byte.valueOf("secp256k1"), i);
-    k_v.put(Byte.valueOf("ip"), 123);
-    k_v.put(Byte.valueOf("tcp"), 8088);
-    k_v.put(Byte.valueOf("udp"), 1200);
+    k_v.put(Byte.valueOf("ip"), rd.nextInt()*100000);
+    k_v.put(Byte.valueOf("tcp"), rd.nextInt()*1000);
+    k_v.put(Byte.valueOf("udp"), rd.nextInt()*1000);
     return k_v;
   }
 
-  @Override
+    private static Map<Byte, Integer> generateCap(int i, List<Byte> keys) {
+        Random rd = new Random();
+        Map<Byte, Integer> k_v = new HashMap<Byte, Integer>();
+       for(Byte b: keys){
+           k_v.put(b,rd.nextInt()*1000);
+       }
+        return k_v;
+    }
+
+
+    @Override
   public void init() {
+      Map<Byte, Integer> k_v = new HashMap<Byte, Integer>();
+
     for (int i = 0; i < totalPeers; i++) {
+        if(i == 1){
+
+        }
       network.addNode(new ETHNode(network.rd, this.nb, generateCap(i)));
     }
     network.setPeers();
-
+    ETHNode n = network.getNodeById(1);
+    n.findCap();
   }
 
   /**
@@ -69,21 +89,17 @@ public class ENRGossiping implements Protocol {
    * capabilities in the network
    */
   private static class FindRecord extends P2PNetwork.Message<ETHNode> {
-    long signature;
     int seq;
     Map<Byte, Integer> k_v;
-    boolean updateReceived;
 
-    FindRecord(int se, long signature, Map<Byte, Integer> k_v, boolean updateReceived) {
-      this.signature = signature;
+    FindRecord(int seq, Map<Byte, Integer> k_v) {
       this.seq = seq;
       this.k_v = k_v;
-      this.updateReceived = updateReceived;
     }
 
     @Override
     public void action(ETHNode from, ETHNode to) {
-      from.onJoinning();
+      from.findCap();
     }
   }
   //When capabilities are found,before exiting the network the node sends it's capabilities through gossiping
@@ -97,7 +113,7 @@ public class ENRGossiping implements Protocol {
 
   class ETHNode extends P2PNode<ETHNode> {
     int nodeId;
-    boolean CapFound;
+    boolean capFound;
     final Map<Byte, Integer> capabilities;
 
     public ETHNode(Random rd, NodeBuilder nb, Map<Byte, Integer> capabilities) {
@@ -108,16 +124,13 @@ public class ENRGossiping implements Protocol {
 
     @Override
     protected void onFlood(ETHNode from, P2PNetwork.FloodMessage floodMessage) {
-      if (CapFound) {
+        capFound = this.capabilities.equals(from.capabilities);
+      if (capFound) {
         doneAt = network.time;
       }
     }
-
-    //When a node first joins the network it gossips to its peers about its capabilities i.e. : sends its key/value pairs
-    // Also sends a request for a given set of capabilities it's looking for
-    void onJoinning() {
-
-      // network.send(new Records(this.signature,this.k_V), this, this.peers);
+    void findCap(){
+        network.send(new FindRecord(1,this.capabilities),this,this.peers);
     }
 
     void onLeaving() {
@@ -133,8 +146,39 @@ public class ENRGossiping implements Protocol {
   private static void capSearch() {
     NetworkLatency nl = new NetworkLatency.IC3NetworkLatency();
     NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
-
+    Random rd = new Random();
     ENRGossiping p = new ENRGossiping(4000, 10, 10, 10, 10, nb, nl);
+      Predicate<Protocol> contIf = p1 -> {
+
+          if (p1.network().time > 50000) {
+              return false;
+          }
+          if(p1.network().getNodeById(1).doneAt == 0){
+              return true;
+          }
+          return false;
+      };
+
+      StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
+          final List<String> fields = new StatsHelper.Counter(0).fields();
+
+          @Override
+          public List<String> fields() {
+              return fields;
+          }
+
+          @Override
+          public StatsHelper.Stat get(List<? extends Node> liveNodes) {
+              return new StatsHelper.Counter(liveNodes.stream().filter(n -> n.getDoneAt() > 0).count());
+          }
+      };
+
+          new ProgressPerTime(p,"","Messages sent",sg,1,null).run(contIf);
+      };
+
+    public static void main(String... args){
+        capSearch();
+    }
   }
 
-}
+
