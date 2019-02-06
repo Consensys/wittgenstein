@@ -2,27 +2,32 @@ package net.consensys.wittgenstein.protocol;
 
 import net.consensys.wittgenstein.core.*;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Random;
-import java.util.List;
+import java.util.*;
 
-/*
+/**
 * A Protocol that uses p2p flooding to gather data on time needed to find desired node capabilities
-* Idea: To change the node discov ery protocol to allow node record sending through gossiping
-* */
+* Idea: To change the node discovery protocol to allow node record sending through gossiping
+ */
 
 public class ENRGossiping implements Protocol {
     private final P2PNetwork<ETHNode> network;
     private final NodeBuilder nb;
+    long signature;
+    private final int timeToChange;
+    private final int capGossipTime;
+    private final int discardTime;
+    private final int timeToLeave;
+    private final int totalPeers ;
 
-    final int totalPeers ;
-
-    public ENRGossiping(P2PNetwork<ETHNode> network, NodeBuilder nb, int totalPeers) {
-        this.network = network;
-        this.nb = nb;
+    public ENRGossiping( int totalPeers, int timeToChange, int capGossipTime, int discardTime, int timeToLeave,NodeBuilder nb, NetworkLatency nl) {
         this.totalPeers = totalPeers;
+        this.timeToChange = timeToChange;
+        this.capGossipTime = capGossipTime;
+        this.discardTime = discardTime;
+        this.timeToLeave = timeToLeave;
+        this.network = new P2PNetwork<>(totalPeers,true);
+        this.nb = nb;
+        this.network.setNetworkLatency(nl);
     }
 
     @Override
@@ -31,74 +36,100 @@ public class ENRGossiping implements Protocol {
     }
 
     @Override
-    public Protocol copy() {
-        return new ENRGossiping(network,nb, totalPeers);
+    public ENRGossiping copy() {
+        return new ENRGossiping(totalPeers,timeToChange,capGossipTime,discardTime,timeToLeave,nb,network.networkLatency);
+    }
+    //Generate new capabilities for new nodes or nodes that periodically change.
+    Map<Byte,Integer> generateCap(int i){
+        Map<Byte,Integer> k_v = new HashMap<Byte,Integer>();
+        k_v.put( Byte.valueOf("id"),4);
+        k_v.put( Byte.valueOf("secp256k1"),i);
+        k_v.put( Byte.valueOf("ip"),123);
+        k_v.put( Byte.valueOf("tcp"),8088);
+        k_v.put( Byte.valueOf("udp"),1200);
+        return k_v;
     }
 
     @Override
     public void init() {
         for(int i = 0; i<totalPeers; i++){
-            //network.addNode(new ETHNode(i,new Records()) );
+            network.addNode(new ETHNode(network.rd,this.nb,generateCap(i)));
         }
+        network.setPeers();
+
     }
-    /*
+    /**
     * The components of a node record are:
     * signature: cryptographic signature of record contents
     * seq: The sequence number, a 64 bit integer. Nodes should increase the number whenever the record changes and republish the record.
     * The remainder of the record consists of arbitrary key/value pairs, which must be sorted by key.
-    * */
-    static class Records extends Network.Message<ETHNode>{
+     * A Node sends this message to query for specific capabilities in the network
+     */
+    private static class FindRecord extends P2PNetwork.Message<ETHNode> {
         long signature;
-        int seq = 0;
+        int seq;
         Map<Byte,Integer> k_v;
         boolean updateReceived;
 
-        Records(long signature, Map<Byte,Integer> k_v ){
+        FindRecord(int se, long signature, Map<Byte,Integer> k_v, boolean updateReceived){
          this.signature = signature;
-         this.seq++;
+         this.seq = seq;
          this.k_v = k_v;
+         this.updateReceived = updateReceived;
         }
+
         @Override
         public void action(ETHNode from, ETHNode to) {
-            from.joinning();
+            from.onJoinning();
+        }
+    }
+    //When capabilities are found,before exiting the network the node sends it's capabilities through gossiping
+    private static class RecordFound extends P2PNetwork.Message<ETHNode> {
+
+        @Override
+        public void action(ETHNode from, ETHNode to) {
+            from.onLeaving();
         }
     }
 
     class ETHNode extends P2PNode<ETHNode> {
         int nodeId;
-        long signature;
-        Map<Byte,Integer> k_v;
-        Records capabilities;
-        int timeToChange = 0;
-        int capGossipTime;
-        int discardTime;
-        int timeToLeave;
-        final List<Records> records = new ArrayList<>();
+        boolean CapFound;
+        final Map<Byte,Integer> capabilities;
 
-        public ETHNode(Random rd, NodeBuilder nb, Records capabilities, int timeToChange, int capGossipTime, int discardTime, int timeToLeave) {
+        public ETHNode(Random rd, NodeBuilder nb, Map<Byte,Integer> capabilities) {
             super(rd, nb);
             this.capabilities = capabilities;
-            this.timeToChange = timeToChange;
-            this.capGossipTime = capGossipTime;
-            this.discardTime = discardTime;
-            this.timeToLeave = timeToLeave;
+
+        }
+        @Override
+        protected void onFlood(ETHNode from, P2PNetwork.FloodMessage floodMessage) {
+            if (CapFound) {
+                doneAt = network.time;
+            }
         }
         //When a node first joins the network it gossips to its peers about its capabilities i.e. : sends its key/value pairs
-        void joinning(){
-            network.send(new Records(this.signature,this.k_v), this, this.peers);
+        // Also sends a request for a given set of capabilities it's looking for
+        void onJoinning(){
+
+           // network.send(new Records(this.signature,this.k_V), this, this.peers);
         }
 
-        void leave(){
-            network.send(new Records(this.signature,this.k_v), this, this.peers);
+        void onLeaving(){
+           // network.send(new Records(this.signature,this.k_v), this, this.peers);
         }
 
-        void changeCapabilities(){
-            network.send(new Records(this.signature,this.k_v), this, this.peers);
+        void atCapChange(){
+           // network.send(new Records(this.signature,this.k_v), this, this.peers);
         }
 
+    }
 
+    private static void capSearch(){
+        NetworkLatency nl = new NetworkLatency.IC3NetworkLatency();
+        NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
 
-
+        ENRGossiping p = new ENRGossiping(4000,10,10,10,10,nb,nl);
     }
 
 }

@@ -132,12 +132,12 @@ public class P2PFlood implements Protocol {
     NetworkLatency nl = new NetworkLatency.IC3NetworkLatency();
     NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
 
-    int liveNodes = 4000;
-    final int threshold = (int) (0.5 * liveNodes);
-    P2PFlood p = new P2PFlood(liveNodes, 0, 1, 4000, threshold, 15, 1, nb, nl);
+    int liveNodes = 1000;
+    final int threshold = (int) (0.99 * liveNodes);
+    P2PFlood p = new P2PFlood(liveNodes, 0, 1, 1000, threshold, 15, 1, nb, nl);
 
     Predicate<Protocol> contIf = p1 -> {
-      if (p1.network().time > 5000) {
+      if (p1.network().time > 50000) {
         return false;
       }
 
