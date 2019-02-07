@@ -18,12 +18,15 @@ public class ENRGossiping implements Protocol {
   private final int discardTime;
   private final int timeToLeave;
   private final int totalPeers;
+  private final int changingNodes;
   final static Random rd = new Random();
+  private final List<Map<String, Integer>> records = new ArrayList<>();
 
-  private ENRGossiping(int totalPeers, int timeToChange, int capGossipTime, int discardTime,
-      int timeToLeave, NodeBuilder nb, NetworkLatency nl) {
+  private ENRGossiping(int totalPeers, int timeToChange, int changingNodes, int capGossipTime,
+      int discardTime, int timeToLeave, NodeBuilder nb, NetworkLatency nl) {
     this.totalPeers = totalPeers;
     this.timeToChange = timeToChange;
+    this.changingNodes = changingNodes;
     this.capGossipTime = capGossipTime;
     this.discardTime = discardTime;
     this.timeToLeave = timeToLeave;
@@ -39,27 +42,27 @@ public class ENRGossiping implements Protocol {
 
   @Override
   public ENRGossiping copy() {
-    return new ENRGossiping(totalPeers, timeToChange, capGossipTime, discardTime, timeToLeave, nb,
-        network.networkLatency);
+    return new ENRGossiping(totalPeers, timeToChange, changingNodes, capGossipTime, discardTime,
+        timeToLeave, nb, network.networkLatency);
   }
 
   //Generate new capabilities for new nodes or nodes that periodically change.
-  private static Map<Byte, Integer> generateCap(int i) {
+  private static Map<String, Integer> generateCap(int i) {
     Random rd = new Random();
-    Map<Byte, Integer> k_v = new HashMap<Byte, Integer>();
-    k_v.put(Byte.valueOf("id"), 4);
-    k_v.put(Byte.valueOf("secp256k1"), i);
-    k_v.put(Byte.valueOf("ip"), rd.nextInt() * 100000);
-    k_v.put(Byte.valueOf("tcp"), rd.nextInt() * 1000);
-    k_v.put(Byte.valueOf("udp"), rd.nextInt() * 1000);
+    Map<String, Integer> k_v = new HashMap<String, Integer>();
+    k_v.put("id", 4);
+    k_v.put(("secp256k1"), i);
+    k_v.put("ip", rd.nextInt() * 100000);
+    k_v.put("tcp", rd.nextInt() * 1000);
+    k_v.put("udp", rd.nextInt() * 1000);
     return k_v;
   }
 
-  private static Map<Byte, Integer> generateCap(int i, List<Byte> keys) {
+  private static Map<String, Integer> generateCap(int i, List<String> keys) {
     Random rd = new Random();
-    Map<Byte, Integer> k_v = new HashMap<Byte, Integer>();
-    for (Byte b : keys) {
-      k_v.put(b, rd.nextInt() * 1000);
+    Map<String, Integer> k_v = new HashMap<String, Integer>();
+    for (String s : keys) {
+      k_v.put(s, rd.nextInt() * 1000);
     }
     return k_v;
   }
@@ -67,17 +70,19 @@ public class ENRGossiping implements Protocol {
 
   @Override
   public void init() {
-    Map<Byte, Integer> k_v = new HashMap<Byte, Integer>();
+    Map<String, Integer> k_v = new HashMap<String, Integer>();
 
     for (int i = 0; i < totalPeers; i++) {
-      if (i == 1) {
-
-      }
-      network.addNode(new ETHNode(network.rd, this.nb, generateCap(i)));
+      records.add(i, generateCap(i));
+      network.addNode(new ETHNode(network.rd, this.nb, records.get(i)));
     }
     network.setPeers();
-    ETHNode n = network.getNodeById(1);
-    n.findCap();
+    //Nodes broadcast their capabilities every 1000 ms with a lag of rand*100 ms
+    for (ETHNode n : network.allNodes) {
+      network.registerPeriodicTask(n::sendCapabilities, 1, capGossipTime, n);
+    }
+
+
   }
 
   /**
@@ -89,15 +94,16 @@ public class ENRGossiping implements Protocol {
    */
   private static class FindRecord extends P2PNetwork.Message<ETHNode> {
     int seq;
-    Map<Byte, Integer> k_v;
+    Map<String, Integer> k_v;
 
-    FindRecord(int seq, Map<Byte, Integer> k_v) {
+    FindRecord(int seq, Map<String, Integer> k_v) {
       this.seq = seq;
       this.k_v = k_v;
     }
 
     @Override
     public void action(ETHNode from, ETHNode to) {
+      this.seq++;
       from.findCap();
     }
   }
@@ -113,11 +119,11 @@ public class ENRGossiping implements Protocol {
   class ETHNode extends P2PNode<ETHNode> {
     int nodeId;
     boolean capFound;
-    final Map<Byte, Integer> capabilities;
+    final List<Map<String, Integer>> capabilities = new ArrayList<>();
 
-    public ETHNode(Random rd, NodeBuilder nb, Map<Byte, Integer> capabilities) {
+    public ETHNode(Random rd, NodeBuilder nb, Map<String, Integer> capabilities) {
       super(rd, nb);
-      this.capabilities = capabilities;
+      this.capabilities.add(capabilities);
 
     }
 
@@ -130,15 +136,15 @@ public class ENRGossiping implements Protocol {
     }
 
     void findCap() {
-      network.send(new FindRecord(1, this.capabilities), this, this.peers);
+      network.send(new FindRecord(1, this.capabilities.get(0)), this, this.peers);
     }
 
     void onLeaving() {
       // network.send(new Records(this.signature,this.k_v), this, this.peers);
     }
 
-    void atCapChange() {
-      // network.send(new Records(this.signature,this.k_v), this, this.peers);
+    public void sendCapabilities() {
+      network.sendAll(new FindRecord(0, this.capabilities.get(0)), rd.nextInt() * 100, this);
     }
 
   }
@@ -147,7 +153,7 @@ public class ENRGossiping implements Protocol {
     NetworkLatency nl = new NetworkLatency.IC3NetworkLatency();
     NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
     Random rd = new Random();
-    ENRGossiping p = new ENRGossiping(4000, 10, 10, 10, 10, nb, nl);
+    ENRGossiping p = new ENRGossiping(4000, 10, 20, 10, 10, 10, nb, nl);
     Predicate<Protocol> contIf = p1 -> {
 
       if (p1.network().time > 50000) {
@@ -177,7 +183,8 @@ public class ENRGossiping implements Protocol {
   };
 
   public static void main(String... args) {
-    capSearch();
+    //capSearch();
+
   }
 }
 
