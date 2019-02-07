@@ -19,8 +19,10 @@ public class ENRGossiping implements Protocol {
   private final int timeToLeave;
   private final int totalPeers;
   private final int changingNodes;
-  final static Random rd = new Random();
   private final List<Map<String, Integer>> records = new ArrayList<>();
+
+  private final int numberOfDifferentCapabilities = 1000;
+  private final int numberOfCapabilityPerNode = 10;
 
   private ENRGossiping(int totalPeers, int timeToChange, int changingNodes, int capGossipTime,
       int discardTime, int timeToLeave, NodeBuilder nb, NetworkLatency nl) {
@@ -47,30 +49,28 @@ public class ENRGossiping implements Protocol {
   }
 
   //Generate new capabilities for new nodes or nodes that periodically change.
-  private static Map<String, Integer> generateCap(int i) {
-    Random rd = new Random();
-    Map<String, Integer> k_v = new HashMap<String, Integer>();
+  private Map<String, Integer> generateCap(int i) {
+    Map<String, Integer> k_v = new HashMap<>();
     k_v.put("id", 4);
     k_v.put(("secp256k1"), i);
-    k_v.put("ip", rd.nextInt() * 100000);
-    k_v.put("tcp", rd.nextInt() * 1000);
-    k_v.put("udp", rd.nextInt() * 1000);
-    return k_v;
-  }
+    k_v.put("ip", network.rd.nextInt() * 100000);
+    k_v.put("tcp", network.rd.nextInt() * 1000);
+    k_v.put("udp", network.rd.nextInt() * 1000);
 
-  private static Map<String, Integer> generateCap(int i, List<String> keys) {
-    Random rd = new Random();
-    Map<String, Integer> k_v = new HashMap<String, Integer>();
-    for (String s : keys) {
-      k_v.put(s, rd.nextInt() * 1000);
+    for (int c=0; c<numberOfCapabilityPerNode; c++) {
+      // todo: with this code we can get multiple time the same capabilities
+      int cap = network.rd.nextInt(numberOfDifferentCapabilities);
+      k_v.put("cap_"+cap, cap);
     }
+
+
     return k_v;
   }
 
 
   @Override
   public void init() {
-    Map<String, Integer> k_v = new HashMap<String, Integer>();
+    Map<String, Integer> k_v = new HashMap<>();
 
     for (int i = 0; i < totalPeers; i++) {
       records.add(i, generateCap(i));
@@ -78,8 +78,11 @@ public class ENRGossiping implements Protocol {
     }
     network.setPeers();
     //Nodes broadcast their capabilities every 1000 ms with a lag of rand*100 ms
+    
+    
     for (ETHNode n : network.allNodes) {
-      network.registerPeriodicTask(n::sendCapabilities, 1, capGossipTime, n);
+      int start = network.rd.nextInt(capGossipTime) + 1;
+      network.registerPeriodicTask(n::sendCapabilities, start, capGossipTime, n);
     }
 
 
@@ -92,51 +95,47 @@ public class ENRGossiping implements Protocol {
    * pairs, which must be sorted by key. A Node sends this message to query for specific
    * capabilities in the network
    */
-  private static class FindRecord extends P2PNetwork.Message<ETHNode> {
-    int seq;
-    Map<String, Integer> k_v;
+  private static class Record extends P2PNetwork.FloodMessage {
+    final int seq;
+    final Map<String, Integer> k_v;
 
-    FindRecord(int seq, Map<String, Integer> k_v) {
+    Record(int seq, Map<String, Integer> k_v) {
       this.seq = seq;
       this.k_v = k_v;
     }
 
     @Override
     public void action(ETHNode from, ETHNode to) {
-      this.seq++;
-      from.findCap();
     }
   }
-  //When capabilities are found,before exiting the network the node sends it's capabilities through gossiping
-  private static class RecordFound extends P2PNetwork.Message<ETHNode> {
 
-    @Override
-    public void action(ETHNode from, ETHNode to) {
-      from.onLeaving();
-    }
-  }
 
   class ETHNode extends P2PNode<ETHNode> {
-    int nodeId;
-    boolean capFound;
     final List<Map<String, Integer>> capabilities = new ArrayList<>();
 
     public ETHNode(Random rd, NodeBuilder nb, Map<String, Integer> capabilities) {
       super(rd, nb);
       this.capabilities.add(capabilities);
+    }
 
+    /**
+     * @return true if there is at least one capabilities in common, false otherwise
+     */
+    private boolean matchCap(P2PNetwork.FloodMessage floodMessage) {
+      return false;
     }
 
     @Override
     protected void onFlood(ETHNode from, P2PNetwork.FloodMessage floodMessage) {
-      capFound = this.capabilities.equals(from.capabilities);
-      if (capFound) {
-        doneAt = network.time;
+      if (doneAt == 0) {
+        if (matchCap(floodMessage)) {
+          doneAt = network.time;
+        }
       }
     }
 
     void findCap() {
-      network.send(new FindRecord(1, this.capabilities.get(0)), this, this.peers);
+      network.send(new Record(1, this.capabilities.get(0)), this, this.peers);
     }
 
     void onLeaving() {
@@ -144,7 +143,13 @@ public class ENRGossiping implements Protocol {
     }
 
     public void sendCapabilities() {
-      network.sendAll(new FindRecord(0, this.capabilities.get(0)), rd.nextInt() * 100, this);
+      Record rf = new Record(0, this.capabilities.get(0));
+      received.add(rf);
+      // Be careful, we never remove messages from p2p flood.
+      // You must do more than p2pflood: a message can replace another:
+      //  if a node send a message with a newer 'seq', the old message should be
+      //  replaced by the new one, and not kept in memory
+      network.send(rf, this, peers);
     }
 
   }
