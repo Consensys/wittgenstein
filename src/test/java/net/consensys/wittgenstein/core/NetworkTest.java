@@ -108,6 +108,31 @@ public class NetworkTest {
   }
 
   @Test
+  public void testMultipleMessageWithDelays() {
+    AtomicInteger ab = new AtomicInteger(0);
+    Network.Message<Node> act = new Network.Message<>() {
+      @Override
+      public void action(Node from, Node to) {
+        ab.incrementAndGet();
+      }
+    };
+
+    network.networkLatency = new NetworkLatency.NetworkNoLatency();
+    network.send(act, 1, n0, Arrays.asList(n1, n2, n3), 10);
+
+    network.runMs(2);
+    Assert.assertEquals(1, ab.get());
+
+    network.runMs(10);
+    Assert.assertEquals(2, ab.get());
+
+    network.runMs(10);
+    Assert.assertEquals(3, ab.get());
+
+    Assert.assertEquals(0, network.msgs.size());
+  }
+
+  @Test
   public void testStats() {
     Network.Message<Node> act = new Network.Message<>() {
       @Override
@@ -189,7 +214,7 @@ public class NetworkTest {
 
 
     List<Network.MessageArrival> mas =
-        network.createMessageArrivals(act, 1, n0, Arrays.asList(n1, n2, n3), mm.randomSeed);
+        network.createMessageArrivals(act, 1, n0, Arrays.asList(n1, n2, n3), mm.randomSeed, 0);
 
     for (Network.MessageArrival ma : mas) {
       Assert.assertEquals(ma.arrival, m.nextArrivalTime(network));

@@ -707,7 +707,7 @@ public class CasperIMD implements Protocol {
     }
 
     try {
-      graph.save(new File("/tmp/graph.png"));
+      graph.save(new File("graph.png"));
     } catch (IOException e) {
       System.err.println("Can't generate the graph: " + e.getMessage());
     }

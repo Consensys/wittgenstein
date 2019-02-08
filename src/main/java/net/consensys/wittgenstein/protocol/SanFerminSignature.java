@@ -551,7 +551,7 @@ public class SanFerminSignature implements Protocol {
     } while (ps1.network.time < limit);
 
     try {
-      graph.save(new File("/tmp/graph.png"));
+      graph.save(new File("graph.png"));
     } catch (IOException e) {
       System.err.println("Can't generate the graph: " + e.getMessage());
     }

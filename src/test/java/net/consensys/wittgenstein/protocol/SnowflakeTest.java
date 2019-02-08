@@ -36,4 +36,10 @@ public class SnowflakeTest {
     }
   }
 
+  @Test
+  public void testPlay() {
+    Snowflake p1 = new Snowflake(100, 5, 7, 4.0 / 7.0, 3);
+    p1.play();
+  }
+
 }

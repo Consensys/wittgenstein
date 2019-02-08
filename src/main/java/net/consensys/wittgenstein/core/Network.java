@@ -405,30 +405,39 @@ public class Network<TN extends Node> {
     return msgs.size() != 0;
   }
 
-
   public void send(Message<? extends TN> m, int sendTime, TN fromNode, List<? extends Node> dests) {
+    send(m, sendTime, fromNode, dests, 0);
+  }
+
+  public void send(Message<? extends TN> m, int sendTime, TN fromNode, List<? extends Node> dests,
+      int delaysBetweenMessage) {
     int randomSeed = rd.nextInt();
 
-    List<MessageArrival> da = createMessageArrivals(m, sendTime, fromNode, dests, randomSeed);
+    List<MessageArrival> da =
+        createMessageArrivals(m, sendTime, fromNode, dests, randomSeed, delaysBetweenMessage);
 
     if (!da.isEmpty()) {
+      Envelope<?> msg;
       if (da.size() == 1) {
         MessageArrival ms = da.get(0);
-        Envelope<?> msg = new Envelope.SingleDestEnvelope<>(m, fromNode, ms.dest, ms.arrival);
-        msgs.addMsg(msg);
+        msg = new Envelope.SingleDestEnvelope<>(m, fromNode, ms.dest, ms.arrival);
+      } else if (delaysBetweenMessage == 0) {
+        msg = new Envelope.MultipleDestEnvelope<>(m, fromNode, da, sendTime, randomSeed);
       } else {
-        Envelope<?> msg =
-            new Envelope.MultipleDestEnvelope<>(m, fromNode, da, sendTime, randomSeed);
-        msgs.addMsg(msg);
+        msg = new Envelope.MultipleDestWithDelayEnvelope<>(m, fromNode, da, sendTime,
+            delaysBetweenMessage, randomSeed);
       }
+      msgs.addMsg(msg);
+
     }
   }
 
   List<MessageArrival> createMessageArrivals(Message<? extends TN> m, int sendTime, TN fromNode,
-      List<? extends Node> dests, int randomSeed) {
+      List<? extends Node> dests, int randomSeed, int delaysBetweenMessage) {
     ArrayList<MessageArrival> da = new ArrayList<>(dests.size());
     for (Node n : dests) {
       MessageArrival ma = createMessageArrival(m, fromNode, n, sendTime, randomSeed);
+      sendTime += delaysBetweenMessage;
       if (ma != null) {
         da.add(ma);
       }

@@ -13,6 +13,10 @@ abstract class Envelope<TN extends Node> {
 
   abstract int nextArrivalTime(Network network);
 
+  /**
+   * The next envelop arriving at the same time, if any: we have this because we manage the envelop
+   * as a linked list.
+   */
   abstract Envelope<?> getNextSameTime();
 
   abstract void setNextSameTime(Envelope<?> m);
@@ -35,14 +39,14 @@ abstract class Envelope<TN extends Node> {
    * first node is the first to receive the message) - recalculate them on the fly as the nodeId &
    * the randomSeed are kept. - this also allows on disk serialization
    */
-  final static class MultipleDestEnvelope<TN extends Node> extends Envelope<TN> {
+  static class MultipleDestEnvelope<TN extends Node> extends Envelope<TN> {
     final Network.Message<TN> message;
     private final int fromNodeId;
 
     private final int sendTime;
     final int randomSeed;
     private final int[] destIds;
-    private int curPos = 0;
+    protected int curPos = 0;
     private Envelope<?> nextSameTime = null;
 
     MultipleDestEnvelope(Network.Message<TN> m, Node fromNode, List<Network.MessageArrival> dests,
@@ -102,6 +106,22 @@ abstract class Envelope<TN extends Node> {
     @Override
     int getFromId() {
       return fromNodeId;
+    }
+  }
+
+
+  final static class MultipleDestWithDelayEnvelope<TN extends Node>
+      extends MultipleDestEnvelope<TN> {
+    final int delayBetweenMessage;
+
+    MultipleDestWithDelayEnvelope(Network.Message<TN> m, Node fromNode,
+        List<Network.MessageArrival> dests, int sendTime, int delayBetweenMessage, int randomSeed) {
+      super(m, fromNode, dests, sendTime, randomSeed);
+      this.delayBetweenMessage = delayBetweenMessage;
+    }
+
+    int nextArrivalTime(Network network) {
+      return super.nextArrivalTime(network) + delayBetweenMessage * curPos;
     }
   }
 
