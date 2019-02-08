@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 public class P2PNetwork<TN extends P2PNode<TN>> extends Network<TN> {
   private final int connectionCount;
   private final boolean minimum;
+  private final int delayBetweenPeers = 0;
 
   /**
    * @param connectionCount - the target for the number of connection
@@ -76,6 +77,17 @@ public class P2PNetwork<TN extends P2PNode<TN>> extends Network<TN> {
     return (int) (tot / allNodes.size());
   }
 
+  public void sendPeers(Network.Message<TN> msg, TN from) {
+    sendPeers(msg, from, 0);
+  }
+
+  public void sendPeers(Network.Message<TN> msg, TN from, int localDelay) {
+    //from.received.add(msg);
+    List<TN> dest = new ArrayList<>(from.peers);
+    Collections.shuffle(dest, rd);
+    send(msg, time + 1 + localDelay, from, dest, delayBetweenPeers);
+  }
+
   /**
    * A P2P node supports flood by default.
    */
@@ -95,15 +107,7 @@ public class P2PNetwork<TN extends P2PNode<TN>> extends Network<TN> {
       if (to.received.add(this)) {
         to.onFlood(from, this);
         List<TN> peers = to.peers.stream().filter(n -> n != from).collect(Collectors.toList());
-        if (delayBetweenPeers == 0) {
-          send(this, time + 1 + localDelay, to, peers);
-        } else {
-          int delay = localDelay + 1;
-          for (TN n : peers) {
-            send(this, time + delay, to, n);
-            delay += delayBetweenPeers;
-          }
-        }
+        send(this, time + 1 + localDelay, to, peers, delayBetweenPeers);
       }
     }
 
