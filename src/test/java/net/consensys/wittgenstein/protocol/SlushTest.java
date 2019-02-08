@@ -35,4 +35,10 @@ public class SlushTest {
       Assert.assertEquals(n1.round, n2.round);
     }
   }
+
+  @Test
+  public void testPlay() {
+    Slush p1 = new Slush(120, 5, 7, 4.0 / 7.0);
+    p1.play();
+  }
 }

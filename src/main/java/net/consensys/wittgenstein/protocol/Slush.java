@@ -161,7 +161,7 @@ public class Slush implements Protocol {
 
     @Override
     public String toString() {
-      return "SanFerminNode{" + "nodeId=" + nodeId + ", thresholdAt=" + K + ", doneAt=" + doneAt
+      return "SlushNode{" + "nodeId=" + nodeId + ", thresholdAt=" + K + ", doneAt=" + doneAt
           + ", msgReceived=" + msgReceived + ", msgSent=" + msgSent + ", KBytesSent="
           + bytesSent / 1024 + ", KBytesReceived=" + bytesReceived / 1024 + '}';
     }
@@ -184,13 +184,12 @@ public class Slush implements Protocol {
     }
   }
 
-  private void play() {
-    String desc = "Slush Protocol color metastasis by time periods in ms with K=" + this.K
-        + " rounds M= " + this.M;
+  void play() {
+    String desc = "";
 
     // sl.network.setNetworkLatency(nl);
     StatsHelper.StatsGetter stats = new StatsHelper.StatsGetter() {
-      final List<String> fields = new StatsHelper.Counter(0).fields();
+      final List<String> fields = List.of("avg");
 
       @Override
       public List<String> fields() {
@@ -230,6 +229,13 @@ public class Slush implements Protocol {
       colors[sn.myColor]++;
     }
     return colors;
+  }
+
+
+  @Override
+  public String toString() {
+    return "Slush{" + "Nodes=" + NODES_AV + ", latency=" + network.networkLatency + ", M=" + M
+        + ", AK=" + AK + '}';
   }
 
   public static void main(String... args) {

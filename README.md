@@ -13,19 +13,24 @@ As it's often what happens with mock protocol implementations, it looked like th
 
 
 ## How to build it
+You will need java 9+ and gradle installed.
+
 To check everything is correct:
 ```
-gradle clean test
+./gradlew clean test
 ```
 You can build a jar with gradle:
 ```
-gradle clean shadowJar
+./gradlew clean shadowJar
 ```
 ## How to run it
 Once built:
 ```
 java -Xms6000m -Xmx12048m -classpath build/libs/wittgenstein-all.jar net.consensys.wittgenstein.protocol.GSFSignature
 ```
+
+This command is typically for a 16GB machine. The memory is very important when you want to simulate tens of thousands of nodes. If you have less memory, use lower values for -Xms and -Xmx, and run the simulations with less nodes.
+
 But you're actually supposed to write code to implement your specific scenarios today. An obvious improvement
  would be to be able to define scenarios reusable between protocols.
 

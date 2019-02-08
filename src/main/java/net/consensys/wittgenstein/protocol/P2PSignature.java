@@ -636,7 +636,7 @@ public class P2PSignature implements Protocol {
     }
 
     try {
-      graph.save(new File("/tmp/graph_ind.png"));
+      graph.save(new File("graph_ind.png"));
     } catch (IOException e) {
       System.err.println("Can't generate the graph: " + e.getMessage());
     }
@@ -649,7 +649,7 @@ public class P2PSignature implements Protocol {
     medianGraph.addSerie(seriesAvgavg);
 
     try {
-      medianGraph.save(new File("/tmp/graph_avg.png"));
+      medianGraph.save(new File("graph_avg.png"));
     } catch (IOException e) {
       System.err.println("Can't generate the graph: " + e.getMessage());
     }
@@ -685,7 +685,7 @@ public class P2PSignature implements Protocol {
     }
 
     try {
-      graph.save(new File("/tmp/graph.png"));
+      graph.save(new File("graph.png"));
     } catch (IOException e) {
       System.err.println("Can't generate the graph: " + e.getMessage());
     }
@@ -732,7 +732,7 @@ public class P2PSignature implements Protocol {
     } while (s1.min != nodeCt);
 
     try {
-      graph.save(new File("/tmp/graph.png"));
+      graph.save(new File("graph.png"));
     } catch (IOException e) {
       System.err.println("Can't generate the graph: " + e.getMessage());
     }

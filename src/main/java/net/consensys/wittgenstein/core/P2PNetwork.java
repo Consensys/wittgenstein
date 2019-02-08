@@ -76,13 +76,33 @@ public class P2PNetwork<TN extends P2PNode<TN>> extends Network<TN> {
     return (int) (tot / allNodes.size());
   }
 
+
+  public void sendPeers(FloodMessage msg, TN from) {
+    from.getSet(msg.msgId()).add(msg);
+    List<TN> dest = new ArrayList<>(from.peers);
+    Collections.shuffle(dest, rd);
+    send(msg, time + 1 + msg.localDelay, from, dest, msg.delayBetweenPeers);
+  }
+
   /**
    * A P2P node supports flood by default.
    */
   public class FloodMessage extends Network.Message<TN> {
-    private final int size;
-    private final int localDelay;
-    private final int delayBetweenPeers;
+    protected final int size;
+    /**
+     * The delay before we send this message to the other nodes, for example if we need to validate
+     * the message before diffusing it.
+     */
+    protected final int localDelay;
+    /**
+     * It's possible to send the message immediately to all peers, but as well to wait between
+     * peers.
+     */
+    protected final int delayBetweenPeers;
+
+    protected long msgId() {
+      return -1;
+    }
 
     public FloodMessage(int size, int localDelay, int delayBetweenPeers) {
       this.size = size;
@@ -92,18 +112,11 @@ public class P2PNetwork<TN extends P2PNode<TN>> extends Network<TN> {
 
     @Override
     public void action(TN from, TN to) {
-      if (to.received.add(this)) {
+      if (to.getSet(msgId()).add(this)) {
         to.onFlood(from, this);
-        List<TN> peers = to.peers.stream().filter(n -> n != from).collect(Collectors.toList());
-        if (delayBetweenPeers == 0) {
-          send(this, time + 1 + localDelay, to, peers);
-        } else {
-          int delay = localDelay + 1;
-          for (TN n : peers) {
-            send(this, time + delay, to, n);
-            delay += delayBetweenPeers;
-          }
-        }
+        List<TN> dest = to.peers.stream().filter(n -> n != from).collect(Collectors.toList());
+        Collections.shuffle(dest, rd);
+        send(this, time + 1 + localDelay, to, dest, delayBetweenPeers);
       }
     }
 
@@ -111,11 +124,52 @@ public class P2PNetwork<TN extends P2PNode<TN>> extends Network<TN> {
     public int size() {
       return size;
     }
-
-    public void kickoff(TN from) {
-      from.received.add(this);
-      send(this, time + 1, from, from.peers);
-    }
   }
 
+
+  /**
+   * Class to use when a same node will update the message, i.e. the new version will replace the
+   * old ones.
+   */
+  public class StatusFloodMessage extends FloodMessage {
+    /**
+     * The message id. It's the same for all versions. The message id must be globally unique, i.e.
+     * if multiple nodes are sending the same type of message they need to have two different msg
+     * id.
+     */
+    final int msgId;
+    /**
+     * The version number.
+     */
+    final int seq;
+
+    public StatusFloodMessage(int msgId, int seq, int size, int localDelay, int delayBetweenPeers) {
+      super(size, localDelay, delayBetweenPeers);
+      if (msgId < 0) {
+        throw new IllegalStateException("id less than zero are reserved, msgId=" + msgId);
+      }
+      this.msgId = msgId;
+      this.seq = seq;
+    }
+
+    protected long msgId() {
+      return msgId;
+    }
+
+    @Override
+    public final void action(TN from, TN to) {
+      Set<?> previousSet = to.getSet(msgId);
+
+      Object previous = previousSet.isEmpty() ? null : previousSet.iterator().next();
+      StatusFloodMessage psf = (StatusFloodMessage) previous;
+      if (psf == null || psf.seq < seq) {
+        previousSet.clear();
+        to.getSet(msgId).add(this);
+        to.onFlood(from, this);
+        List<TN> dest = to.peers.stream().filter(n -> n != from).collect(Collectors.toList());
+        Collections.shuffle(dest, rd);
+        send(this, time + 1 + localDelay, to, dest, delayBetweenPeers);
+      }
+    }
+  }
 }

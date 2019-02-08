@@ -194,14 +194,13 @@ public class Snowflake implements Protocol {
     }
   }
 
-  private void play() {
+  void play() {
 
-    String desc = "Slush Protocol color metastasis by time periods in ms with K=" + this.K
-        + " rounds M= " + this.M;
+    String desc = "";
 
     // sl.network.setNetworkLatency(nl);
     StatsHelper.StatsGetter stats = new StatsHelper.StatsGetter() {
-      final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
+      final List<String> fields = List.of("avg");
 
       @Override
       public List<String> fields() {
@@ -242,6 +241,12 @@ public class Snowflake implements Protocol {
       colors[sn.myColor]++;
     }
     return colors;
+  }
+
+  @Override
+  public String toString() {
+    return "Snowflake{" + "nodes=" + NODES_AV + ", latency=" + network.networkLatency + ", M=" + M
+        + ", AK=" + AK + ", B=" + B + '}';
   }
 
   public static void main(String... args) {

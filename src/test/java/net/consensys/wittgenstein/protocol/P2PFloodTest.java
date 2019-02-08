@@ -24,9 +24,9 @@ public class P2PFloodTest {
     for (Node nn : p.network().allNodes) {
       P2PFlood.P2PFloodNode n = (P2PFlood.P2PFloodNode) nn;
       if (n.down) {
-        Assert.assertEquals(0, n.received.size());
+        Assert.assertEquals(0, n.getSet(-1).size());
       } else {
-        Assert.assertEquals(1, n.received.size());
+        Assert.assertEquals(1, n.getSet(-1).size());
       }
     }
   }
@@ -47,9 +47,9 @@ public class P2PFloodTest {
     for (Node nn : p.network().allNodes) {
       P2PFlood.P2PFloodNode n = (P2PFlood.P2PFloodNode) nn;
       if (n.down) {
-        Assert.assertEquals(0, n.received.size());
+        Assert.assertEquals(0, n.getSet(-1).size());
       } else {
-        Assert.assertEquals(1, n.received.size());
+        Assert.assertEquals(1, n.getSet(-1).size());
       }
     }
   }
@@ -71,7 +71,7 @@ public class P2PFloodTest {
       Assert.assertNotNull(n2);
       Assert.assertEquals(n1.doneAt, n2.doneAt);
       Assert.assertEquals(n1.down, n2.down);
-      Assert.assertEquals(n1.received.size(), n2.received.size());
+      Assert.assertEquals(n1.getSet(-1).size(), n2.getSet(-1).size());
       Assert.assertEquals(n1.x, n2.x);
       Assert.assertEquals(n1.y, n2.y);
       Assert.assertEquals(n1.peers, n2.peers);

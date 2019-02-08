@@ -115,7 +115,7 @@ public class P2PFlood implements Protocol {
       if (!from.down && senders.add(nodeId)) {
         P2PNetwork<P2PFloodNode>.FloodMessage m =
             network.new FloodMessage(1, delayBeforeResent, delayBetweenSends);
-        m.kickoff(from);
+        network.sendPeers(m, from);
         if (msgCount == 1) {
           from.doneAt = 1;
         }
@@ -132,9 +132,9 @@ public class P2PFlood implements Protocol {
     NetworkLatency nl = new NetworkLatency.IC3NetworkLatency();
     NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
 
-    int liveNodes = 1000;
+    int liveNodes = 2000;
     final int threshold = (int) (0.99 * liveNodes);
-    P2PFlood p = new P2PFlood(liveNodes, 0, 1, 1000, threshold, 15, 1, nb, nl);
+    P2PFlood p = new P2PFlood(liveNodes, 0, 1, 2000, threshold, 15, 1, nb, nl);
 
     Predicate<Protocol> contIf = p1 -> {
       if (p1.network().time > 50000) {
