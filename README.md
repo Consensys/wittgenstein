@@ -17,11 +17,11 @@ You will need java 9+ and gradle installed.
 
 To check everything is correct:
 ```
-gradle clean test
+./gradlew clean test
 ```
 You can build a jar with gradle:
 ```
-gradle clean shadowJar
+./gradlew clean shadowJar
 ```
 ## How to run it
 Once built:
