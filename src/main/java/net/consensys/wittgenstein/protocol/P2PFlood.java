@@ -115,7 +115,7 @@ public class P2PFlood implements Protocol {
       if (!from.down && senders.add(nodeId)) {
         P2PNetwork<P2PFloodNode>.FloodMessage m =
             network.new FloodMessage(1, delayBeforeResent, delayBetweenSends);
-        m.kickoff(from);
+        network.sendPeers(m, from);
         if (msgCount == 1) {
           from.doneAt = 1;
         }
