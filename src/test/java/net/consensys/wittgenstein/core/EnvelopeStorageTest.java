@@ -1,5 +1,6 @@
 package net.consensys.wittgenstein.core;
 
+import net.consensys.wittgenstein.core.message.Message;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -16,9 +17,9 @@ public class EnvelopeStorageTest {
   private Node n2 = new Node(rd, nb);
   private Node n3 = new Node(rd, nb);
 
-  private Network.Message<Node> dummy = new Network.Message<>() {
+  private Message<Node> dummy = new Message<>() {
     @Override
-    public void action(Node from, Node to) {}
+    public void action(Network<Node> network, Node from, Node to) {}
   };
 
   @Before
@@ -58,9 +59,9 @@ public class EnvelopeStorageTest {
   @Test
   public void testAction() {
     AtomicBoolean ab = new AtomicBoolean(false);
-    Network.Message<Node> act = new Network.Message<>() {
+    Message<Node> act = new Message<>() {
       @Override
-      public void action(Node from, Node to) {
+      public void action(Network<Node> network, Node from, Node to) {
         ab.set(true);
       }
     };
@@ -83,10 +84,10 @@ public class EnvelopeStorageTest {
   @Test
   public void testMsgArrival() {
     AtomicLong ab = new AtomicLong(0);
-    Network.Message<Node> act = new Network.Message<>() {
+    Message<Node> act = new Message<>() {
       @Override
-      public void action(Node from, Node to) {
-        ab.set(network.time);
+      public void action(Network<Node> network, Node from, Node to) {
+        ab.set(EnvelopeStorageTest.this.network.time);
       }
     };
 

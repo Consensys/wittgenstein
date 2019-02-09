@@ -2,6 +2,7 @@ package net.consensys.wittgenstein.protocol;
 
 
 import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.message.Message;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
@@ -62,7 +63,7 @@ public class OptimisticP2PSignature implements Protocol {
     return new OptimisticP2PSignature(nodeCount, threshold, connectionCount, pairingTime);
   }
 
-  static class SendSig extends Network.Message<P2PSigNode> {
+  static class SendSig extends Message<P2PSigNode> {
     final int sig;
 
     public SendSig(P2PSigNode who) {
@@ -76,7 +77,7 @@ public class OptimisticP2PSignature implements Protocol {
     }
 
     @Override
-    public void action(P2PSigNode from, P2PSigNode to) {
+    public void action(Network<P2PSigNode> network, P2PSigNode from, P2PSigNode to) {
       to.onSig(from, this);
     }
   }

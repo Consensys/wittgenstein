@@ -1,7 +1,7 @@
 package net.consensys.wittgenstein.core;
 
+import net.consensys.wittgenstein.core.message.FloodMessage;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class P2PNetwork<TN extends P2PNode<TN>> extends Network<TN> {
   private final int connectionCount;
@@ -77,99 +77,12 @@ public class P2PNetwork<TN extends P2PNode<TN>> extends Network<TN> {
   }
 
 
-  public void sendPeers(FloodMessage msg, TN from) {
+  public void sendPeers(FloodMessage<TN> msg, TN from) {
     from.getSet(msg.msgId()).add(msg);
     List<TN> dest = new ArrayList<>(from.peers);
     Collections.shuffle(dest, rd);
     send(msg, time + 1 + msg.localDelay, from, dest, msg.delayBetweenPeers);
   }
 
-  /**
-   * A P2P node supports flood by default.
-   */
-  public class FloodMessage extends Network.Message<TN> {
-    protected final int size;
-    /**
-     * The delay before we send this message to the other nodes, for example if we need to validate
-     * the message before diffusing it.
-     */
-    protected final int localDelay;
-    /**
-     * It's possible to send the message immediately to all peers, but as well to wait between
-     * peers.
-     */
-    protected final int delayBetweenPeers;
 
-    protected long msgId() {
-      return -1;
-    }
-
-    public FloodMessage(int size, int localDelay, int delayBetweenPeers) {
-      this.size = size;
-      this.localDelay = localDelay;
-      this.delayBetweenPeers = delayBetweenPeers;
-    }
-
-    @Override
-    public void action(TN from, TN to) {
-      if (to.getSet(msgId()).add(this)) {
-        to.onFlood(from, this);
-        List<TN> dest = to.peers.stream().filter(n -> n != from).collect(Collectors.toList());
-        Collections.shuffle(dest, rd);
-        send(this, time + 1 + localDelay, to, dest, delayBetweenPeers);
-      }
-    }
-
-    @Override
-    public int size() {
-      return size;
-    }
-  }
-
-
-  /**
-   * Class to use when a same node will update the message, i.e. the new version will replace the
-   * old ones.
-   */
-  public class StatusFloodMessage extends FloodMessage {
-    /**
-     * The message id. It's the same for all versions. The message id must be globally unique, i.e.
-     * if multiple nodes are sending the same type of message they need to have two different msg
-     * id.
-     */
-    final int msgId;
-    /**
-     * The version number.
-     */
-    final int seq;
-
-    public StatusFloodMessage(int msgId, int seq, int size, int localDelay, int delayBetweenPeers) {
-      super(size, localDelay, delayBetweenPeers);
-      if (msgId < 0) {
-        throw new IllegalStateException("id less than zero are reserved, msgId=" + msgId);
-      }
-      this.msgId = msgId;
-      this.seq = seq;
-    }
-
-    protected long msgId() {
-      return msgId;
-    }
-
-    @Override
-    public final void action(TN from, TN to) {
-      Set<?> previousSet = to.getSet(msgId);
-
-      Object previous = previousSet.isEmpty() ? null : previousSet.iterator().next();
-      StatusFloodMessage psf = (StatusFloodMessage) previous;
-      if (psf == null || psf.seq < seq) {
-        previousSet.clear();
-        to.getSet(msgId).add(this);
-        to.onFlood(from, this);
-        List<TN> dest = to.peers.stream().filter(n -> n != from).collect(Collectors.toList());
-        Collections.shuffle(dest, rd);
-        send(this, time + 1 + localDelay, to, dest, delayBetweenPeers);
-      }
-    }
-  }
 }

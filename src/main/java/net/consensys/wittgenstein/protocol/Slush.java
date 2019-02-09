@@ -1,6 +1,7 @@
 package net.consensys.wittgenstein.protocol;
 
 import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.message.Message;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import java.util.*;
 import java.util.function.Predicate;
@@ -61,7 +62,7 @@ public class Slush implements Protocol {
     return new Slush(NODES_AV, M, K, A);
   }
 
-  static class Query extends Network.Message<SlushNode> {
+  static class Query extends Message<SlushNode> {
     final int id;
     final int color;
 
@@ -71,12 +72,12 @@ public class Slush implements Protocol {
     }
 
     @Override
-    public void action(SlushNode from, SlushNode to) {
+    public void action(Network<SlushNode> network, SlushNode from, SlushNode to) {
       to.onQuery(this, from);
     }
   }
 
-  static class AnswerQuery extends Network.Message<SlushNode> {
+  static class AnswerQuery extends Message<SlushNode> {
     final Query originalQuery;
     final int color;
 
@@ -86,7 +87,7 @@ public class Slush implements Protocol {
     }
 
     @Override
-    public void action(SlushNode from, SlushNode to) {
+    public void action(Network<SlushNode> network, SlushNode from, SlushNode to) {
       to.onAnswer(originalQuery.id, color);
     }
   }

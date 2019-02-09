@@ -1,5 +1,6 @@
 package net.consensys.wittgenstein.core;
 
+import net.consensys.wittgenstein.core.message.Message;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -29,9 +30,9 @@ public class NetworkTest {
     AtomicInteger a1 = new AtomicInteger(-1);
     AtomicInteger a2 = new AtomicInteger(-1);
 
-    Network.Message<Node> act = new Network.Message<>() {
+    Message<Node> act = new Message<>() {
       @Override
-      public void action(Node from, Node to) {
+      public void action(Network<Node> network, Node from, Node to) {
         a1.set(from.nodeId);
         a2.set(to.nodeId);
       }
@@ -64,9 +65,9 @@ public class NetworkTest {
     AtomicInteger a1 = new AtomicInteger(0);
     AtomicInteger a2 = new AtomicInteger(0);
 
-    Network.Message<Node> act = new Network.Message<>() {
+    Message<Node> act = new Message<>() {
       @Override
-      public void action(Node from, Node to) {
+      public void action(Network<Node> network, Node from, Node to) {
         a1.addAndGet(from.nodeId);
         a2.addAndGet(to.nodeId);
       }
@@ -91,9 +92,9 @@ public class NetworkTest {
   @Test
   public void testMultipleMessage() {
     AtomicInteger ab = new AtomicInteger(0);
-    Network.Message<Node> act = new Network.Message<>() {
+    Message<Node> act = new Message<>() {
       @Override
-      public void action(Node from, Node to) {
+      public void action(Network<Node> network, Node from, Node to) {
         ab.incrementAndGet();
       }
     };
@@ -110,9 +111,9 @@ public class NetworkTest {
   @Test
   public void testMultipleMessageWithDelays() {
     AtomicInteger ab = new AtomicInteger(0);
-    Network.Message<Node> act = new Network.Message<>() {
+    Message<Node> act = new Message<>() {
       @Override
-      public void action(Node from, Node to) {
+      public void action(Network<Node> network, Node from, Node to) {
         ab.incrementAndGet();
       }
     };
@@ -134,9 +135,9 @@ public class NetworkTest {
 
   @Test
   public void testStats() {
-    Network.Message<Node> act = new Network.Message<>() {
+    Message<Node> act = new Message<>() {
       @Override
-      public void action(Node from, Node to) {}
+      public void action(Network<Node> network, Node from, Node to) {}
     };
 
     network.send(act, n0, Arrays.asList(n1, n2, n3));
@@ -166,9 +167,9 @@ public class NetworkTest {
 
   @Test
   public void testSortedArrivals() {
-    Network.Message<Node> act = new Network.Message<>() {
+    Message<Node> act = new Message<>() {
       @Override
-      public void action(Node from, Node to) {}
+      public void action(Network<Node> network, Node from, Node to) {}
     };
 
     network.send(act, 1, n0, Arrays.asList(n1, n2, n3));
@@ -201,9 +202,9 @@ public class NetworkTest {
   @Test
   public void testDelays() {
     network.setNetworkLatency(new NetworkLatency.EthScanNetworkLatency());
-    Network.Message<Node> act = new Network.Message<>() {
+    Message<Node> act = new Message<>() {
       @Override
-      public void action(Node from, Node to) {}
+      public void action(Network<Node> network, Node from, Node to) {}
     };
 
     network.send(act, 1, n0, Arrays.asList(n1, n2, n3));
@@ -238,9 +239,9 @@ public class NetworkTest {
     Node n3 = new Node(network.rd, nb);
 
     AtomicInteger ab = new AtomicInteger(0);
-    Network.Message<Node> act = new Network.Message<>() {
+    Message<Node> act = new Message<>() {
       @Override
-      public void action(Node from, Node to) {
+      public void action(Network<Node> network, Node from, Node to) {
         ab.incrementAndGet();
       }
     };

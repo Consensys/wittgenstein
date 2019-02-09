@@ -1,6 +1,7 @@
 package net.consensys.wittgenstein.protocol;
 
 import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.message.Message;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.tools.Graph;
@@ -473,7 +474,7 @@ public class SanFerminSignature implements Protocol {
     NO
   }
 
-  class SwapReply extends Network.Message<SanFerminNode> {
+  class SwapReply extends Message<SanFerminNode> {
 
     Status status;
     final int level;
@@ -488,7 +489,7 @@ public class SanFerminSignature implements Protocol {
     }
 
     @Override
-    public void action(SanFerminNode from, SanFerminNode to) {
+    public void action(Network<SanFerminNode> network, SanFerminNode from, SanFerminNode to) {
       to.onSwapReply(from, this);
     }
 
@@ -500,7 +501,7 @@ public class SanFerminSignature implements Protocol {
   }
 
 
-  class SwapRequest extends Network.Message<SanFerminNode> {
+  class SwapRequest extends Message<SanFerminNode> {
     final int level;
     final int aggValue; // see Reply.aggValue
     // String data -- no need to specify it, but only in the size() method
@@ -512,7 +513,7 @@ public class SanFerminSignature implements Protocol {
     }
 
     @Override
-    public void action(SanFerminNode from, SanFerminNode to) {
+    public void action(Network<SanFerminNode> network, SanFerminNode from, SanFerminNode to) {
       to.onSwapRequest(from, this);
     }
 

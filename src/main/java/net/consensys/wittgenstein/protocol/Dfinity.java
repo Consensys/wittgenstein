@@ -2,6 +2,7 @@ package net.consensys.wittgenstein.protocol;
 
 
 import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.message.Message;
 import java.util.*;
 
 @SuppressWarnings({"WeakerAccess", "SameParameterValue"})
@@ -111,7 +112,7 @@ public class Dfinity implements Protocol {
     }
   }
 
-  static class BlockProposal extends Network.Message<DfinityNode> {
+  static class BlockProposal extends Message<DfinityNode> {
     final DfinityBlock block;
 
     public BlockProposal(DfinityBlock block) {
@@ -119,13 +120,13 @@ public class Dfinity implements Protocol {
     }
 
     @Override
-    public void action(DfinityNode from, DfinityNode to) {
+    public void action(Network<DfinityNode> network, DfinityNode from, DfinityNode to) {
       AttesterNode n = (AttesterNode) to;
       n.onProposal(block);
     }
   }
 
-  static class Vote extends Network.Message<DfinityNode> {
+  static class Vote extends Message<DfinityNode> {
     final DfinityBlock voteFor;
 
     public Vote(DfinityBlock voteFor) {
@@ -133,13 +134,13 @@ public class Dfinity implements Protocol {
     }
 
     @Override
-    public void action(DfinityNode fromNode, DfinityNode toNode) {
+    public void action(Network<DfinityNode> network, DfinityNode fromNode, DfinityNode toNode) {
       toNode.onVote(fromNode, voteFor);
     }
   }
 
 
-  static class RandomBeaconExchange extends Network.Message<RandomBeaconNode> {
+  static class RandomBeaconExchange extends Message<RandomBeaconNode> {
     final int height;
 
     public RandomBeaconExchange(int height) {
@@ -147,12 +148,13 @@ public class Dfinity implements Protocol {
     }
 
     @Override
-    public void action(RandomBeaconNode from, RandomBeaconNode to) {
+    public void action(Network<RandomBeaconNode> network, RandomBeaconNode from,
+        RandomBeaconNode to) {
       to.onRandomBeaconExchange(from, height);
     }
   }
 
-  static class RandomBeaconResult extends Network.Message<DfinityNode> {
+  static class RandomBeaconResult extends Message<DfinityNode> {
     final int height;
     final long rd;
 
@@ -162,7 +164,7 @@ public class Dfinity implements Protocol {
     }
 
     @Override
-    public void action(DfinityNode from, DfinityNode to) {
+    public void action(Network<DfinityNode> network, DfinityNode from, DfinityNode to) {
       to.onRandomBeacon(height, rd);
     }
   }

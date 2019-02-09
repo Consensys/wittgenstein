@@ -1,6 +1,8 @@
 package net.consensys.wittgenstein.protocol;
 
 import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.message.FloodMessage;
+import net.consensys.wittgenstein.core.message.Message;
 import java.util.*;
 
 /**
@@ -68,7 +70,7 @@ public class ENRGossiping implements Protocol {
    * pairs, which must be sorted by key. A Node sends this message to query for specific
    * capabilities in the network
    */
-  private static class FindRecord extends P2PNetwork.Message<ETHNode> {
+  private static class FindRecord extends Message<ETHNode> {
     long signature;
     int seq;
     Map<Byte, Integer> k_v;
@@ -82,15 +84,15 @@ public class ENRGossiping implements Protocol {
     }
 
     @Override
-    public void action(ETHNode from, ETHNode to) {
+    public void action(Network<ETHNode> network, ETHNode from, ETHNode to) {
       from.onJoinning();
     }
   }
   //When capabilities are found,before exiting the network the node sends it's capabilities through gossiping
-  private static class RecordFound extends P2PNetwork.Message<ETHNode> {
+  private static class RecordFound extends Message<ETHNode> {
 
     @Override
-    public void action(ETHNode from, ETHNode to) {
+    public void action(Network<ETHNode> network, ETHNode from, ETHNode to) {
       from.onLeaving();
     }
   }
@@ -107,7 +109,7 @@ public class ENRGossiping implements Protocol {
     }
 
     @Override
-    protected void onFlood(ETHNode from, P2PNetwork.FloodMessage floodMessage) {
+    public void onFlood(ETHNode from, FloodMessage floodMessage) {
       if (CapFound) {
         doneAt = network.time;
       }

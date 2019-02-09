@@ -1,6 +1,7 @@
 package net.consensys.wittgenstein.protocol;
 
 import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.message.Message;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.tools.Graph;
@@ -401,7 +402,7 @@ public class SanFerminCappos implements Protocol {
   }
 
 
-  class Swap extends Network.Message<SanFerminNode> {
+  class Swap extends Message<SanFerminNode> {
 
     boolean wantReply; // indicate that the other needs a reply to this
     // Swap
@@ -417,7 +418,7 @@ public class SanFerminCappos implements Protocol {
     }
 
     @Override
-    public void action(SanFerminNode from, SanFerminNode to) {
+    public void action(Network<SanFerminNode> network, SanFerminNode from, SanFerminNode to) {
       to.onSwap(from, this);
     }
 

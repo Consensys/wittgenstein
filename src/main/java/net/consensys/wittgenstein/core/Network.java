@@ -1,5 +1,6 @@
 package net.consensys.wittgenstein.core;
 
+import net.consensys.wittgenstein.core.message.Message;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -226,28 +227,9 @@ public class Network<TN extends Node> {
 
 
   /**
-   * The generic message that goes on a network. Triggers an 'action' on reception.
-   * <p>
-   * Object of this class must be immutable. Especially, Message is shared between the messages for
-   * messages sent to multiple nodes.
-   */
-  public static abstract class Message<TN extends Node> {
-    public abstract void action(TN from, TN to);
-
-    /**
-     * We track the total size of the messages exchanged. Subclasses should override this method if
-     * they want to measure the network usage.
-     */
-    public int size() {
-      return 1;
-    }
-  }
-
-
-  /**
    * Some protocols want some tasks to be executed at a given time
    */
-  public class Task extends Message<TN> {
+  public static class Task<TN extends Node> extends Message<TN> {
     final Runnable r;
 
     public Task(Runnable r) {
@@ -260,13 +242,13 @@ public class Network<TN extends Node> {
     }
 
     @Override
-    public void action(TN from, TN to) {
+    public void action(Network<TN> network, TN from, TN to) {
       r.run();
     }
   }
 
 
-  public final class ConditionalTask extends Task {
+  public final static class ConditionalTask<TN extends Node> extends Task<TN> {
     /**
      * Starts if this condition is met.
      */
@@ -281,7 +263,7 @@ public class Network<TN extends Node> {
      * Time before next start.
      */
     final int duration;
-    final Node sender;
+    final TN sender;
 
     /**
      * Will start after this time.
@@ -289,7 +271,7 @@ public class Network<TN extends Node> {
     int minStartTime;
 
     public ConditionalTask(Condition startIf, Condition repeatIf, Runnable r, int minStartTime,
-        int duration, Node sender) {
+        int duration, TN sender) {
       super(r);
       this.startIf = startIf;
       this.repeatIf = repeatIf;
@@ -308,27 +290,28 @@ public class Network<TN extends Node> {
   /**
    * Some protocols want some tasks to be executed periodically
    */
-  public class PeriodicTask extends Task {
+  public static class PeriodicTask<TN extends Node> extends Task<TN> {
     final int period;
-    final Node sender;
+    final TN sender;
     final Condition continuationCondition;
 
-    public PeriodicTask(Runnable r, Node fromNode, int period, Condition condition) {
+    public PeriodicTask(Runnable r, TN fromNode, int period, Condition condition) {
       super(r);
       this.period = period;
       this.sender = fromNode;
       this.continuationCondition = condition;
     }
 
-    public PeriodicTask(Runnable r, Node fromNode, int period) {
+    public PeriodicTask(Runnable r, TN fromNode, int period) {
       this(r, fromNode, period, () -> true);
     }
 
     @Override
-    public void action(Node from, Node to) {
+    public void action(Network<TN> network, TN from, TN to) {
       r.run();
       if (continuationCondition.check()) {
-        msgs.addMsg(new Envelope.SingleDestEnvelope<>(this, sender, sender, time + period));
+        network.msgs
+            .addMsg(new Envelope.SingleDestEnvelope<>(this, sender, sender, network.time + period));
       }
     }
   }
@@ -484,24 +467,25 @@ public class Network<TN extends Node> {
   }
 
   public void registerTask(final Runnable task, int startAt, TN fromNode) {
-    Task sw = new Task(task);
+    Task<TN> sw = new Task<>(task);
     msgs.addMsg(new Envelope.SingleDestEnvelope<>(sw, fromNode, fromNode, startAt));
   }
 
   public void registerPeriodicTask(final Runnable task, int startAt, int period, TN fromNode) {
-    PeriodicTask sw = new PeriodicTask(task, fromNode, period);
+    PeriodicTask<TN> sw = new PeriodicTask<>(task, fromNode, period);
     msgs.addMsg(new Envelope.SingleDestEnvelope<>(sw, fromNode, fromNode, startAt));
   }
 
   public void registerPeriodicTask(final Runnable task, int startAt, int period, TN fromNode,
       Condition c) {
-    PeriodicTask sw = new PeriodicTask(task, fromNode, period, c);
+    PeriodicTask<TN> sw = new PeriodicTask<>(task, fromNode, period, c);
     msgs.addMsg(new Envelope.SingleDestEnvelope<>(sw, fromNode, fromNode, startAt));
   }
 
   public void registerConditionalTask(final Runnable task, int startAt, int duration, TN fromNode,
       Condition startIf, Condition repeatIf) {
-    ConditionalTask ct = new ConditionalTask(startIf, repeatIf, task, startAt, duration, fromNode);
+    ConditionalTask<TN> ct =
+        new ConditionalTask<>(startIf, repeatIf, task, startAt, duration, fromNode);
     conditionalTasks.add(ct);
   }
 
@@ -545,7 +529,7 @@ public class Network<TN extends Node> {
       TN from = allNodes.get(m.getFromId());
       TN to = allNodes.get(m.getNextDestId());
       if (partitionId(from) == partitionId(to)) {
-        if (!(m.getMessage() instanceof Network<?>.Task)) {
+        if (!(m.getMessage() instanceof Network.Task)) {
           if (m.getMessage().size() == 0) {
             throw new IllegalStateException("Message size should be greater than zero: " + m);
           }
@@ -554,7 +538,7 @@ public class Network<TN extends Node> {
         }
         @SuppressWarnings("unchecked")
         Message<TN> mc = (Message<TN>) m.getMessage();
-        mc.action(from, to);
+        mc.action(this, from, to);
       }
 
       m.markRead();

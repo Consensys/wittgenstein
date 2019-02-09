@@ -1,6 +1,7 @@
 package net.consensys.wittgenstein.protocol;
 
 import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.message.Message;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import java.util.*;
 import java.util.function.Predicate;
@@ -64,7 +65,7 @@ public class Snowflake implements Protocol {
     return network;
   }
 
-  static class Query extends Network.Message<SnowflakeNode> {
+  static class Query extends Message<SnowflakeNode> {
     final int id;
     final int color;
 
@@ -74,13 +75,13 @@ public class Snowflake implements Protocol {
     }
 
     @Override
-    public void action(SnowflakeNode from, SnowflakeNode to) {
+    public void action(Network<SnowflakeNode> network, SnowflakeNode from, SnowflakeNode to) {
       to.onQuery(this, from);
     }
   }
 
 
-  static class AnswerQuery extends Network.Message<SnowflakeNode> {
+  static class AnswerQuery extends Message<SnowflakeNode> {
     final Query originalQuery;
     final int color;
 
@@ -90,7 +91,7 @@ public class Snowflake implements Protocol {
     }
 
     @Override
-    public void action(SnowflakeNode from, SnowflakeNode to) {
+    public void action(Network<SnowflakeNode> network, SnowflakeNode from, SnowflakeNode to) {
       to.onAnswer(originalQuery.id, color);
     }
   }
