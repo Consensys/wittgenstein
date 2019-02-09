@@ -5,9 +5,9 @@ import java.util.*;
 
 public class P2PNode<TN extends P2PNode> extends Node {
   public final List<TN> peers = new ArrayList<>();
-  public Map<Long, Set<FloodMessage>> received = new HashMap<>();
+  private Map<Long, Set<FloodMessage>> received = new HashMap<>();
 
-  public Set<FloodMessage> getSet(long id) {
+  public Set<FloodMessage> getMsgReceived(long id) {
     return received.computeIfAbsent(id, k -> new HashSet<>());
   }
 

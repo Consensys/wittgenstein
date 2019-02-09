@@ -35,15 +35,16 @@ public class StatusFloodMessage<TN extends P2PNode<TN>> extends FloodMessage<TN>
   /**
    * We're adding this message to the node's received set only if the seq number is greater.
    */
-  protected boolean addToReceived(TN to) {
-    Set<?> previousSet = to.getSet(msgId);
+  @Override
+  public boolean addToReceived(TN to) {
+    Set<?> previousSet = to.getMsgReceived(msgId);
     Object previous = previousSet.isEmpty() ? null : previousSet.iterator().next();
     StatusFloodMessage psf = (StatusFloodMessage) previous;
     if (psf != null && psf.seq >= seq) {
       return false;
     }
     previousSet.clear(); // By definition we want only one element in the set
-    to.getSet(msgId).add(this);
+    to.getMsgReceived(msgId).add(this);
     return true;
   }
 }

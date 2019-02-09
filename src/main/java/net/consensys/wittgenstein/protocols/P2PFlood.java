@@ -68,7 +68,7 @@ public class P2PFlood implements Protocol {
 
     @Override
     public void onFlood(P2PFloodNode from, FloodMessage floodMessage) {
-      if (received.size() == msgCount) {
+      if (getMsgReceived(floodMessage.msgId()).size() == msgCount) {
         doneAt = network.time;
       }
     }

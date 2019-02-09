@@ -122,7 +122,9 @@ abstract class Envelope<TN extends Node> {
     }
 
     int nextArrivalTime(Network network) {
-      return super.nextArrivalTime(network) + delayBetweenMessage * curPos;
+      // We add one because we consider that the next message is sent at the next
+      //  slot after the delay
+      return super.nextArrivalTime(network) + (1 + delayBetweenMessage) * curPos;
     }
   }
 

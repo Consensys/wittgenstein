@@ -31,8 +31,8 @@ public class FloodMessage<TN extends P2PNode<TN>> extends Message<TN> {
     this.delayBetweenPeers = delayBetweenPeers;
   }
 
-  protected boolean addToReceived(TN to) {
-    return to.getSet(msgId()).add(this);
+  public boolean addToReceived(TN to) {
+    return to.getMsgReceived(msgId()).add(this);
   }
 
   @Override

@@ -124,10 +124,10 @@ public class NetworkTest {
     network.runMs(2);
     Assert.assertEquals(1, ab.get());
 
-    network.runMs(10);
+    network.runMs(11);
     Assert.assertEquals(2, ab.get());
 
-    network.runMs(10);
+    network.runMs(11);
     Assert.assertEquals(3, ab.get());
 
     Assert.assertEquals(0, network.msgs.size());
