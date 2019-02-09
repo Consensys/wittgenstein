@@ -1,8 +1,8 @@
-package net.consensys.wittgenstein.protocol;
+package net.consensys.wittgenstein.protocols;
 
 
 import net.consensys.wittgenstein.core.*;
-import net.consensys.wittgenstein.core.message.Message;
+import net.consensys.wittgenstein.core.messages.Message;
 import java.util.*;
 
 @SuppressWarnings({"WeakerAccess", "SameParameterValue"})

@@ -1,14 +1,14 @@
-package net.consensys.wittgenstein.protocol;
+package net.consensys.wittgenstein.protocols;
 
 
 import net.consensys.wittgenstein.core.*;
-import net.consensys.wittgenstein.core.message.Message;
+import net.consensys.wittgenstein.core.messages.Message;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
 
 /**
- * The simplest protocol to exhange signatures: just send the signatures, and do an aggregation at
+ * The simplest protocol to exchange signatures: just send the signatures, and do an aggregation at
  * the end.
  * <p>
  * Protocol: forward the message to all your peers if you have not done it already.

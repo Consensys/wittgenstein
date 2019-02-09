@@ -1,4 +1,4 @@
-package net.consensys.wittgenstein.core.message;
+package net.consensys.wittgenstein.core.messages;
 
 import net.consensys.wittgenstein.core.P2PNode;
 import java.util.Set;

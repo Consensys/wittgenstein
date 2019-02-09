@@ -1,6 +1,6 @@
 package net.consensys.wittgenstein.core;
 
-import net.consensys.wittgenstein.core.message.FloodMessage;
+import net.consensys.wittgenstein.core.messages.FloodMessage;
 import java.util.*;
 
 public class P2PNetwork<TN extends P2PNode<TN>> extends Network<TN> {

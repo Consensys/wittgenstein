@@ -1,7 +1,7 @@
-package net.consensys.wittgenstein.protocol;
+package net.consensys.wittgenstein.protocols;
 
 import net.consensys.wittgenstein.core.*;
-import net.consensys.wittgenstein.core.message.FloodMessage;
+import net.consensys.wittgenstein.core.messages.FloodMessage;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import java.util.HashSet;
 import java.util.List;

@@ -1,6 +1,9 @@
 package net.consensys.wittgenstein.core;
 
-import net.consensys.wittgenstein.core.message.Message;
+import net.consensys.wittgenstein.core.messages.ConditionalTask;
+import net.consensys.wittgenstein.core.messages.Message;
+import net.consensys.wittgenstein.core.messages.PeriodicTask;
+import net.consensys.wittgenstein.core.messages.Task;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -22,7 +25,7 @@ public class Network<TN extends Node> {
    * In parallel of the messages, we have tasks. It's mixed with messages (some tasks are managed as
    * special messages). Conditional tasks are in a specific list.
    */
-  public final List<ConditionalTask> conditionalTasks = new LinkedList<>();
+  public final List<ConditionalTask<TN>> conditionalTasks = new LinkedList<>();
 
 
   /**
@@ -226,95 +229,10 @@ public class Network<TN extends Node> {
   }
 
 
-  /**
-   * Some protocols want some tasks to be executed at a given time
-   */
-  public static class Task<TN extends Node> extends Message<TN> {
-    final Runnable r;
-
-    public Task(Runnable r) {
-      this.r = r;
-    }
-
-    @Override
-    public int size() {
-      return 0;
-    }
-
-    @Override
-    public void action(Network<TN> network, TN from, TN to) {
-      r.run();
-    }
-  }
-
-
-  public final static class ConditionalTask<TN extends Node> extends Task<TN> {
-    /**
-     * Starts if this condition is met.
-     */
-    final Condition startIf;
-
-    /**
-     * Will start again when the task is finished if this condition is met.
-     */
-    final Condition repeatIf;
-
-    /**
-     * Time before next start.
-     */
-    final int duration;
-    final TN sender;
-
-    /**
-     * Will start after this time.
-     */
-    int minStartTime;
-
-    public ConditionalTask(Condition startIf, Condition repeatIf, Runnable r, int minStartTime,
-        int duration, TN sender) {
-      super(r);
-      this.startIf = startIf;
-      this.repeatIf = repeatIf;
-      this.duration = duration;
-      this.sender = sender;
-      this.minStartTime = minStartTime;
-    }
-  }
-
-
   public interface Condition {
     boolean check();
   }
 
-
-  /**
-   * Some protocols want some tasks to be executed periodically
-   */
-  public static class PeriodicTask<TN extends Node> extends Task<TN> {
-    final int period;
-    final TN sender;
-    final Condition continuationCondition;
-
-    public PeriodicTask(Runnable r, TN fromNode, int period, Condition condition) {
-      super(r);
-      this.period = period;
-      this.sender = fromNode;
-      this.continuationCondition = condition;
-    }
-
-    public PeriodicTask(Runnable r, TN fromNode, int period) {
-      this(r, fromNode, period, () -> true);
-    }
-
-    @Override
-    public void action(Network<TN> network, TN from, TN to) {
-      r.run();
-      if (continuationCondition.check()) {
-        network.msgs
-            .addMsg(new Envelope.SingleDestEnvelope<>(this, sender, sender, network.time + period));
-      }
-    }
-  }
 
   /**
    * Simulate for x seconds. Can be called multiple time.
@@ -362,6 +280,14 @@ public class Network<TN extends Node> {
       Envelope<?> m = new Envelope.SingleDestEnvelope<>(mc, fromNode, toNode, ms.arrival);
       msgs.addMsg(m);
     }
+  }
+
+  public void sendArriveAt(Message<? extends TN> mc, int arriveAt, TN fromNode, TN toNode) {
+    if (arriveAt <= time) {
+      throw new IllegalArgumentException(
+          "wrong arrival time: arriveAt=" + arriveAt + ", time=" + time);
+    }
+    msgs.addMsg(new Envelope.SingleDestEnvelope<>(mc, fromNode, toNode, arriveAt));
   }
 
   final static class MessageArrival implements Comparable<MessageArrival> {
@@ -436,7 +362,7 @@ public class Network<TN extends Node> {
       throw new IllegalStateException("" + m + ", sendTime=" + sendTime + ", time=" + time);
     }
 
-    assert !(m instanceof Network.Task);
+    assert !(m instanceof Task);
     fromNode.msgSent++;
     fromNode.bytesSent += m.size();
     if (partitionId(fromNode) == partitionId(toNode) && !fromNode.down && !toNode.down) {
@@ -512,7 +438,7 @@ public class Network<TN extends Node> {
               "time:" + time + ", arrival=" + m.nextArrivalTime(this) + ", m:" + m);
         }
 
-        Iterator<ConditionalTask> it = conditionalTasks.iterator();
+        Iterator<ConditionalTask<TN>> it = conditionalTasks.iterator();
         while (it.hasNext()) {
           ConditionalTask ct = it.next();
           if (!ct.repeatIf.check()) {
@@ -529,7 +455,7 @@ public class Network<TN extends Node> {
       TN from = allNodes.get(m.getFromId());
       TN to = allNodes.get(m.getNextDestId());
       if (partitionId(from) == partitionId(to)) {
-        if (!(m.getMessage() instanceof Network.Task)) {
+        if (!(m.getMessage() instanceof Task<?>)) {
           if (m.getMessage().size() == 0) {
             throw new IllegalStateException("Message size should be greater than zero: " + m);
           }

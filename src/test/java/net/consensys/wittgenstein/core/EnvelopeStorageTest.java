@@ -1,6 +1,6 @@
 package net.consensys.wittgenstein.core;
 
-import net.consensys.wittgenstein.core.message.Message;
+import net.consensys.wittgenstein.core.messages.Message;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;

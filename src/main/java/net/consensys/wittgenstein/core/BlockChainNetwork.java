@@ -1,7 +1,7 @@
 package net.consensys.wittgenstein.core;
 
 
-import net.consensys.wittgenstein.core.message.Message;
+import net.consensys.wittgenstein.core.messages.Message;
 import java.util.*;
 
 /**
