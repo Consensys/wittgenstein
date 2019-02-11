@@ -5,7 +5,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import java.util.List;
 
-public class Stats {
+public class StatsTest {
 
   @Test
   public void testAvg() {
