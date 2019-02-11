@@ -10,8 +10,8 @@ import java.util.Random;
 import java.util.stream.Collectors;
 
 /**
- * A simple (and even simplistic) implementation of the Paxos protocol, using the algorithm described here:
- * https://www.the-paper-trail.org/post/2009-02-03-consensus-protocols-paxos/
+ * A simple (and even simplistic) implementation of the Paxos protocol, using the algorithm
+ * described here: https://www.the-paper-trail.org/post/2009-02-03-consensus-protocols-paxos/
  * <p>
  * An important point is the latency, as we have just a few nodes. As a result a proposer close to
  * the acceptors will get most of its proposals accepted, while a proposers further than the other
