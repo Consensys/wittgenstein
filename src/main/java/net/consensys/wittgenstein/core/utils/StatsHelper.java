@@ -2,25 +2,57 @@ package net.consensys.wittgenstein.core.utils;
 
 
 import net.consensys.wittgenstein.core.Node;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class StatsHelper {
+  private StatsHelper() {}
 
   public interface Get {
     long get(Node n);
   }
 
-  public interface Stat {
+  public interface Stat extends Cloneable {
     List<String> fields();
 
     long get(String fieldName);
+
+    Stat createFromValue(Map<String, AtomicLong> vals);
+  }
+
+  /**
+   * Calculates the avg of a set of stats, field by field.
+   */
+  public static Stat avg(List<Stat> stats) {
+    if (stats.isEmpty()) {
+      throw new IllegalStateException();
+    }
+    if (stats.size() == 1) {
+      return stats.get(0);
+    }
+
+    Map<String, AtomicLong> vals = new HashMap<>();
+    for (String f : stats.get(0).fields()) {
+      for (Stat s : stats) {
+        AtomicLong al = vals.computeIfAbsent(f, (k) -> new AtomicLong(0));
+        al.addAndGet(s.get(f));
+      }
+    }
+
+    for (AtomicLong al : vals.values()) {
+      al.set(al.get() / stats.size());
+    }
+
+    return stats.get(0).createFromValue(vals);
   }
 
   public static class Counter implements Stat {
-    final long val;
+    final long count;
 
     public Counter(long val) {
-      this.val = val;
+      this.count = val;
     }
 
     @Override
@@ -30,12 +62,17 @@ public class StatsHelper {
 
     @Override
     public long get(String fieldName) {
-      return val;
+      return count;
+    }
+
+    @Override
+    public Stat createFromValue(Map<String, AtomicLong> vals) {
+      return new Counter(vals.get(fields().get(0)).get());
     }
 
     @Override
     public String toString() {
-      return "Counter{" + "val=" + val + '}';
+      return "Counter{" + "count=" + count + '}';
     }
   }
 
@@ -71,6 +108,12 @@ public class StatsHelper {
       }
       throw new IllegalStateException("field name not known in stats:" + fieldName);
     }
+
+    @Override
+    public Stat createFromValue(Map<String, AtomicLong> vals) {
+      return new SimpleStats(vals.get("min").get(), vals.get("max").get(), vals.get("avg").get());
+    }
+
   }
 
   public static SimpleStats getStatsOn(List<? extends Node> nodes, Get get) {
@@ -93,6 +136,14 @@ public class StatsHelper {
     List<String> fields();
 
     Stat get(List<? extends Node> liveNodes);
+  }
+
+  public static abstract class SimpleStatsGetter implements StatsGetter {
+    private final List<String> fields = new SimpleStats(0, 0, 0).fields();
+
+    public List<String> fields() {
+      return fields;
+    }
   }
 
 }
