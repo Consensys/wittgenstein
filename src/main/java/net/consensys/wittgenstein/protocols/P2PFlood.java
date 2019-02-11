@@ -1,6 +1,7 @@
-package net.consensys.wittgenstein.protocol;
+package net.consensys.wittgenstein.protocols;
 
 import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.messages.FloodMessage;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import java.util.HashSet;
 import java.util.List;
@@ -66,8 +67,8 @@ public class P2PFlood implements Protocol {
     }
 
     @Override
-    protected void onFlood(P2PFloodNode from, P2PNetwork.FloodMessage floodMessage) {
-      if (received.size() == msgCount) {
+    public void onFlood(P2PFloodNode from, FloodMessage floodMessage) {
+      if (getMsgReceived(floodMessage.msgId()).size() == msgCount) {
         doneAt = network.time;
       }
     }
@@ -113,8 +114,7 @@ public class P2PFlood implements Protocol {
       int nodeId = network.rd.nextInt(nodeCount);
       P2PFloodNode from = network.getNodeById(nodeId);
       if (!from.down && senders.add(nodeId)) {
-        P2PNetwork<P2PFloodNode>.FloodMessage m =
-            network.new FloodMessage(1, delayBeforeResent, delayBetweenSends);
+        FloodMessage<P2PFloodNode> m = new FloodMessage<>(1, delayBeforeResent, delayBetweenSends);
         network.sendPeers(m, from);
         if (msgCount == 1) {
           from.doneAt = 1;

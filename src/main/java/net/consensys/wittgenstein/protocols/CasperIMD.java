@@ -1,6 +1,7 @@
-package net.consensys.wittgenstein.protocol;
+package net.consensys.wittgenstein.protocols;
 
 import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.tools.Graph;
 import java.io.File;
 import java.io.IOException;
@@ -93,7 +94,7 @@ public class CasperIMD implements Protocol {
   // EF team repo:
   // https://github.com/ethereum/beacon_chain/blob/master/beacon_chain/state/attestation_record.py
   // It contains a field referencing the block hash: 'shard_block_hash': 'hash32'
-  class Attestation extends Network.Message<CasperNode> {
+  class Attestation extends Message<CasperNode> {
     final Attester attester;
     final int height;
     final Set<Long> hs = new HashSet<>(); // technically, we put them in a set for efficiency
@@ -115,7 +116,7 @@ public class CasperIMD implements Protocol {
     }
 
     @Override
-    public void action(CasperNode from, CasperNode to) {
+    public void action(Network<CasperNode> network, CasperNode from, CasperNode to) {
       to.onAttestation(this);
     }
 
@@ -405,8 +406,8 @@ public class CasperIMD implements Protocol {
 
     void createAndSendBlock(int height) {
       head = buildBlock(head, height);
-      network.sendAll(new BlockChainNetwork.SendBlock<CasperBlock, CasperNode>(head),
-          network.time + blockConstructionTime, this);
+      network.sendAll(new BlockChainNetwork.SendBlock<>(head), network.time + blockConstructionTime,
+          this);
     }
 
     @Override
@@ -645,7 +646,7 @@ public class CasperIMD implements Protocol {
             @Override
             public void run() {
               head = buildBlock(b, th);
-              network.sendAll(new BlockChainNetwork.SendBlock<CasperBlock, CasperNode>(head),
+              network.sendAll(new BlockChainNetwork.SendBlock<>(head),
                   network.time + blockConstructionTime, ByzBlockProducerWF.this);
             }
           };

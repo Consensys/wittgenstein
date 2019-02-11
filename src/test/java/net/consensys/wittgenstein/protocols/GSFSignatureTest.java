@@ -1,4 +1,4 @@
-package net.consensys.wittgenstein.protocol;
+package net.consensys.wittgenstein.protocols;
 
 import org.junit.Assert;
 import org.junit.Before;

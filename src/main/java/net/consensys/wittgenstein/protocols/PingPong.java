@@ -1,6 +1,7 @@
-package net.consensys.wittgenstein.protocol;
+package net.consensys.wittgenstein.protocols;
 
 import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.messages.Message;
 
 /**
  * A simulation of a trivial protocol to be used as a sample.
@@ -20,16 +21,16 @@ public class PingPong implements Protocol {
    * Messages, exchanged on the network, are specific to the protocol. Here we have two messages:
    * Ping & Pong.
    */
-  static class Ping extends Network.Message<PingPongNode> {
+  static class Ping extends Message<PingPongNode> {
     @Override
-    public void action(PingPongNode from, PingPongNode to) {
+    public void action(Network<PingPongNode> network, PingPongNode from, PingPongNode to) {
       to.onPing(from);
     }
   }
 
-  static class Pong extends Network.Message<PingPongNode> {
+  static class Pong extends Message<PingPongNode> {
     @Override
-    public void action(PingPongNode from, PingPongNode to) {
+    public void action(Network<PingPongNode> network, PingPongNode from, PingPongNode to) {
       to.onPong();
     }
   }

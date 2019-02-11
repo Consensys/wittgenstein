@@ -1,6 +1,7 @@
-package net.consensys.wittgenstein.protocol;
+package net.consensys.wittgenstein.protocols;
 
 import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.tools.Graph;
@@ -20,22 +21,12 @@ import java.util.stream.Collectors;
  * KBytesSent=13, KBytesReceived=13, outdatedSwaps=0}
  */
 @SuppressWarnings("WeakerAccess")
-public class SanFerminSignature implements Protocol {
+public class SanFerminCappos implements Protocol {
 
   /**
    * The number of nodes in the network
    */
   final int nodeCount;
-
-  /**
-   * exponent to represent @signingNodeCount in base 2 signingNodeCount = 2 ** powerOfTwo; It is
-   * used to represent the length of the binary string of a node's id.
-   */
-  final int powerOfTwo;
-  /**
-   * The number of signatures to reach to finish the protocol
-   */
-  final int threshold;
 
   /**
    * The time it takes to do a pairing for a node i.e. simulation of the most heavy computation
@@ -47,10 +38,6 @@ public class SanFerminSignature implements Protocol {
    */
   final int signatureSize;
 
-  /**
-   * how much time to wait for a reply upon a given request
-   */
-  final int replyTimeout;
 
   /**
    * Do we print logging information from nodes or not
@@ -58,15 +45,24 @@ public class SanFerminSignature implements Protocol {
   boolean verbose;
 
   /**
-   * Should we shuffle the list of the candidate sets at each peers
-   */
-  boolean shuffledLists;
-
-  /**
    * how many candidate do we try to reach at the same time for a given level
    */
   int candidateCount;
 
+  /**
+   * Threshold is the ratio of number of actual contributions vs number of expected contributions in
+   * a given range level
+   */
+  int threshold;
+
+  /**
+   * timeout after which to pass on to the next level in ms
+   */
+  int timeout;
+
+  public List<SanFerminNode> getAllNodes() {
+    return allNodes;
+  }
 
   /**
    * allNodes represent the full list of nodes present in the system. NOTE: This assumption that a
@@ -76,21 +72,19 @@ public class SanFerminSignature implements Protocol {
    * unknown peers yet can answer. This technique works because it uses Pastry ID allocation
    * mechanism. Here no underlying DHT or p2p special structure is assumed.
    */
-  public final List<SanFerminNode> allNodes;
+  public List<SanFerminNode> allNodes;
 
-  public final List<SanFerminNode> finishedNodes;
+  public List<SanFerminNode> finishedNodes;
 
 
-  public SanFerminSignature(int nodeCount, int threshold, int pairingTime, int signatureSize,
-      int replyTimeout, int candidateCount, boolean shuffledLists) {
+  public SanFerminCappos(int nodeCount, int threshold, int pairingTime, int signatureSize,
+      int timeout, int candidateCount) {
     this.nodeCount = nodeCount;
-    this.powerOfTwo = MoreMath.log2(nodeCount);
-    this.threshold = threshold;
     this.pairingTime = pairingTime;
     this.signatureSize = signatureSize;
-    this.replyTimeout = replyTimeout;
     this.candidateCount = candidateCount;
-    this.shuffledLists = shuffledLists;
+    this.threshold = threshold;
+    this.timeout = timeout;
 
     this.network = new Network<>();
     this.nb = new NodeBuilder.NodeBuilderWithRandomPosition();
@@ -102,33 +96,41 @@ public class SanFerminSignature implements Protocol {
       this.network.addNode(n);
     }
 
-    // register the sanfermin helper with all the nodes
-    this.allNodes
-        .forEach(n -> n.candidateTree = new SanFerminHelper<>(n, allNodes, this.network.rd));
+    // compute candidate set once all peers have been created
+    for (SanFerminNode n : allNodes)
+      n.helper = new SanFerminHelper<>(n, allNodes, this.network.rd);
+
 
     finishedNodes = new ArrayList<>();
-  }
-
-  public SanFerminSignature copy() {
-    return new SanFerminSignature(nodeCount, threshold, pairingTime, signatureSize, replyTimeout,
-        candidateCount, shuffledLists);
   }
 
   final Network<SanFerminNode> network;
   final NodeBuilder nb;
 
-  /**
-   * init makes each node starts swapping with each other when the network starts
-   */
-  public void init() {
-    for (SanFerminNode n : allNodes)
-      network.registerTask(n::goNextLevel, 1, n);
-  }
-
+  @Override
   public Network<SanFerminNode> network() {
     return network;
   }
 
+  @Override
+  public void init() {
+
+  }
+
+
+
+  /**
+   * init makes each node starts swapping with each other when the network starts
+   */
+  public void StartAll() {
+    for (SanFerminNode n : allNodes)
+      network.registerTask(n::goNextLevel, 1, n);
+  }
+
+  public SanFerminCappos copy() {
+    return new SanFerminCappos(nodeCount, threshold, pairingTime, signatureSize, timeout,
+        candidateCount);
+  }
 
   /**
    * SanFerminNode is a node that carefully selects the peers he needs to contact to get the final
@@ -140,6 +142,8 @@ public class SanFerminSignature implements Protocol {
      */
     public final String binaryId;
 
+    private SanFerminHelper<SanFerminNode> helper;
+
     /**
      * This node needs to exchange with another node having a current common prefix length of
      * currentPrefixLength. A node starts by the highest possible prefix length and works towards a
@@ -147,28 +151,10 @@ public class SanFerminSignature implements Protocol {
      */
     public int currentPrefixLength;
 
-    SanFerminHelper<SanFerminNode> candidateTree;
-
     /**
-     * BitSet to save which node have we sent swaprequest so far
+     * Set of received signatures at each level.
      */
-    HashMap<Integer, BitSet> usedCandidates;
-
-    /**
-     * Set of aggregated signatures saved. Since it's only a logarithmic number it's not much to
-     * save (log_2(20k) = 15)
-     */
-    HashMap<Integer, Integer> signatureCache;
-
-    /**
-     * Ids of the nodes we have sent a SwapRequest to. Different strategies to pick the nodes are
-     * detailed in `pickNextNodes`
-     */
-    Set<Integer> pendingNodes;
-
-    HashMap<Integer, Integer> futurSigs;
-
-
+    HashMap<Integer, List<Integer>> signatureCache;
     /**
      * isSwapping indicates whether we are in a state where we can swap at the current level or not.
      * This is acting as a Lock, since between the time we receive a valid swap and the time we
@@ -176,7 +162,6 @@ public class SanFerminSignature implements Protocol {
      * would end up swapping twice at a given level.
      */
     boolean isSwapping;
-
 
     /**
      * Integer field that simulate an aggregated signature badly. It keeps increasing as the node do
@@ -199,135 +184,72 @@ public class SanFerminSignature implements Protocol {
      */
     boolean done;
 
-    /**
-     * number of swap "request" this node sent (vs optimistic reply etc)
-     */
-    int sentRequests;
-    /**
-     * number of swap requests received by this node
-     */
-    int receivedRequests;
-
 
     public SanFerminNode(NodeBuilder nb) {
       super(network.rd, nb);
-
       this.binaryId = SanFerminHelper.toBinaryID(this, nodeCount);
-      this.usedCandidates = new HashMap<>();
       this.done = false;
       this.thresholdDone = false;
-      this.sentRequests = 0;
-      this.receivedRequests = 0;
       this.aggValue = 1;
+      this.isSwapping = false;
       // node should start at n-1 with N = 2^n
       // this counter gets decreased with `goNextLevel`.
-      this.currentPrefixLength = powerOfTwo;
+      this.currentPrefixLength = MoreMath.log2(nodeCount);
       this.signatureCache = new HashMap<>();
-      this.futurSigs = new HashMap<>();
     }
 
     /**
-     * onSwapRequest checks if it is a request for the same current level, and if it is, swap and go
-     * to the next level. onSwapRequest is the fastest way to swap, since the value is already
-     * embedded in the message.
+     * onSwap checks if it is a swap a the current level and from a candidate node. If it is, it
+     * reply with his own swap, aggregates the value and move on to the next level. If it is not at
+     * the current level, it replies with a cached value if it has, or save the value for later if
+     * valid. If it is not from a candidate set, then it drops the message.
      */
-    public void onSwapRequest(SanFerminNode node, SwapRequest request) {
-      receivedRequests++;
-      if (done || request.level != this.currentPrefixLength) {
-        if (this.signatureCache.containsKey(request.level)) {
-          print("sending back CACHED signature at level " + request.level + " to node "
-              + node.binaryId);
-          // OPTIMISTIC REPLY
-          this.sendSwapReply(node, Status.OK, request.level,
-              this.signatureCache.get(request.level));
+    public void onSwap(SanFerminNode from, Swap swap) {
+      boolean wantReply = swap.wantReply;
+      if (done || swap.level != this.currentPrefixLength) {
+        boolean isValueCached = this.signatureCache.containsKey(swap.level);
+        if (wantReply && isValueCached) {
+          print(
+              "sending back CACHED signature at level " + swap.level + " to node " + from.binaryId);
+          this.sendSwap(Collections.singletonList(from), swap.level,
+              this.getBestCachedSig(swap.level), false);
         } else {
-          this.sendSwapReply(node, Status.NO, 0);
           // it's a value we might want to keep for later!
-          boolean isCandidate = candidateTree.getCandidateSet(request.level).contains(node);
+          boolean isCandidate = this.helper.isCandidate(from, swap.level);
           boolean isValidSig = true; // as always :)
           if (isCandidate && isValidSig) {
             // it is a good request we can save for later!
-            this.signatureCache.put(request.level, request.aggValue);
+            this.putCachedSig(swap.level, swap.aggValue);
           }
         }
         return;
       }
 
-      // just send the value but don't aggregate it
-      // OPTIMISTIC reply
-      if (isSwapping) {
-        this.sendSwapReply(node, Status.OK, request.level, this.aggValue);
-        return;
+      if (wantReply) {
+        this.sendSwap(Collections.singletonList(from), swap.level,
+            this.totalNumberOfSigs(swap.level), false);
       }
+
 
       // accept if it is a valid swap !
-      boolean isCandidate = candidateTree.getCandidateSet(currentPrefixLength).contains(node);
-      boolean goodLevel = request.level == currentPrefixLength;
+      boolean goodLevel = swap.level == currentPrefixLength;
+      boolean isCandidate = this.helper.isCandidate(from, currentPrefixLength);
       boolean isValidSig = true; // as always :)
       if (isCandidate && goodLevel && isValidSig) {
-        transition("valid swap REQUEST", node.binaryId, request.level, request.aggValue);
+        if (!isSwapping)
+          transition(" received valid SWAP ", from.binaryId, swap.level, swap.aggValue);
       } else {
-        print(" received  INVALID Swap" + "from " + node.binaryId + " at level " + request.level);
-      }
-
-    }
-
-    public void onSwapReply(SanFerminNode from, SwapReply reply) {
-      if (reply.level != this.currentPrefixLength || done) {
-        // TODO optimization here to potentially save the value for
-        // future usage if it can be useful and is valid
-        return;
-      }
-      if (isSwapping)
-        return;
-
-      switch (reply.status) {
-        case OK:
-          // We must verify it contains a valid
-          // aggregated signature, that it comes from a peer
-          // present in your candidate set at this prefix level,
-          // and that the prefix level is the same as this node's.
-          // we dont want to aggregate twice so we have to check
-          // pendingNode (acts like a lock).
-          if (!this.pendingNodes.contains(from.nodeId)) {
-            boolean isCandidate = candidateTree.getCandidateSet(currentPrefixLength).contains(from);
-            boolean goodLevel = reply.level == currentPrefixLength;
-            boolean isValidSig = true; // as always :)
-            if (isCandidate && goodLevel && isValidSig) {
-              transition("UNEXPECTED swap REPLY", from.binaryId, reply.level, reply.aggValue);
-            } else {
-              print(" received UNEXPECTED - WRONG swap reply " + "from " + from.binaryId
-                  + " at level " + reply.level);
-            }
-            return;
-          }
-          // good valid honest answer !
-          transition("valid swap REPLY", from.binaryId, reply.level, reply.aggValue);
-          // 1946, doneAt=2545, sigs=1024, msgReceived=27
-          // doneAt=219, sigs=527, msgReceived=283, msgSent=134,
-          break;
-        case NO:
-          print(" received SwapReply NO from " + from.binaryId);
-          // only try the next one if this is an expected reply
-          if (this.pendingNodes.contains(from.nodeId)) {
-            List<SanFerminNode> nodes =
-                this.candidateTree.pickNextNodes(this.currentPrefixLength, candidateCount);
-            sendToNodes(nodes);
-          } else {
-            print(" UNEXPECTED NO reply from " + from.binaryId);
-          }
-          break;
-        default:
-          throw new Error("That should never happen");
+        print(" received  INVALID Swap" + "from " + from.binaryId + " at level " + swap.level);
+        print("   ---> " + isValidSig + " - " + goodLevel + " - " + isCandidate);
       }
     }
 
     /**
-     * sendToNodes sends a swap request to the given nodes. It attaches a timeout to the request. If
-     * no SwapReply has been received before timeout, sendToNodes() will be called again.
+     * tryNextNodes simply picks the next eligible candidate from the list and send a swap request
+     * to it. It attaches a timeout to the request. If no SwapReply has been received before
+     * timeout, tryNextNodes() will be called again.
      */
-    private void sendToNodes(List<SanFerminNode> candidates) {
-      // TODO move to fully multiple node mode ! but git commit before
+    private void tryNextNodes(List<SanFerminNode> candidates) {
       if (candidates.size() == 0) {
         // when malicious actors are introduced or some nodes are
         // failing this case can happen. In that case, the node
@@ -338,15 +260,16 @@ public class SanFerminSignature implements Protocol {
         print(" is OUT (no more " + "nodes to pick)");
         return;
       }
+      candidates.stream().filter(n -> !helper.isCandidate(n, currentPrefixLength)).forEach(n -> {
+        System.out.println("currentPrefixlength=" + currentPrefixLength + " vs helper.currentLevel="
+            + helper.currentLevel);
+        throw new IllegalStateException();
+      });
 
-      // add ids to the set of pending nodes
-      this.pendingNodes.addAll(candidates.stream().map(n -> n.nodeId).collect(Collectors.toList()));
-      this.sentRequests += candidates.size();
-
-      SwapRequest r = new SwapRequest(this.currentPrefixLength, this.aggValue);
-      print(" send SwapRequest to " + String.join(" - ",
-          candidates.stream().map(n -> n.binaryId).collect(Collectors.toList())));
-      network.send(r, this, candidates);
+      print(" send Swaps to "
+          + candidates.stream().map(n -> n.binaryId).collect(Collectors.joining(" - ")));
+      this.sendSwap(candidates, this.currentPrefixLength,
+          this.totalNumberOfSigs(this.currentPrefixLength + 1), true);
 
       int currLevel = this.currentPrefixLength;
       network.registerTask(() -> {
@@ -355,12 +278,12 @@ public class SanFerminSignature implements Protocol {
         if (!SanFerminNode.this.done && SanFerminNode.this.currentPrefixLength == currLevel) {
           print("TIMEOUT of SwapRequest at level " + currLevel);
           // that means we haven't got a successful reply for that
-          // level so we try other nodes
-          List<SanFerminNode> newList =
-              this.candidateTree.pickNextNodes(this.currentPrefixLength, candidateCount);
-          sendToNodes(newList);
+          // level so we try another node
+          List<SanFerminNode> nextNodes =
+              this.helper.pickNextNodes(this.currentPrefixLength, candidateCount);
+          tryNextNodes(nextNodes);
         }
-      }, network.time + replyTimeout, SanFerminNode.this);
+      }, network.time + timeout, SanFerminNode.this);
 
     }
 
@@ -379,7 +302,7 @@ public class SanFerminSignature implements Protocol {
         return;
       }
 
-      boolean enoughSigs = this.aggValue >= threshold;
+      boolean enoughSigs = totalNumberOfSigs(this.currentPrefixLength) >= threshold;
       boolean noMoreSwap = this.currentPrefixLength == 0;
 
       if (enoughSigs && !thresholdDone) {
@@ -396,29 +319,32 @@ public class SanFerminSignature implements Protocol {
         return;
       }
       this.currentPrefixLength--;
-      this.signatureCache.put(this.currentPrefixLength, this.aggValue);
       this.isSwapping = false;
-      this.pendingNodes = new HashSet<>();
-      if (futurSigs.containsKey(currentPrefixLength)) {
+
+      if (signatureCache.containsKey(currentPrefixLength)) {
         print(" FUTURe value at new level" + currentPrefixLength + " "
             + "saved. Moving on directly !");
-        this.aggValue += futurSigs.get(currentPrefixLength);
         // directly go to the next level !
         goNextLevel();
         return;
       }
-      List<SanFerminNode> newList =
-          this.candidateTree.pickNextNodes(currentPrefixLength, candidateCount);
-      this.sendToNodes(newList);
+      List<SanFerminNode> newNodes = this.helper.pickNextNodes(currentPrefixLength, candidateCount);
+      this.tryNextNodes(newNodes);
     }
 
-    private void sendSwapReply(SanFerminNode n, Status s, int value) {
-      sendSwapReply(n, s, this.currentPrefixLength, value);
+    private void sendSwap(List<SanFerminNode> nodes, int level, int value, boolean wantReply) {
+      Swap r = new Swap(level, value, wantReply);
+      network.send(r, SanFerminNode.this, nodes);
     }
 
-    private void sendSwapReply(SanFerminNode n, Status s, int level, int value) {
-      SwapReply r = new SwapReply(s, level, value);
-      network.send(r, SanFerminNode.this, List.of(n));
+    public int totalNumberOfSigs(int level) {
+      return this.signatureCache
+          .entrySet()
+          .stream()
+          .filter(entry -> entry.getKey() >= level)
+          .map(Map.Entry::getValue)
+          .map(list -> list.stream().max(Comparator.naturalOrder()).get())
+          .reduce(0, Integer::sum) + 1; // +1 for own sig
     }
 
     /**
@@ -428,18 +354,33 @@ public class SanFerminSignature implements Protocol {
     private void transition(String type, String fromId, int level, int toAggregate) {
       this.isSwapping = true;
       network.registerTask(() -> {
-        int before = this.aggValue;
-        this.aggValue += toAggregate;
-        print(" received " + type + " lvl=" + level + " from " + fromId + " aggValue " + before
-            + " -> " + this.aggValue);
+        print(" received " + type + " lvl=" + level + " from " + fromId);
+        this.putCachedSig(level, toAggregate);
         this.goNextLevel();
       }, network.time + pairingTime, this);
     }
 
-    private void timeout(int level) {
-      // number of potential candidates at a given level
-      int diff = powerOfTwo - currentPrefixLength;
-      int potentials = (int) Math.pow(2, diff) - 1;
+    private int getBestCachedSig(int level) {
+      List<Integer> cached = this.signatureCache.getOrDefault(level, new ArrayList<>());
+      int max = cached.stream().reduce(Integer::max).get();
+      return max;
+    }
+
+    private void putCachedSig(int level, int value) {
+      List<Integer> list = this.signatureCache.getOrDefault(level, new ArrayList<>());
+      list.add(value);
+      this.signatureCache.put(level, list);
+      boolean enoughSigs = totalNumberOfSigs(this.currentPrefixLength) >= threshold;
+
+      if (enoughSigs && !thresholdDone) {
+        print(" --- THRESHOLD REACHED --- ");
+        thresholdDone = true;
+        thresholdAt = network.time + pairingTime * 2;
+      }
+    }
+
+    public long getDoneAt() {
+      return doneAt;
     }
 
     /**
@@ -447,73 +388,38 @@ public class SanFerminSignature implements Protocol {
      */
     private void print(String s) {
       if (verbose)
-        System.out.println("t=" + network.time + ", id=" + this.nodeId + ", lvl="
+        System.out.println("t=" + network.time + ", id=" + this.binaryId + ", lvl="
             + this.currentPrefixLength + ", sent=" + this.msgSent + " -> " + s);
     }
 
     @Override
     public String toString() {
       return "SanFerminNode{" + "nodeId=" + binaryId + ", thresholdAt=" + thresholdAt + ", doneAt="
-          + doneAt + ", sigs=" + aggValue + ", msgReceived=" + msgReceived + ", msgSent=" + msgSent
-          + ", sentRequests=" + sentRequests + ", receivedRequests=" + receivedRequests
-          + ", KBytesSent=" + bytesSent / 1024 + ", KBytesReceived=" + bytesReceived / 1024 + '}';
-    }
-
-    public long getThresholdAt() {
-      return thresholdAt;
-    }
-
-    public long getDoneAt() {
-      return doneAt;
+          + doneAt + ", sigs=" + totalNumberOfSigs(-1) + ", msgReceived=" + msgReceived + ", "
+          + "msgSent=" + msgSent + ", KBytesSent=" + bytesSent / 1024 + ", KBytesReceived="
+          + bytesReceived / 1024 + '}';
     }
   }
 
-  enum Status {
-    OK,
-    NO
-  }
 
-  class SwapReply extends Network.Message<SanFerminNode> {
+  class Swap extends Message<SanFerminNode> {
 
-    Status status;
+    boolean wantReply; // indicate that the other needs a reply to this
+    // Swap
     final int level;
     int aggValue; // see Reply.aggValue
     // String data -- no need to specify it, but only in the size() method
 
 
-    public SwapReply(Status s, int level, int aggValue) {
+    public Swap(int level, int aggValue, boolean reply) {
       this.level = level;
-      this.status = s;
+      this.wantReply = reply;
       this.aggValue = aggValue;
     }
 
     @Override
-    public void action(SanFerminNode from, SanFerminNode to) {
-      to.onSwapReply(from, this);
-    }
-
-    @Override
-    public int size() {
-      // uint32 + sig size
-      return 4 + signatureSize;
-    }
-  }
-
-
-  class SwapRequest extends Network.Message<SanFerminNode> {
-    final int level;
-    final int aggValue; // see Reply.aggValue
-    // String data -- no need to specify it, but only in the size() method
-
-
-    public SwapRequest(int level, int aggValue) {
-      this.level = level;
-      this.aggValue = aggValue;
-    }
-
-    @Override
-    public void action(SanFerminNode from, SanFerminNode to) {
-      to.onSwapRequest(from, this);
+    public void action(Network<SanFerminNode> network, SanFerminNode from, SanFerminNode to) {
+      to.onSwap(from, this);
     }
 
     @Override
@@ -526,7 +432,8 @@ public class SanFerminSignature implements Protocol {
   public static void sigsPerTime() {
     NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
     int nodeCt = 32768 / 2;
-    SanFerminSignature ps1 = new SanFerminSignature(nodeCt, nodeCt, 2, 48, 300, 1, false);
+
+    SanFerminCappos ps1 = new SanFerminCappos(nodeCt, nodeCt / 2, 2, 48, 150, 50);
 
     ps1.network.setNetworkLatency(nl);
 
@@ -538,13 +445,16 @@ public class SanFerminSignature implements Protocol {
     graph.addSerie(series1max);
     graph.addSerie(series1avg);
 
-    ps1.init();
+    ps1.StartAll();
 
     StatsHelper.SimpleStats s;
     final long limit = 6000;
     do {
       ps1.network.runMs(10);
-      s = StatsHelper.getStatsOn(ps1.allNodes, n -> ((SanFerminNode) n).aggValue);
+      s = StatsHelper.getStatsOn(ps1.allNodes, n -> {
+        SanFerminNode sfn = ((SanFerminNode) n);
+        return sfn.totalNumberOfSigs(-1);
+      });
       series1min.addLine(new Graph.ReportLine(ps1.network.time, s.min));
       series1max.addLine(new Graph.ReportLine(ps1.network.time, s.max));
       series1avg.addLine(new Graph.ReportLine(ps1.network.time, s.avg));
@@ -571,3 +481,4 @@ public class SanFerminSignature implements Protocol {
     sigsPerTime();
   }
 }
+
