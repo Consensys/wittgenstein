@@ -84,6 +84,7 @@ public class ENRGossiping implements Protocol {
 
   //Generate new capabilities for new nodes or nodes that periodically change.
   private Map<String, Integer> generateCap(int i) {
+
     Map<String, Integer> k_v = new HashMap<>();
     k_v.put("id", 4);
     k_v.put(("secp256k1"), i);
@@ -167,7 +168,6 @@ public class ENRGossiping implements Protocol {
       Record m = (Record) floodMessage;
       if (m.k_v.entrySet().stream().allMatch(
           e -> e.getValue().equals(this.capabilities.get(e.getKey())))) {
-        System.out.println("nodes key value: "+this.capabilities+" message: "+m.k_v);
         return true;
       }
       return false;
