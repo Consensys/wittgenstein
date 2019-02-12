@@ -123,8 +123,7 @@ public class ENRGossiping implements Protocol {
       int nodeId = network.rd.nextInt(NODES);
       ETHNode n = network.getNodeById(nodeId);
       if (senders.add(nodeId)) {
-
-        n.findCap();
+        n.findCap(mId++);
       }
       // if(capSearch())
 
@@ -168,6 +167,7 @@ public class ENRGossiping implements Protocol {
       Record m = (Record) floodMessage;
       if (m.k_v.entrySet().stream().allMatch(
           e -> e.getValue().equals(this.capabilities.get(e.getKey())))) {
+        System.out.println("nodes key value: "+this.capabilities+" message: "+m.k_v);
         return true;
       }
       return false;
@@ -182,8 +182,8 @@ public class ENRGossiping implements Protocol {
       }
     }
 
-    void findCap() {
-      network.send(new Record(1, 1, 1, 1, 1, this.capabilities), this, this.peers);
+    void findCap(int msgId) {
+      network.send(new Record(msgId, 1, 1, 1, 1, this.capabilities), this, this.peers);
     }
 
     //probably will be deleted
@@ -231,7 +231,7 @@ public class ENRGossiping implements Protocol {
       }
     };
 
-    new ProgressPerTime(this, "", "Messages sent", sg, 1, null).run(contIf);
+    new ProgressPerTime(this, "", "Nodes that have found capabilities", sg, 1, null).run(contIf);
   }
 
   public static void main(String... args) {
