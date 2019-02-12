@@ -74,8 +74,8 @@ public class P2PFlood implements Protocol {
     }
   }
 
-  public P2PFlood(int nodeCount, int deadNodeCount, int delayBeforeResent, int msgCount,
-      int msgToReceive, int peersCount, int delayBetweenSends, NodeBuilder nb, NetworkLatency nl) {
+  P2PFlood(int nodeCount, int deadNodeCount, int delayBeforeResent, int msgCount, int msgToReceive,
+      int peersCount, int delayBetweenSends, NodeBuilder nb, NetworkLatency nl) {
     this.nodeCount = nodeCount;
     this.deadNodeCount = deadNodeCount;
     this.delayBeforeResent = delayBeforeResent;

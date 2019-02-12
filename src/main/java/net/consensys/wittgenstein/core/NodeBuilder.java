@@ -6,6 +6,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Random;
 
+@SuppressWarnings("WeakerAccess")
 public class NodeBuilder implements Cloneable {
   private int nodeIds = 0;
   private final MessageDigest digest;

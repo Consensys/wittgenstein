@@ -18,7 +18,6 @@ public final class ConditionalTask<TN extends Node> extends Task<TN> {
    * Time before next start.
    */
   public final int duration;
-  private final TN sender;
 
   /**
    * Will start after this time.
@@ -26,12 +25,11 @@ public final class ConditionalTask<TN extends Node> extends Task<TN> {
   public int minStartTime;
 
   public ConditionalTask(Network.Condition startIf, Network.Condition repeatIf, Runnable r,
-      int minStartTime, int duration, TN sender) {
+      int minStartTime, int duration) {
     super(r);
     this.startIf = startIf;
     this.repeatIf = repeatIf;
     this.duration = duration;
-    this.sender = sender;
     this.minStartTime = minStartTime;
   }
 }

@@ -6,6 +6,7 @@ import net.consensys.wittgenstein.core.Node;
 /**
  * Some protocols want some tasks to be executed periodically
  */
+@SuppressWarnings("WeakerAccess")
 public class PeriodicTask<TN extends Node> extends Task<TN> {
   public final int period;
   public final TN sender;
