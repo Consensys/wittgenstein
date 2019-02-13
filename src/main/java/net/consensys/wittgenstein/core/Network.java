@@ -4,6 +4,7 @@ import net.consensys.wittgenstein.core.messages.ConditionalTask;
 import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.messages.PeriodicTask;
 import net.consensys.wittgenstein.core.messages.Task;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -62,8 +63,7 @@ public class Network<TN extends Node> {
     return allNodes.get(id);
   }
 
-  @SuppressWarnings("UnusedReturnValue")
-  public Network<TN> setMsgDiscardTime(int l) {
+  @SuppressWarnings("UnusedReturnValue") public Network<TN> setMsgDiscardTime(int l) {
     this.msgDiscardTime = l;
     return this;
   }
@@ -178,6 +178,9 @@ public class Network<TN extends Node> {
       cleanup();
       ensureSize(aTime);
       int pos = (aTime - msgsBySlot.get(0).startTime) / duration;
+      if (pos >= msgsBySlot.size()) {
+        throw new IllegalStateException("pos=" + pos + ", size=" + msgsBySlot.size());
+      }
       return msgsBySlot.get(pos);
     }
 
@@ -243,6 +246,9 @@ public class Network<TN extends Node> {
 
   public void runMs(int ms) {
     int endAt = time + ms;
+    if (endAt <= 0) {
+      throw new IllegalStateException("Maximum time reached!");
+    }
     receiveUntil(endAt);
     time = endAt;
   }
@@ -285,7 +291,7 @@ public class Network<TN extends Node> {
   public void sendArriveAt(Message<? extends TN> mc, int arriveAt, TN fromNode, TN toNode) {
     if (arriveAt <= time) {
       throw new IllegalArgumentException(
-          "wrong arrival time: arriveAt=" + arriveAt + ", time=" + time);
+        "wrong arrival time: arriveAt=" + arriveAt + ", time=" + time);
     }
     msgs.addMsg(new Envelope.SingleDestEnvelope<>(mc, fromNode, toNode, arriveAt));
   }
@@ -299,13 +305,11 @@ public class Network<TN extends Node> {
       this.arrival = arrival;
     }
 
-    @Override
-    public String toString() {
+    @Override public String toString() {
       return "MessageArrival{" + "dest=" + dest + ", arrival=" + arrival + '}';
     }
 
-    @Override
-    public int compareTo(Network.MessageArrival o) {
+    @Override public int compareTo(Network.MessageArrival o) {
       return Long.compare(arrival, o.arrival);
     }
   }
@@ -319,11 +323,11 @@ public class Network<TN extends Node> {
   }
 
   public void send(Message<? extends TN> m, int sendTime, TN fromNode, List<? extends Node> dests,
-      int delaysBetweenMessage) {
+    int delaysBetweenMessage) {
     int randomSeed = rd.nextInt();
 
     List<MessageArrival> da =
-        createMessageArrivals(m, sendTime, fromNode, dests, randomSeed, delaysBetweenMessage);
+      createMessageArrivals(m, sendTime, fromNode, dests, randomSeed, delaysBetweenMessage);
 
     if (!da.isEmpty()) {
       Envelope<?> msg;
@@ -334,7 +338,7 @@ public class Network<TN extends Node> {
         msg = new Envelope.MultipleDestEnvelope<>(m, fromNode, da, sendTime, randomSeed);
       } else {
         msg = new Envelope.MultipleDestWithDelayEnvelope<>(m, fromNode, da, sendTime,
-            delaysBetweenMessage, randomSeed);
+          delaysBetweenMessage, randomSeed);
       }
       msgs.addMsg(msg);
 
@@ -342,7 +346,7 @@ public class Network<TN extends Node> {
   }
 
   List<MessageArrival> createMessageArrivals(Message<? extends TN> m, int sendTime, TN fromNode,
-      List<? extends Node> dests, int randomSeed, int delaysBetweenMessage) {
+    List<? extends Node> dests, int randomSeed, int delaysBetweenMessage) {
     ArrayList<MessageArrival> da = new ArrayList<>(dests.size());
     for (Node n : dests) {
       MessageArrival ma = createMessageArrival(m, fromNode, n, sendTime, randomSeed);
@@ -357,7 +361,7 @@ public class Network<TN extends Node> {
   }
 
   private MessageArrival createMessageArrival(Message<?> m, Node fromNode, Node toNode,
-      int sendTime, int randomSeed) {
+    int sendTime, int randomSeed) {
     if (sendTime <= time) {
       throw new IllegalStateException("" + m + ", sendTime=" + sendTime + ", time=" + time);
     }
@@ -367,7 +371,7 @@ public class Network<TN extends Node> {
     fromNode.bytesSent += m.size();
     if (partitionId(fromNode) == partitionId(toNode) && !fromNode.down && !toNode.down) {
       int nt =
-          networkLatency.getLatency(fromNode, toNode, getPseudoRandom(toNode.nodeId, randomSeed));
+        networkLatency.getLatency(fromNode, toNode, getPseudoRandom(toNode.nodeId, randomSeed));
       if (nt < msgDiscardTime) {
         return new MessageArrival(toNode, sendTime + nt);
       }
@@ -378,7 +382,7 @@ public class Network<TN extends Node> {
 
   /**
    * @return always the same number for the same parameters, between 0 and 99, uniformly
-   *         distributed.
+   * distributed.
    */
   public static int getPseudoRandom(int nodeId, int randomSeed) {
     int x = hash(nodeId) ^ randomSeed;
@@ -403,13 +407,13 @@ public class Network<TN extends Node> {
   }
 
   public void registerPeriodicTask(final Runnable task, int startAt, int period, TN fromNode,
-      Condition c) {
+    Condition c) {
     PeriodicTask<TN> sw = new PeriodicTask<>(task, fromNode, period, c);
     msgs.addMsg(new Envelope.SingleDestEnvelope<>(sw, fromNode, fromNode, startAt));
   }
 
   public void registerConditionalTask(final Runnable task, int startAt, int duration, TN fromNode,
-      Condition startIf, Condition repeatIf) {
+    Condition startIf, Condition repeatIf) {
     ConditionalTask<TN> ct = new ConditionalTask<>(startIf, repeatIf, task, startAt, duration);
     conditionalTasks.add(ct);
   }
@@ -434,7 +438,7 @@ public class Network<TN extends Node> {
       if (m.nextArrivalTime(this) != previousTime) {
         if (time > m.nextArrivalTime(this)) {
           throw new IllegalStateException(
-              "time:" + time + ", arrival=" + m.nextArrivalTime(this) + ", m:" + m);
+            "time:" + time + ", arrival=" + m.nextArrivalTime(this) + ", m:" + m);
         }
 
         Iterator<ConditionalTask<TN>> it = conditionalTasks.iterator();
@@ -461,8 +465,7 @@ public class Network<TN extends Node> {
           to.msgReceived++;
           to.bytesReceived += m.getMessage().size();
         }
-        @SuppressWarnings("unchecked")
-        Message<TN> mc = (Message<TN>) m.getMessage();
+        @SuppressWarnings("unchecked") Message<TN> mc = (Message<TN>) m.getMessage();
         mc.action(this, from, to);
       }
 
@@ -508,7 +511,7 @@ public class Network<TN extends Node> {
   public Network<TN> setNetworkLatency(NetworkLatency networkLatency) {
     if (msgs.size() != 0) {
       throw new IllegalStateException(
-          "You can't change the latency while the system as on going messages");
+        "You can't change the latency while the system as on going messages");
     }
 
     this.networkLatency = networkLatency;

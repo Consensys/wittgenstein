@@ -81,9 +81,9 @@ public class PingPong implements Protocol {
     p.network.setNetworkLatency(new NetworkLatency.NetworkLatencyByDistance());
     p.init();
 
-    for (int i = 0; i < 1000; i += 100) {
+    for (int i = 0; i < 500; i += 50) {
       System.out.println(i + " ms, pongs received " + p.network.getNodeById(0).pong);
-      p.network.runMs(100);
+      p.network.runMs(50);
     }
   }
 }

@@ -292,4 +292,17 @@ public class NetworkTest {
     Assert.assertNull(net.msgs.peekFirst());
     net.msgs.clear();
   }
+
+  @Test
+  public void testLongRunning(){
+    Message<Node> act = new Message<>() {
+      @Override
+      public void action(Network<Node> network, Node from, Node to) {
+      }
+    };
+    while (network.time < 100_000_000) {
+      network.runMs(10_000);
+      network.send(act, n0, n1);
+    }
+  }
 }
