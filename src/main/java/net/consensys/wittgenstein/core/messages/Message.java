@@ -2,7 +2,7 @@ package net.consensys.wittgenstein.core.messages;
 
 import net.consensys.wittgenstein.core.Network;
 import net.consensys.wittgenstein.core.Node;
-import java.lang.reflect.Field;
+import net.consensys.wittgenstein.core.utils.Strings;
 
 /**
  * The generic message that goes on a network. Triggers an 'action' on reception.
@@ -11,6 +11,11 @@ import java.lang.reflect.Field;
  * messages sent to multiple nodes.
  */
 public abstract class Message<TN extends Node> {
+
+  /**
+   * Must be implemented by the protocol implementers to specify what happens when a node receive
+   * this message.
+   */
   public abstract void action(Network<TN> network, TN from, TN to);
 
   /**
@@ -21,22 +26,12 @@ public abstract class Message<TN extends Node> {
     return 1;
   }
 
+  /**
+   * Default implemntation, using reflection to print the fields value. Can be overridden by the
+   * subclasses if they want to.
+   */
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder();
-
-    for (Field f : this.getClass().getDeclaredFields()) {
-      try {
-        f.setAccessible(true);
-        String v = "" + f.get(this);
-        if (sb.length() != 0) {
-          sb.append(", ");
-        }
-        sb.append(f.getName()).append("=").append(v);
-      } catch (IllegalAccessException ignore) {
-      }
-    }
-
-    return this.getClass().getSimpleName() + "{" + sb.toString() + "}";
+    return Strings.toString(this);
   }
 }
