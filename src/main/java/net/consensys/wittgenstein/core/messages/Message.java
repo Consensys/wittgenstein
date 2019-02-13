@@ -2,6 +2,7 @@ package net.consensys.wittgenstein.core.messages;
 
 import net.consensys.wittgenstein.core.Network;
 import net.consensys.wittgenstein.core.Node;
+import net.consensys.wittgenstein.core.utils.Strings;
 
 /**
  * The generic message that goes on a network. Triggers an 'action' on reception.
@@ -10,6 +11,11 @@ import net.consensys.wittgenstein.core.Node;
  * messages sent to multiple nodes.
  */
 public abstract class Message<TN extends Node> {
+
+  /**
+   * Must be implemented by the protocol implementers to specify what happens when a node receive
+   * this message.
+   */
   public abstract void action(Network<TN> network, TN from, TN to);
 
   /**
@@ -18,5 +24,14 @@ public abstract class Message<TN extends Node> {
    */
   public int size() {
     return 1;
+  }
+
+  /**
+   * Default implemntation, using reflection to print the fields value. Can be overridden by the
+   * subclasses if they want to.
+   */
+  @Override
+  public String toString() {
+    return Strings.toString(this);
   }
 }

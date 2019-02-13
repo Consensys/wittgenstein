@@ -7,7 +7,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * A P2P node supports flood by default.
+ * A P2P node supports flood by default. In P2P protocols: - you can wait before resending the
+ * message to your peers, for example because you're validating the message. - you can send the
+ * message to all your peers immediately, or one after another with a delay between each send. Here,
+ * we embed this logic in the message; allowing each message to have a different strategy.
  */
 public class FloodMessage<TN extends P2PNode<TN>> extends Message<TN> {
   protected final int size;

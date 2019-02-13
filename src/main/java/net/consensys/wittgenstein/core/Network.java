@@ -410,8 +410,7 @@ public class Network<TN extends Node> {
 
   public void registerConditionalTask(final Runnable task, int startAt, int duration, TN fromNode,
       Condition startIf, Condition repeatIf) {
-    ConditionalTask<TN> ct =
-        new ConditionalTask<>(startIf, repeatIf, task, startAt, duration, fromNode);
+    ConditionalTask<TN> ct = new ConditionalTask<>(startIf, repeatIf, task, startAt, duration);
     conditionalTasks.add(ct);
   }
 
