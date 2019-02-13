@@ -56,6 +56,7 @@ public class ENRGossiping implements Protocol {
 
   private final int numberOfDifferentCapabilities = 1000;
   private final int numberOfCapabilityPerNode = 10;
+  private int msgId = 0;
 
   private ENRGossiping(int NODES, int totalPeers, int timeToChange, int changingNodes,
       int capGossipTime, int discardTime, int timeToLeave) {
@@ -109,7 +110,7 @@ public class ENRGossiping implements Protocol {
       network.addNode(new ETHNode(network.rd, this.nb, generateCap(i)));
     }
     network.setPeers();
-    //Nodes broadcast their capabilities every 1000 ms with a lag of rand*100 ms
+    //Nodes broadcast their capabilities every capGossipTime ms with a lag of rand*100 ms
 
     for (ETHNode n : network.allNodes) {
       int start = network.rd.nextInt(capGossipTime) + 1;
@@ -119,15 +120,13 @@ public class ENRGossiping implements Protocol {
     //Send a query for your capabilities matching yours
     //while you haven't found them, or the time hasnt run out you keep querying
     Set<Integer> senders = new HashSet<>(totalPeers);
-    int mId = 0;
+
     while (senders.size() < NODES) {
       int nodeId = network.rd.nextInt(NODES);
       ETHNode n = network.getNodeById(nodeId);
       if (senders.add(nodeId)) {
-        n.findCap(mId++);
+        n.findCap(msgId++);
       }
-      // if(capSearch())
-
     }
   }
 
@@ -149,7 +148,6 @@ public class ENRGossiping implements Protocol {
       this.seq = seq;
       this.k_v = k_v;
     }
-
   }
 
   class ETHNode extends P2PNode<ETHNode> {
@@ -183,13 +181,13 @@ public class ENRGossiping implements Protocol {
     }
 
     void findCap(int msgId) {
-      network.send(new Record(msgId, 1, 1, 1, 1, this.capabilities), this, this.peers);
+      network.send(new Record(nodeId, 1, 10, 10, 1, this.capabilities), this, this.peers);
     }
 
     //probably will be deleted
     public void sendCapabilities() {
-      Record rf = new Record(1, 1, 1, 1, 1, this.capabilities);
-      // Change logic, as currently only interested in keeping at most 2 records
+      Record rf = new Record(nodeId, 1, 1, 1, 1, this.capabilities);
+
       Set<FloodMessage> rfSet = new HashSet<>();
       rfSet.add(rf);
       received.put(Long.valueOf(rf.seq), rfSet);
@@ -205,7 +203,6 @@ public class ENRGossiping implements Protocol {
     Predicate<Protocol> contIf = p1 -> {
 
       if (p1.network().time > 50000) {
-        System.out.println("Hah time out");
         return false;
       }
       for (Node n : p1.network().allNodes) {
@@ -234,8 +231,17 @@ public class ENRGossiping implements Protocol {
     new ProgressPerTime(this, "", "Nodes that have found capabilities", sg, 1, null).run(contIf);
   }
 
+  @Override
+  public String toString() {
+    return "ENRGossiping{" + "timeToChange=" + timeToChange + ", capGossipTime=" + capGossipTime
+        + ", discardTime=" + discardTime + ", timeToLeave=" + timeToLeave + ", totalPeers="
+        + totalPeers + ", NODES=" + NODES + ", changingNodes=" + changingNodes
+        + ", numberOfDifferentCapabilities=" + numberOfDifferentCapabilities
+        + ", numberOfCapabilityPerNode=" + numberOfCapabilityPerNode + ", msgId=" + msgId + '}';
+  }
+
   public static void main(String... args) {
-    new ENRGossiping(100, 10, 10, 20, 10, 10, 10).capSearch();
+    new ENRGossiping(1000, 10, 10, 20, 10, 10, 10).capSearch();
 
   }
 }
