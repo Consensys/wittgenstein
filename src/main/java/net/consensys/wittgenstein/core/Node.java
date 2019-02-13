@@ -52,7 +52,6 @@ public class Node {
    */
   public double speedRatio;
 
-
   protected long msgReceived = 0;
   protected long msgSent = 0;
   protected long bytesSent = 0;
@@ -93,6 +92,19 @@ public class Node {
     return "id=" + nodeId + ", city=" + cityName + ", posX=" + x + ", posY=" + y;
   }
 
+  /**
+   * Called when a node starts or restarts.
+   */
+  public void start() {
+    down = false;
+  }
+
+  /**
+   * Called when a node is stopped.
+   */
+  public void stop() {
+    down = true;
+  }
 
 
   /**

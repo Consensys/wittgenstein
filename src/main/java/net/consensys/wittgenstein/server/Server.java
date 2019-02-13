@@ -6,17 +6,18 @@ import net.consensys.wittgenstein.core.utils.Reflects;
 import net.consensys.wittgenstein.protocols.PingPong;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.SimpleBeanDefinitionRegistry;
+import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
 import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
-import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
 import java.lang.reflect.Constructor;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
  * Allows to run the protocols in a (web)server.
  */
-public class Server {
+public class Server implements IServer {
   private Protocol protocol;
 
   public List<? extends Node> getNodeInfo() {
@@ -40,7 +41,7 @@ public class Server {
     throw new IllegalStateException("no constructor in " + fullClassName);
   }
 
-  public void setProtocol(String fullClassName, WParameter parameters) {
+  public void init(String fullClassName, WParameter parameters) {
     Constructor<?> c = getConstructor(fullClassName);
     protocol = (Protocol) Reflects.newInstance(c, parameters);
     protocol.init();
@@ -87,7 +88,7 @@ public class Server {
     String clazz = "net.consensys.wittgenstein.protocols.P2PFlood";
     WParameter params = server.getProtocolParameters(clazz);
     System.out.println(params);
-    server.setProtocol(clazz, params);
+    server.init(clazz, params);
     server.runMs(100);
     System.out.println(server.protocol);
     System.out.println(server.getNodeInfo());

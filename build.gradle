@@ -16,13 +16,14 @@ repositories {
     maven { url "http://repo.maven.apache.org/maven2" }
 }
 
-
 dependencies {
     implementation 'org.knowm.xchart:xchart:3.5.2'
     implementation "org.apache.commons:commons-csv:1.5"
     implementation "org.springframework:spring-beans:5.1.4.RELEASE"
     implementation "org.springframework:spring-context:5.1.4.RELEASE"
+    implementation "org.springframework.boot:spring-boot-starter-web:2.1.2.RELEASE"
 
+    testImplementation "org.springframework.boot:spring-boot-starter-test:2.1.2.RELEASE"
     testImplementation 'junit:junit:4.12'
 }
 

@@ -88,6 +88,18 @@ public class P2PFlood implements Protocol {
     final String nodeBuilderName;
     final String networkLatencyName;
 
+    public P2PFloodParameters() {
+      this.nodeCount = 100;
+      this.deadNodeCount = 10;
+      this.delayBeforeResent = 10;
+      this.msgCount = 1;
+      this.msgToReceive = 1;
+      this.peersCount = 15;
+      this.delayBetweenSends = 0;
+      this.nodeBuilderName = null;
+      this.networkLatencyName = null;
+    }
+
     public P2PFloodParameters(int nodeCount, int deadNodeCount, int delayBeforeResent, int msgCount,
         int msgToReceive, int peersCount, int delayBetweenSends, String nodeBuilderName,
         String networkLatencyName) {
