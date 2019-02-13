@@ -5,7 +5,7 @@ package net.consensys.wittgenstein.core;
  * context of a scenario, typically executing multiple runs to extract min/max/avg behavior on some
  * network conditions.
  * 
- * @see net.consensys.wittgenstein.protocol.PingPong
+ * @see net.consensys.wittgenstein.protocols.PingPong
  */
 public interface Protocol {
 

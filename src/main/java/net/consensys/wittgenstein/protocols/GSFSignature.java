@@ -1,6 +1,7 @@
-package net.consensys.wittgenstein.protocol;
+package net.consensys.wittgenstein.protocols;
 
 import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import java.util.*;
@@ -74,7 +75,7 @@ public class GSFSignature implements Protocol {
         + ", network=" + network.networkLatency.getClass().getSimpleName();
   }
 
-  static class SendSigs extends Network.Message<GSFNode> {
+  static class SendSigs extends Message<GSFNode> {
     final BitSet sigs;
     final int level;
     final boolean levelFinished;
@@ -94,7 +95,7 @@ public class GSFSignature implements Protocol {
     }
 
     @Override
-    public void action(GSFNode from, GSFNode to) {
+    public void action(Network<GSFNode> network, GSFNode from, GSFNode to) {
       to.onNewSig(from, this);
     }
   }

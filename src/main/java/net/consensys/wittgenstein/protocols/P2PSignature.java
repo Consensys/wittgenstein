@@ -1,6 +1,7 @@
-package net.consensys.wittgenstein.protocol;
+package net.consensys.wittgenstein.protocols;
 
 import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.tools.Graph;
@@ -114,7 +115,7 @@ public class P2PSignature implements Protocol {
     this.nb = new NodeBuilder.NodeBuilderWithRandomPosition();
   }
 
-  static class State extends Network.Message<P2PSigNode> {
+  static class State extends Message<P2PSigNode> {
     final BitSet desc;
     final P2PSigNode who;
 
@@ -133,7 +134,7 @@ public class P2PSignature implements Protocol {
     }
 
     @Override
-    public void action(P2PSigNode from, P2PSigNode to) {
+    public void action(Network<P2PSigNode> network, P2PSigNode from, P2PSigNode to) {
       to.onPeerState(this);
     }
   }
@@ -230,7 +231,7 @@ public class P2PSignature implements Protocol {
     return 0;
   }
 
-  static class SendSigs extends Network.Message<P2PSigNode> {
+  static class SendSigs extends Message<P2PSigNode> {
     final BitSet sigs;
     final int size;
 
@@ -252,7 +253,7 @@ public class P2PSignature implements Protocol {
 
 
     @Override
-    public void action(P2PSigNode from, P2PSigNode to) {
+    public void action(Network<P2PSigNode> network, P2PSigNode from, P2PSigNode to) {
       to.onNewSig(sigs);
     }
   }

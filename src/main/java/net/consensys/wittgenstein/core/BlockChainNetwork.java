@@ -1,6 +1,7 @@
 package net.consensys.wittgenstein.core;
 
 
+import net.consensys.wittgenstein.core.messages.Message;
 import java.util.*;
 
 /**
@@ -29,7 +30,7 @@ public class BlockChainNetwork<TB extends Block, TN extends BlockChainNode<TB>>
     }
 
     @Override
-    public void action(TN fromNode, TN toNode) {
+    public void action(Network<TN> network, TN fromNode, TN toNode) {
       toNode.onBlock(toSend);
     }
 

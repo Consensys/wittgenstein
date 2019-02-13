@@ -1,5 +1,6 @@
 package net.consensys.wittgenstein.core;
 
+import net.consensys.wittgenstein.core.messages.Message;
 import java.util.Arrays;
 import java.util.List;
 
@@ -7,7 +8,7 @@ import java.util.List;
  * This is a class internal to the framework.
  */
 abstract class Envelope<TN extends Node> {
-  abstract Network.Message<TN> getMessage();
+  abstract Message<TN> getMessage();
 
   abstract int getNextDestId();
 
@@ -40,7 +41,7 @@ abstract class Envelope<TN extends Node> {
    * the randomSeed are kept. - this also allows on disk serialization
    */
   static class MultipleDestEnvelope<TN extends Node> extends Envelope<TN> {
-    final Network.Message<TN> message;
+    final Message<TN> message;
     private final int fromNodeId;
 
     private final int sendTime;
@@ -49,7 +50,7 @@ abstract class Envelope<TN extends Node> {
     protected int curPos = 0;
     private Envelope<?> nextSameTime = null;
 
-    MultipleDestEnvelope(Network.Message<TN> m, Node fromNode, List<Network.MessageArrival> dests,
+    MultipleDestEnvelope(Message<TN> m, Node fromNode, List<Network.MessageArrival> dests,
         int sendTime, int randomSeed) {
       this.message = m;
       this.fromNodeId = fromNode.nodeId;
@@ -69,7 +70,7 @@ abstract class Envelope<TN extends Node> {
     }
 
     @Override
-    Network.Message<TN> getMessage() {
+    Message<TN> getMessage() {
       return message;
     }
 
@@ -114,20 +115,22 @@ abstract class Envelope<TN extends Node> {
       extends MultipleDestEnvelope<TN> {
     final int delayBetweenMessage;
 
-    MultipleDestWithDelayEnvelope(Network.Message<TN> m, Node fromNode,
-        List<Network.MessageArrival> dests, int sendTime, int delayBetweenMessage, int randomSeed) {
+    MultipleDestWithDelayEnvelope(Message<TN> m, Node fromNode, List<Network.MessageArrival> dests,
+        int sendTime, int delayBetweenMessage, int randomSeed) {
       super(m, fromNode, dests, sendTime, randomSeed);
       this.delayBetweenMessage = delayBetweenMessage;
     }
 
     int nextArrivalTime(Network network) {
-      return super.nextArrivalTime(network) + delayBetweenMessage * curPos;
+      // We add one because we consider that the next message is sent at the next
+      //  slot after the delay
+      return super.nextArrivalTime(network) + (1 + delayBetweenMessage) * curPos;
     }
   }
 
 
   final static class SingleDestEnvelope<TN extends Node> extends Envelope<TN> {
-    final Network.Message<TN> message;
+    final Message<TN> message;
     private final int fromNodeId;
     private final int toNodeId;
     private final int arrivalTime;
@@ -144,7 +147,7 @@ abstract class Envelope<TN extends Node> {
       this.nextSameTime = nextSameTime;
     }
 
-    SingleDestEnvelope(Network.Message<TN> message, Node fromNode, Node toNode, int arrivalTime) {
+    SingleDestEnvelope(Message<TN> message, Node fromNode, Node toNode, int arrivalTime) {
       this.message = message;
       this.fromNodeId = fromNode.nodeId;
       this.toNodeId = toNode.nodeId;
@@ -158,7 +161,7 @@ abstract class Envelope<TN extends Node> {
     }
 
     @Override
-    Network.Message<TN> getMessage() {
+    Message<TN> getMessage() {
       return message;
     }
 
