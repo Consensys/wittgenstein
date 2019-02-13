@@ -20,6 +20,9 @@ repositories {
 dependencies {
     implementation 'org.knowm.xchart:xchart:3.5.2'
     implementation "org.apache.commons:commons-csv:1.5"
+    implementation "org.springframework:spring-beans:5.1.4.RELEASE"
+    implementation "org.springframework:spring-context:5.1.4.RELEASE"
+
     testImplementation 'junit:junit:4.12'
 }
 

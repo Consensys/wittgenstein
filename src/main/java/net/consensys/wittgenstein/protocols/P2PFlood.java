@@ -3,6 +3,7 @@ package net.consensys.wittgenstein.protocols;
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.FloodMessage;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
+import net.consensys.wittgenstein.server.WParameter;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -56,6 +57,8 @@ public class P2PFlood implements Protocol {
 
 
   class P2PFloodNode extends P2PNode<P2PFloodNode> {
+    boolean extern;
+
     /**
      * @param down - if the node is marked down, it won't send/receive messages, but will still be
      *        included in the peers. As such it's a byzantine behavior: officially available but
@@ -74,8 +77,41 @@ public class P2PFlood implements Protocol {
     }
   }
 
-  public P2PFlood(int nodeCount, int deadNodeCount, int delayBeforeResent, int msgCount,
-      int msgToReceive, int peersCount, int delayBetweenSends, NodeBuilder nb, NetworkLatency nl) {
+  public static class P2PFloodParameters extends WParameter {
+    final int nodeCount;
+    final int deadNodeCount;
+    final int delayBeforeResent;
+    final int msgCount;
+    final int msgToReceive;
+    final int peersCount;
+    final int delayBetweenSends;
+    final String nodeBuilderName;
+    final String networkLatencyName;
+
+    public P2PFloodParameters(int nodeCount, int deadNodeCount, int delayBeforeResent, int msgCount,
+        int msgToReceive, int peersCount, int delayBetweenSends, String nodeBuilderName,
+        String networkLatencyName) {
+      this.nodeCount = nodeCount;
+      this.deadNodeCount = deadNodeCount;
+      this.delayBeforeResent = delayBeforeResent;
+      this.msgCount = msgCount;
+      this.msgToReceive = msgToReceive;
+      this.peersCount = peersCount;
+      this.delayBetweenSends = delayBetweenSends;
+      this.nodeBuilderName = nodeBuilderName;
+      this.networkLatencyName = networkLatencyName;
+    }
+  }
+
+  public P2PFlood(P2PFloodParameters params) {
+    this(params.nodeCount, params.deadNodeCount, params.delayBeforeResent, params.msgCount,
+        params.msgToReceive, params.peersCount, params.delayBetweenSends,
+        new RegistryNodeBuilders().getByName(params.nodeBuilderName),
+        new RegistryNetworkLatencies().getByName(params.networkLatencyName));
+  }
+
+  P2PFlood(int nodeCount, int deadNodeCount, int delayBeforeResent, int msgCount, int msgToReceive,
+      int peersCount, int delayBetweenSends, NodeBuilder nb, NetworkLatency nl) {
     this.nodeCount = nodeCount;
     this.deadNodeCount = deadNodeCount;
     this.delayBeforeResent = delayBeforeResent;

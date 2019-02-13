@@ -650,43 +650,7 @@ public class P2PSignature implements Protocol {
     medianGraph.addSerie(seriesAvgavg);
 
     try {
-      medianGraph.save(new File("graph_avg.png"));
-    } catch (IOException e) {
-      System.err.println("Can't generate the graph: " + e.getMessage());
-    }
-  }
-
-  public static void sigsPerNodeCount() {
-    List<P2PSignature> pss = new ArrayList<>();
-    for (int nodeCt : new int[] {50, 100, 200, 300, 400, 500}) {//, 1000, 1500, 2000, 2500, 3000, 4000, 5000,
-      // 10000, 15000, 20000}) {
-      NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
-      P2PSignature ps1 =
-          new P2PSignature(nodeCt, 0, nodeCt, 15, 3, 20, true, false, SendSigsStrategy.all, 1);
-      ps1.network.setNetworkLatency(nl);
-      pss.add(ps1);
-    }
-
-    Graph graph = new Graph("number of sig per time", "number of nodes", "time in ms");
-    Graph.Series series = new Graph.Series("all nodes time");
-    graph.addSerie(series);
-
-    for (P2PSignature ps1 : pss) {
-      ps1.network.rd.setSeed(1);
-      ps1.init();
-      ps1.network.setMsgDiscardTime(1000);
-
-      StatsHelper.SimpleStats s;
-      do {
-        ps1.network.runMs(10);
-        s = StatsHelper.getStatsOn(ps1.network.allNodes,
-            n -> ((P2PSigNode) n).verifiedSignatures.cardinality());
-      } while (s.min != ps1.signingNodeCount);
-      series.addLine(new Graph.ReportLine(ps1.signingNodeCount, ps1.network.time));
-    }
-
-    try {
-      graph.save(new File("graph.png"));
+      medianGraph.save(new File("graph_time_avg.png"));
     } catch (IOException e) {
       System.err.println("Can't generate the graph: " + e.getMessage());
     }
@@ -733,47 +697,14 @@ public class P2PSignature implements Protocol {
     } while (s1.min != nodeCt);
 
     try {
-      graph.save(new File("graph.png"));
+      graph.save(new File("graph_strat.png"));
     } catch (IOException e) {
       System.err.println("Can't generate the graph: " + e.getMessage());
     }
   }
 
-
-
   public static void main(String... args) {
-    NetworkLatency nl = new NetworkLatency.NetworkLatencyByDistance();
-    System.out.println("" + nl);
-
-    if (true) {
-      sigsPerTime();
-      return;
-    }
-
-    boolean printLat = false;
-    for (int cnt : new int[] {15}) {
-      for (int sendPeriod : new int[] {20, 100}) {
-        for (int nodeCt : new int[] {1000, 10000}) {
-          for (int r : new int[] {1, 2, 4, 6, 8, 12, 14, 16}) {
-            P2PSignature p2ps =
-                new P2PSignature(nodeCt, 0, (int) (nodeCt * 0.67), cnt, 3, sendPeriod, true, false,
-                    r < 2 ? SendSigsStrategy.all : SendSigsStrategy.cmp_all, r);
-            p2ps.network.setNetworkLatency(nl);
-            Node observer = p2ps.network.getNodeById(0);
-
-            if (!printLat) {
-              System.out.println("NON P2P " + NetworkLatency.estimateLatency(p2ps.network, 100000));
-              System.out
-                  .println("\nP2P " + NetworkLatency.estimateP2PLatency(p2ps.network, 100000));
-              printLat = true;
-            }
-            p2ps.network.rd.setSeed(0);
-
-            p2ps.network.run(10);
-            System.out.println("peers=" + cnt + ", sendPeriod=" + sendPeriod + " " + observer);
-          }
-        }
-      }
-    }
+    sigsPerTime();
+    sigsPerStrategy();
   }
 }
