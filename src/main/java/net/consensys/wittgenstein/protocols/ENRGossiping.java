@@ -4,8 +4,6 @@ import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.core.messages.StatusFloodMessage;
 import net.consensys.wittgenstein.core.messages.*;
-import javax.xml.crypto.NodeSetData;
-import java.lang.reflect.Array;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -56,7 +54,6 @@ public class ENRGossiping implements Protocol {
 
   private final int numberOfDifferentCapabilities = 1000;
   private final int numberOfCapabilityPerNode = 10;
-  private int msgId = 0;
 
   ENRGossiping(int NODES, int totalPeers, int timeToChange, int changingNodes, int capGossipTime,
       int discardTime, int timeToLeave) {
@@ -84,7 +81,7 @@ public class ENRGossiping implements Protocol {
   }
 
   //Generate new capabilities for new nodes or nodes that periodically change.
-  private Map<String, Integer> generateCap(int i) {
+  private Map<String, Integer> generateCap() {
 
     Map<String, Integer> k_v = new HashMap<>();
     while (k_v.size() < numberOfCapabilityPerNode) {
@@ -98,7 +95,7 @@ public class ENRGossiping implements Protocol {
   @Override
   public void init() {
     for (int i = 0; i < NODES; i++) {
-      network.addNode(new ETHNode(network.rd, this.nb, generateCap(i)));
+      network.addNode(new ETHNode(network.rd, this.nb, generateCap()));
     }
     network.setPeers();
     //Nodes broadcast their capabilities every capGossipTime ms with a lag of rand*100 ms
@@ -156,11 +153,8 @@ public class ENRGossiping implements Protocol {
     private boolean matchCap(FloodMessage floodMessage) {
       //check with filter() if doenst work
       Record m = (Record) floodMessage;
-      if (m.k_v.entrySet().stream().allMatch(
-          e -> e.getValue().equals(this.capabilities.get(e.getKey())))) {
-        return true;
-      }
-      return false;
+      return m.k_v.entrySet().stream().allMatch(
+          e -> e.getValue().equals(this.capabilities.get(e.getKey())));
     }
 
     @Override
@@ -216,7 +210,7 @@ public class ENRGossiping implements Protocol {
         + ", discardTime=" + discardTime + ", timeToLeave=" + timeToLeave + ", totalPeers="
         + totalPeers + ", NODES=" + NODES + ", changingNodes=" + changingNodes
         + ", numberOfDifferentCapabilities=" + numberOfDifferentCapabilities
-        + ", numberOfCapabilityPerNode=" + numberOfCapabilityPerNode + ", msgId=" + msgId + '}';
+        + ", numberOfCapabilityPerNode=" + numberOfCapabilityPerNode + '}';
   }
 
   public static void main(String... args) {
