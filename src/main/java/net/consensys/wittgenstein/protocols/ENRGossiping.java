@@ -175,7 +175,7 @@ public class ENRGossiping implements Protocol {
   private void capSearch() {
     Predicate<Protocol> contIf = p1 -> {
 
-      if (p1.network().time > 50000) {
+      if (p1.network().time > 500000) {
         return false;
       }
       for (Node n : p1.network().allNodes) {

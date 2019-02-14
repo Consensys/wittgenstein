@@ -12,7 +12,7 @@ abstract class Envelope<TN extends Node> {
 
   abstract int getNextDestId();
 
-  abstract int nextArrivalTime(Network network);
+  abstract int nextArrivalTime(Network<?> network);
 
   /**
    * The next envelop arriving at the same time, if any: we have this because we manage the envelop
@@ -79,11 +79,13 @@ abstract class Envelope<TN extends Node> {
       return destIds[curPos];
     }
 
-    int nextArrivalTime(Network network) {
-      return sendTime
-          + network.networkLatency.getLatency((Node) network.allNodes.get(this.fromNodeId),
-              (Node) network.allNodes.get(this.getNextDestId()),
-              Network.getPseudoRandom(this.getNextDestId(), randomSeed));
+    @Override
+    int nextArrivalTime(Network<?> network) {
+      int rd = Network.getPseudoRandom(this.getNextDestId(), randomSeed);
+      Node f = network.getNodeById(this.fromNodeId);
+      Node t = network.getNodeById(this.getNextDestId());
+      int lat = network.networkLatency.getLatency(f, t, rd);
+      return sendTime + lat;
     }
 
     @Override
@@ -100,6 +102,7 @@ abstract class Envelope<TN extends Node> {
       curPos++;
     }
 
+    @Override
     boolean hasNextReader() {
       return curPos < destIds.length;
     }
@@ -111,20 +114,64 @@ abstract class Envelope<TN extends Node> {
   }
 
 
-  final static class MultipleDestWithDelayEnvelope<TN extends Node>
-      extends MultipleDestEnvelope<TN> {
-    final int delayBetweenMessage;
+  final static class MultipleDestWithDelayEnvelope<TN extends Node> extends Envelope<TN> {
+    final Message<TN> message;
+    private final int fromNodeId;
 
-    MultipleDestWithDelayEnvelope(Message<TN> m, Node fromNode, List<Network.MessageArrival> dests,
-        int sendTime, int delayBetweenMessage, int randomSeed) {
-      super(m, fromNode, dests, sendTime, randomSeed);
-      this.delayBetweenMessage = delayBetweenMessage;
+    private final int[] destIds;
+    private final int[] arrivalTime;
+    protected int curPos = 0;
+    private Envelope<?> nextSameTime = null;
+
+    MultipleDestWithDelayEnvelope(Message<TN> m, Node fromNode,
+        List<Network.MessageArrival> dests) {
+      this.message = m;
+      this.fromNodeId = fromNode.nodeId;
+      this.destIds = new int[dests.size()];
+      this.arrivalTime = new int[dests.size()];
+      for (int i = 0; i < destIds.length; i++) {
+        destIds[i] = dests.get(i).dest.nodeId;
+        arrivalTime[i] = dests.get(i).arrival;
+      }
     }
 
-    int nextArrivalTime(Network network) {
-      // We add one because we consider that the next message is sent at the next
-      //  slot after the delay
-      return super.nextArrivalTime(network) + (1 + delayBetweenMessage) * curPos;
+    @Override
+    Message<TN> getMessage() {
+      return message;
+    }
+
+    @Override
+    int getNextDestId() {
+      return destIds[curPos];
+    }
+
+    int nextArrivalTime(Network<?> network) {
+      return arrivalTime[curPos];
+    }
+
+    @Override
+    Envelope<?> getNextSameTime() {
+      return nextSameTime;
+    }
+
+    @Override
+    void setNextSameTime(Envelope<?> m) {
+      nextSameTime = m;
+    }
+
+    @Override
+    void markRead() {
+      curPos++;
+    }
+
+    @Override
+    boolean hasNextReader() {
+      return curPos < destIds.length;
+    }
+
+    @Override
+    int getFromId() {
+      return fromNodeId;
     }
   }
 
