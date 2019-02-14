@@ -31,7 +31,7 @@ abstract class Envelope<TN extends Node> {
   /**
    * The implementation idea here is the following: - we expect that messages are the bottleneck -
    * we expect that we have a lot of single messages sent to multiple nodes, many thousands - this
-   * has been confirmed by looking at the behavior with youkit 95% of the memory is messages - so we
+   * has been confirmed by looking at the behavior with yourkit 95% of the memory is messages - so we
    * want to optimize this case. - we have a single MultipleDestEnvelope for all nodes - we don't
    * keep the list of the network latency to save memory
    * <p>
