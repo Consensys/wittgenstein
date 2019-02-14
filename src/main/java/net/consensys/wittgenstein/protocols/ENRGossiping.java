@@ -1,14 +1,11 @@
 package net.consensys.wittgenstein.protocols;
 
 import net.consensys.wittgenstein.core.*;
-import net.consensys.wittgenstein.core.utils.StatsHelper;
+import net.consensys.wittgenstein.core.messages.FloodMessage;
 import net.consensys.wittgenstein.core.messages.StatusFloodMessage;
-import net.consensys.wittgenstein.core.messages.*;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
-import java.util.function.Predicate;
+import net.consensys.wittgenstein.core.utils.StatsHelper;
 import java.util.*;
+import java.util.function.Predicate;
 
 /**
  * A Protocol that uses p2p flooding to gather data on time needed to find desired node capabilities

@@ -97,10 +97,12 @@ public class WServer implements IServer {
     for (Class<?> p : server.getParametersName()) {
       mapper.registerSubtypes(new NamedType(p, p.getSimpleName()));
     }
+
     return mapper;
   }
 
   public static void main(String... args) {
     SpringApplication.run(WServer.class, args);
   }
+
 }

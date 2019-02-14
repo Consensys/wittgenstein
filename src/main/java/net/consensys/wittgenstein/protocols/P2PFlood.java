@@ -57,8 +57,6 @@ public class P2PFlood implements Protocol {
 
 
   class P2PFloodNode extends P2PNode<P2PFloodNode> {
-    boolean extern;
-
     /**
      * @param down - if the node is marked down, it won't send/receive messages, but will still be
      *        included in the peers. As such it's a byzantine behavior: officially available but
