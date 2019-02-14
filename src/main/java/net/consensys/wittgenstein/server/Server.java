@@ -10,6 +10,7 @@ import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
 import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
 import java.lang.reflect.Constructor;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -41,12 +42,14 @@ public class Server implements IServer {
     throw new IllegalStateException("no constructor in " + fullClassName);
   }
 
+  @Override
   public void init(String fullClassName, WParameter parameters) {
     Constructor<?> c = getConstructor(fullClassName);
     protocol = (Protocol) Reflects.newInstance(c, parameters);
     protocol.init();
   }
 
+  @Override
   public List<String> getProtocols() {
     BeanDefinitionRegistry bdr = new SimpleBeanDefinitionRegistry();
     ClassPathBeanDefinitionScanner s = new ClassPathBeanDefinitionScanner(bdr);
@@ -62,6 +65,7 @@ public class Server implements IServer {
         Collectors.toList());
   }
 
+  @Override
   public WParameter getProtocolParameters(String fullClassName) {
     Class<?> clazz = Reflects.forName(fullClassName);
     Constructor<?> bc = null;
@@ -77,9 +81,39 @@ public class Server implements IServer {
     return (WParameter) Reflects.newInstance(bc.getParameters()[0].getType());
   }
 
+  public List<Class<?>> getParametersName() {
+    List<Class<?>> res = new ArrayList<>();
+    for (String s : getProtocols()) {
+      try {
+        WParameter wp = getProtocolParameters(s);
+        res.add(wp.getClass());
+      } catch (Throwable ignored) {
+      }
+
+    }
+    return res;
+  }
+
+  @Override
   public void runMs(int ms) {
     protocol.network().runMs(ms);
   }
+
+  @Override
+  public void startNode(int nodeId) {
+    protocol.network().getNodeById(nodeId).start();
+  }
+
+  @Override
+  public void stopNode(int nodeId) {
+    protocol.network().getNodeById(nodeId).stop();
+  }
+
+  @Override
+  public Node getNodeInfo(int nodeId) {
+    return protocol.network().getNodeById(nodeId);
+  }
+
 
   public static void main(String... args) {
     Server server = new Server();

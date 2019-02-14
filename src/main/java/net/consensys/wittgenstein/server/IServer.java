@@ -17,4 +17,9 @@ public interface IServer {
 
   void runMs(int ms);
 
+  Node getNodeInfo(int nodeId);
+
+  void startNode(int nodeId);
+
+  void stopNode(int nodeId);
 }

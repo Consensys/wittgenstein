@@ -2,9 +2,11 @@ package net.consensys.wittgenstein.server.ws;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import net.consensys.wittgenstein.core.Node;
-import net.consensys.wittgenstein.protocols.P2PFlood;
 import net.consensys.wittgenstein.server.IServer;
 import net.consensys.wittgenstein.server.Server;
 import net.consensys.wittgenstein.server.WParameter;
@@ -33,9 +35,6 @@ public class WServer implements IServer {
     return server.getTime();
   }
 
-  @Override
-  public void init(String fullClassName, WParameter parameters) {}
-
   @GetMapping(value = "/protocols")
   @Override
   public List<String> getProtocols() {
@@ -45,21 +44,39 @@ public class WServer implements IServer {
   @GetMapping(value = "/protocols/{fullClassName}")
   @Override
   public WParameter getProtocolParameters(@PathVariable("fullClassName") String fullClassName) {
-    WParameter p = server.getProtocolParameters(fullClassName);
-    return p;
+    return server.getProtocolParameters(fullClassName);
   }
 
   @PostMapping(value = "/init/{fullClassName}")
   public void init(@PathVariable("fullClassName") String fullClassName,
-      @RequestBody P2PFlood.P2PFloodParameters parameters) { // TODO!!!!!!
+      @RequestBody WParameter parameters) {
     server.init(fullClassName, parameters);
   }
 
-  @PostMapping(value = "/run/{ms}")
+  @PostMapping(value = "/runMs/{ms}")
   @Override
   public void runMs(@PathVariable("ms") int ms) {
     server.runMs(ms);
   }
+
+  @GetMapping(value = "/nodes/{nodeId}")
+  @Override
+  public Node getNodeInfo(@PathVariable("nodeId") int nodeId) {
+    return server.getNodeInfo(nodeId);
+  }
+
+  @PostMapping(value = "/nodes/{nodeId}/start")
+  @Override
+  public void startNode(@PathVariable("nodeId") int nodeId) {
+    server.startNode(nodeId);
+  }
+
+  @PostMapping(value = "/nodes/{nodeId}/stop")
+  @Override
+  public void stopNode(@PathVariable("nodeId") int nodeId) {
+    server.stopNode(nodeId);
+  }
+
 
   /**
    * We're mapping all fields in the parameters, not taking into account the getters/setters
@@ -71,13 +88,15 @@ public class WServer implements IServer {
     ObjectMapper mapper = new ObjectMapper();
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     mapper.configure(MapperFeature.DEFAULT_VIEW_INCLUSION, true);
-    mapper.configure(SerializationFeature.WRAP_ROOT_VALUE, true);
-    mapper.configure(DeserializationFeature.UNWRAP_ROOT_VALUE, true);
 
     mapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
     mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
 
     mapper.enableDefaultTyping(ObjectMapper.DefaultTyping.OBJECT_AND_NON_CONCRETE);
+
+    for (Class<?> p : server.getParametersName()) {
+      mapper.registerSubtypes(new NamedType(p, p.getSimpleName()));
+    }
     return mapper;
   }
 
