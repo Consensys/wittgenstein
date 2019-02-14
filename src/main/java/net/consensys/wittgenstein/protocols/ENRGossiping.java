@@ -1,14 +1,11 @@
 package net.consensys.wittgenstein.protocols;
 
 import net.consensys.wittgenstein.core.*;
-import net.consensys.wittgenstein.core.utils.StatsHelper;
+import net.consensys.wittgenstein.core.messages.FloodMessage;
 import net.consensys.wittgenstein.core.messages.StatusFloodMessage;
-import net.consensys.wittgenstein.core.messages.*;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
-import java.util.function.Predicate;
+import net.consensys.wittgenstein.core.utils.StatsHelper;
 import java.util.*;
+import java.util.function.Predicate;
 
 /**
  * A Protocol that uses p2p flooding to gather data on time needed to find desired node capabilities
@@ -169,10 +166,10 @@ public class ENRGossiping implements Protocol {
       network.send(new Record(nodeId, 1, 10, 10, records++, this.capabilities), this, this.peers);
     }
 
-    void changeCap(){
-        capabilities.clear();
-        capabilities = generateCap();
-        network.send(new Record(nodeId, 1, 10, 10, records++, this.capabilities), this, this.peers);
+    void changeCap() {
+      capabilities.clear();
+      capabilities = generateCap();
+      network.send(new Record(nodeId, 1, 10, 10, records++, this.capabilities), this, this.peers);
     }
 
   }
@@ -180,10 +177,10 @@ public class ENRGossiping implements Protocol {
   private void capSearch() {
     Predicate<Protocol> contIf = p1 -> {
 
-      if (p1.network().time > 50000) {
+      if (p1.network().time > 500000) {
         return false;
       }
-     return true;
+      return true;
     };
 
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {

@@ -1,11 +1,13 @@
 package net.consensys.wittgenstein.server;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import net.consensys.wittgenstein.core.utils.Strings;
 
 /**
  * A value object containing all the parameters for a protocol. This will be serialized to/from a
  * json object, allowing to run a protocol from a distant system using http/json calls.
  */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 public class WParameter {
   @Override
   public String toString() {

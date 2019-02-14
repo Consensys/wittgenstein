@@ -7,11 +7,11 @@ public class PingPongTest {
 
   @Test
   public void testSimple() {
-    PingPong p = new PingPong();
+    PingPong p = new PingPong(new PingPong.PingPongParameters());
     p.init();
     p.network().run(10);
 
-    Assert.assertEquals(p.nodeCt, p.network().allNodes.size());
+    Assert.assertEquals(p.params.nodeCt, p.network().allNodes.size());
     for (PingPong.PingPongNode n : p.network().allNodes) {
       Assert.assertFalse(n.down);
       Assert.assertTrue(n.pong == 0 || n.pong == 1000);
@@ -23,7 +23,7 @@ public class PingPongTest {
    */
   @Test
   public void testCopy() {
-    PingPong p1 = new PingPong();
+    PingPong p1 = new PingPong(new PingPong.PingPongParameters());
     PingPong p2 = p1.copy();
     p1.init();
     p1.network().runMs(200);

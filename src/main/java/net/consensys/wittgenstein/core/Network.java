@@ -76,7 +76,7 @@ public class Network<TN extends Node> {
    * The second idea is to have a repeatable run when there are multiple messages arriving at the
    * same millisecond.
    */
-  private final class MsgsSlot {
+  final class MsgsSlot {
     final int startTime;
     final int endTime;
     final Envelope<?>[] msgsByMs = new Envelope[duration];
@@ -88,13 +88,19 @@ public class Network<TN extends Node> {
 
     private int getPos(int aTime) {
       if (aTime < startTime || aTime >= startTime + duration) {
-        throw new IllegalArgumentException();
+        throw new IllegalArgumentException(
+            "aTime=" + aTime + ", startTime=" + startTime + ", duration=" + duration);
       }
       return (aTime % duration);
     }
 
     public void addMsg(Envelope<?> m) {
-      int pos = getPos(m.nextArrivalTime(Network.this));
+      int aTime = m.nextArrivalTime(Network.this);
+      if (aTime < time) {
+        throw new IllegalStateException("Can't add a message arriving in the past! time=" + time
+            + ", arriving at " + aTime + ", m=" + m);
+      }
+      int pos = getPos(aTime);
       m.setNextSameTime(msgsByMs[pos]);
       msgsByMs[pos] = m;
     }
@@ -178,11 +184,20 @@ public class Network<TN extends Node> {
       cleanup();
       ensureSize(aTime);
       int pos = (aTime - msgsBySlot.get(0).startTime) / duration;
+      if (pos >= msgsBySlot.size()) {
+        throw new IllegalStateException("pos=" + pos + ", size=" + msgsBySlot.size());
+      }
       return msgsBySlot.get(pos);
     }
 
     void addMsg(Envelope<?> m) {
-      findSlot(m.nextArrivalTime(Network.this)).addMsg(m);
+      int na = m.nextArrivalTime(Network.this);
+      if (na < time) {
+        throw new IllegalStateException(
+            "Arriving in the past: arrival=" + na + ", time=" + time + ", msg=" + m);
+      }
+      MsgsSlot slot = findSlot(na);
+      slot.addMsg(m);
     }
 
     Envelope<?> peek(int time) {
@@ -242,7 +257,22 @@ public class Network<TN extends Node> {
   }
 
   public void runMs(int ms) {
+    if (ms <= 0) {
+      throw new IllegalArgumentException("Should be greater than 0. ms=" + ms);
+    }
+
+    if (time == 0) {
+      for (Node n : allNodes) {
+        if (!n.down) {
+          n.start();
+        }
+      }
+    }
+
     int endAt = time + ms;
+    if (endAt <= 0) {
+      throw new IllegalStateException("Maximum time reached!");
+    }
     receiveUntil(endAt);
     time = endAt;
   }
@@ -333,8 +363,7 @@ public class Network<TN extends Node> {
       } else if (delaysBetweenMessage == 0) {
         msg = new Envelope.MultipleDestEnvelope<>(m, fromNode, da, sendTime, randomSeed);
       } else {
-        msg = new Envelope.MultipleDestWithDelayEnvelope<>(m, fromNode, da, sendTime,
-            delaysBetweenMessage, randomSeed);
+        msg = new Envelope.MultipleDestWithDelayEnvelope<>(m, fromNode, da);
       }
       msgs.addMsg(msg);
 
@@ -346,7 +375,7 @@ public class Network<TN extends Node> {
     ArrayList<MessageArrival> da = new ArrayList<>(dests.size());
     for (Node n : dests) {
       MessageArrival ma = createMessageArrival(m, fromNode, n, sendTime, randomSeed);
-      sendTime += delaysBetweenMessage;
+      sendTime += delaysBetweenMessage + (delaysBetweenMessage > 0 ? 1 : 0);
       if (ma != null) {
         da.add(ma);
       }
@@ -431,10 +460,10 @@ public class Network<TN extends Node> {
     Envelope<?> next = nextMessage(until);
     while (next != null) {
       Envelope<?> m = next;
-      if (m.nextArrivalTime(this) != previousTime) {
-        if (time > m.nextArrivalTime(this)) {
-          throw new IllegalStateException(
-              "time:" + time + ", arrival=" + m.nextArrivalTime(this) + ", m:" + m);
+      int na = m.nextArrivalTime(this);
+      if (na != previousTime) {
+        if (time > na) {
+          throw new IllegalStateException("time:" + time + ", arrival=" + na + ", m:" + m);
         }
 
         Iterator<ConditionalTask<TN>> it = conditionalTasks.iterator();

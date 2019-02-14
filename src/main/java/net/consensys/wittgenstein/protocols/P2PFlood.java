@@ -57,8 +57,6 @@ public class P2PFlood implements Protocol {
 
 
   class P2PFloodNode extends P2PNode<P2PFloodNode> {
-    boolean extern;
-
     /**
      * @param down - if the node is marked down, it won't send/receive messages, but will still be
      *        included in the peers. As such it's a byzantine behavior: officially available but
@@ -87,6 +85,18 @@ public class P2PFlood implements Protocol {
     final int delayBetweenSends;
     final String nodeBuilderName;
     final String networkLatencyName;
+
+    public P2PFloodParameters() {
+      this.nodeCount = 100;
+      this.deadNodeCount = 10;
+      this.delayBeforeResent = 10;
+      this.msgCount = 1;
+      this.msgToReceive = 1;
+      this.peersCount = 15;
+      this.delayBetweenSends = 0;
+      this.nodeBuilderName = null;
+      this.networkLatencyName = null;
+    }
 
     public P2PFloodParameters(int nodeCount, int deadNodeCount, int delayBeforeResent, int msgCount,
         int msgToReceive, int peersCount, int delayBetweenSends, String nodeBuilderName,

@@ -1,8 +1,8 @@
 package net.consensys.wittgenstein.protocols;
 
+
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.*;
-import net.consensys.wittgenstein.protocols.*;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -34,22 +34,23 @@ public class ENRGossipingTest {
 
   }
 
-    @Test
-    public void testLongRunning(){
-        ENRGossiping p1 = new ENRGossiping(100, 0, 25, 10, 2, 5, 10);
-        Message<ENRGossiping.ETHNode> act = new Message<>() {
+  @Test
+  public void testLongRunning() {
+    ENRGossiping p1 = new ENRGossiping(100, 0, 25, 10, 2, 5, 10);
+    Message<ENRGossiping.ETHNode> act = new Message<>() {
 
-            @Override
-            public void action(Network<ENRGossiping.ETHNode> network, ENRGossiping.ETHNode from, ENRGossiping.ETHNode to) {
+      @Override
+      public void action(Network<ENRGossiping.ETHNode> network, ENRGossiping.ETHNode from,
+          ENRGossiping.ETHNode to) {
 
-            }
+      }
 
-        };
-        while (p1.network().time < 100_000_000) {
-            p1.network().runMs(1_000_000);
-            p1.network().send(act, p1.network().getNodeById(1), p1.network().getNodeById(2));
-        }
+    };
+    while (p1.network().time < 100_000_000) {
+      p1.network().runMs(1_000_000);
+      p1.network().send(act, p1.network().getNodeById(1), p1.network().getNodeById(2));
     }
+  }
 
 
 }

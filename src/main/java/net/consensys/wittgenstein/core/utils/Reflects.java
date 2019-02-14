@@ -31,6 +31,9 @@ public class Reflects {
   }
 
   public static Class<?> forName(String fullName) {
+    if (fullName == null || fullName.isEmpty()) {
+      throw new IllegalArgumentException("class name is null or empty");
+    }
     try {
       return Class.forName(fullName);
     } catch (ClassNotFoundException e) {

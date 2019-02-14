@@ -2,11 +2,14 @@ package net.consensys.wittgenstein.protocols;
 
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.Message;
+import net.consensys.wittgenstein.server.WParameter;
 
 /**
  * A simulation of a trivial protocol to be used as a sample.
  */
 public class PingPong implements Protocol {
+  final PingPongParameters params;
+
   /**
    * You need a network. Nodes are added to this network. Network latency can be set later.
    */
@@ -35,7 +38,18 @@ public class PingPong implements Protocol {
     }
   }
 
-  final int nodeCt = 1000;
+  @SuppressWarnings("WeakerAccess")
+  public static class PingPongParameters extends WParameter {
+    final int nodeCt;
+
+    public PingPongParameters() {
+      nodeCt = 1000;
+    }
+  }
+
+  public PingPong(PingPongParameters params) {
+    this.params = params;
+  }
 
   /**
    * Nodes are specialized for the protocol.
@@ -58,12 +72,12 @@ public class PingPong implements Protocol {
 
   @Override
   public PingPong copy() {
-    return new PingPong();
+    return new PingPong(params);
   }
 
   @Override
   public void init() {
-    for (int i = 0; i < nodeCt; i++) {
+    for (int i = 0; i < params.nodeCt; i++) {
       network.addNode(new PingPongNode());
     }
     network.sendAll(new Ping(), network.getNodeById(0));
@@ -76,14 +90,14 @@ public class PingPong implements Protocol {
 
 
   public static void main(String... args) {
-    PingPong p = new PingPong();
+    PingPong p = new PingPong(new PingPongParameters());
 
     p.network.setNetworkLatency(new NetworkLatency.NetworkLatencyByDistance());
     p.init();
 
-    for (int i = 0; i < 1000; i += 100) {
+    for (int i = 0; i < 500; i += 50) {
       System.out.println(i + " ms, pongs received " + p.network.getNodeById(0).pong);
-      p.network.runMs(100);
+      p.network.runMs(50);
     }
   }
 }
