@@ -139,7 +139,7 @@ public class ENRGossiping implements Protocol {
   }
 
   class ETHNode extends P2PNode<ETHNode> {
-    final Map<String, Integer> capabilities;
+    private Map<String, Integer> capabilities;
     private int records = 0;
 
     private ETHNode(Random rd, NodeBuilder nb, Map<String, Integer> capabilities) {
@@ -151,7 +151,6 @@ public class ENRGossiping implements Protocol {
      * @return true if there is at least one capabilities in common, false otherwise
      */
     private boolean matchCap(FloodMessage floodMessage) {
-      //check with filter() if doenst work
       Record m = (Record) floodMessage;
       return m.k_v.entrySet().stream().allMatch(
           e -> e.getValue().equals(this.capabilities.get(e.getKey())));
@@ -170,6 +169,12 @@ public class ENRGossiping implements Protocol {
       network.send(new Record(nodeId, 1, 10, 10, records++, this.capabilities), this, this.peers);
     }
 
+    void changeCap(){
+        capabilities.clear();
+        capabilities = generateCap();
+        network.send(new Record(nodeId, 1, 10, 10, records++, this.capabilities), this, this.peers);
+    }
+
   }
 
   private void capSearch() {
@@ -178,12 +183,7 @@ public class ENRGossiping implements Protocol {
       if (p1.network().time > 50000) {
         return false;
       }
-      for (Node n : p1.network().allNodes) {
-        if (n.getDoneAt() == 0) {
-          return true;
-        }
-      }
-      return false;
+     return true;
     };
 
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
@@ -214,7 +214,7 @@ public class ENRGossiping implements Protocol {
   }
 
   public static void main(String... args) {
-    new ENRGossiping(200, 15, 500, 20, 10000, 10, 10000).capSearch();
+    new ENRGossiping(2000, 15, 500, 20, 10000, 10, 10000).capSearch();
 
   }
 }
