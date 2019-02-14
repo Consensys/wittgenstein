@@ -16,6 +16,11 @@ public class NetworkTest {
   private Node n2 = new Node(network.rd, nb);
   private Node n3 = new Node(network.rd, nb);
 
+  private Message<Node> m = new Message<>() {
+    @Override
+    public void action(Network<Node> network, Node from, Node to) {}
+  };
+
   @Before
   public void before() {
     network.setNetworkLatency(new NetworkLatency.NetworkNoLatency());
@@ -131,17 +136,138 @@ public class NetworkTest {
     Assert.assertEquals(3, ab.get());
 
     Assert.assertEquals(0, network.msgs.size());
+    Assert.assertEquals(3, ab.get());
+  }
+
+  @Test
+  public void testMultipleMessageWithDelaysAcrossSlots() {
+    AtomicInteger ab = new AtomicInteger(0);
+    Message<Node> act = new Message<>() {
+      @Override
+      public void action(Network<Node> network, Node from, Node to) {
+        ab.incrementAndGet();
+      }
+    };
+
+    network.networkLatency = new NetworkLatency.NetworkNoLatency();
+    network.send(act, 59000, n0, Arrays.asList(n1, n2, n3), 55000);
+
+    network.runMs(200000);
+    Assert.assertEquals(0, network.msgs.size());
+    Assert.assertEquals(3, ab.get());
+  }
+
+  @Test
+  public void testMultipleMessageWithDelaysEndOfSlot() {
+    AtomicInteger ab = new AtomicInteger(0);
+    Message<Node> act = new Message<>() {
+      @Override
+      public void action(Network<Node> network, Node from, Node to) {
+        ab.incrementAndGet();
+      }
+    };
+
+    network.networkLatency = new NetworkLatency.NetworkNoLatency();
+    network.send(act, 58998, n0, Arrays.asList(n1, n2, n3), 1000);
+
+    Assert.assertEquals(1, network.msgs.size());
+    network.runMs(59000);
+    Assert.assertEquals(1, network.msgs.size());
+    network.runMs(3000);
+    Assert.assertEquals(0, network.msgs.size());
+    Assert.assertEquals(3, ab.get());
+  }
+
+  @Test
+  public void testMsgArrival() {
+    List<Network.MessageArrival> mas =
+        network.createMessageArrivals(m, 1, n0, List.of(n1, n2, n3), 1, 10);
+    Assert.assertEquals(3, mas.size());
+    Collections.sort(mas);
+    Assert.assertEquals(2, mas.get(0).arrival);
+    Assert.assertEquals(13, mas.get(1).arrival);
+    Assert.assertEquals(24, mas.get(2).arrival);
+
+    Envelope.MultipleDestWithDelayEnvelope<Node> e =
+        new Envelope.MultipleDestWithDelayEnvelope<>(m, n0, mas);
+    Assert.assertEquals(2, e.nextArrivalTime(network));
+    e.markRead();
+    Assert.assertEquals(13, e.nextArrivalTime(network));
+    e.markRead();
+    Assert.assertEquals(24, e.nextArrivalTime(network));
+    Assert.assertTrue(e.hasNextReader());
+    e.markRead();
+    Assert.assertFalse(e.hasNextReader());
+  }
+
+  @Test
+  public void testMsgArrivalWithRandomNoDelay() {
+    Network<Node> network = new Network<>();
+    NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
+    Node n0 = new Node(network.rd, nb);
+    Node n1 = new Node(network.rd, nb);
+    Node n2 = new Node(network.rd, nb);
+    Node n3 = new Node(network.rd, nb);
+    network.setNetworkLatency(new NetworkLatency.NetworkLatencyByDistance());
+    network.addNode(n0);
+    network.addNode(n1);
+    network.addNode(n2);
+    network.addNode(n3);
+
+    network.networkLatency = new NetworkLatency.NetworkLatencyByDistance();
+    List<Network.MessageArrival> mas =
+        network.createMessageArrivals(m, 1, n0, List.of(n1, n2, n3), 2, 0);
+    Assert.assertEquals(3, mas.size());
+    Collections.sort(mas);
+
+    Envelope.MultipleDestEnvelope<Node> e = new Envelope.MultipleDestEnvelope<>(m, n0, mas, 1, 2);
+    Assert.assertEquals(2, e.randomSeed);
+    Assert.assertEquals(mas.get(0).arrival, e.nextArrivalTime(network));
+    e.markRead();
+    Assert.assertEquals(mas.get(1).arrival, e.nextArrivalTime(network));
+    e.markRead();
+    Assert.assertEquals(mas.get(2).arrival, e.nextArrivalTime(network));
+    Assert.assertTrue(e.hasNextReader());
+    e.markRead();
+    Assert.assertFalse(e.hasNextReader());
+  }
+
+  @Test
+  public void testMsgArrivalWithRandom() {
+    Network<Node> network = new Network<>();
+    NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
+    Node n0 = new Node(network.rd, nb);
+    Node n1 = new Node(network.rd, nb);
+    Node n2 = new Node(network.rd, nb);
+    Node n3 = new Node(network.rd, nb);
+    network.setNetworkLatency(new NetworkLatency.NetworkLatencyByDistance());
+    network.addNode(n0);
+    network.addNode(n1);
+    network.addNode(n2);
+    network.addNode(n3);
+
+    network.networkLatency = new NetworkLatency.NetworkLatencyByDistance();
+    List<Network.MessageArrival> mas =
+        network.createMessageArrivals(m, 1, n0, List.of(n1, n2, n3), 1, 20);
+    Assert.assertEquals(3, mas.size());
+    Collections.sort(mas);
+
+    Envelope.MultipleDestWithDelayEnvelope<Node> e =
+        new Envelope.MultipleDestWithDelayEnvelope<>(m, n0, mas);
+    Assert.assertEquals(mas.get(0).arrival, e.nextArrivalTime(network));
+    e.markRead();
+    Assert.assertEquals(mas.get(1).arrival, e.nextArrivalTime(network));
+    e.markRead();
+    Assert.assertEquals(mas.get(2).arrival, e.nextArrivalTime(network));
+    Assert.assertTrue(e.hasNextReader());
+    e.markRead();
+    Assert.assertFalse(e.hasNextReader());
   }
 
   @Test
   public void testStats() {
-    Message<Node> act = new Message<>() {
-      @Override
-      public void action(Network<Node> network, Node from, Node to) {}
-    };
-
-    network.send(act, n0, Arrays.asList(n1, n2, n3));
-    network.send(act, n0, n1);
+    network.send(m, n0, Arrays.asList(n1, n2, n3));
+    network.send(m, n0, n1);
     network.runMs(2);
 
     Assert.assertEquals(0, n0.getMsgReceived());
@@ -167,14 +293,9 @@ public class NetworkTest {
 
   @Test
   public void testSortedArrivals() {
-    Message<Node> act = new Message<>() {
-      @Override
-      public void action(Network<Node> network, Node from, Node to) {}
-    };
+    network.send(m, 1, n0, Arrays.asList(n1, n2, n3));
 
-    network.send(act, 1, n0, Arrays.asList(n1, n2, n3));
-
-    Envelope m = network.msgs.peekFirst();
+    Envelope<?> m = network.msgs.peekFirst();
     Assert.assertNotNull(m);
 
     HashSet<Integer> dests = new HashSet<>(Arrays.asList(1, 2, 3));
@@ -202,24 +323,20 @@ public class NetworkTest {
   @Test
   public void testDelays() {
     network.setNetworkLatency(new NetworkLatency.EthScanNetworkLatency());
-    Message<Node> act = new Message<>() {
-      @Override
-      public void action(Network<Node> network, Node from, Node to) {}
-    };
 
-    network.send(act, 1, n0, Arrays.asList(n1, n2, n3));
-    Envelope m = network.msgs.pollFirst();
-    Assert.assertNotNull(m);
-    Assert.assertTrue(m instanceof Envelope.MultipleDestEnvelope);
-    Envelope.MultipleDestEnvelope mm = (Envelope.MultipleDestEnvelope) m;
+    network.send(m, 1, n0, Arrays.asList(n1, n2, n3));
+    Envelope<?> e = network.msgs.pollFirst();
+    Assert.assertNotNull(e);
+    Assert.assertTrue(e instanceof Envelope.MultipleDestEnvelope);
+    Envelope.MultipleDestEnvelope mm = (Envelope.MultipleDestEnvelope) e;
 
 
     List<Network.MessageArrival> mas =
-        network.createMessageArrivals(act, 1, n0, Arrays.asList(n1, n2, n3), mm.randomSeed, 0);
+        network.createMessageArrivals(m, 1, n0, Arrays.asList(n1, n2, n3), mm.randomSeed, 0);
 
     for (Network.MessageArrival ma : mas) {
-      Assert.assertEquals(ma.arrival, m.nextArrivalTime(network));
-      m.markRead();
+      Assert.assertEquals(ma.arrival, e.nextArrivalTime(network));
+      e.markRead();
     }
   }
 
@@ -294,11 +411,10 @@ public class NetworkTest {
   }
 
   @Test
-  public void testLongRunning(){
+  public void testLongRunning() {
     Message<Node> act = new Message<>() {
       @Override
-      public void action(Network<Node> network, Node from, Node to) {
-      }
+      public void action(Network<Node> network, Node from, Node to) {}
     };
     while (network.time < 100_000_000) {
       network.runMs(10_000);
