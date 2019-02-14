@@ -1,5 +1,7 @@
 package net.consensys.wittgenstein.core;
 
+import java.lang.reflect.Constructor;
+
 public class RegistryNetworkLatencies {
 
   public NetworkLatency getByName(String name) {
@@ -12,7 +14,8 @@ public class RegistryNetworkLatencies {
     String full = cut + name;
     try {
       Class<?> cn = Class.forName(full);
-      return (NetworkLatency) cn.newInstance();
+      Constructor<?> c = cn.getConstructor();
+      return (NetworkLatency) c.newInstance();
     } catch (Exception e) {
       throw new IllegalArgumentException(e);
     }
