@@ -117,4 +117,13 @@ public class EnvelopeStorageTest {
     Assert.assertNotNull(network.msgs.peek(Network.duration));
     Assert.assertEquals(2, network.msgs.msgsBySlot.size());
   }
+
+  @Test
+  public void testEdgeCase3() {
+    Assert.assertNull(network.msgs.peek(Network.duration));
+    Envelope<Node> m1 = new Envelope.SingleDestEnvelope<>(dummy, n0, n1, Network.duration);
+    Network<Node>.MsgsSlot s = network.msgs.findSlot(59997);
+    Assert.assertTrue(59997 > s.startTime);
+  }
+
 }
