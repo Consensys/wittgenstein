@@ -95,16 +95,12 @@ public class Node {
   /**
    * Called when a node starts or restarts.
    */
-  public void start() {
-    down = false;
-  }
+  public void start() {}
 
   /**
    * Called when a node is stopped.
    */
-  public void stop() {
-    down = true;
-  }
+  public void stop() {}
 
 
   /**

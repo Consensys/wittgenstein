@@ -257,6 +257,18 @@ public class Network<TN extends Node> {
   }
 
   public void runMs(int ms) {
+    if (ms <= 0) {
+      throw new IllegalArgumentException("Should be greater than 0. ms=" + ms);
+    }
+
+    if (time == 0) {
+      for (Node n : allNodes) {
+        if (!n.down) {
+          n.start();
+        }
+      }
+    }
+
     int endAt = time + ms;
     if (endAt <= 0) {
       throw new IllegalStateException("Maximum time reached!");
