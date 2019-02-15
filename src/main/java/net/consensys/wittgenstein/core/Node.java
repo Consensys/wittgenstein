@@ -1,5 +1,7 @@
 package net.consensys.wittgenstein.core;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import net.consensys.wittgenstein.core.json.ExternalConverter;
 import net.consensys.wittgenstein.core.utils.GeneralizedParetoDistribution;
 import net.consensys.wittgenstein.server.External;
 import java.util.Random;
@@ -58,6 +60,8 @@ public class Node {
   protected long bytesSent = 0;
   protected long bytesReceived = 0;
   public String cityName;
+
+  @JsonSerialize(converter = ExternalConverter.class)
   private External external = null;
 
   /**

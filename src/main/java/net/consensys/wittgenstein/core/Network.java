@@ -514,10 +514,10 @@ public class Network<TN extends Node> {
         }
         @SuppressWarnings("unchecked")
         Message<TN> mc = (Message<TN>) m.getMessage();
-        if (from.getExternal() != null) {
+        if (to.getExternal() != null) {
           // TODO add reception
           EnvelopeInfo<TN> ei = (EnvelopeInfo<TN>) m.curInfos(this);
-          from.getExternal().receive(ei);
+          to.getExternal().receive(ei);
         } else {
           mc.action(this, from, to);
         }
