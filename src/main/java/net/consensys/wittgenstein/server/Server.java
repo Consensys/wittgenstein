@@ -112,8 +112,10 @@ public class Server implements IServer {
     protocol.network().getNodeById(nodeId).stop();
   }
 
-  @Override public void setExternal(int nodeId, String externalServiceFullAddress) {
-    protocol.network().getNodeById(nodeId).setExternal(new ExternalMockImplementation(protocol.network()));
+  @Override
+  public void setExternal(int nodeId, String externalServiceFullAddress) {
+    protocol.network().getNodeById(nodeId).setExternal(
+        new ExternalMockImplementation(protocol.network()));
   }
 
   @SuppressWarnings("unchecked")

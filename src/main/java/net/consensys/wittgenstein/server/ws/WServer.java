@@ -86,7 +86,9 @@ public class WServer implements IServer {
   }
 
   @PostMapping(value = "/nodes/{nodeId}/external")
-  @Override public void setExternal(@PathVariable("nodeId") int nodeId, @RequestBody String externalServiceFullAddress) {
+  @Override
+  public void setExternal(@PathVariable("nodeId") int nodeId,
+      @RequestBody String externalServiceFullAddress) {
     server.setExternal(nodeId, externalServiceFullAddress);
   }
 
