@@ -19,6 +19,11 @@ public class EnvelopeInfo<TN extends Node> implements Comparable<EnvelopeInfo> {
     this.msg = msg;
   }
 
+  // for json
+  public EnvelopeInfo() {
+    this(0, 0, 0, 0, null);
+  }
+
   @Override
   public String toString() {
     return Strings.toString(this);

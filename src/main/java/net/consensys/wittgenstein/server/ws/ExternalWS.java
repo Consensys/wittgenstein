@@ -1,0 +1,38 @@
+package net.consensys.wittgenstein.server.ws;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import net.consensys.wittgenstein.core.EnvelopeInfo;
+import net.consensys.wittgenstein.core.Node;
+import net.consensys.wittgenstein.server.External;
+import net.consensys.wittgenstein.server.SendMessage;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import java.util.Collections;
+import java.util.List;
+
+/**
+ * Dummy implementation of an external node. It just prints the messages.
+ */
+@RestController
+@EnableAutoConfiguration
+@RequestMapping("/w")
+public class ExternalWS implements External {
+
+  @PutMapping(value = "/external_sink")
+  @Override
+  public <TN extends Node> List<SendMessage> receive(@RequestBody EnvelopeInfo<TN> ei) {
+    System.out.println("Received message" + ei);
+    return Collections.emptyList();
+  }
+
+  @Bean
+  @Primary
+  public ObjectMapper objectMapper() {
+    return ObjectMapperFactory.objectMapper();
+  }
+}

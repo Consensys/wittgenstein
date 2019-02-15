@@ -4,6 +4,7 @@ import net.consensys.wittgenstein.core.messages.ConditionalTask;
 import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.messages.PeriodicTask;
 import net.consensys.wittgenstein.core.messages.Task;
+import net.consensys.wittgenstein.server.SendMessage;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -517,7 +518,12 @@ public class Network<TN extends Node> {
         if (to.getExternal() != null) {
           // TODO add reception
           EnvelopeInfo<TN> ei = (EnvelopeInfo<TN>) m.curInfos(this);
-          to.getExternal().receive(ei);
+          List<SendMessage> sms = to.getExternal().receive(ei);
+          for (SendMessage sm : sms) {
+            List<TN> dest = sm.to.stream().map(this::getNodeById).collect(Collectors.toList());
+            Message<TN> mtn = (Message<TN>) sm.message;
+            send(mtn, sm.sendTime, getNodeById(sm.from), dest, sm.delayBetweenSend);
+          }
         } else {
           mc.action(this, from, to);
         }

@@ -1,28 +1,22 @@
 package net.consensys.wittgenstein.server.ws;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import net.consensys.wittgenstein.core.EnvelopeInfo;
 import net.consensys.wittgenstein.core.Node;
-import net.consensys.wittgenstein.server.IServer;
-import net.consensys.wittgenstein.server.SendMessage;
-import net.consensys.wittgenstein.server.Server;
-import net.consensys.wittgenstein.server.WParameter;
+import net.consensys.wittgenstein.server.*;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.web.bind.annotation.*;
+import java.util.Collections;
 import java.util.List;
 
 @RestController
 @EnableAutoConfiguration
 @RequestMapping("/w")
-public class WServer implements IServer {
+public class WServer extends ExternalWS implements IServer, External {
   private Server server = new Server();
 
   @GetMapping(value = "/nodes")
@@ -98,6 +92,7 @@ public class WServer implements IServer {
     server.sendMessage(msg);
   }
 
+
   /**
    * We're mapping all fields in the parameters, not taking into account the getters/setters
    */
@@ -105,14 +100,7 @@ public class WServer implements IServer {
   @Bean
   @Primary
   public ObjectMapper objectMapper() {
-    ObjectMapper mapper = new ObjectMapper();
-    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    mapper.configure(MapperFeature.DEFAULT_VIEW_INCLUSION, true);
-
-    mapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
-    mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
-
-    mapper.enableDefaultTyping(ObjectMapper.DefaultTyping.OBJECT_AND_NON_CONCRETE);
+    ObjectMapper mapper = ObjectMapperFactory.objectMapper();
 
     for (Class<?> p : server.getParametersName()) {
       mapper.registerSubtypes(new NamedType(p, p.getSimpleName()));
@@ -124,5 +112,4 @@ public class WServer implements IServer {
   public static void main(String... args) {
     SpringApplication.run(WServer.class, args);
   }
-
 }

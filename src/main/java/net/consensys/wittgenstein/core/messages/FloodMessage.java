@@ -28,6 +28,11 @@ public class FloodMessage<TN extends P2PNode<TN>> extends Message<TN> {
     return -1;
   }
 
+  // for json
+  public FloodMessage() {
+    this(0, 0, 0);
+  }
+
   public FloodMessage(int size, int localDelay, int delayBetweenPeers) {
     this.size = size;
     this.localDelay = localDelay;
