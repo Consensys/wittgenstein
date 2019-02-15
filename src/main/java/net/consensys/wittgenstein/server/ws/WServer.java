@@ -69,7 +69,7 @@ public class WServer implements IServer {
 
   @GetMapping(value = "/network/messages")
   @Override
-  public List<EnvelopeInfo> getMessages() {
+  public List<EnvelopeInfo<?>> getMessages() {
     return server.getMessages();
   }
 
@@ -83,6 +83,11 @@ public class WServer implements IServer {
   @Override
   public void stopNode(@PathVariable("nodeId") int nodeId) {
     server.stopNode(nodeId);
+  }
+
+  @PostMapping(value = "/nodes/{nodeId}/external")
+  @Override public void setExternal(@PathVariable("nodeId") int nodeId, @RequestBody String externalServiceFullAddress) {
+    server.setExternal(nodeId, externalServiceFullAddress);
   }
 
   @PostMapping(value = "/network/send")

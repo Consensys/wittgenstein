@@ -112,6 +112,10 @@ public class Server implements IServer {
     protocol.network().getNodeById(nodeId).stop();
   }
 
+  @Override public void setExternal(int nodeId, String externalServiceFullAddress) {
+    protocol.network().getNodeById(nodeId).setExternal(new ExternalMockImplementation(protocol.network()));
+  }
+
   @SuppressWarnings("unchecked")
   @Override
   public <TN extends Node> void sendMessage(SendMessage msg) {
@@ -128,7 +132,7 @@ public class Server implements IServer {
   }
 
   @Override
-  public List<EnvelopeInfo> getMessages() {
+  public List<EnvelopeInfo<?>> getMessages() {
     return protocol.network().msgs.peekMessages();
   }
 

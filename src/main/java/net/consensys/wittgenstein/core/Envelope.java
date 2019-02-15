@@ -33,7 +33,12 @@ abstract class Envelope<TN extends Node> {
 
   abstract int getFromId();
 
-  abstract List<EnvelopeInfo> infos(Network<?> network);
+  EnvelopeInfo<?> curInfos(Network<?> network) {
+    return new EnvelopeInfo<>(getFromId(), getNextDestId(), sendTime, nextArrivalTime(network),
+        getMessage());
+  }
+
+  abstract List<EnvelopeInfo<?>> infos(Network<?> network);
 
   public Envelope(int sendTime) {
     this.sendTime = sendTime;
@@ -127,10 +132,10 @@ abstract class Envelope<TN extends Node> {
     }
 
     @Override
-    List<EnvelopeInfo> infos(Network<?> network) {
-      List<EnvelopeInfo> res = new ArrayList<>();
+    List<EnvelopeInfo<?>> infos(Network<?> network) {
+      List<EnvelopeInfo<?>> res = new ArrayList<>();
       for (int i = curPos; i < destIds.length; i++) {
-        EnvelopeInfo ei = new EnvelopeInfo(fromNodeId, destIds[i], sendTime,
+        EnvelopeInfo<?> ei = new EnvelopeInfo<>(fromNodeId, destIds[i], sendTime,
             arrivalTime(network, destIds[i]), message);
         res.add(ei);
       }
@@ -201,11 +206,11 @@ abstract class Envelope<TN extends Node> {
     }
 
     @Override
-    List<EnvelopeInfo> infos(Network<?> network) {
-      List<EnvelopeInfo> res = new ArrayList<>();
+    List<EnvelopeInfo<?>> infos(Network<?> network) {
+      List<EnvelopeInfo<?>> res = new ArrayList<>();
       for (int i = curPos; i < destIds.length; i++) {
-        EnvelopeInfo ei =
-            new EnvelopeInfo(fromNodeId, destIds[i], sendTime, arrivalTime[i], message);
+        EnvelopeInfo<?> ei =
+            new EnvelopeInfo<>(fromNodeId, destIds[i], sendTime, arrivalTime[i], message);
         res.add(ei);
       }
       return res;
@@ -275,9 +280,9 @@ abstract class Envelope<TN extends Node> {
     }
 
     @Override
-    List<EnvelopeInfo> infos(Network<?> network) {
+    List<EnvelopeInfo<?>> infos(Network<?> network) {
       return Collections
-          .singletonList(new EnvelopeInfo(fromNodeId, toNodeId, sendTime, arrivalTime, message));
+          .singletonList(new EnvelopeInfo<>(fromNodeId, toNodeId, sendTime, arrivalTime, message));
     }
   }
 }

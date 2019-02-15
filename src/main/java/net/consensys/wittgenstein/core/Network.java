@@ -142,8 +142,8 @@ public class Network<TN extends Node> {
       return null;
     }
 
-    List<EnvelopeInfo> infos() {
-      List<EnvelopeInfo> res = new ArrayList<>();
+    List<EnvelopeInfo<?>> infos() {
+      List<EnvelopeInfo<?>> res = new ArrayList<>();
 
       for (int i = 0; i < duration; i++) {
         Envelope<?> m = msgsByMs[i];
@@ -238,8 +238,8 @@ public class Network<TN extends Node> {
       return null;
     }
 
-    public List<EnvelopeInfo> peekMessages() {
-      List<EnvelopeInfo> res = new ArrayList<>();
+    public List<EnvelopeInfo<?>> peekMessages() {
+      List<EnvelopeInfo<?>> res = new ArrayList<>();
       for (MsgsSlot ms : msgsBySlot) {
         res.addAll(ms.infos());
       }
@@ -514,7 +514,13 @@ public class Network<TN extends Node> {
         }
         @SuppressWarnings("unchecked")
         Message<TN> mc = (Message<TN>) m.getMessage();
-        mc.action(this, from, to);
+        if (from.getExternal() != null) {
+          // TODO add reception
+          EnvelopeInfo<TN> ei = (EnvelopeInfo<TN>) m.curInfos(this);
+          from.getExternal().receive(ei);
+        } else {
+          mc.action(this, from, to);
+        }
       }
 
       m.markRead();

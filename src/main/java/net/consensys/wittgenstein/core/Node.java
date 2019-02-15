@@ -1,6 +1,7 @@
 package net.consensys.wittgenstein.core;
 
 import net.consensys.wittgenstein.core.utils.GeneralizedParetoDistribution;
+import net.consensys.wittgenstein.server.External;
 import java.util.Random;
 
 @SuppressWarnings({"WeakerAccess"})
@@ -57,7 +58,7 @@ public class Node {
   protected long bytesSent = 0;
   protected long bytesReceived = 0;
   public String cityName;
-  boolean external = false;
+  private External external = null;
 
   /**
    * The time when the protocol ended for this node 0 if it has not ended yet.
@@ -108,8 +109,12 @@ public class Node {
   }
 
 
-  public void setExternal(boolean external) {
-    this.external = external;
+  public void setExternal(External ext) {
+    this.external = ext;
+  }
+
+  public External getExternal() {
+    return external;
   }
 
 
