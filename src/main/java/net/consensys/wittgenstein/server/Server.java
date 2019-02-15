@@ -1,7 +1,10 @@
 package net.consensys.wittgenstein.server;
 
+import net.consensys.wittgenstein.core.EnvelopeInfo;
+import net.consensys.wittgenstein.core.Network;
 import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.core.Protocol;
+import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.Reflects;
 import net.consensys.wittgenstein.protocols.PingPong;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -109,9 +112,24 @@ public class Server implements IServer {
     protocol.network().getNodeById(nodeId).stop();
   }
 
+  @SuppressWarnings("unchecked")
+  @Override
+  public <TN extends Node> void sendMessage(SendMessage msg) {
+    Network<TN> n = (Network<TN>) protocol.network();
+    TN fromN = n.getNodeById(msg.from);
+    List<TN> destN = msg.to.stream().map(n::getNodeById).collect(Collectors.toList());
+    Message<TN> m = (Message<TN>) msg.message;
+    n.send(m, msg.sendTime, fromN, destN, msg.delayBetweenSend);
+  }
+
   @Override
   public Node getNodeInfo(int nodeId) {
     return protocol.network().getNodeById(nodeId);
+  }
+
+  @Override
+  public List<EnvelopeInfo> getMessages() {
+    return protocol.network().msgs.peekMessages();
   }
 
 

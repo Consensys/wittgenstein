@@ -6,8 +6,10 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import net.consensys.wittgenstein.core.EnvelopeInfo;
 import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.server.IServer;
+import net.consensys.wittgenstein.server.SendMessage;
 import net.consensys.wittgenstein.server.Server;
 import net.consensys.wittgenstein.server.WParameter;
 import org.springframework.boot.SpringApplication;
@@ -53,7 +55,7 @@ public class WServer implements IServer {
     server.init(fullClassName, parameters);
   }
 
-  @PostMapping(value = "/runMs/{ms}")
+  @PostMapping(value = "/network/runMs/{ms}")
   @Override
   public void runMs(@PathVariable("ms") int ms) {
     server.runMs(ms);
@@ -63,6 +65,12 @@ public class WServer implements IServer {
   @Override
   public Node getNodeInfo(@PathVariable("nodeId") int nodeId) {
     return server.getNodeInfo(nodeId);
+  }
+
+  @GetMapping(value = "/network/messages")
+  @Override
+  public List<EnvelopeInfo> getMessages() {
+    return server.getMessages();
   }
 
   @PostMapping(value = "/nodes/{nodeId}/start")
@@ -77,6 +85,11 @@ public class WServer implements IServer {
     server.stopNode(nodeId);
   }
 
+  @PostMapping(value = "/network/send")
+  @Override
+  public <TN extends Node> void sendMessage(@RequestBody SendMessage msg) {
+    server.sendMessage(msg);
+  }
 
   /**
    * We're mapping all fields in the parameters, not taking into account the getters/setters

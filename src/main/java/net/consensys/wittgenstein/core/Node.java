@@ -57,6 +57,7 @@ public class Node {
   protected long bytesSent = 0;
   protected long bytesReceived = 0;
   public String cityName;
+  boolean external = false;
 
   /**
    * The time when the protocol ended for this node 0 if it has not ended yet.
@@ -104,6 +105,11 @@ public class Node {
    */
   public void stop() {
     down = true;
+  }
+
+
+  public void setExternal(boolean external) {
+    this.external = external;
   }
 
 
