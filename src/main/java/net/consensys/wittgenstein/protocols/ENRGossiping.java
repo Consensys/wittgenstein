@@ -95,9 +95,9 @@ public class ENRGossiping implements Protocol {
   }
 
   public void selectChangingNodes() {
-    int chaningCapNodes = (int) (totalPeers * changingNodes);
-    changedNodes = new ArrayList<>(chaningCapNodes);
-    while (changedNodes.size() < chaningCapNodes) {
+    int changingCapNodes = (int) (totalPeers * changingNodes);
+    changedNodes = new ArrayList<>(changingCapNodes);
+    while (changedNodes.size() < changingCapNodes) {
       changedNodes.add(network.getNodeById(network.rd.nextInt(totalPeers)));
     }
   }
@@ -186,7 +186,6 @@ public class ENRGossiping implements Protocol {
     }
 
     void changeCap() {
-      capabilities.clear();
       capabilities = generateCap();
       network.send(new Record(nodeId, 1, 10, 10, records++, this.capabilities), this, this.peers);
     }
