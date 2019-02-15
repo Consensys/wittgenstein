@@ -47,12 +47,13 @@ public class ENRGossiping implements Protocol {
   /**
    * chaningNodes is the % of nodes that regularly change their capabilities
    */
-  private final int changingNodes;
+  private final float changingNodes;
 
   private final int numberOfDifferentCapabilities = 1000;
   private final int numberOfCapabilityPerNode = 10;
+  private List<ETHNode> changedNodes;
 
-  ENRGossiping(int NODES, int totalPeers, int timeToChange, int changingNodes, int capGossipTime,
+  ENRGossiping(int NODES, int totalPeers, int timeToChange, float changingNodes, int capGossipTime,
       int discardTime, int timeToLeave) {
     this.NODES = NODES;
     this.totalPeers = totalPeers;
@@ -88,15 +89,28 @@ public class ENRGossiping implements Protocol {
     return k_v;
   }
 
+  public void selectChangingNodes() {
+    int changingCapNodes = (int) (totalPeers * changingNodes);
+    changedNodes = new ArrayList<>(changingCapNodes);
+    while (changedNodes.size() < changingCapNodes) {
+      changedNodes.add(network.getNodeById(network.rd.nextInt(totalPeers)));
+    }
+  }
 
   @Override
   public void init() {
     for (int i = 0; i < NODES; i++) {
       network.addNode(new ETHNode(network.rd, this.nb, generateCap()));
     }
-    network.setPeers();
-    //Nodes broadcast their capabilities every capGossipTime ms with a lag of rand*100 ms
 
+    network.setPeers();
+    selectChangingNodes();
+    //A percentage of Nodes change their capabilities every X time as defined by the protocol parameters
+    for (ETHNode n : changedNodes) {
+      int start = network.rd.nextInt(capGossipTime) + 1;
+      network.registerPeriodicTask(n::changeCap, start, timeToChange, n);
+    }
+    //Nodes broadcast their capabilities every capGossipTime ms with a lag of rand*100 ms
     for (ETHNode n : network.allNodes) {
       int start = network.rd.nextInt(capGossipTime) + 1;
       network.registerPeriodicTask(n::findCap, start, capGossipTime, n);
@@ -136,7 +150,7 @@ public class ENRGossiping implements Protocol {
   }
 
   class ETHNode extends P2PNode<ETHNode> {
-    final Map<String, Integer> capabilities;
+    private Map<String, Integer> capabilities;
     private int records = 0;
 
     private ETHNode(Random rd, NodeBuilder nb, Map<String, Integer> capabilities) {
@@ -148,7 +162,6 @@ public class ENRGossiping implements Protocol {
      * @return true if there is at least one capabilities in common, false otherwise
      */
     private boolean matchCap(FloodMessage floodMessage) {
-      //check with filter() if doenst work
       Record m = (Record) floodMessage;
       return m.k_v.entrySet().stream().allMatch(
           e -> e.getValue().equals(this.capabilities.get(e.getKey())));
@@ -167,6 +180,11 @@ public class ENRGossiping implements Protocol {
       network.send(new Record(nodeId, 1, 10, 10, records++, this.capabilities), this, this.peers);
     }
 
+    void changeCap() {
+      capabilities = generateCap();
+      network.send(new Record(nodeId, 1, 10, 10, records++, this.capabilities), this, this.peers);
+    }
+
   }
 
   private void capSearch() {
@@ -175,12 +193,7 @@ public class ENRGossiping implements Protocol {
       if (p1.network().time > 500000) {
         return false;
       }
-      for (Node n : p1.network().allNodes) {
-        if (n.getDoneAt() == 0) {
-          return true;
-        }
-      }
-      return false;
+      return true;
     };
 
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
@@ -211,7 +224,7 @@ public class ENRGossiping implements Protocol {
   }
 
   public static void main(String... args) {
-    new ENRGossiping(200, 15, 500, 20, 10000, 10, 10000).capSearch();
+    new ENRGossiping(2000, 15, 500, 20, 10000, 10, 10000).capSearch();
 
   }
 }
