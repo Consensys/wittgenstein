@@ -1,5 +1,8 @@
 package net.consensys.wittgenstein.protocols;
 
+
+import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.messages.*;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -30,6 +33,5 @@ public class ENRGossipingTest {
     }
 
   }
-
 
 }
