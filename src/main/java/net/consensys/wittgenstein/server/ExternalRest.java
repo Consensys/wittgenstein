@@ -26,6 +26,11 @@ public class ExternalRest implements External {
   }
 
   @Override
+  public String toString() {
+    return this.getClass().getSimpleName() + ": " + httpFullAddress;
+  }
+
+  @Override
   public <TN extends Node> List<SendMessage> receive(EnvelopeInfo<TN> ei) {
     String jsonString = "na";
     try {
@@ -45,7 +50,7 @@ public class ExternalRest implements External {
       }
 
     } catch (Throwable t) {
-      System.err.println("caught: " + t.getMessage() + "(" + jsonString + ")");
+      System.err.println("caught: " + t.getMessage() + ", sending: " + jsonString + "");
     }
     return Collections.emptyList();
   }

@@ -26,7 +26,7 @@ public class ExternalWS implements External {
   @PutMapping(value = "/external_sink")
   @Override
   public <TN extends Node> List<SendMessage> receive(@RequestBody EnvelopeInfo<TN> ei) {
-    System.out.println("Received message" + ei);
+    System.out.println("Received message: " + ei);
     return Collections.emptyList();
   }
 

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import net.consensys.wittgenstein.core.EnvelopeInfo;
 import net.consensys.wittgenstein.core.Node;
+import net.consensys.wittgenstein.core.utils.Reflects;
 import net.consensys.wittgenstein.server.*;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -104,6 +105,11 @@ public class WServer extends ExternalWS implements IServer, External {
 
     for (Class<?> p : server.getParametersName()) {
       mapper.registerSubtypes(new NamedType(p, p.getSimpleName()));
+    }
+
+    for (String s : server.getMessageType()) {
+      Class<?> c = Reflects.forName(s);
+      mapper.registerSubtypes(new NamedType(c, c.getSimpleName()));
     }
 
     return mapper;

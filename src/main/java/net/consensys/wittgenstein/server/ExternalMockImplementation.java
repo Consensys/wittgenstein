@@ -17,6 +17,11 @@ public class ExternalMockImplementation implements External {
     this.network = network;
   }
 
+  @Override
+  public String toString() {
+    return this.getClass().getSimpleName();
+  }
+
   @SuppressWarnings("unchecked")
   @Override
   public <TN extends Node> List<SendMessage> receive(EnvelopeInfo<TN> ei) {

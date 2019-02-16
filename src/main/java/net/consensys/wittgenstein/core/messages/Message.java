@@ -1,5 +1,6 @@
 package net.consensys.wittgenstein.core.messages;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import net.consensys.wittgenstein.core.Network;
 import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.core.utils.Strings;
@@ -10,6 +11,7 @@ import net.consensys.wittgenstein.core.utils.Strings;
  * Object of this class must be immutable. Especially, Message is shared between the messages for
  * messages sent to multiple nodes.
  */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public abstract class Message<TN extends Node> {
 
   /**

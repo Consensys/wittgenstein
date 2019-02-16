@@ -2,6 +2,7 @@ package net.consensys.wittgenstein.core.utils;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
+import java.sql.Ref;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,4 +49,10 @@ public class Reflects {
       throw new IllegalArgumentException(e);
     }
   }
+
+  /*
+  public static List<Package> wittgensteinPackages(){
+    List<Package> res = new ArrayList<>();
+    Reflects.class.getClassLoader().getDefinedPackages()
+  }*/
 }

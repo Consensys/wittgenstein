@@ -13,9 +13,7 @@ import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
 import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
 import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -55,7 +53,7 @@ public class Server implements IServer {
   @Override
   public List<String> getProtocols() {
     BeanDefinitionRegistry bdr = new SimpleBeanDefinitionRegistry();
-    ClassPathBeanDefinitionScanner s = new ClassPathBeanDefinitionScanner(bdr);
+    ClassPathBeanDefinitionScanner s = new ClassPathBeanDefinitionScanner(bdr, false);
 
     TypeFilter tf = new AssignableTypeFilter(Protocol.class);
 
@@ -96,6 +94,30 @@ public class Server implements IServer {
     }
     return res;
   }
+
+
+  public Set<String> getMessageType() {
+    BeanDefinitionRegistry bdr = new SimpleBeanDefinitionRegistry();
+    ClassPathBeanDefinitionScanner s = new ClassPathBeanDefinitionScanner(bdr, false);
+
+    TypeFilter tf = new AssignableTypeFilter(Message.class);
+    s.addIncludeFilter(tf);
+
+    Set<String> res = new HashSet<>();
+    for (Package p : PingPong.class.getClassLoader().getDefinedPackages()) {
+      try {
+        s.scan(p.getName());
+        String[] beans = bdr.getBeanDefinitionNames();
+        res.addAll(
+            Arrays.stream(beans).map(n -> bdr.getBeanDefinition(n).getBeanClassName()).collect(
+                Collectors.toList()));
+      } catch (Throwable ignored) {
+      }
+    }
+
+    return res;
+  }
+
 
   @Override
   public void runMs(int ms) {

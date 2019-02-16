@@ -6,6 +6,6 @@ import net.consensys.wittgenstein.server.External;
 public class ExternalConverter extends StdConverter<External, String> {
   @Override
   public String convert(External value) {
-    return value == null ? "false" : value.getClass().getSimpleName();
+    return value == null ? "false" : value.toString();
   }
 }
