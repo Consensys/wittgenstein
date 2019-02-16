@@ -478,6 +478,7 @@ public class Network<TN extends Node> {
     return null;
   }
 
+  @SuppressWarnings("unchecked")
   void receiveUntil(int until) {
     int previousTime = time;
     Envelope<?> next = nextMessage(until);
@@ -516,7 +517,6 @@ public class Network<TN extends Node> {
         @SuppressWarnings("unchecked")
         Message<TN> mc = (Message<TN>) m.getMessage();
         if (to.getExternal() != null) {
-          // TODO add reception
           EnvelopeInfo<TN> ei = (EnvelopeInfo<TN>) m.curInfos(this);
           List<SendMessage> sms = to.getExternal().receive(ei);
           for (SendMessage sm : sms) {
