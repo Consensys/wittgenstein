@@ -189,7 +189,7 @@ public class NetworkTest {
     Assert.assertEquals(24, mas.get(2).arrival);
 
     Envelope.MultipleDestWithDelayEnvelope<Node> e =
-        new Envelope.MultipleDestWithDelayEnvelope<>(m, n0, mas);
+        new Envelope.MultipleDestWithDelayEnvelope<>(m, n0, mas, 1);
     Assert.assertEquals(2, e.nextArrivalTime(network));
     e.markRead();
     Assert.assertEquals(13, e.nextArrivalTime(network));
@@ -253,7 +253,7 @@ public class NetworkTest {
     Collections.sort(mas);
 
     Envelope.MultipleDestWithDelayEnvelope<Node> e =
-        new Envelope.MultipleDestWithDelayEnvelope<>(m, n0, mas);
+        new Envelope.MultipleDestWithDelayEnvelope<>(m, n0, mas, 1);
     Assert.assertEquals(mas.get(0).arrival, e.nextArrivalTime(network));
     e.markRead();
     Assert.assertEquals(mas.get(1).arrival, e.nextArrivalTime(network));

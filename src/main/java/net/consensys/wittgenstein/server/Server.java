@@ -1,7 +1,10 @@
 package net.consensys.wittgenstein.server;
 
+import net.consensys.wittgenstein.core.EnvelopeInfo;
+import net.consensys.wittgenstein.core.Network;
 import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.core.Protocol;
+import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.Reflects;
 import net.consensys.wittgenstein.protocols.PingPong;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -10,9 +13,7 @@ import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
 import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
 import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -52,7 +53,7 @@ public class Server implements IServer {
   @Override
   public List<String> getProtocols() {
     BeanDefinitionRegistry bdr = new SimpleBeanDefinitionRegistry();
-    ClassPathBeanDefinitionScanner s = new ClassPathBeanDefinitionScanner(bdr);
+    ClassPathBeanDefinitionScanner s = new ClassPathBeanDefinitionScanner(bdr, false);
 
     TypeFilter tf = new AssignableTypeFilter(Protocol.class);
 
@@ -94,6 +95,30 @@ public class Server implements IServer {
     return res;
   }
 
+
+  public static Set<String> getMessageType() {
+    BeanDefinitionRegistry bdr = new SimpleBeanDefinitionRegistry();
+    ClassPathBeanDefinitionScanner s = new ClassPathBeanDefinitionScanner(bdr, false);
+
+    TypeFilter tf = new AssignableTypeFilter(Message.class);
+    s.addIncludeFilter(tf);
+
+    Set<String> res = new HashSet<>();
+    for (Package p : PingPong.class.getClassLoader().getDefinedPackages()) {
+      try {
+        s.scan(p.getName());
+        String[] beans = bdr.getBeanDefinitionNames();
+        res.addAll(
+            Arrays.stream(beans).map(n -> bdr.getBeanDefinition(n).getBeanClassName()).collect(
+                Collectors.toList()));
+      } catch (Throwable ignored) {
+      }
+    }
+
+    return res;
+  }
+
+
   @Override
   public void runMs(int ms) {
     protocol.network().runMs(ms);
@@ -110,8 +135,34 @@ public class Server implements IServer {
   }
 
   @Override
+  public void setExternal(int nodeId, String externalServiceFullAddress) {
+    External ext;
+    if (externalServiceFullAddress == null || externalServiceFullAddress.trim().isEmpty()) {
+      ext = new ExternalMockImplementation(protocol.network());
+    } else {
+      ext = new ExternalRest(externalServiceFullAddress);
+    }
+    protocol.network().getNodeById(nodeId).setExternal(ext);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public <TN extends Node> void sendMessage(SendMessage msg) {
+    Network<TN> n = (Network<TN>) protocol.network();
+    TN fromN = n.getNodeById(msg.from);
+    List<TN> destN = msg.to.stream().map(n::getNodeById).collect(Collectors.toList());
+    Message<TN> m = (Message<TN>) msg.message;
+    n.send(m, msg.sendTime, fromN, destN, msg.delayBetweenSend);
+  }
+
+  @Override
   public Node getNodeInfo(int nodeId) {
     return protocol.network().getNodeById(nodeId);
+  }
+
+  @Override
+  public List<EnvelopeInfo<?>> getMessages() {
+    return protocol.network().msgs.peekMessages();
   }
 
 

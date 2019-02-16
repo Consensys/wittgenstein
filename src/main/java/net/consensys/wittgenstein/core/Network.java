@@ -4,6 +4,7 @@ import net.consensys.wittgenstein.core.messages.ConditionalTask;
 import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.messages.PeriodicTask;
 import net.consensys.wittgenstein.core.messages.Task;
+import net.consensys.wittgenstein.server.SendMessage;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -141,6 +142,19 @@ public class Network<TN extends Node> {
       }
       return null;
     }
+
+    List<EnvelopeInfo<?>> infos() {
+      List<EnvelopeInfo<?>> res = new ArrayList<>();
+
+      for (int i = 0; i < duration; i++) {
+        Envelope<?> m = msgsByMs[i];
+        while (m != null) {
+          res.addAll(m.infos(Network.this));
+          m = m.getNextSameTime();
+        }
+      }
+      return res;
+    }
   }
 
 
@@ -225,6 +239,15 @@ public class Network<TN extends Node> {
       return null;
     }
 
+    public List<EnvelopeInfo<?>> peekMessages() {
+      List<EnvelopeInfo<?>> res = new ArrayList<>();
+      for (MsgsSlot ms : msgsBySlot) {
+        res.addAll(ms.infos());
+      }
+      Collections.sort(res);
+      return res;
+    }
+
 
     /**
      * For tests: they can find their message content.
@@ -307,7 +330,7 @@ public class Network<TN extends Node> {
   public void send(Message<? extends TN> mc, int sendTime, TN fromNode, TN toNode) {
     MessageArrival ms = createMessageArrival(mc, fromNode, toNode, sendTime, rd.nextInt());
     if (ms != null) {
-      Envelope<?> m = new Envelope.SingleDestEnvelope<>(mc, fromNode, toNode, ms.arrival);
+      Envelope<?> m = new Envelope.SingleDestEnvelope<>(mc, fromNode, toNode, sendTime, ms.arrival);
       msgs.addMsg(m);
     }
   }
@@ -317,7 +340,7 @@ public class Network<TN extends Node> {
       throw new IllegalArgumentException(
           "wrong arrival time: arriveAt=" + arriveAt + ", time=" + time);
     }
-    msgs.addMsg(new Envelope.SingleDestEnvelope<>(mc, fromNode, toNode, arriveAt));
+    msgs.addMsg(new Envelope.SingleDestEnvelope<>(mc, fromNode, toNode, time, arriveAt));
   }
 
   final static class MessageArrival implements Comparable<MessageArrival> {
@@ -359,11 +382,11 @@ public class Network<TN extends Node> {
       Envelope<?> msg;
       if (da.size() == 1) {
         MessageArrival ms = da.get(0);
-        msg = new Envelope.SingleDestEnvelope<>(m, fromNode, ms.dest, ms.arrival);
+        msg = new Envelope.SingleDestEnvelope<>(m, fromNode, ms.dest, sendTime, ms.arrival);
       } else if (delaysBetweenMessage == 0) {
         msg = new Envelope.MultipleDestEnvelope<>(m, fromNode, da, sendTime, randomSeed);
       } else {
-        msg = new Envelope.MultipleDestWithDelayEnvelope<>(m, fromNode, da);
+        msg = new Envelope.MultipleDestWithDelayEnvelope<>(m, fromNode, da, sendTime);
       }
       msgs.addMsg(msg);
 
@@ -423,18 +446,18 @@ public class Network<TN extends Node> {
 
   public void registerTask(final Runnable task, int startAt, TN fromNode) {
     Task<TN> sw = new Task<>(task);
-    msgs.addMsg(new Envelope.SingleDestEnvelope<>(sw, fromNode, fromNode, startAt));
+    msgs.addMsg(new Envelope.SingleDestEnvelope<>(sw, fromNode, fromNode, time, startAt));
   }
 
   public void registerPeriodicTask(final Runnable task, int startAt, int period, TN fromNode) {
     PeriodicTask<TN> sw = new PeriodicTask<>(task, fromNode, period);
-    msgs.addMsg(new Envelope.SingleDestEnvelope<>(sw, fromNode, fromNode, startAt));
+    msgs.addMsg(new Envelope.SingleDestEnvelope<>(sw, fromNode, fromNode, time, startAt));
   }
 
   public void registerPeriodicTask(final Runnable task, int startAt, int period, TN fromNode,
       Condition c) {
     PeriodicTask<TN> sw = new PeriodicTask<>(task, fromNode, period, c);
-    msgs.addMsg(new Envelope.SingleDestEnvelope<>(sw, fromNode, fromNode, startAt));
+    msgs.addMsg(new Envelope.SingleDestEnvelope<>(sw, fromNode, fromNode, time, startAt));
   }
 
   public void registerConditionalTask(final Runnable task, int startAt, int duration, TN fromNode,
@@ -455,6 +478,7 @@ public class Network<TN extends Node> {
     return null;
   }
 
+  @SuppressWarnings("unchecked")
   void receiveUntil(int until) {
     int previousTime = time;
     Envelope<?> next = nextMessage(until);
@@ -492,7 +516,17 @@ public class Network<TN extends Node> {
         }
         @SuppressWarnings("unchecked")
         Message<TN> mc = (Message<TN>) m.getMessage();
-        mc.action(this, from, to);
+        if (to.getExternal() != null) {
+          EnvelopeInfo<TN> ei = (EnvelopeInfo<TN>) m.curInfos(this);
+          List<SendMessage> sms = to.getExternal().receive(ei);
+          for (SendMessage sm : sms) {
+            List<TN> dest = sm.to.stream().map(this::getNodeById).collect(Collectors.toList());
+            Message<TN> mtn = (Message<TN>) sm.message;
+            send(mtn, sm.sendTime, getNodeById(sm.from), dest, sm.delayBetweenSend);
+          }
+        } else {
+          mc.action(this, from, to);
+        }
       }
 
       m.markRead();

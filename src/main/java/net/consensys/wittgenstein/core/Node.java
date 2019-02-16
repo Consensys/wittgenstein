@@ -1,9 +1,14 @@
 package net.consensys.wittgenstein.core;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import net.consensys.wittgenstein.core.json.ExternalConverter;
 import net.consensys.wittgenstein.core.utils.GeneralizedParetoDistribution;
+import net.consensys.wittgenstein.server.External;
 import java.util.Random;
 
 @SuppressWarnings({"WeakerAccess"})
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public class Node {
   public final static int MAX_X = 1000;
   public final static int MAX_Y = 1000;
@@ -58,6 +63,9 @@ public class Node {
   protected long bytesReceived = 0;
   public String cityName;
 
+  @JsonSerialize(converter = ExternalConverter.class)
+  private External external = null;
+
   /**
    * The time when the protocol ended for this node 0 if it has not ended yet.
    */
@@ -104,6 +112,15 @@ public class Node {
    */
   public void stop() {
     down = true;
+  }
+
+
+  public void setExternal(External ext) {
+    this.external = ext;
+  }
+
+  public External getExternal() {
+    return external;
   }
 
 
