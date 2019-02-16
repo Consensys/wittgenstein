@@ -156,12 +156,9 @@ public class P2PFlood implements Protocol {
   }
 
   private static void floodTime() {
-    NetworkLatency nl = new NetworkLatency.IC3NetworkLatency();
-    NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
-
     int liveNodes = 2000;
     final int threshold = (int) (0.99 * liveNodes);
-    P2PFloodParameters params = new P2PFloodParameters(liveNodes, 0, 1, 2000, threshold, 15, 1,"RANDOM_POSITION","NetworkLatencyByDistance");
+    P2PFloodParameters params = new P2PFloodParameters(liveNodes, 0, 1, 2000, threshold, 15, 1,NodeBuilder.NodeBuilderWithRandomPosition.class.getSimpleName() + "_constant_speed",null);
     P2PFlood p = new P2PFlood(params);
 
     Predicate<Protocol> contIf = p1 -> {
