@@ -5,6 +5,8 @@ import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.*;
 import org.junit.Assert;
 import org.junit.Test;
+import net.consensys.wittgenstein.protocols.ENRGossiping;
+import java.util.Map;
 
 public class ENRGossipingTest {
 
