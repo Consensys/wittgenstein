@@ -4,6 +4,7 @@ import net.consensys.wittgenstein.tools.CSVLatencyReader;
 import java.util.HashMap;
 import java.util.Map;
 
+@SuppressWarnings("WeakerAccess")
 public class RegistryNodeBuilders {
   private Map<String, NodeBuilder> registry = new HashMap<>();
 
@@ -22,7 +23,7 @@ public class RegistryNodeBuilders {
 
   public NodeBuilder getByName(String name) {
     if (name == null) {
-      name = NodeBuilder.NodeBuilderWithRandomPosition.class.getSimpleName();
+      name = RANDOM_POSITION;
     }
 
     NodeBuilder c = registry.get(name);
