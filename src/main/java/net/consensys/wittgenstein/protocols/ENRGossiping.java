@@ -13,7 +13,12 @@ import java.util.function.Predicate;
  */
 
 public class ENRGossiping implements Protocol {
-  private final P2PNetwork<ETHNode> network;
+  public final P2PNetwork<ETHNode> network;
+
+  public NodeBuilder getNb() {
+    return nb;
+  }
+
   private final NodeBuilder nb;
   /**
    * timeToChange is used to describe the time period, in s, that needs to pass in order to change
@@ -79,7 +84,7 @@ public class ENRGossiping implements Protocol {
   }
 
   //Generate new capabilities for new nodes or nodes that periodically change.
-  private Map<String, Integer> generateCap() {
+  public Map<String, Integer> generateCap() {
 
     Map<String, Integer> k_v = new HashMap<>();
     while (k_v.size() < numberOfCapabilityPerNode) {
@@ -137,7 +142,7 @@ public class ENRGossiping implements Protocol {
    * capabilities in the network
    */
 
-  private class Record extends StatusFloodMessage {
+  public class Record extends StatusFloodMessage<ETHNode> {
     final int seq;
     final Map<String, Integer> k_v;
 
@@ -150,7 +155,7 @@ public class ENRGossiping implements Protocol {
   }
 
   class ETHNode extends P2PNode<ETHNode> {
-    private Map<String, Integer> capabilities;
+    public Map<String, Integer> capabilities;
     private int records = 0;
 
     private ETHNode(Random rd, NodeBuilder nb, Map<String, Integer> capabilities) {
@@ -161,7 +166,7 @@ public class ENRGossiping implements Protocol {
     /**
      * @return true if there is at least one capabilities in common, false otherwise
      */
-    private boolean matchCap(FloodMessage floodMessage) {
+    public boolean matchCap(FloodMessage floodMessage) {
       Record m = (Record) floodMessage;
       return m.k_v.entrySet().stream().allMatch(
           e -> e.getValue().equals(this.capabilities.get(e.getKey())));
@@ -190,7 +195,7 @@ public class ENRGossiping implements Protocol {
   private void capSearch() {
     Predicate<Protocol> contIf = p1 -> {
 
-      if (p1.network().time > 500000) {
+      if (p1.network().time > 100000) {
         return false;
       }
       return true;
@@ -224,7 +229,7 @@ public class ENRGossiping implements Protocol {
   }
 
   public static void main(String... args) {
-    new ENRGossiping(2000, 15, 500, 20, 10000, 10, 10000).capSearch();
+    new ENRGossiping(200, 15, 500, 20, 10000, 10, 10000).capSearch();
 
   }
 }
