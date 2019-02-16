@@ -16,7 +16,9 @@ public class ENRGossipingTest {
   //Test that copy method works
   @Test
   public void testCopy() {
-    ENRGossiping p1 = new ENRGossiping(100, 0, 25, 10, 2, 5, 10);
+      NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
+      NetworkLatency nl = new NetworkLatency.NetworkLatencyByDistance();
+    ENRGossiping p1 = new ENRGossiping(100, 0, 25, 10, 2, 5, 10,nb, nl);
     ENRGossiping p2 = p1.copy();
     p1.init();
     p1.network().run(10);

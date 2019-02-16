@@ -15,62 +15,54 @@ import java.util.function.Predicate;
 
 public class ENRGossiping implements Protocol {
   public final P2PNetwork<ETHNode> network;
-
-  public NodeBuilder getNb() {
-    return nb;
-  }
-
+  private final ENRParameters params;
   private final NodeBuilder nb;
-  /**
-   * timeToChange is used to describe the time period, in s, that needs to pass in order to change
-   * your capabilities i.e.: when you create new key-value pairs for your record. Only a given
-   * percentage of nodes will actually change their capabilities at this time.
-   */
-  private final int timeToChange;
-
-  /**
-   * capGossipTime is the period at which every node will regularly gossip their capabilities
-   */
-  private final int capGossipTime;
-
-  /**
-   * discardTime is the time after which, if a node(s) hasnt received an update from the nodes it
-   * will discard the information it holds about such node(s)
-   */
-  private final int discardTime;
-
-  /**
-   * timeToLeave is the time before a node exists the network
-   */
-
-  private final int timeToLeave;
-
-  /**
-   * totalPeers tracks the number of peers a node is connected to
-   */
-  private final int totalPeers;
-  private final int NODES;
-  /**
-   * chaningNodes is the % of nodes that regularly change their capabilities
-   */
-  private final float changingNodes;
+   final NetworkLatency nl;
 
   private final int numberOfDifferentCapabilities = 1000;
   private final int numberOfCapabilityPerNode = 10;
   private List<ETHNode> changedNodes;
-
+  public NodeBuilder getNb() {
+    return nb;
+  }
   public static class ENRParameters extends WParameter {
+    /**
+     * timeToChange is used to describe the time period, in s, that needs to pass in order to change
+     * your capabilities i.e.: when you create new key-value pairs for your record. Only a given
+     * percentage of nodes will actually change their capabilities at this time.
+     */
     final int timeToChange;
+
+    /**
+     * capGossipTime is the period at which every node will regularly gossip their capabilities
+     */
     final int capGossipTime;
+
+    /**
+     * discardTime is the time after which, if a node(s) hasnt received an update from the nodes it
+     * will discard the information it holds about such node(s)
+     */
     final int discardTime;
+
+    /**
+     * timeToLeave is the time before a node exists the network
+     */
+
     final int timeToLeave;
-    final int totalPeers;
-    final int NODES;
+
+    /**
+     * totalPeers tracks the number of peers a node is connected to
+     */
+   final int totalPeers;
+   final int NODES;
+    /**
+     * chaningNodes is the % of nodes that regularly change their capabilities
+     */
     final float changingNodes;
     final String nodeBuilderName;
     final String networkLatencyName;
 
-    public ENRParameters() {
+    private ENRParameters() {
       this.NODES = 200;
       this.timeToChange = 5000;
       this.capGossipTime = 10000;
@@ -82,7 +74,7 @@ public class ENRGossiping implements Protocol {
       this.networkLatencyName = null;
     }
 
-    public ENRParameters(int timeToChange, int capGossipTime, int discardTime, int timeToLeave,
+    private ENRParameters(int timeToChange, int capGossipTime, int discardTime, int timeToLeave,
         int totalPeers, int nodes, float changingNodes, String nodeBuilderName,
         String networkLatencyName) {
       this.NODES = nodes;
@@ -94,27 +86,14 @@ public class ENRGossiping implements Protocol {
       this.changingNodes = changingNodes;
       this.nodeBuilderName = nodeBuilderName;
       this.networkLatencyName = networkLatencyName;
-
     }
   }
 
-  public ENRGossiping(ENRParameters params) {
-    this(params.NODES, params.totalPeers, params.timeToChange, params.changingNodes,
-        params.capGossipTime, params.discardTime, params.timeToLeave);
-  }
-
-  ENRGossiping(int NODES, int totalPeers, int timeToChange, float changingNodes, int capGossipTime,
-      int discardTime, int timeToLeave) {
-    this.NODES = NODES;
-    this.totalPeers = totalPeers;
-    this.timeToChange = timeToChange;
-    this.changingNodes = changingNodes;
-    this.capGossipTime = capGossipTime;
-    this.discardTime = discardTime;
-    this.timeToLeave = timeToLeave;
-    this.network = new P2PNetwork<>(totalPeers, true);
-    this.nb = new NodeBuilder.NodeBuilderWithRandomPosition();
-    this.network.setNetworkLatency(new NetworkLatency.IC3NetworkLatency());
+  private ENRGossiping(ENRParameters params) {
+    this.params = params;
+    this.network = new P2PNetwork<>(params.totalPeers, true);
+    this.nb =  new RegistryNodeBuilders().getByName(params.nodeBuilderName);
+    this.nl =  new RegistryNetworkLatencies().getByName(params.networkLatencyName);
   }
 
   @Override
@@ -124,8 +103,7 @@ public class ENRGossiping implements Protocol {
 
   @Override
   public ENRGossiping copy() {
-    return new ENRGossiping(NODES, totalPeers, timeToChange, changingNodes, capGossipTime,
-        discardTime, timeToLeave);
+    return new ENRGossiping(params);
   }
 
   //Generate new capabilities for new nodes or nodes that periodically change.
@@ -140,16 +118,16 @@ public class ENRGossiping implements Protocol {
   }
 
   public void selectChangingNodes() {
-    int changingCapNodes = (int) (totalPeers * changingNodes);
+    int changingCapNodes = (int) (params.totalPeers * params.changingNodes);
     changedNodes = new ArrayList<>(changingCapNodes);
     while (changedNodes.size() < changingCapNodes) {
-      changedNodes.add(network.getNodeById(network.rd.nextInt(totalPeers)));
+      changedNodes.add(network.getNodeById(network.rd.nextInt(params.totalPeers)));
     }
   }
 
   @Override
   public void init() {
-    for (int i = 0; i < NODES; i++) {
+    for (int i = 0; i < params.NODES; i++) {
       network.addNode(new ETHNode(network.rd, this.nb, generateCap()));
     }
 
@@ -157,27 +135,27 @@ public class ENRGossiping implements Protocol {
     selectChangingNodes();
     //A percentage of Nodes change their capabilities every X time as defined by the protocol parameters
     for (ETHNode n : changedNodes) {
-      int start = network.rd.nextInt(timeToChange) + 1;
-      network.registerPeriodicTask(n::changeCap, start, timeToChange, n);
+      int start = network.rd.nextInt(params.timeToChange) + 1;
+      network.registerPeriodicTask(n::changeCap, start, params.timeToChange, n);
     }
     //Nodes broadcast their capabilities every capGossipTime ms with a lag of rand*100 ms
     for (ETHNode n : network.allNodes) {
-      int start = network.rd.nextInt(capGossipTime) + 1;
-      network.registerPeriodicTask(n::findCap, start, capGossipTime, n);
+      int start = network.rd.nextInt(params.capGossipTime) + 1;
+      network.registerPeriodicTask(n::findCap, start, params.capGossipTime, n);
     }
     //Send a query for your capabilities matching yours
     //while you haven't found them, or the time hasnt run out you keep querying
-    Set<Integer> senders = new HashSet<>(totalPeers);
+    Set<Integer> senders = new HashSet<>(params.totalPeers);
 
-    while (senders.size() < NODES) {
-      int nodeId = network.rd.nextInt(NODES);
+    while (senders.size() < params.NODES) {
+      int nodeId = network.rd.nextInt(params.NODES);
       ETHNode n = network.getNodeById(nodeId);
       if (senders.add(nodeId)) {
         n.findCap();
       }
     }
     //Exit the network randomly
-    int start = network.rd.nextInt(timeToChange);
+    int start = network.rd.nextInt(params.timeToChange);
     ETHNode n = network.getNodeById(0);
     //network.registerPeriodicTask(getPeriodicTask,start,timeToLeave,network.getNodeById(0));
 
@@ -185,8 +163,8 @@ public class ENRGossiping implements Protocol {
 
   protected Runnable getPeriodicTask() {
     return () -> {
-      int start = network.rd.nextInt(timeToChange);
-      int nodeId = network.rd.nextInt(NODES);
+      int start = network.rd.nextInt(params.timeToChange);
+      int nodeId = network.rd.nextInt(params.NODES);
       exitNetwork(network.getNodeById(nodeId));
     };
   }
@@ -230,7 +208,7 @@ public class ENRGossiping implements Protocol {
     /**
      * @return true if there is at least one capabilities in common, false otherwise
      */
-    public boolean matchCap(FloodMessage floodMessage) {
+     boolean matchCap(FloodMessage floodMessage) {
       Record m = (Record) floodMessage;
       return m.k_v.entrySet().stream().allMatch(
           e -> e.getValue().equals(this.capabilities.get(e.getKey())));
@@ -265,10 +243,7 @@ public class ENRGossiping implements Protocol {
   private void capSearch() {
     Predicate<Protocol> contIf = p1 -> {
 
-      if (p1.network().time > 100000) {
-        return false;
-      }
-      return true;
+      return p1.network().time <= 100000;
     };
 
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
@@ -298,17 +273,15 @@ public class ENRGossiping implements Protocol {
 
   @Override
   public String toString() {
-    return "ENRGossiping{" + "timeToChange=" + timeToChange + ", capGossipTime=" + capGossipTime
-        + ", discardTime=" + discardTime + ", timeToLeave=" + timeToLeave + ", totalPeers="
-        + totalPeers + ", NODES=" + NODES + ", changingNodes=" + changingNodes
+    return "ENRGossiping{" + "timeToChange=" + params.timeToChange + ", capGossipTime=" + params.capGossipTime
+        + ", discardTime=" + params.discardTime + ", timeToLeave=" + params.timeToLeave + ", totalPeers="
+        + params.totalPeers + ", NODES=" + params.NODES + ", changingNodes=" + params.changingNodes
         + ", numberOfDifferentCapabilities=" + numberOfDifferentCapabilities
         + ", numberOfCapabilityPerNode=" + numberOfCapabilityPerNode + '}';
   }
 
   public static void main(String... args) {
-    new ENRGossiping(200, 10, 5000, 20, 10000, 10, 10000).capSearch();
-
-
+    new ENRGossiping(new ENRParameters()).capSearch();
   }
 }
 
