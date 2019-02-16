@@ -14,7 +14,7 @@ public class P2PFloodTest {
     NetworkLatency nl = new NetworkLatency.NetworkNoLatency();
     NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
 
-    P2PFlood po = new P2PFlood(100, 10, 50, 1, 1, 10, 30, nb, nl);
+    P2PFlood po = new P2PFlood(new P2PFlood.P2PFloodParameters());
     Protocol p = po.copy();
     p.init();
     p.network().run(20);
@@ -37,7 +37,9 @@ public class P2PFloodTest {
     NodeBuilder nb =
         new NodeBuilder.NodeBuilderWithCity(NetworkLatency.AwsRegionNetworkLatency.cities());
 
-    Protocol po = new P2PFlood(4500, 4000, 500, 1, 1, 50, 300, nb, nl);
+    Protocol po = new P2PFlood(new P2PFlood.P2PFloodParameters(4500, 4000, 500, 1, 1, 50, 300,
+        NodeBuilder.NodeBuilderWithRandomPosition.class.getSimpleName() + "_constant_speed",
+        "NetworkLatencyByDistance"));
     Protocol p = po.copy();
     p.init();
     p.network().run(2000);
@@ -56,10 +58,10 @@ public class P2PFloodTest {
 
   @Test
   public void testCopy() {
-    NetworkLatency nl = new NetworkLatency.NetworkLatencyByDistance();
-    NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
 
-    P2PFlood p1 = new P2PFlood(2000, 10, 50, 1, 1, 10, 30, nb, nl);
+    P2PFlood p1 = new P2PFlood(new P2PFlood.P2PFloodParameters(2000, 10, 50, 1, 1, 10, 30,
+        NodeBuilder.NodeBuilderWithRandomPosition.class.getSimpleName() + "_constant_speed",
+        "NetworkLatencyByDistance"));
     P2PFlood p2 = p1.copy();
     p1.init();
     p1.network().runMs(1000);

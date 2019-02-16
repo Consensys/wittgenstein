@@ -15,7 +15,7 @@ import java.util.function.Predicate;
  * https://github.com/libp2p/specs/tree/master/pubsub/gossipsub
  */
 public class P2PFlood implements Protocol {
-  final P2PFloodParameters params;
+  private final P2PFloodParameters params;
 
 
   private final P2PNetwork<P2PFloodNode> network;
@@ -54,9 +54,9 @@ public class P2PFlood implements Protocol {
     private final int deadNodeCount;
 
     /**
-     * The time a node wait before resending a message to its peers. This can be used to represent the
-     * validation time or an extra delay if the message is supposed to be big (i.e. a block in a block
-     * chain for example
+     * The time a node wait before resending a message to its peers. This can be used to represent
+     * the validation time or an extra delay if the message is supposed to be big (i.e. a block in a
+     * block chain for example
      */
     private final int delayBeforeResent;
 
@@ -68,12 +68,12 @@ public class P2PFlood implements Protocol {
     /**
      * The number of messages to receive for a node to consider the protocol finished
      */
-     final int msgToReceive;
+    final int msgToReceive;
 
     /**
      * Average number of peers
      */
-     final int peersCount;
+    final int peersCount;
 
     /**
      * How long we wait between peers when we forward a message to our peers.
@@ -109,20 +109,20 @@ public class P2PFlood implements Protocol {
     }
   }
 
-   P2PFlood(P2PFloodParameters params) {
+  P2PFlood(P2PFloodParameters params) {
     this.params = params;
-     this.network = new P2PNetwork<>(params.nodeCount, true);
-    this.nb =    new RegistryNodeBuilders().getByName(params.nodeBuilderName);
-    this.nl =    new RegistryNetworkLatencies().getByName(params.networkLatencyName);
+    this.network = new P2PNetwork<>(params.nodeCount, true);
+    this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);
+    this.nl = new RegistryNetworkLatencies().getByName(params.networkLatencyName);
   }
 
   @Override
   public String toString() {
-    return "nodes=" + params.nodeCount + ", deadNodes=" + params.deadNodeCount + ", delayBeforeResent="
-        + params.delayBeforeResent + "ms, msgSent=" + params.msgCount + ", msgToReceive=" + params.msgToReceive
-        + ", peers(minimum)=" + params.peersCount + ", peers(avg)=" + network.avgPeers()
-        + ", delayBetweenSends=" + params.delayBetweenSends + "ms, latency="
-        + network.networkLatency.getClass().getSimpleName();
+    return "nodes=" + params.nodeCount + ", deadNodes=" + params.deadNodeCount
+        + ", delayBeforeResent=" + params.delayBeforeResent + "ms, msgSent=" + params.msgCount
+        + ", msgToReceive=" + params.msgToReceive + ", peers(minimum)=" + params.peersCount
+        + ", peers(avg)=" + network.avgPeers() + ", delayBetweenSends=" + params.delayBetweenSends
+        + "ms, latency=" + network.networkLatency.getClass().getSimpleName();
   }
 
   @Override
@@ -141,7 +141,8 @@ public class P2PFlood implements Protocol {
       int nodeId = network.rd.nextInt(params.nodeCount);
       P2PFloodNode from = network.getNodeById(nodeId);
       if (!from.down && senders.add(nodeId)) {
-        FloodMessage<P2PFloodNode> m = new FloodMessage<>(1, params.delayBeforeResent, params.delayBetweenSends);
+        FloodMessage<P2PFloodNode> m =
+            new FloodMessage<>(1, params.delayBeforeResent, params.delayBetweenSends);
         network.sendPeers(m, from);
         if (params.msgCount == 1) {
           from.doneAt = 1;
@@ -158,7 +159,8 @@ public class P2PFlood implements Protocol {
   private static void floodTime() {
     int liveNodes = 2000;
     final int threshold = (int) (0.99 * liveNodes);
-    P2PFloodParameters params = new P2PFloodParameters(liveNodes, 0, 1, 2000, threshold, 15, 1,NodeBuilder.NodeBuilderWithRandomPosition.class.getSimpleName() + "_constant_speed",null);
+    P2PFloodParameters params =
+        new P2PFloodParameters(liveNodes, 0, 1, 2000, threshold, 15, 1, null, null);
     P2PFlood p = new P2PFlood(params);
 
     Predicate<Protocol> contIf = p1 -> {

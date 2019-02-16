@@ -17,14 +17,16 @@ public class ENRGossiping implements Protocol {
   public final P2PNetwork<ETHNode> network;
   private final ENRParameters params;
   private final NodeBuilder nb;
-   final NetworkLatency nl;
+  final NetworkLatency nl;
 
   private final int numberOfDifferentCapabilities = 1000;
   private final int numberOfCapabilityPerNode = 10;
   private List<ETHNode> changedNodes;
+
   public NodeBuilder getNb() {
     return nb;
   }
+
   public static class ENRParameters extends WParameter {
     /**
      * timeToChange is used to describe the time period, in s, that needs to pass in order to change
@@ -53,8 +55,8 @@ public class ENRGossiping implements Protocol {
     /**
      * totalPeers tracks the number of peers a node is connected to
      */
-   final int totalPeers;
-   final int NODES;
+    final int totalPeers;
+    final int NODES;
     /**
      * chaningNodes is the % of nodes that regularly change their capabilities
      */
@@ -74,7 +76,7 @@ public class ENRGossiping implements Protocol {
       this.networkLatencyName = null;
     }
 
-    private ENRParameters(int timeToChange, int capGossipTime, int discardTime, int timeToLeave,
+    public ENRParameters(int timeToChange, int capGossipTime, int discardTime, int timeToLeave,
         int totalPeers, int nodes, float changingNodes, String nodeBuilderName,
         String networkLatencyName) {
       this.NODES = nodes;
@@ -89,11 +91,11 @@ public class ENRGossiping implements Protocol {
     }
   }
 
-  private ENRGossiping(ENRParameters params) {
+  public ENRGossiping(ENRParameters params) {
     this.params = params;
     this.network = new P2PNetwork<>(params.totalPeers, true);
-    this.nb =  new RegistryNodeBuilders().getByName(params.nodeBuilderName);
-    this.nl =  new RegistryNetworkLatencies().getByName(params.networkLatencyName);
+    this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);
+    this.nl = new RegistryNetworkLatencies().getByName(params.networkLatencyName);
   }
 
   @Override
@@ -208,7 +210,7 @@ public class ENRGossiping implements Protocol {
     /**
      * @return true if there is at least one capabilities in common, false otherwise
      */
-     boolean matchCap(FloodMessage floodMessage) {
+    boolean matchCap(FloodMessage floodMessage) {
       Record m = (Record) floodMessage;
       return m.k_v.entrySet().stream().allMatch(
           e -> e.getValue().equals(this.capabilities.get(e.getKey())));
@@ -273,11 +275,12 @@ public class ENRGossiping implements Protocol {
 
   @Override
   public String toString() {
-    return "ENRGossiping{" + "timeToChange=" + params.timeToChange + ", capGossipTime=" + params.capGossipTime
-        + ", discardTime=" + params.discardTime + ", timeToLeave=" + params.timeToLeave + ", totalPeers="
-        + params.totalPeers + ", NODES=" + params.NODES + ", changingNodes=" + params.changingNodes
-        + ", numberOfDifferentCapabilities=" + numberOfDifferentCapabilities
-        + ", numberOfCapabilityPerNode=" + numberOfCapabilityPerNode + '}';
+    return "ENRGossiping{" + "timeToChange=" + params.timeToChange + ", capGossipTime="
+        + params.capGossipTime + ", discardTime=" + params.discardTime + ", timeToLeave="
+        + params.timeToLeave + ", totalPeers=" + params.totalPeers + ", NODES=" + params.NODES
+        + ", changingNodes=" + params.changingNodes + ", numberOfDifferentCapabilities="
+        + numberOfDifferentCapabilities + ", numberOfCapabilityPerNode=" + numberOfCapabilityPerNode
+        + '}';
   }
 
   public static void main(String... args) {
