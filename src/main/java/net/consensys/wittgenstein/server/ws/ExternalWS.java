@@ -27,6 +27,10 @@ public class ExternalWS implements External {
   @Override
   public <TN extends Node> List<SendMessage> receive(@RequestBody EnvelopeInfo<TN> ei) {
     System.out.println("Received message: " + ei);
+
+    //FloodMessage<?> f = new FloodMessage<>(2000, 10,10);
+    //SendMessage m = new SendMessage(0, new ArrayList<>( List.of(1,2,3)), 1200, 1, f);
+    //return new ArrayList<>(Collections.singleton(m));
     return Collections.emptyList();
   }
 

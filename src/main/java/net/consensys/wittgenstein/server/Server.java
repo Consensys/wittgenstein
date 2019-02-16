@@ -96,7 +96,7 @@ public class Server implements IServer {
   }
 
 
-  public Set<String> getMessageType() {
+  public static Set<String> getMessageType() {
     BeanDefinitionRegistry bdr = new SimpleBeanDefinitionRegistry();
     ClassPathBeanDefinitionScanner s = new ClassPathBeanDefinitionScanner(bdr, false);
 

@@ -43,6 +43,7 @@ public class ExternalRest implements External {
 
       ResponseEntity<String> re = restTemplate.exchange(requestEntity, String.class);
       if (re.hasBody()) {
+        System.out.println("answer: " + re.getBody());
         CollectionType javaType =
             objectMapper.getTypeFactory().constructCollectionType(List.class, SendMessage.class);
 

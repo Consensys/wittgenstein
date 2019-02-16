@@ -11,7 +11,6 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.web.bind.annotation.*;
-import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -105,11 +104,6 @@ public class WServer extends ExternalWS implements IServer, External {
 
     for (Class<?> p : server.getParametersName()) {
       mapper.registerSubtypes(new NamedType(p, p.getSimpleName()));
-    }
-
-    for (String s : server.getMessageType()) {
-      Class<?> c = Reflects.forName(s);
-      mapper.registerSubtypes(new NamedType(c, c.getSimpleName()));
     }
 
     return mapper;

@@ -5,6 +5,9 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import net.consensys.wittgenstein.core.utils.Reflects;
+import net.consensys.wittgenstein.server.Server;
 
 public class ObjectMapperFactory {
 
@@ -18,6 +21,12 @@ public class ObjectMapperFactory {
     mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
 
     mapper.enableDefaultTyping(ObjectMapper.DefaultTyping.OBJECT_AND_NON_CONCRETE);
+
+    for (String s : Server.getMessageType()) {
+      Class<?> c = Reflects.forName(s);
+      mapper.registerSubtypes(new NamedType(c, c.getSimpleName()));
+    }
+
 
     return mapper;
   }
