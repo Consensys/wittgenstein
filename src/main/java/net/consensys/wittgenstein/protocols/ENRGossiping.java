@@ -195,7 +195,7 @@ public class ENRGossiping implements Protocol {
   // assume no messages are sent when it leaves
   // assume that nodes know that the peer has left
   void exitNetwork(ETHNode n) {
-    network.removeNode(n);
+
   }
 
   /**
