@@ -27,7 +27,6 @@ public class ObjectMapperFactory {
       mapper.registerSubtypes(new NamedType(c, c.getSimpleName()));
     }
 
-
     return mapper;
   }
 

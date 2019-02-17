@@ -95,16 +95,17 @@ public class Server implements IServer {
     return res;
   }
 
+  private static List<Package> getProtocolPackages() {
+    return List.of(PingPong.class.getPackage(), Node.class.getPackage());
+  }
 
   public static Set<String> getMessageType() {
     BeanDefinitionRegistry bdr = new SimpleBeanDefinitionRegistry();
     ClassPathBeanDefinitionScanner s = new ClassPathBeanDefinitionScanner(bdr, false);
-
-    TypeFilter tf = new AssignableTypeFilter(Message.class);
-    s.addIncludeFilter(tf);
+    s.addIncludeFilter(new AssignableTypeFilter(Message.class));
 
     Set<String> res = new HashSet<>();
-    for (Package p : PingPong.class.getClassLoader().getDefinedPackages()) {
+    for (Package p : getProtocolPackages()) {
       try {
         s.scan(p.getName());
         String[] beans = bdr.getBeanDefinitionNames();
