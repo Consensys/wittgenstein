@@ -7,11 +7,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
- * A simple (and even simplistic) implementation of the Paxos protocol, using the algorithm
- * described here: https://www.the-paper-trail.org/post/2009-02-03-consensus-protocols-paxos/
+ * A simple implementation of the Paxos protocol, using the algorithm described here:
+ * https://www.the-paper-trail.org/post/2009-02-03-consensus-protocols-paxos/ or here (in
+ * french...): https://www.youtube.com/watch?v=cj9DCYac3dw
  * <p>
  * An important point is the latency, as we have just a few nodes. As a result a proposer close to
  * the acceptors will get most of its proposals accepted, while a proposers further than the other
@@ -19,24 +21,27 @@ import java.util.stream.Collectors;
  * a law of the large numbers.
  */
 public class Paxos implements Protocol {
+  private static final int MAX_VAL = 1000;
   private final Network<PaxosNode> network = new Network<>();
   private final List<AcceptorNode> acceptors = new ArrayList<>();
   final List<ProposerNode> proposers = new ArrayList<>();
-  private final int delayBetweenProposals;
   private final int timeout;
   final int majority;
   private final int proposerCount;
   private final int acceptorCount;
   private final NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
 
-  Paxos(int delayBetweenProposals, int timeout, int proposerCount, int accepterCount) {
-    this.delayBetweenProposals = delayBetweenProposals;
+  Paxos(int timeout, int proposerCount, int acceptorCount) {
     this.timeout = timeout;
     this.proposerCount = proposerCount;
-    this.acceptorCount = accepterCount;
-    this.majority = accepterCount / 2 + 1;
+    this.acceptorCount = acceptorCount;
+    this.majority = acceptorCount / 2 + 1;
   }
 
+  /**
+   * Sent by a proposer at the first round. Sequence number are incremental; partitioned by
+   * proposer.
+   */
   static class Propose extends Message<PaxosNode> {
     final int seq;
 
@@ -51,30 +56,75 @@ public class Paxos implements Protocol {
   }
 
 
-  static class Agree extends Message<PaxosNode> {
-    final int yourSeq;
+  /**
+   * Sent by an acceptor at the first round if it refuses the Proposal.
+   */
+  static class Reject extends Message<PaxosNode> {
+    /**
+     * The seq sent by the proposer, and refused by the acceptor.
+     */
+    final int seqRejected;
+    /**
+     * The seq already accepted by the acceptor; eg. the proposer will need to send a seq number
+     * greater to this one.
+     */
+    final int seqAccepted;
 
-    Agree(int yourSeq) {
-      this.yourSeq = yourSeq;
+    Reject(int seqRejected, int seqAccepted) {
+      this.seqRejected = seqRejected;
+      this.seqAccepted = seqAccepted;
     }
 
     @Override
     public void action(Network<PaxosNode> network, PaxosNode from, PaxosNode to) {
-      ((ProposerNode) to).onAgree(yourSeq);
+      ((ProposerNode) to).onReject(seqRejected, seqAccepted);
     }
   }
 
 
-  static class Commit extends Message<PaxosNode> {
-    final int seq;
+  /**
+   * Sent by an acceptor during the first round, as a reply to a proposal.
+   */
+  static class Agree extends Message<PaxosNode> {
+    /**
+     * The seq number sent by the proposer, and agreed by the acceptor.
+     */
+    final int yourSeq;
+    /**
+     * The value previously accepted by this acceptor.
+     */
+    final Integer acceptedSeq;
+    final Integer acceptedVal;
 
-    Commit(int seq) {
-      this.seq = seq;
+    Agree(int yourSeq, Integer acceptedSeq, Integer acceptedVal) {
+      this.yourSeq = yourSeq;
+      this.acceptedSeq = acceptedSeq;
+      this.acceptedVal = acceptedVal;
     }
 
     @Override
     public void action(Network<PaxosNode> network, PaxosNode from, PaxosNode to) {
-      ((AcceptorNode) to).onCommit(from, seq);
+      ((ProposerNode) to).onAgree(yourSeq, acceptedSeq, acceptedVal);
+    }
+  }
+
+
+  /**
+   * Sent by a proposer at the second round, if the first round was successful (i.e. a majority of
+   * agree)
+   */
+  static class Commit extends Message<PaxosNode> {
+    final int seq;
+    final int val;
+
+    Commit(int seq, int val) {
+      this.seq = seq;
+      this.val = val;
+    }
+
+    @Override
+    public void action(Network<PaxosNode> network, PaxosNode from, PaxosNode to) {
+      ((AcceptorNode) to).onCommit(from, seq, val);
     }
   }
 
@@ -93,6 +143,9 @@ public class Paxos implements Protocol {
   }
 
 
+  /**
+   * Sent by the acceptor when it refuses the value during the second round.
+   */
   static class RejectOnCommit extends Message<PaxosNode> {
     final int seqRejected;
     final int seqAccepted;
@@ -109,22 +162,6 @@ public class Paxos implements Protocol {
   }
 
 
-  static class Reject extends Message<PaxosNode> {
-    final int seqRejected;
-    final int seqAccepted;
-
-    Reject(int seqRejected, int seqAccepted) {
-      this.seqRejected = seqRejected;
-      this.seqAccepted = seqAccepted;
-    }
-
-    @Override
-    public void action(Network<PaxosNode> network, PaxosNode from, PaxosNode to) {
-      ((ProposerNode) to).onReject(seqRejected, seqAccepted);
-    }
-  }
-
-
   static class PaxosNode extends Node {
     PaxosNode(Random rd, NodeBuilder nb) {
       super(rd, nb);
@@ -133,7 +170,9 @@ public class Paxos implements Protocol {
 
 
   class AcceptorNode extends PaxosNode {
-    int maxAgreed;
+    int maxAgreed = -1;
+    Integer acceptedSeq;
+    Integer acceptedVal;
     ProposerNode agreedTo;
 
     AcceptorNode(Random rd, NodeBuilder nb) {
@@ -149,21 +188,23 @@ public class Paxos implements Protocol {
         //  and this protocol does not have byzantine nodes
         throw new IllegalStateException(this + " " + p);
       } else {
-        Agree a = new Agree(p.seq);
+        Agree a = new Agree(p.seq, acceptedSeq, acceptedVal);
         maxAgreed = p.seq;
         agreedTo = (ProposerNode) from;
         network.send(a, this, from);
       }
     }
 
-    void onCommit(PaxosNode from, int seq) {
-      if (seq != maxAgreed) {
+    void onCommit(PaxosNode from, int seq, int val) {
+      if (seq != maxAgreed || (acceptedVal != null && acceptedVal != val)) {
         // Can happen:
         //  1) if I agreed to a new value in between
         //  2) if the majority (but not me) agreed at the previous step but we didn't.
         RejectOnCommit r = new RejectOnCommit(seq, maxAgreed);
         network.send(r, this, from);
       } else {
+        acceptedVal = val;
+        acceptedSeq = acceptedSeq == null ? seq : Math.max(acceptedSeq, seq);
         Accept a = new Accept(seq);
         network.send(a, this, from);
       }
@@ -177,6 +218,12 @@ public class Paxos implements Protocol {
 
 
   class ProposerNode extends PaxosNode {
+    final int valueProposed;
+    Integer valueAccepted;
+
+    Integer acceptedSeq;
+    Integer acceptedVal;
+
     int rank;
     int seqIP;
     int agreeCountIP;
@@ -184,18 +231,20 @@ public class Paxos implements Protocol {
     int acceptCountIP;
     int reject2CountIP;
     boolean proposalIP = false;
+
+
     int seqAccepted;
 
     // Statistics on the proposal made
     int agreeCount = 0;
     int reject1Count = 0;
-    int acceptCount = 0;
     int reject2Count = 0;
     int timeoutCount = 0;
 
     ProposerNode(int rank, Random rd, NodeBuilder nb) {
       super(rd, nb);
       this.rank = rank;
+      this.valueProposed = rd.nextInt(MAX_VAL);
     }
 
     void onReject(int seq, int serverCurSeq) {
@@ -210,25 +259,36 @@ public class Paxos implements Protocol {
       }
     }
 
-    void onAgree(int seq) {
-      if (seq == seqIP) {
+    void onAgree(int seq, Integer acceptedSeq, Integer acceptedVal) {
+      if (seq == seqIP && agreeCountIP < majority) {
         agreeCountIP++;
+        if (acceptedSeq != null) {
+          if (this.acceptedSeq == null || this.acceptedSeq < acceptedSeq) {
+            this.acceptedSeq = acceptedSeq;
+            this.acceptedVal = acceptedVal;
+          }
+        }
         if (agreeCountIP >= majority) {
           agreeCount++;
-          Commit c = new Commit(seqIP);
+          if (this.acceptedVal == null) {
+            this.acceptedVal = valueProposed;
+          }
+          Commit c = new Commit(seqIP, this.acceptedVal);
           sendToAcceptors(c, network.time + 1);
         }
       }
     }
 
     void onAccept(int seq) {
-      if (seq == seqIP) {
+      if (seq == seqIP && acceptCountIP < majority) {
         acceptCountIP++;
         if (acceptCountIP >= majority) {
           proposalIP = false;
-          seqAccepted = Math.max(seqAccepted, seq);
-          acceptCount++;
-          startNextProposal();
+          if (acceptedVal == null) {
+            throw new IllegalStateException();
+          }
+          valueAccepted = acceptedVal;
+          doneAt = network.time;
         }
       }
     }
@@ -263,6 +323,10 @@ public class Paxos implements Protocol {
       if (proposalIP) {
         throw new IllegalStateException();
       }
+
+      acceptedVal = null;
+      acceptedSeq = null;
+
       proposalIP = true;
       reject1CountIP = 0;
       agreeCountIP = 0;
@@ -276,20 +340,9 @@ public class Paxos implements Protocol {
       seqIP = newSeqIP > seqIP ? newSeqIP : seqIP + proposerCount;
 
       Propose p = new Propose(seqIP);
-      int sentTime = delayBetweenProposals == 0 ? network.time + 1
-          : network.time + network.rd.nextInt(delayBetweenProposals) + 1;
+      int sentTime = network.time + 1;
       sendToAcceptors(p, sentTime);
       network.registerTask(() -> onTimeout(p.seq), sentTime + timeout, this);
-    }
-
-    @Override
-    public String toString() {
-      return "ProposerNode{" + "rank=" + rank + ", seqIP=" + seqIP + ", agreeCountIP="
-          + agreeCountIP + ", reject1CountIP=" + reject1CountIP + ", acceptCountIP=" + acceptCountIP
-          + ", reject2CountIP=" + reject2CountIP + ", proposalIP=" + proposalIP + ", seqAccepted="
-          + seqAccepted + ", agreeCount=" + agreeCount + ", reject1Count=" + reject1Count
-          + ", acceptCount=" + acceptCount + ", reject2Count=" + reject2Count + ", timeoutCount="
-          + timeoutCount + '}';
     }
   }
 
@@ -300,7 +353,7 @@ public class Paxos implements Protocol {
 
   @Override
   public Paxos copy() {
-    return new Paxos(delayBetweenProposals, timeout, proposerCount, acceptorCount);
+    return new Paxos(timeout, proposerCount, acceptorCount);
   }
 
   @Override
@@ -328,12 +381,12 @@ public class Paxos implements Protocol {
       public StatsHelper.Stat get(List<? extends Node> liveNodes) {
         List<Node> proposers =
             liveNodes.stream().filter(n -> n instanceof ProposerNode).collect(Collectors.toList());
-        return StatsHelper.getStatsOn(proposers, p -> ((ProposerNode) p).acceptCount);
+        return StatsHelper.getStatsOn(proposers, p -> ((ProposerNode) p).doneAt);
       }
 
       @Override
       public String toString() {
-        return "acceptCount";
+        return "doneAt";
       }
     });
     statsToGet.add(new StatsHelper.SimpleStatsGetter() {
@@ -387,26 +440,29 @@ public class Paxos implements Protocol {
       }
     });
 
+    RunMultipleTimes rmt = new RunMultipleTimes(this, 1000, statsToGet);
+    List<StatsHelper.Stat> res = rmt.run(protocol -> {
+      for (Node n : protocol.network().allNodes) {
+        if (n instanceof ProposerNode && n.doneAt == 0) {
+          return true;
+        }
+      }
+      return false;
+    });
 
-    RunMultipleTimes rmt = new RunMultipleTimes(this, 10, statsToGet);
-    List<StatsHelper.Stat> res = rmt.run(protocol -> protocol.network().time < 100_000);
-
-    StatsHelper.SimpleStats ac = (StatsHelper.SimpleStats) res.get(0);
+    StatsHelper.SimpleStats da = (StatsHelper.SimpleStats) res.get(0);
     StatsHelper.SimpleStats to = (StatsHelper.SimpleStats) res.get(1);
     StatsHelper.SimpleStats r1 = (StatsHelper.SimpleStats) res.get(2);
     StatsHelper.SimpleStats r2 = (StatsHelper.SimpleStats) res.get(3);
     StatsHelper.SimpleStats mr = (StatsHelper.SimpleStats) res.get(4);
 
-    double successRate = 1.0 * ac.avg / (ac.avg + r1.avg + r2.avg + to.avg);
-    successRate = (int) (successRate * 10000) / 100.0;
-
-    System.out.println("acceptors: " + acceptorCount + ", accepted=(" + ac + "), avg success rate:"
-        + successRate + "%, msg received=(" + mr + ")");
+    System.out.println("acceptors: " + acceptorCount + ", doneAt=(" + da + "), timeout=(" + to
+        + "), msg received=(" + mr + ")");
   }
 
   private static void msgPerValidators() {
-    for (int a = 3; a < 50; a += 2) {
-      Paxos p = new Paxos(1000, 400, 3, a);
+    for (int a = 3; a < 4; a += 2) {
+      Paxos p = new Paxos(1000, 9, 1);
       p.play();
     }
   }
