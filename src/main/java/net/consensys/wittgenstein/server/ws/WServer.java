@@ -18,13 +18,13 @@ import java.util.List;
 public class WServer extends ExternalWS implements IServer, External {
   private Server server = new Server();
 
-  @GetMapping(value = "/nodes")
+  @GetMapping(value = "/network/nodes")
   @Override
   public List<? extends Node> getNodeInfo() {
     return server.getNodeInfo();
   }
 
-  @GetMapping(value = "/time")
+  @GetMapping(value = "/network/time")
   @Override
   public int getTime() {
     return server.getTime();
@@ -42,7 +42,7 @@ public class WServer extends ExternalWS implements IServer, External {
     return server.getProtocolParameters(fullClassName);
   }
 
-  @PostMapping(value = "/init/{fullClassName}")
+  @PostMapping(value = "/network/init/{fullClassName}")
   public void init(@PathVariable("fullClassName") String fullClassName,
       @RequestBody WParameter parameters) {
     server.init(fullClassName, parameters);
@@ -54,7 +54,7 @@ public class WServer extends ExternalWS implements IServer, External {
     server.runMs(ms);
   }
 
-  @GetMapping(value = "/nodes/{nodeId}")
+  @GetMapping(value = "/network/nodes/{nodeId}")
   @Override
   public Node getNodeInfo(@PathVariable("nodeId") int nodeId) {
     return server.getNodeInfo(nodeId);
@@ -72,13 +72,13 @@ public class WServer extends ExternalWS implements IServer, External {
     server.startNode(nodeId);
   }
 
-  @PostMapping(value = "/nodes/{nodeId}/stop")
+  @PostMapping(value = "/network/nodes/{nodeId}/stop")
   @Override
   public void stopNode(@PathVariable("nodeId") int nodeId) {
     server.stopNode(nodeId);
   }
 
-  @PostMapping(value = "/nodes/{nodeId}/external")
+  @PostMapping(value = "/network/nodes/{nodeId}/external")
   @Override
   public void setExternal(@PathVariable("nodeId") int nodeId,
       @RequestBody String externalServiceFullAddress) {
@@ -90,7 +90,6 @@ public class WServer extends ExternalWS implements IServer, External {
   public <TN extends Node> void sendMessage(@RequestBody SendMessage msg) {
     server.sendMessage(msg);
   }
-
 
   /**
    * We're mapping all fields in the parameters, not taking into account the getters/setters

@@ -7,6 +7,7 @@ import net.consensys.wittgenstein.server.WParameter;
 /**
  * A simulation of a trivial protocol to be used as a sample.
  */
+@SuppressWarnings("WeakerAccess")
 public class PingPong implements Protocol {
   final PingPongParameters params;
 
@@ -43,7 +44,11 @@ public class PingPong implements Protocol {
     final int nodeCt;
 
     public PingPongParameters() {
-      nodeCt = 1000;
+      this(1000);
+    }
+
+    public PingPongParameters(int nodeCt) {
+      this.nodeCt = nodeCt;
     }
   }
 
