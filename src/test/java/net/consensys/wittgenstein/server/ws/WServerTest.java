@@ -26,6 +26,7 @@ import java.net.URL;
 import java.util.Collections;
 import java.util.List;
 
+@SuppressWarnings("WeakerAccess")
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = WServer.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class WServerTest {
@@ -83,9 +84,7 @@ public class WServerTest {
 
     CollectionType javaType =
         objectMapper.getTypeFactory().constructCollectionType(List.class, Node.class);
-    List<Node> nis = objectMapper.readValue(response.getBody(), javaType);
-
-    return nis;
+    return objectMapper.readValue(response.getBody(), javaType);
   }
 
   private List<EnvelopeInfo> allMessagesInfo() throws IOException {
@@ -97,13 +96,12 @@ public class WServerTest {
 
     CollectionType javaType =
         objectMapper.getTypeFactory().constructCollectionType(List.class, EnvelopeInfo.class);
-    List<EnvelopeInfo> nis = objectMapper.readValue(response.getBody(), javaType);
-
-    return nis;
+    return objectMapper.readValue(response.getBody(), javaType);
   }
 
 
   public static class Node {
+    @SuppressWarnings("unused")
     int nodeId;
 
     public Node() {}
@@ -129,11 +127,10 @@ public class WServerTest {
       network.addNode(new net.consensys.wittgenstein.core.Node(network.rd, nb));
     }
 
+    @SuppressWarnings("unused")
     public DummyProtocol(DummyParameters p) {}
 
     public static class DummyParameters extends WParameter {
-      int dummy = 12;
-
       public DummyParameters() {}
     }
   }
