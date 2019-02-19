@@ -4,7 +4,6 @@ import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.server.WParameter;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -210,9 +209,10 @@ public class Paxos implements Protocol {
       }
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
       return "AcceptorNode{" + "maxAgreed=" + maxAgreed + ", acceptedSeq=" + acceptedSeq
-        + ", acceptedVal=" + acceptedVal + ", agreedTo=" + agreedTo + '}';
+          + ", acceptedVal=" + acceptedVal + ", agreedTo=" + agreedTo + '}';
     }
   }
 
@@ -359,19 +359,20 @@ public class Paxos implements Protocol {
     return new Paxos(params);
   }
 
-  @SuppressWarnings("WeakerAccess") public static class PaxosParameters extends WParameter {
+  @SuppressWarnings("WeakerAccess")
+  public static class PaxosParameters extends WParameter {
     final int acceptorCount;
     final int proposerCount;
     final int timeout;
     final String nodeBuilder;
     final String latency;
 
-    public PaxosParameters(){
-      this(3,3,1000,null,null);
+    public PaxosParameters() {
+      this(3, 3, 1000, null, null);
     }
 
     public PaxosParameters(int acceptorCount, int proposerCount, int timeout, String nodeBuilder,
-      String latency) {
+        String latency) {
       this.acceptorCount = acceptorCount;
       this.proposerCount = proposerCount;
       this.timeout = timeout;
@@ -396,7 +397,8 @@ public class Paxos implements Protocol {
     }
   }
 
-  @Override public String toString() {
+  @Override
+  public String toString() {
     return "Paxos{" + "params=" + params + '}';
   }
 
@@ -496,8 +498,8 @@ public class Paxos implements Protocol {
     StatsHelper.SimpleStats r2 = (StatsHelper.SimpleStats) res.get(3);
     StatsHelper.SimpleStats mr = (StatsHelper.SimpleStats) res.get(4);
 
-    System.out.println(this+", doneAt=(" + da + "), timeout=(" + to+"), rejectRound1=("+r1+
-      "), rejectRound2="+r2 + "), msg received=(" + mr + ")");
+    System.out.println(this + ", doneAt=(" + da + "), timeout=(" + to + "), rejectRound1=(" + r1
+        + "), rejectRound2=" + r2 + "), msg received=(" + mr + ")");
   }
 
   public static void main(String... args) {
