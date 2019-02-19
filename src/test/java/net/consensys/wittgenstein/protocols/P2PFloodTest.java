@@ -2,7 +2,7 @@ package net.consensys.wittgenstein.protocols;
 
 import net.consensys.wittgenstein.core.NetworkLatency;
 import net.consensys.wittgenstein.core.Node;
-import net.consensys.wittgenstein.core.NodeBuilder;
+import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 import net.consensys.wittgenstein.core.Protocol;
 import org.junit.Assert;
 import org.junit.Test;
@@ -11,10 +11,8 @@ public class P2PFloodTest {
 
   @Test
   public void testSimpleRun() {
-    // NetworkLatency nl = new NetworkLatency.NetworkNoLatency();
-    // NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
-    String nl = null;
-    String nb = "NodeBuilderWithRandomPosition_constant_speed";
+    String nl = NetworkLatency.NetworkNoLatency.class.getSimpleName();
+    String nb = RegistryNodeBuilders.RANDOM_POSITION;
 
     P2PFlood po = new P2PFlood(new P2PFlood.P2PFloodParameters(100, 10, 50, 1, 1, 10, 30, nb, nl));
     Protocol p = po.copy();
@@ -35,13 +33,11 @@ public class P2PFloodTest {
 
   @Test
   public void testLongRun() {
-    NetworkLatency nl = new NetworkLatency.AwsRegionNetworkLatency();
-    NodeBuilder nb =
-        new NodeBuilder.NodeBuilderWithCity(NetworkLatency.AwsRegionNetworkLatency.cities());
+    String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
+    String nb = RegistryNodeBuilders.ALL_CITIES;
 
-    Protocol po = new P2PFlood(new P2PFlood.P2PFloodParameters(4500, 4000, 500, 1, 1, 50, 300,
-        NodeBuilder.NodeBuilderWithRandomPosition.class.getSimpleName() + "_constant_speed",
-        "NetworkLatencyByDistance"));
+    Protocol po =
+        new P2PFlood(new P2PFlood.P2PFloodParameters(4500, 4000, 500, 1, 1, 50, 300, nb, nl));
     Protocol p = po.copy();
     p.init();
     p.network().run(2000);
@@ -60,10 +56,9 @@ public class P2PFloodTest {
 
   @Test
   public void testCopy() {
-
-    P2PFlood p1 = new P2PFlood(new P2PFlood.P2PFloodParameters(2000, 10, 50, 1, 1, 10, 30,
-        NodeBuilder.NodeBuilderWithRandomPosition.class.getSimpleName() + "_constant_speed",
-        "NetworkLatencyByDistance"));
+    String nb = RegistryNodeBuilders.RANDOM_POSITION;
+    String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
+    P2PFlood p1 = new P2PFlood(new P2PFlood.P2PFloodParameters(2000, 10, 50, 1, 1, 10, 30, nb, nl));
     P2PFlood p2 = p1.copy();
     p1.init();
     p1.network().runMs(1000);
