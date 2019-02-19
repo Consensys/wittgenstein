@@ -34,7 +34,7 @@ public class P2PFloodTest {
   @Test
   public void testLongRun() {
     String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
-    String nb = RegistryNodeBuilders.ALL_CITIES;
+    String nb = RegistryNodeBuilders.AWS_SITE;
 
     Protocol po =
         new P2PFlood(new P2PFlood.P2PFloodParameters(4500, 4000, 500, 1, 1, 50, 300, nb, nl));
