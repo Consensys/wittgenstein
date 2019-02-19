@@ -19,7 +19,6 @@ public class PingPong implements Protocol {
    * Nodes have positions. This position is chosen by the builder.
    */
   private final NodeBuilder nb;
-  final NetworkLatency nl;
 
   /**
    * Messages, exchanged on the network, are specific to the protocol. Here we have two messages:
@@ -61,7 +60,8 @@ public class PingPong implements Protocol {
   public PingPong(PingPongParameters params) {
     this.params = params;
     this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);
-    this.nl = new RegistryNetworkLatencies().getByName(params.networkLatencyName);
+    this.network
+        .setNetworkLatency(new RegistryNetworkLatencies().getByName(params.networkLatencyName));
   }
 
   /**

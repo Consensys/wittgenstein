@@ -11,10 +11,12 @@ public class P2PFloodTest {
 
   @Test
   public void testSimpleRun() {
-    NetworkLatency nl = new NetworkLatency.NetworkNoLatency();
-    NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
+    // NetworkLatency nl = new NetworkLatency.NetworkNoLatency();
+    // NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
+    String nl = null;
+    String nb = "NodeBuilderWithRandomPosition_constant_speed";
 
-    P2PFlood po = new P2PFlood(new P2PFlood.P2PFloodParameters());
+    P2PFlood po = new P2PFlood(new P2PFlood.P2PFloodParameters(100, 10, 50, 1, 1, 10, 30, nb, nl));
     Protocol p = po.copy();
     p.init();
     p.network().run(20);

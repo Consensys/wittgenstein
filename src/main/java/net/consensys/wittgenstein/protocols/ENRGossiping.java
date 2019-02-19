@@ -17,8 +17,6 @@ public class ENRGossiping implements Protocol {
   public final P2PNetwork<ETHNode> network;
   private final ENRParameters params;
   private final NodeBuilder nb;
-  final NetworkLatency nl;
-
   private final int numberOfDifferentCapabilities = 1000;
   private final int numberOfCapabilityPerNode = 10;
   private List<ETHNode> changedNodes;
@@ -95,7 +93,8 @@ public class ENRGossiping implements Protocol {
     this.params = params;
     this.network = new P2PNetwork<>(params.totalPeers, true);
     this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);
-    this.nl = new RegistryNetworkLatencies().getByName(params.networkLatencyName);
+    this.network
+        .setNetworkLatency(new RegistryNetworkLatencies().getByName(params.networkLatencyName));
   }
 
   @Override

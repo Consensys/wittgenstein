@@ -16,11 +16,8 @@ import java.util.function.Predicate;
  */
 public class P2PFlood implements Protocol {
   private final P2PFloodParameters params;
-
-
   private final P2PNetwork<P2PFloodNode> network;
   private final NodeBuilder nb;
-  final NetworkLatency nl;
 
 
   class P2PFloodNode extends P2PNode<P2PFloodNode> {
@@ -85,11 +82,11 @@ public class P2PFlood implements Protocol {
     public P2PFloodParameters() {
       this.nodeCount = 100;
       this.deadNodeCount = 10;
-      this.delayBeforeResent = 10;
+      this.delayBeforeResent = 50;
       this.msgCount = 1;
       this.msgToReceive = 1;
-      this.peersCount = 15;
-      this.delayBetweenSends = 0;
+      this.peersCount = 10;
+      this.delayBetweenSends = 30;
       this.nodeBuilderName = null;
       this.networkLatencyName = null;
     }
@@ -111,9 +108,10 @@ public class P2PFlood implements Protocol {
 
   P2PFlood(P2PFloodParameters params) {
     this.params = params;
-    this.network = new P2PNetwork<>(params.nodeCount, true);
+    this.network = new P2PNetwork<>(params.peersCount, true);
     this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);
-    this.nl = new RegistryNetworkLatencies().getByName(params.networkLatencyName);
+    this.network
+        .setNetworkLatency(new RegistryNetworkLatencies().getByName(params.networkLatencyName));
   }
 
   @Override
