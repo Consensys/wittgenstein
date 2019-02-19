@@ -7,7 +7,7 @@ public class PaxosTest {
 
   @Test
   public void testSimple() {
-    Paxos p = new Paxos(1000, 1, 3);
+    Paxos p = new Paxos(new Paxos.PaxosParameters(2,5,1000, null, null));
     p.init();
     p.network().run(10);
 
@@ -21,7 +21,7 @@ public class PaxosTest {
 
   @Test
   public void testCopy() {
-    Paxos p1 = new Paxos(1000, 1, 3);
+    Paxos p1 = new Paxos(new Paxos.PaxosParameters(2,5,1000, null, null));
     Paxos p2 = p1.copy();
     p1.init();
     p1.network().runMs(2000);
@@ -37,7 +37,7 @@ public class PaxosTest {
 
   @Test
   public void testPlay() {
-    Paxos p1 = new Paxos(1000, 1, 3);
+    Paxos p1 = new Paxos(new Paxos.PaxosParameters());
     p1.play();
   }
 }

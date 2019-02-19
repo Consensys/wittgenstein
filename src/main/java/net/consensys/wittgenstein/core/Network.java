@@ -279,7 +279,7 @@ public class Network<TN extends Node> {
     runMs(seconds * 1000);
   }
 
-  public void runMs(int ms) {
+  public boolean runMs(int ms) {
     if (ms <= 0) {
       throw new IllegalArgumentException("Should be greater than 0. ms=" + ms);
     }
@@ -296,8 +296,9 @@ public class Network<TN extends Node> {
     if (endAt <= 0) {
       throw new IllegalStateException("Maximum time reached!");
     }
-    receiveUntil(endAt);
+    boolean didSomething = receiveUntil(endAt);
     time = endAt;
+    return didSomething;
   }
 
 
@@ -479,9 +480,12 @@ public class Network<TN extends Node> {
   }
 
   @SuppressWarnings("unchecked")
-  void receiveUntil(int until) {
+  boolean receiveUntil(int until) {
     int previousTime = time;
     Envelope<?> next = nextMessage(until);
+    if (next == null) {
+      return false;
+    }
     while (next != null) {
       Envelope<?> m = next;
       int na = m.nextArrivalTime(this);
@@ -536,6 +540,7 @@ public class Network<TN extends Node> {
       previousTime = time;
       next = nextMessage(until);
     }
+    return true;
   }
 
   int partitionId(Node to) {
