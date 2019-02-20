@@ -20,6 +20,7 @@ public class ENRGossiping implements Protocol {
   private final int numberOfDifferentCapabilities = 1000;
   private final int numberOfCapabilityPerNode = 10;
   private List<ETHNode> changedNodes;
+  private int maxPeers = 30;
 
   public NodeBuilder getNb() {
     return nb;
@@ -158,22 +159,7 @@ public class ENRGossiping implements Protocol {
     //Exit the network randomly
     int start = network.rd.nextInt(params.timeToChange);
     ETHNode n = network.getNodeById(0);
-    //network.registerPeriodicTask(getPeriodicTask,start,timeToLeave,network.getNodeById(0));
-
-  }
-
-  protected Runnable getPeriodicTask() {
-    return () -> {
-      int start = network.rd.nextInt(params.timeToChange);
-      int nodeId = network.rd.nextInt(params.NODES);
-      exitNetwork(network.getNodeById(nodeId));
-    };
-  }
-
-  //Use .down instead and remove links with other peers
-  // assume no messages are sent when it leaves
-  // assume that nodes know that the peer has left
-  void exitNetwork(ETHNode n) {
+    network.registerPeriodicTask(n::exitNetwork, start, params.timeToLeave, network.getNodeById(0));
 
   }
 
@@ -198,7 +184,7 @@ public class ENRGossiping implements Protocol {
   }
 
   public class ETHNode extends P2PNode<ETHNode> {
-    public Map<String, Integer> capabilities;
+    Map<String, Integer> capabilities;
     private int records = 0;
 
     ETHNode(Random rd, NodeBuilder nb, Map<String, Integer> capabilities) {
@@ -220,15 +206,18 @@ public class ENRGossiping implements Protocol {
       if (doneAt == 0) {
         if (matchCap(floodMessage)) {
           doneAt = network.time;
-          if (!peers.contains(from)) {
+          if (!peers.contains(from) && peers.size() < maxPeers) {
             peers.add(from); //Add as peer if your capabilities match
-            //Add as peer for sending node
-            // createLink
-            // add a limit for peers when you reach that value disconnect from peer that has least cap in common
+            network.createLink(network.getExistingLinks(), this.nodeId, from.nodeId);
+          } else if (!peers.contains(from) && peers.size() >= maxPeers) {
+            int toRemove = addNewPeer(peers, this);
+            network.removeLink(network.getExistingLinks(), this.nodeId, toRemove);
           }
+
         }
       }
     }
+
 
     void findCap() {
       network.send(new Record(nodeId, 1, 10, 10, records++, this.capabilities), this, this.peers);
@@ -239,13 +228,40 @@ public class ENRGossiping implements Protocol {
       network.send(new Record(nodeId, 1, 10, 10, records++, this.capabilities), this, this.peers);
     }
 
+    int addNewPeer(List<ETHNode> peers, ETHNode from) {
+      Map<ETHNode, Integer> result = new HashMap<>();
+      for (ETHNode n : peers) {
+        int count = 0;
+        for (int i = 0; i < n.capabilities.size(); i++) {
+          if (from.capabilities.get(i).equals(n.capabilities.get(i))) {
+            count++;
+          }
+        }
+        result.put(n, count);
+      }
+      int min = 1000;
+      ETHNode toRemove = null;
+      for (ETHNode n : result.keySet()) {
+        if (result.get(n) < min) {
+          min = result.get(n);
+          toRemove = n;
+        }
+      }
+      return toRemove.nodeId;
+    }
+
+    void exitNetwork() {
+      int start = network.rd.nextInt(params.timeToChange);
+      int nodeId = network.rd.nextInt(params.NODES);
+      network.allNodes.get(nodeId).down = true;
+      network.allNodes.get(nodeId).peers.stream().forEach(
+          n -> network.removeLink(network.getExistingLinks(), nodeId, n.nodeId));
+    }
+
   }
 
   private void capSearch() {
-    Predicate<Protocol> contIf = p1 -> {
-
-      return p1.network().time <= 100000;
-    };
+    Predicate<Protocol> contIf = p1 -> p1.network().time <= 100000;
 
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
 
