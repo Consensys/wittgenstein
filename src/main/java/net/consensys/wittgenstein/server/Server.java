@@ -6,7 +6,6 @@ import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.core.Protocol;
 import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.Reflects;
-import net.consensys.wittgenstein.protocols.PingPong;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.SimpleBeanDefinitionRegistry;
 import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
@@ -32,6 +31,9 @@ public class Server implements IServer {
 
   private Constructor<?> getConstructor(String fullClassName) {
     Class<?> clazz = Reflects.forName(fullClassName);
+    if (clazz == null) {
+      throw new IllegalArgumentException("Class not found: " + fullClassName);
+    }
 
     for (Constructor<?> c : clazz.getConstructors()) {
       if (c.getParameterCount() == 1
@@ -59,7 +61,7 @@ public class Server implements IServer {
 
     s.addIncludeFilter(tf);
     s.setIncludeAnnotationConfig(false);
-    s.scan(PingPong.class.getPackage().getName());
+    s.scan("net.consensys");
 
     String[] beans = bdr.getBeanDefinitionNames();
     return Arrays.stream(beans).map(n -> bdr.getBeanDefinition(n).getBeanClassName()).collect(
@@ -95,27 +97,15 @@ public class Server implements IServer {
     return res;
   }
 
-
   public static Set<String> getMessageType() {
     BeanDefinitionRegistry bdr = new SimpleBeanDefinitionRegistry();
     ClassPathBeanDefinitionScanner s = new ClassPathBeanDefinitionScanner(bdr, false);
+    s.addIncludeFilter(new AssignableTypeFilter(Message.class));
 
-    TypeFilter tf = new AssignableTypeFilter(Message.class);
-    s.addIncludeFilter(tf);
-
-    Set<String> res = new HashSet<>();
-    for (Package p : PingPong.class.getClassLoader().getDefinedPackages()) {
-      try {
-        s.scan(p.getName());
-        String[] beans = bdr.getBeanDefinitionNames();
-        res.addAll(
-            Arrays.stream(beans).map(n -> bdr.getBeanDefinition(n).getBeanClassName()).collect(
-                Collectors.toList()));
-      } catch (Throwable ignored) {
-      }
-    }
-
-    return res;
+    s.scan("net.consensys");
+    String[] beans = bdr.getBeanDefinitionNames();
+    return Arrays.stream(beans).map(n -> bdr.getBeanDefinition(n).getBeanClassName()).collect(
+        Collectors.toSet());
   }
 
 

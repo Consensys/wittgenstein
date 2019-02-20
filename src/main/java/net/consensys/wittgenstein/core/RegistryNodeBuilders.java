@@ -22,7 +22,7 @@ public class RegistryNodeBuilders {
   }
 
   public NodeBuilder getByName(String name) {
-    if (name == null) {
+    if (name == null || name.trim().isEmpty()) {
       name = RANDOM_POSITION;
     }
 

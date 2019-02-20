@@ -11,6 +11,7 @@ public class SendMessage {
   public final int delayBetweenSend;
   public final Message<?> message;
 
+  // For json
   public SendMessage() {
     this(0, null, 0, 0, null);
   }

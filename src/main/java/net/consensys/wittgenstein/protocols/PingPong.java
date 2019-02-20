@@ -7,6 +7,7 @@ import net.consensys.wittgenstein.server.WParameter;
 /**
  * A simulation of a trivial protocol to be used as a sample.
  */
+@SuppressWarnings("WeakerAccess")
 public class PingPong implements Protocol {
   final PingPongParameters params;
 
@@ -49,12 +50,7 @@ public class PingPong implements Protocol {
       nodeBuilderName = null;
       networkLatencyName = null;
     }
-
-    public PingPongParameters(int nodeCt, String nodeBuilderName, String networkLatencyName) {
-      this.nodeCt = nodeCt;
-      this.nodeBuilderName = nodeBuilderName;
-      this.networkLatencyName = networkLatencyName;
-    }
+    
   }
 
   public PingPong(PingPongParameters params) {
