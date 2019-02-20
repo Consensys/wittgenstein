@@ -297,13 +297,8 @@ public class ENRGossiping implements Protocol {
 
     /**
      * Remove the node the least interesting for us considering it would be replaced by
-     * 'replacement'. If it's not interesting then don't remove the node <<<<<<< HEAD
-     *
-     * =======
-     * 
-     * >>>>>>> e11456ac182ba6c97ee72bd8307753e7f33014a2
-     * 
-     * @return true if we remove a node, false otherwise.
+     * 'replacement'. If it's not interesting then don't remove the node
+     * @return true if we removed a node, false otherwise.
      */
     boolean removeWorseIfPossible(ETHNode replacement) {
       ETHNode toRemove = replacement;
