@@ -163,10 +163,10 @@ public class P2PNetworkTest {
   public void testPeerRemoval() {
     final List<P2PNodeTest> n0Peers = n0.peers;
     int n0P = n0Peers.size();
-    int linksB = network.getExistingLinks().size();
+    int linksB = network.existingLinks.size();
     P2PNodeTest n0RemovedPeers = n0Peers.get(1);
-    network.removeLink(network.getExistingLinks(), n0.nodeId, n0RemovedPeers.nodeId);
-    int linksA = network.getExistingLinks().size();
+    network.removeLink( n0, n0RemovedPeers);
+    int linksA = network.existingLinks.size();
     Assert.assertFalse(n0.peers.contains(n0RemovedPeers));
     Assert.assertFalse(n0RemovedPeers.peers.contains(n0));
     Assert.assertEquals((n0P - 1), n0.peers.size());
