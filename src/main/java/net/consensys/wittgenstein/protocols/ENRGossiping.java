@@ -5,6 +5,7 @@ import net.consensys.wittgenstein.core.messages.FloodMessage;
 import net.consensys.wittgenstein.core.messages.StatusFloodMessage;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.server.WParameter;
+
 import java.util.*;
 import java.util.function.Predicate;
 
@@ -17,8 +18,8 @@ public class ENRGossiping implements Protocol {
   public final P2PNetwork<ETHNode> network;
   private final ENRParameters params;
   private final NodeBuilder nb;
-  private final int numberOfDifferentCapabilities = 1000;
-  private final int numberOfCapabilityPerNode = 10;
+  private final int numberOfDifferentCapabilities = 100;
+  private final int numberOfCapabilityPerNode = 20;
   private List<ETHNode> changedNodes;
 
 
@@ -65,12 +66,12 @@ public class ENRGossiping implements Protocol {
     final String networkLatencyName;
 
     private ENRParameters() {
-      this.NODES = 200;
-      this.timeToChange = 5000;
-      this.capGossipTime = 10000;
+      this.NODES = 400;
+      this.timeToChange = 1000 * 60 * 60 * 2;
+      this.capGossipTime = 1000 * 60 * 5;
       this.discardTime = 100;
-      this.timeToLeave = 10000;
-      this.totalPeers = 15;
+      this.timeToLeave = 1000 * 60 * 60 * 5;
+      this.totalPeers = 10;
       this.changingNodes = 20;
       this.maxPeers = 30;
       this.nodeBuilderName = null;
@@ -112,14 +113,13 @@ public class ENRGossiping implements Protocol {
   }
 
   //Generate new capabilities for new nodes or nodes that periodically change.
-  private Map<String, Integer> generateCap() {
-
-    Map<String, Integer> k_v = new HashMap<>();
-    while (k_v.size() < numberOfCapabilityPerNode) {
+  private Set<String> generateCap() {
+    Set<String> caps = new HashSet<>();
+    while (caps.size() < numberOfCapabilityPerNode) {
       int cap = network.rd.nextInt(numberOfDifferentCapabilities);
-      k_v.put("cap_" + cap, cap);
+      caps.add("cap_" + cap);
     }
-    return k_v;
+    return caps;
   }
 
   private void selectChangingNodes() {
@@ -135,35 +135,7 @@ public class ENRGossiping implements Protocol {
     for (int i = 0; i < params.NODES; i++) {
       network.addNode(new ETHNode(network.rd, this.nb, generateCap()));
     }
-
     network.setPeers();
-    selectChangingNodes();
-    //A percentage of Nodes change their capabilities every X time as defined by the protocol parameters
-    for (ETHNode n : changedNodes) {
-      int start = network.rd.nextInt(params.timeToChange) + 1;
-      network.registerPeriodicTask(n::changeCap, start, params.timeToChange, n);
-    }
-    //Nodes broadcast their capabilities every capGossipTime ms with a lag of rand*100 ms
-    for (ETHNode n : network.allNodes) {
-      int start = network.rd.nextInt(params.capGossipTime) + 1;
-      network.registerPeriodicTask(n::findCap, start, params.capGossipTime, n);
-    }
-    //Send a query for your capabilities matching yours
-    //while you haven't found them, or the time hasnt run out you keep querying
-    Set<Integer> senders = new HashSet<>(params.totalPeers);
-
-    while (senders.size() < params.NODES) {
-      int nodeId = network.rd.nextInt(params.NODES);
-      ETHNode n = network.getNodeById(nodeId);
-      if (senders.add(nodeId)) {
-        n.findCap();
-      }
-    }
-    //Exit the network randomly
-    int start = network.rd.nextInt(params.timeToLeave);
-    ETHNode n = network.getNodeById(0);
-    network.registerPeriodicTask(n::exitNetwork, start, params.timeToLeave,network.getNodeById(0));
-
   }
 
   /**
@@ -173,102 +145,164 @@ public class ENRGossiping implements Protocol {
    * pairs, which must be sorted by key. A Node sends this message to query for specific
    * capabilities in the network
    */
-
   public class Record extends StatusFloodMessage<ETHNode> {
+    final ETHNode source;
     final int seq;
-    final Map<String, Integer> k_v;
+    final Set<String> caps;
 
-    Record(int msgId, int size, int localDelay, int delayBetweenPeers, int seq,
-        Map<String, Integer> k_v) {
+    Record(ETHNode source, int msgId, int size, int localDelay, int delayBetweenPeers, int seq,
+        Set<String> caps) {
       super(msgId, seq, size, localDelay, delayBetweenPeers);
+      this.source = source;
       this.seq = seq;
-      this.k_v = k_v;
+      this.caps = caps;
     }
   }
 
   public class ETHNode extends P2PNode<ETHNode> {
-    Map<String, Integer> capabilities;
+    Set<String> capabilities;
     private int records = 0;
 
-    ETHNode(Random rd, NodeBuilder nb, Map<String, Integer> capabilities) {
+
+    boolean isFullyConnected(){
+      return score(peers) == capabilities.size();
+    }
+
+    int addedValue(ETHNode p) {
+      int s1 = score(peers);
+      List<ETHNode> added = new ArrayList<>(peers);
+      added.add(p);
+      int s2 = score(added);
+      return s2 - s1;
+    }
+
+    boolean canConnect(ETHNode p){
+      if (p.down || p.peers.size() >= params.maxPeers) {
+        return false;
+      }
+      return true;
+    }
+
+    ETHNode(Random rd, NodeBuilder nb, Set<String> capabilities) {
       super(rd, nb);
       this.capabilities = capabilities;
     }
 
-    /**
-     * @return true if there is at least one capabilities in common, false otherwise
-     */
-    boolean matchCap(FloodMessage floodMessage) {
-      Record m = (Record) floodMessage;
-      return m.k_v.entrySet().stream().allMatch(
-          e -> e.getValue().equals(this.capabilities.get(e.getKey())));
+    @Override
+    public void start(){
+      if (isFullyConnected()) {
+        doneAt = 1;
+      }
+
+      /*selectChangingNodes();
+      //A percentage of Nodes change their capabilities every X time as defined by the protocol parameters
+      for (ETHNode n : changedNodes) {
+        int start = network.rd.nextInt(params.timeToChange) + 1;
+        network.registerPeriodicTask(n::changeCap, start, params.timeToChange, n);
+      }*/
+
+      //Nodes broadcast their capabilities every capGossipTime ms with a lag of rand*100 ms
+      int startBroadcast = network.rd.nextInt(params.capGossipTime) + 1;
+      network.registerPeriodicTask(this::broadcastCapabilities, startBroadcast, params.capGossipTime, this);
+
+      // All nodes have to leave a day.
+      int startExit = network.rd.nextInt(params.timeToLeave);
+      //network.registerTask(this::exitNetwork, startExit, this);
     }
 
-    @Override
-    public void onFlood(ETHNode from, FloodMessage floodMessage) {
-      if (doneAt == 0) {
-        if (matchCap(floodMessage)) {
-          doneAt = network.time;
-          if (!peers.contains(from) && peers.size() < params.maxPeers) {
-            peers.add(from); //Add as peer if your capabilities match
-            network.createLink(network.getExistingLinks(), this.nodeId, from.nodeId);
-          } else if (!peers.contains(from) && peers.size() >= params.maxPeers) {
-            int toRemove = addNewPeer(this);
-            network.removeLink(network.getExistingLinks(), this.nodeId, toRemove);
-          }
+    @Override public void onFlood(ETHNode from, FloodMessage floodMessage) {
+      Record rc = (Record)floodMessage;
+      if (!canConnect(rc.source)) {
+        // If we can't connect to this peer there is no need to evaluate anything
+        return;
+      }
+      if (peers.contains(rc.source)) {
+        // We're already connected, and we don't support capability changes. We
+        // can ignore this message.
+        return;
+      }
+      int addedValue = addedValue(rc.source);
+      if (addedValue == 0) {
+        // This node has nothing interesting for us.
+        return;
+      }
 
+      if (peers.size() >= params.maxPeers) {
+        if (!removeWorseIfPossible(rc.source)) {
+          // We're full and removing a peer won't help.
+          return;
         }
+      }
+
+      network.createLink(this, rc.source);
+      if (doneAt == 0 && isFullyConnected()) {
+        doneAt = network.time;
       }
     }
 
-    void findCap() {
-      network.send(new Record(nodeId, 1, 10, 10, records++, this.capabilities), this, this.peers);
+    void broadcastCapabilities() {
+      network.send(new Record(this, nodeId, 1, 10, 10, records++, this.capabilities), this, this.peers);
     }
 
     void changeCap() {
       capabilities = generateCap();
-      network.send(new Record(nodeId, 1, 10, 10, records++, this.capabilities), this, this.peers);
+      network.send(new Record(this, nodeId, 1, 10, 10, records++, this.capabilities), this, this.peers);
     }
 
-    int addNewPeer(ETHNode rNode) {
-      Map<ETHNode, Integer> result = new HashMap<>();
-      ETHNode toRemove = null;
-      for (ETHNode n : peers) {
-        int count = 0;
-        for (int i = 0; i < n.capabilities.size(); i++) {
-          if (rNode.capabilities.get(i).equals(n.capabilities.get(i))) {
-            count++;
+
+    /**
+     * Count the number of matching capabilities if we're connected to this list of peers.
+     */
+    int score(List<ETHNode> peers) {
+      Set<String> found = new HashSet<>();
+      for (ETHNode n:peers) {
+        for (String s:n.capabilities) {
+          if (capabilities.contains(s)) {
+            found.add(s);
           }
         }
-        result.put(n, count);
       }
-      int min = 1000;
+      return found.size();
+    }
 
-      for (ETHNode n : result.keySet()) {
-        if (result.get(n) < min) {
-          min = result.get(n);
-          toRemove = n;
+    /**
+     * Remove the node the least interesting for us considering it would
+     *  be replaced by 'replacement'. If it's not interesting then don't remove the node
+     * @return true if we remove a node, false otherwise.
+     */
+    boolean removeWorseIfPossible(ETHNode replacement) {
+      ETHNode toRemove = replacement;
+      int maxScore = score(peers);
+      List<ETHNode> cP = new ArrayList<>(peers);
+      for (int i = 0; i < peers.size(); i++) {
+        ETHNode cur = cP.get(i);
+        cP.set(i, replacement);
+        int score = score(cP);
+        cP.set(i, cur);
+        if (score > maxScore) {
+          maxScore = score;
+          toRemove = cur;
         }
       }
-      return toRemove.nodeId;
+
+      if (toRemove != replacement) {
+        network.removeLink(this, toRemove);
+        return true;
+      } else {
+        return false;
+      }
     }
-//    int addToRemove(){
-//      peers.stream(n-> n.capabilities.keySet().stream().allMatch(e ->e.equals(this.capabilities.keySet()))).;
-//    }
 
     void exitNetwork() {
-      int nodeId = network.rd.nextInt(params.NODES);
-      this.peers.forEach(p ->network.removeLink(network.getExistingLinks(), nodeId, p.nodeId));
-      network.allNodes.get(nodeId).down = true;
+      network.disconnect(this);
+      network.getNodeById(nodeId).stop();
     }
-
   }
 
   private void capSearch() {
-    Predicate<Protocol> contIf = p1 -> p1.network().time <= 100000;
+    Predicate<Protocol> contIf = p1 -> p1.network().time <= 1000000;
 
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
-
       final List<String> fields = new StatsHelper.Counter(0).fields();
 
       @Override

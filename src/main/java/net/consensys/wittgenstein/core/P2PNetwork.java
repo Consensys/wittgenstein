@@ -8,10 +8,6 @@ public class P2PNetwork<TN extends P2PNode<TN>> extends Network<TN> {
   private final boolean minimum;
   private Set<Long> existingLinks = new HashSet<>();
 
-  public Set<Long> getExistingLinks() {
-    return existingLinks;
-  }
-
   /**
    * @param connectionCount - the target for the number of connection
    * @param minimum - if true, connectionCount is the minimum number of connections per node. If
@@ -46,7 +42,21 @@ public class P2PNetwork<TN extends P2PNode<TN>> extends Network<TN> {
     }
   }
 
-  public void createLink(Set<Long> existingLinks, int pp1, int pp2) {
+  public void disconnect(TN p) {
+    for (TN n: new ArrayList<>(p.peers)) {
+      removeLink(p, n);
+    }
+  }
+
+  public void createLink(TN p1, TN p2) {
+    createLink(existingLinks, p1.nodeId, p2.nodeId);
+  }
+
+  public void removeLink(TN p1, TN p2) {
+    removeLink(existingLinks, p1.nodeId, p2.nodeId);
+  }
+
+  private void createLink(Set<Long> existingLinks, int pp1, int pp2) {
     if (pp1 == pp2) {
       return;
     }
@@ -69,15 +79,15 @@ public class P2PNetwork<TN extends P2PNode<TN>> extends Network<TN> {
     p2.peers.add(p1);
   }
 
-  public void removeLink(Set<Long> existingLinks, int pp1, int pp2) {
+  private void removeLink(Set<Long> existingLinks, int pp1, int pp2) {
     if (pp1 == pp2) {
       return;
     }
     long l1 = Math.min(pp1, pp2);
     long l2 = Math.max(pp1, pp2);
     long link = (l1 << 32) + l2;
-    if (existingLinks.contains(link)) {
-      existingLinks.remove(link);
+    if (!existingLinks.remove(link)) {
+      throw new IllegalStateException("link between "+pp1+" and "+pp2+" does not exist");
     }
     TN p1 = allNodes.get(pp1);
     TN p2 = allNodes.get(pp2);
