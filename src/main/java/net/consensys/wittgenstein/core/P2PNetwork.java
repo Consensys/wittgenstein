@@ -43,7 +43,7 @@ public class P2PNetwork<TN extends P2PNode<TN>> extends Network<TN> {
   }
 
   public void disconnect(TN p) {
-    for (TN n: new ArrayList<>(p.peers)) {
+    for (TN n : new ArrayList<>(p.peers)) {
       removeLink(p, n);
     }
   }
@@ -87,7 +87,7 @@ public class P2PNetwork<TN extends P2PNode<TN>> extends Network<TN> {
     long l2 = Math.max(pp1, pp2);
     long link = (l1 << 32) + l2;
     if (!existingLinks.remove(link)) {
-      throw new IllegalStateException("link between "+pp1+" and "+pp2+" does not exist");
+      throw new IllegalStateException("link between " + pp1 + " and " + pp2 + " does not exist");
     }
     TN p1 = allNodes.get(pp1);
     TN p2 = allNodes.get(pp2);

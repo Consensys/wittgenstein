@@ -5,8 +5,8 @@ import net.consensys.wittgenstein.core.messages.FloodMessage;
 import net.consensys.wittgenstein.core.messages.StatusFloodMessage;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.server.WParameter;
-
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
 /**
@@ -19,7 +19,7 @@ public class ENRGossiping implements Protocol {
   private final ENRParameters params;
   private final NodeBuilder nb;
   private final int numberOfDifferentCapabilities = 100;
-  private final int numberOfCapabilityPerNode = 20;
+  private final int numberOfCapabilityPerNode = 10;
   private List<ETHNode> changedNodes;
 
 
@@ -66,21 +66,21 @@ public class ENRGossiping implements Protocol {
     final String networkLatencyName;
 
     private ENRParameters() {
-      this.NODES = 400;
+      this.NODES = 4000;
       this.timeToChange = 1000 * 60 * 60 * 2;
       this.capGossipTime = 1000 * 60 * 5;
       this.discardTime = 100;
       this.timeToLeave = 1000 * 60 * 60 * 5;
-      this.totalPeers = 10;
+      this.totalPeers = 5;
       this.changingNodes = 20;
-      this.maxPeers = 30;
+      this.maxPeers = 50;
       this.nodeBuilderName = null;
       this.networkLatencyName = null;
     }
 
     ENRParameters(int timeToChange, int capGossipTime, int discardTime, int timeToLeave,
-                  int totalPeers, int nodes, float changingNodes,int maxPeer, String nodeBuilderName,
-                  String networkLatencyName) {
+        int totalPeers, int nodes, float changingNodes, int maxPeer, String nodeBuilderName,
+        String networkLatencyName) {
       this.NODES = nodes;
       this.timeToChange = timeToChange;
       this.capGossipTime = capGossipTime;
@@ -136,6 +136,20 @@ public class ENRGossiping implements Protocol {
       network.addNode(new ETHNode(network.rd, this.nb, generateCap()));
     }
     network.setPeers();
+
+    Map<String, AtomicInteger> caps = new HashMap<>();
+    for (ETHNode n : network.allNodes) {
+      for (String s : n.capabilities) {
+        AtomicInteger c = caps.computeIfAbsent(s, k -> new AtomicInteger());
+        c.incrementAndGet();
+      }
+    }
+    for (Map.Entry<String, AtomicInteger> i : caps.entrySet()) {
+      if (i.getValue().get() == 1) {
+        throw new IllegalStateException("Capabilities are not well distributed");
+      }
+      System.out.println(i.getKey() + ": " + i.getValue().get());
+    }
   }
 
   /**
@@ -159,12 +173,13 @@ public class ENRGossiping implements Protocol {
     }
   }
 
+
   public class ETHNode extends P2PNode<ETHNode> {
     Set<String> capabilities;
     private int records = 0;
 
 
-    boolean isFullyConnected(){
+    boolean isFullyConnected() {
       return score(peers) == capabilities.size();
     }
 
@@ -176,7 +191,7 @@ public class ENRGossiping implements Protocol {
       return s2 - s1;
     }
 
-    boolean canConnect(ETHNode p){
+    boolean canConnect(ETHNode p) {
       if (p.down || p.peers.size() >= params.maxPeers) {
         return false;
       }
@@ -189,7 +204,7 @@ public class ENRGossiping implements Protocol {
     }
 
     @Override
-    public void start(){
+    public void start() {
       if (isFullyConnected()) {
         doneAt = 1;
       }
@@ -203,15 +218,17 @@ public class ENRGossiping implements Protocol {
 
       //Nodes broadcast their capabilities every capGossipTime ms with a lag of rand*100 ms
       int startBroadcast = network.rd.nextInt(params.capGossipTime) + 1;
-      network.registerPeriodicTask(this::broadcastCapabilities, startBroadcast, params.capGossipTime, this);
+      network.registerPeriodicTask(this::broadcastCapabilities, startBroadcast,
+          params.capGossipTime, this);
 
       // All nodes have to leave a day.
       int startExit = network.rd.nextInt(params.timeToLeave);
       //network.registerTask(this::exitNetwork, startExit, this);
     }
 
-    @Override public void onFlood(ETHNode from, FloodMessage floodMessage) {
-      Record rc = (Record)floodMessage;
+    @Override
+    public void onFlood(ETHNode from, FloodMessage floodMessage) {
+      Record rc = (Record) floodMessage;
       if (!canConnect(rc.source)) {
         // If we can't connect to this peer there is no need to evaluate anything
         return;
@@ -233,20 +250,28 @@ public class ENRGossiping implements Protocol {
           return;
         }
       }
+      connect(rc.source);
+    }
 
-      network.createLink(this, rc.source);
+    void connect(ETHNode n) {
+      network.createLink(this, n);
       if (doneAt == 0 && isFullyConnected()) {
         doneAt = network.time;
+      }
+      if (n.doneAt == 0 && n.isFullyConnected()) {
+        n.doneAt = network.time;
       }
     }
 
     void broadcastCapabilities() {
-      network.send(new Record(this, nodeId, 1, 10, 10, records++, this.capabilities), this, this.peers);
+      network.send(new Record(this, nodeId, 1, 10, 10, records++, this.capabilities), this,
+          this.peers);
     }
 
     void changeCap() {
       capabilities = generateCap();
-      network.send(new Record(this, nodeId, 1, 10, 10, records++, this.capabilities), this, this.peers);
+      network.send(new Record(this, nodeId, 1, 10, 10, records++, this.capabilities), this,
+          this.peers);
     }
 
 
@@ -255,19 +280,23 @@ public class ENRGossiping implements Protocol {
      */
     int score(List<ETHNode> peers) {
       Set<String> found = new HashSet<>();
-      for (ETHNode n:peers) {
-        for (String s:n.capabilities) {
+      for (ETHNode n : peers) {
+        for (String s : n.capabilities) {
           if (capabilities.contains(s)) {
             found.add(s);
           }
         }
       }
+      if (found.size() > capabilities.size()) {
+        throw new IllegalStateException();
+      }
       return found.size();
     }
 
     /**
-     * Remove the node the least interesting for us considering it would
-     *  be replaced by 'replacement'. If it's not interesting then don't remove the node
+     * Remove the node the least interesting for us considering it would be replaced by
+     * 'replacement'. If it's not interesting then don't remove the node
+     *
      * @return true if we remove a node, false otherwise.
      */
     boolean removeWorseIfPossible(ETHNode replacement) {
@@ -300,7 +329,7 @@ public class ENRGossiping implements Protocol {
   }
 
   private void capSearch() {
-    Predicate<Protocol> contIf = p1 -> p1.network().time <= 1000000;
+    Predicate<Protocol> contIf = p1 -> p1.network().time <= 10000000;
 
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
       final List<String> fields = new StatsHelper.Counter(0).fields();
@@ -324,12 +353,12 @@ public class ENRGossiping implements Protocol {
 
   @Override
   public String toString() {
-    return "ENRGossiping{" + "timeToChange=" + params.timeToChange + ", capGossipTime="
-        + params.capGossipTime + ", discardTime=" + params.discardTime + ", timeToLeave="
-        + params.timeToLeave + ", totalPeers=" + params.totalPeers + ", NODES=" + params.NODES
-        + ", changingNodes=" + params.changingNodes + ", numberOfDifferentCapabilities="
-        + numberOfDifferentCapabilities + ", numberOfCapabilityPerNode=" + numberOfCapabilityPerNode
-        + '}';
+    return "ENRGossiping{" + "timeToChange=" + (params.timeToChange / 1000) + "s, capGossipTime="
+        + (params.capGossipTime / 1000) + "s, discardTime=" + params.discardTime
+        + "ms, timeToLeave=" + (params.timeToLeave / 1000) + "s, totalPeers=" + params.totalPeers
+        + ", NODES=" + params.NODES + ", changingNodes=" + params.changingNodes
+        + ", numberOfDifferentCapabilities=" + numberOfDifferentCapabilities
+        + ", numberOfCapabilityPerNode=" + numberOfCapabilityPerNode + '}';
   }
 
   public static void main(String... args) {
