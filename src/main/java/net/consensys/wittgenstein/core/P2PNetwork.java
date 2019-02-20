@@ -6,7 +6,7 @@ import java.util.*;
 public class P2PNetwork<TN extends P2PNode<TN>> extends Network<TN> {
   private final int connectionCount;
   private final boolean minimum;
-  private Set<Long> existingLinks = new HashSet<>();
+  Set<Long> existingLinks = new HashSet<>();
 
   /**
    * @param connectionCount - the target for the number of connection
