@@ -2,7 +2,6 @@ package net.consensys.wittgenstein.protocols;
 
 
 import net.consensys.wittgenstein.core.*;
-import net.consensys.wittgenstein.core.messages.*;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -14,7 +13,10 @@ public class ENRGossipingTest {
   //Test that copy method works
   @Test
   public void testCopy() {
-    ENRGossiping p1 = new ENRGossiping(100, 0, 25, 10, 2, 5, 10);
+    String nb = RegistryNodeBuilders.RANDOM_POSITION;
+    String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
+    ENRGossiping p1 = new ENRGossiping(
+        new ENRGossiping.ENRParameters(100, 10, 25, 15000, 2, 20, 0.4f, 30, 20, 5, nb, nl));
     ENRGossiping p2 = p1.copy();
     p1.init();
     p1.network().run(10);
@@ -31,7 +33,5 @@ public class ENRGossipingTest {
       Assert.assertEquals(n1.y, n2.y);
       Assert.assertEquals(n1.peers, n2.peers);
     }
-
   }
-
 }

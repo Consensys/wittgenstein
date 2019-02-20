@@ -19,7 +19,7 @@ public class PingPong implements Protocol {
   /**
    * Nodes have positions. This position is chosen by the builder.
    */
-  private final NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
+  private final NodeBuilder nb;
 
   /**
    * Messages, exchanged on the network, are specific to the protocol. Here we have two messages:
@@ -42,18 +42,27 @@ public class PingPong implements Protocol {
   @SuppressWarnings("WeakerAccess")
   public static class PingPongParameters extends WParameter {
     final int nodeCt;
+    final String nodeBuilderName;
+    final String networkLatencyName;
 
     public PingPongParameters() {
-      this(1000);
+      nodeCt = 1000;
+      nodeBuilderName = null;
+      networkLatencyName = null;
     }
 
-    public PingPongParameters(int nodeCt) {
+    public PingPongParameters(int nodeCt, String nodeBuilderName, String networkLatencyName) {
       this.nodeCt = nodeCt;
+      this.nodeBuilderName = nodeBuilderName;
+      this.networkLatencyName = networkLatencyName;
     }
   }
 
   public PingPong(PingPongParameters params) {
     this.params = params;
+    this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);
+    this.network
+        .setNetworkLatency(new RegistryNetworkLatencies().getByName(params.networkLatencyName));
   }
 
   /**
@@ -96,10 +105,7 @@ public class PingPong implements Protocol {
 
   public static void main(String... args) {
     PingPong p = new PingPong(new PingPongParameters());
-
-    p.network.setNetworkLatency(new NetworkLatency.NetworkLatencyByDistance());
     p.init();
-
     for (int i = 0; i < 500; i += 50) {
       System.out.println(i + " ms, pongs received " + p.network.getNodeById(0).pong);
       p.network.runMs(50);

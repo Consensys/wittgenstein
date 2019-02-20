@@ -15,43 +15,7 @@ import java.util.function.Predicate;
  * https://github.com/libp2p/specs/tree/master/pubsub/gossipsub
  */
 public class P2PFlood implements Protocol {
-  /**
-   * The total number of nodes in the network
-   */
-  private final int nodeCount;
-
-  /**
-   * The total number of dead nodes: they won't be connected.
-   */
-  private final int deadNodeCount;
-
-  /**
-   * The time a node wait before resending a message to its peers. This can be used to represent the
-   * validation time or an extra delay if the message is supposed to be big (i.e. a block in a block
-   * chain for example
-   */
-  private final int delayBeforeResent;
-
-  /**
-   * The number of nodes sending a message (each one sending a different message)
-   */
-  private final int msgCount;
-
-  /**
-   * The number of messages to receive for a node to consider the protocol finished
-   */
-  private final int msgToReceive;
-
-  /**
-   * Average number of peers
-   */
-  private final int peersCount;
-
-  /**
-   * How long we wait between peers when we forward a message to our peers.
-   */
-  private final int delayBetweenSends;
-
+  private final P2PFloodParameters params;
   private final P2PNetwork<P2PFloodNode> network;
   private final NodeBuilder nb;
 
@@ -69,31 +33,60 @@ public class P2PFlood implements Protocol {
 
     @Override
     public void onFlood(P2PFloodNode from, FloodMessage floodMessage) {
-      if (getMsgReceived(floodMessage.msgId()).size() == msgCount) {
+      if (getMsgReceived(floodMessage.msgId()).size() == params.msgCount) {
         doneAt = network.time;
       }
     }
   }
 
   public static class P2PFloodParameters extends WParameter {
-    final int nodeCount;
-    final int deadNodeCount;
-    final int delayBeforeResent;
-    final int msgCount;
+    /**
+     * The total number of nodes in the network
+     */
+    private final int nodeCount;
+
+    /**
+     * The total number of dead nodes: they won't be connected.
+     */
+    private final int deadNodeCount;
+
+    /**
+     * The time a node wait before resending a message to its peers. This can be used to represent
+     * the validation time or an extra delay if the message is supposed to be big (i.e. a block in a
+     * block chain for example
+     */
+    private final int delayBeforeResent;
+
+    /**
+     * The number of nodes sending a message (each one sending a different message)
+     */
+    private final int msgCount;
+
+    /**
+     * The number of messages to receive for a node to consider the protocol finished
+     */
     final int msgToReceive;
+
+    /**
+     * Average number of peers
+     */
     final int peersCount;
-    final int delayBetweenSends;
+
+    /**
+     * How long we wait between peers when we forward a message to our peers.
+     */
+    private final int delayBetweenSends;
     final String nodeBuilderName;
     final String networkLatencyName;
 
     public P2PFloodParameters() {
       this.nodeCount = 100;
       this.deadNodeCount = 10;
-      this.delayBeforeResent = 10;
+      this.delayBeforeResent = 50;
       this.msgCount = 1;
       this.msgToReceive = 1;
-      this.peersCount = 15;
-      this.delayBetweenSends = 0;
+      this.peersCount = 10;
+      this.delayBetweenSends = 30;
       this.nodeBuilderName = null;
       this.networkLatencyName = null;
     }
@@ -113,56 +106,43 @@ public class P2PFlood implements Protocol {
     }
   }
 
-  public P2PFlood(P2PFloodParameters params) {
-    this(params.nodeCount, params.deadNodeCount, params.delayBeforeResent, params.msgCount,
-        params.msgToReceive, params.peersCount, params.delayBetweenSends,
-        new RegistryNodeBuilders().getByName(params.nodeBuilderName),
-        new RegistryNetworkLatencies().getByName(params.networkLatencyName));
-  }
-
-  P2PFlood(int nodeCount, int deadNodeCount, int delayBeforeResent, int msgCount, int msgToReceive,
-      int peersCount, int delayBetweenSends, NodeBuilder nb, NetworkLatency nl) {
-    this.nodeCount = nodeCount;
-    this.deadNodeCount = deadNodeCount;
-    this.delayBeforeResent = delayBeforeResent;
-    this.msgCount = msgCount;
-    this.msgToReceive = msgToReceive;
-    this.peersCount = peersCount;
-    this.delayBetweenSends = delayBetweenSends;
-    this.network = new P2PNetwork<>(peersCount, true);
-    this.nb = nb;
-    this.network.setNetworkLatency(nl);
+  P2PFlood(P2PFloodParameters params) {
+    this.params = params;
+    this.network = new P2PNetwork<>(params.peersCount, true);
+    this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);
+    this.network
+        .setNetworkLatency(new RegistryNetworkLatencies().getByName(params.networkLatencyName));
   }
 
   @Override
   public String toString() {
-    return "nodes=" + nodeCount + ", deadNodes=" + deadNodeCount + ", delayBeforeResent="
-        + delayBeforeResent + "ms, msgSent=" + msgCount + ", msgToReceive=" + msgToReceive
-        + ", peers(minimum)=" + peersCount + ", peers(avg)=" + network.avgPeers()
-        + ", delayBetweenSends=" + delayBetweenSends + "ms, latency="
-        + network.networkLatency.getClass().getSimpleName();
+    return "nodes=" + params.nodeCount + ", deadNodes=" + params.deadNodeCount
+        + ", delayBeforeResent=" + params.delayBeforeResent + "ms, msgSent=" + params.msgCount
+        + ", msgToReceive=" + params.msgToReceive + ", peers(minimum)=" + params.peersCount
+        + ", peers(avg)=" + network.avgPeers() + ", delayBetweenSends=" + params.delayBetweenSends
+        + "ms, latency=" + network.networkLatency.getClass().getSimpleName();
   }
 
   @Override
   public P2PFlood copy() {
-    return new P2PFlood(nodeCount, deadNodeCount, delayBeforeResent, msgCount, msgToReceive,
-        peersCount, delayBetweenSends, nb.copy(), network.networkLatency);
+    return new P2PFlood(params);
   }
 
   public void init() {
-    for (int i = 0; i < nodeCount; i++) {
-      network.addNode(new P2PFloodNode(nb, i < deadNodeCount));
+    for (int i = 0; i < params.nodeCount; i++) {
+      network.addNode(new P2PFloodNode(nb, i < params.deadNodeCount));
     }
     network.setPeers();
 
-    Set<Integer> senders = new HashSet<>(msgCount);
-    while (senders.size() < msgCount) {
-      int nodeId = network.rd.nextInt(nodeCount);
+    Set<Integer> senders = new HashSet<>(params.msgCount);
+    while (senders.size() < params.msgCount) {
+      int nodeId = network.rd.nextInt(params.nodeCount);
       P2PFloodNode from = network.getNodeById(nodeId);
       if (!from.down && senders.add(nodeId)) {
-        FloodMessage<P2PFloodNode> m = new FloodMessage<>(1, delayBeforeResent, delayBetweenSends);
+        FloodMessage<P2PFloodNode> m =
+            new FloodMessage<>(1, params.delayBeforeResent, params.delayBetweenSends);
         network.sendPeers(m, from);
-        if (msgCount == 1) {
+        if (params.msgCount == 1) {
           from.doneAt = 1;
         }
       }
@@ -175,12 +155,11 @@ public class P2PFlood implements Protocol {
   }
 
   private static void floodTime() {
-    NetworkLatency nl = new NetworkLatency.IC3NetworkLatency();
-    NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
-
     int liveNodes = 2000;
     final int threshold = (int) (0.99 * liveNodes);
-    P2PFlood p = new P2PFlood(liveNodes, 0, 1, 2000, threshold, 15, 1, nb, nl);
+    P2PFloodParameters params =
+        new P2PFloodParameters(liveNodes, 0, 1, 2000, threshold, 15, 1, null, null);
+    P2PFlood p = new P2PFlood(params);
 
     Predicate<Protocol> contIf = p1 -> {
       if (p1.network().time > 50000) {

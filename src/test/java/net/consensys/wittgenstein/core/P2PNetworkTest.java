@@ -6,6 +6,7 @@ import net.consensys.wittgenstein.core.utils.MoreMath;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import java.util.List;
 import java.util.Random;
 
 public class P2PNetworkTest {
@@ -156,5 +157,16 @@ public class P2PNetworkTest {
     Assert.assertEquals(mv2, n1.getMsgReceived(m.msgId()).iterator().next());
     Assert.assertEquals(m2, n0.getMsgReceived(m2.msgId()).iterator().next());
     Assert.assertEquals(m2, n1.getMsgReceived(m2.msgId()).iterator().next());
+  }
+
+  @Test
+  public void testPeerRemoval() {
+    final List<P2PNodeTest> n0Peers = n0.peers;
+    int n0P = n0Peers.size();
+    P2PNodeTest n0RemovedPeers = n0Peers.get(1);
+    network.removeLink(n0, n0RemovedPeers);
+    Assert.assertFalse(n0.peers.contains(n0RemovedPeers));
+    Assert.assertFalse(n0RemovedPeers.peers.contains(n0));
+    Assert.assertEquals((n0P - 1), n0.peers.size());
   }
 }
