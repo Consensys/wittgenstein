@@ -145,7 +145,7 @@ public class WServerTest {
 
   @Test
   public void testInitProtocol() throws Exception {
-    WParameter params = new PingPong.PingPongParameters(123);
+    WParameter params = new PingPong.PingPongParameters(123, null, null);
     String jsonString = objectMapper.writeValueAsString(params);
 
     RequestEntity<String> requestEntity = RequestEntity

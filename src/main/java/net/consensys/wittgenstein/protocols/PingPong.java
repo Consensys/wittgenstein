@@ -51,6 +51,11 @@ public class PingPong implements Protocol {
       networkLatencyName = null;
     }
 
+    public PingPongParameters(int nodeCt, String nodeBuilderName, String networkLatencyName) {
+      this.nodeCt = nodeCt;
+      this.nodeBuilderName = nodeBuilderName;
+      this.networkLatencyName = networkLatencyName;
+    }
   }
 
   public PingPong(PingPongParameters params) {
