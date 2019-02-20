@@ -50,7 +50,7 @@ public class PingPong implements Protocol {
       nodeBuilderName = null;
       networkLatencyName = null;
     }
-    
+
   }
 
   public PingPong(PingPongParameters params) {
