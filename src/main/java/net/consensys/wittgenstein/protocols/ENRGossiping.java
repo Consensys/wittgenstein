@@ -290,7 +290,7 @@ public class ENRGossiping implements Protocol {
         }
       }
       if (found.size() > capabilities.size()) {
-        throw new IllegalStateException();
+        throw new IllegalStateException("found.size() > capabilities.size()");
       }
       return found.size();
     }
@@ -298,6 +298,7 @@ public class ENRGossiping implements Protocol {
     /**
      * Remove the node the least interesting for us considering it would be replaced by
      * 'replacement'. If it's not interesting then don't remove the node
+     * 
      * @return true if we removed a node, false otherwise.
      */
     boolean removeWorseIfPossible(ETHNode replacement) {
