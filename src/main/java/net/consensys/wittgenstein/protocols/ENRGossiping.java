@@ -20,13 +20,13 @@ public class ENRGossiping implements Protocol {
   private final int numberOfDifferentCapabilities = 1000;
   private final int numberOfCapabilityPerNode = 10;
   private List<ETHNode> changedNodes;
-  private int maxPeers = 30;
+
 
   public NodeBuilder getNb() {
     return nb;
   }
 
-  public static class ENRParameters extends WParameter {
+  static class ENRParameters extends WParameter {
     /**
      * timeToChange is used to describe the time period, in s, that needs to pass in order to change
      * your capabilities i.e.: when you create new key-value pairs for your record. Only a given
@@ -60,6 +60,7 @@ public class ENRGossiping implements Protocol {
      * chaningNodes is the % of nodes that regularly change their capabilities
      */
     final float changingNodes;
+    private final int maxPeers;
     final String nodeBuilderName;
     final String networkLatencyName;
 
@@ -71,13 +72,14 @@ public class ENRGossiping implements Protocol {
       this.timeToLeave = 10000;
       this.totalPeers = 15;
       this.changingNodes = 20;
+      this.maxPeers = 30;
       this.nodeBuilderName = null;
       this.networkLatencyName = null;
     }
 
-    public ENRParameters(int timeToChange, int capGossipTime, int discardTime, int timeToLeave,
-        int totalPeers, int nodes, float changingNodes, String nodeBuilderName,
-        String networkLatencyName) {
+    ENRParameters(int timeToChange, int capGossipTime, int discardTime, int timeToLeave,
+                  int totalPeers, int nodes, float changingNodes,int maxPeer, String nodeBuilderName,
+                  String networkLatencyName) {
       this.NODES = nodes;
       this.timeToChange = timeToChange;
       this.capGossipTime = capGossipTime;
@@ -85,12 +87,13 @@ public class ENRGossiping implements Protocol {
       this.timeToLeave = timeToLeave;
       this.totalPeers = totalPeers;
       this.changingNodes = changingNodes;
+      this.maxPeers = maxPeer;
       this.nodeBuilderName = nodeBuilderName;
       this.networkLatencyName = networkLatencyName;
     }
   }
 
-  public ENRGossiping(ENRParameters params) {
+  ENRGossiping(ENRParameters params) {
     this.params = params;
     this.network = new P2PNetwork<>(params.totalPeers, true);
     this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);
@@ -109,7 +112,7 @@ public class ENRGossiping implements Protocol {
   }
 
   //Generate new capabilities for new nodes or nodes that periodically change.
-  public Map<String, Integer> generateCap() {
+  private Map<String, Integer> generateCap() {
 
     Map<String, Integer> k_v = new HashMap<>();
     while (k_v.size() < numberOfCapabilityPerNode) {
@@ -119,7 +122,7 @@ public class ENRGossiping implements Protocol {
     return k_v;
   }
 
-  public void selectChangingNodes() {
+  private void selectChangingNodes() {
     int changingCapNodes = (int) (params.totalPeers * params.changingNodes);
     changedNodes = new ArrayList<>(changingCapNodes);
     while (changedNodes.size() < changingCapNodes) {
@@ -157,9 +160,9 @@ public class ENRGossiping implements Protocol {
       }
     }
     //Exit the network randomly
-    int start = network.rd.nextInt(params.timeToChange);
+    int start = network.rd.nextInt(params.timeToLeave);
     ETHNode n = network.getNodeById(0);
-    network.registerPeriodicTask(n::exitNetwork, start, params.timeToLeave, network.getNodeById(0));
+    network.registerPeriodicTask(n::exitNetwork, start, params.timeToLeave,network.getNodeById(0));
 
   }
 
@@ -206,18 +209,17 @@ public class ENRGossiping implements Protocol {
       if (doneAt == 0) {
         if (matchCap(floodMessage)) {
           doneAt = network.time;
-          if (!peers.contains(from) && peers.size() < maxPeers) {
+          if (!peers.contains(from) && peers.size() < params.maxPeers) {
             peers.add(from); //Add as peer if your capabilities match
             network.createLink(network.getExistingLinks(), this.nodeId, from.nodeId);
-          } else if (!peers.contains(from) && peers.size() >= maxPeers) {
-            int toRemove = addNewPeer(peers, this);
+          } else if (!peers.contains(from) && peers.size() >= params.maxPeers) {
+            int toRemove = addNewPeer(this);
             network.removeLink(network.getExistingLinks(), this.nodeId, toRemove);
           }
 
         }
       }
     }
-
 
     void findCap() {
       network.send(new Record(nodeId, 1, 10, 10, records++, this.capabilities), this, this.peers);
@@ -228,19 +230,20 @@ public class ENRGossiping implements Protocol {
       network.send(new Record(nodeId, 1, 10, 10, records++, this.capabilities), this, this.peers);
     }
 
-    int addNewPeer(List<ETHNode> peers, ETHNode from) {
+    int addNewPeer(ETHNode rNode) {
       Map<ETHNode, Integer> result = new HashMap<>();
+      ETHNode toRemove = null;
       for (ETHNode n : peers) {
         int count = 0;
         for (int i = 0; i < n.capabilities.size(); i++) {
-          if (from.capabilities.get(i).equals(n.capabilities.get(i))) {
+          if (rNode.capabilities.get(i).equals(n.capabilities.get(i))) {
             count++;
           }
         }
         result.put(n, count);
       }
       int min = 1000;
-      ETHNode toRemove = null;
+
       for (ETHNode n : result.keySet()) {
         if (result.get(n) < min) {
           min = result.get(n);
@@ -249,13 +252,14 @@ public class ENRGossiping implements Protocol {
       }
       return toRemove.nodeId;
     }
+//    int addToRemove(){
+//      peers.stream(n-> n.capabilities.keySet().stream().allMatch(e ->e.equals(this.capabilities.keySet()))).;
+//    }
 
     void exitNetwork() {
-      int start = network.rd.nextInt(params.timeToChange);
       int nodeId = network.rd.nextInt(params.NODES);
+      this.peers.forEach(p ->network.removeLink(network.getExistingLinks(), nodeId, p.nodeId));
       network.allNodes.get(nodeId).down = true;
-      network.allNodes.get(nodeId).peers.stream().forEach(
-          n -> network.removeLink(network.getExistingLinks(), nodeId, n.nodeId));
     }
 
   }
@@ -281,10 +285,6 @@ public class ENRGossiping implements Protocol {
     ProgressPerTime ppp =
         new ProgressPerTime(this, "", "Nodes that have found capabilities", sg, 1, null);
     ppp.run(contIf);
-    /*for(int i=0;i< ppp.protocol.network().allNodes.size();i++){
-      List<ETHNode> n = (List<ETHNode>) ppp.protocol.network().allNodes;
-      //System.out.println("Node"+ppp.protocol.network().getNodeById(i)+" has "+n.get(i).peers.size()+" peers");
-    }*/
 
   }
 
