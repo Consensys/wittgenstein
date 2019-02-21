@@ -9,7 +9,7 @@ import net.consensys.wittgenstein.core.Protocol;
 import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.protocols.PingPong;
 import net.consensys.wittgenstein.server.SendMessage;
-import net.consensys.wittgenstein.server.WParameter;
+import net.consensys.wittgenstein.server.WParameters;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -71,7 +71,7 @@ public class WServerTest {
         restTemplate.exchange(createURLWithPort("/protocols/" + PingPong.class.getName()),
             HttpMethod.GET, entity, String.class);
 
-    WParameter ps = objectMapper.readValue(response.getBody(), WParameter.class);
+    WParameters ps = objectMapper.readValue(response.getBody(), WParameters.class);
     Assert.assertTrue(response.getBody(), ps instanceof PingPong.PingPongParameters);
   }
 
@@ -130,7 +130,7 @@ public class WServerTest {
     @SuppressWarnings("unused")
     public DummyProtocol(DummyParameters p) {}
 
-    public static class DummyParameters extends WParameter {
+    public static class DummyParameters extends WParameters {
       public DummyParameters() {}
     }
   }
@@ -145,7 +145,7 @@ public class WServerTest {
 
   @Test
   public void testInitProtocol() throws Exception {
-    WParameter params = new PingPong.PingPongParameters(123, null, null);
+    WParameters params = new PingPong.PingPongParameters(123, null, null);
     String jsonString = objectMapper.writeValueAsString(params);
 
     RequestEntity<String> requestEntity = RequestEntity
@@ -163,7 +163,7 @@ public class WServerTest {
 
   @Test
   public void testFullWorkflowOnDummyProtocol() throws Exception {
-    WParameter params = new DummyProtocol.DummyParameters();
+    WParameters params = new DummyProtocol.DummyParameters();
     String jsonString = objectMapper.writeValueAsString(params);
 
     RequestEntity<String> requestEntity = RequestEntity

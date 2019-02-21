@@ -4,7 +4,7 @@ import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.FloodMessage;
 import net.consensys.wittgenstein.core.messages.StatusFloodMessage;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
-import net.consensys.wittgenstein.server.WParameter;
+import net.consensys.wittgenstein.server.WParameters;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
@@ -25,7 +25,7 @@ public class ENRGossiping implements Protocol {
     return nb;
   }
 
-  static class ENRParameters extends WParameter {
+  static class ENRParameters extends WParameters {
     /**
      * timeToChange is used to describe the time period, in s, that needs to pass in order to change
      * your capabilities i.e.: when you create new key-value pairs for your record. Only a given

@@ -3,7 +3,7 @@ package net.consensys.wittgenstein.protocols;
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
-import net.consensys.wittgenstein.server.WParameter;
+import net.consensys.wittgenstein.server.WParameters;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -360,7 +360,7 @@ public class Paxos implements Protocol {
   }
 
   @SuppressWarnings("WeakerAccess")
-  public static class PaxosParameters extends WParameter {
+  public static class PaxosParameters extends WParameters {
     final int acceptorCount;
     final int proposerCount;
     final int timeout;

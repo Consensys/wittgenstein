@@ -38,13 +38,13 @@ public class WServer extends ExternalWS implements IServer, External {
 
   @GetMapping(value = "/protocols/{fullClassName}")
   @Override
-  public WParameter getProtocolParameters(@PathVariable("fullClassName") String fullClassName) {
+  public WParameters getProtocolParameters(@PathVariable("fullClassName") String fullClassName) {
     return server.getProtocolParameters(fullClassName);
   }
 
   @PostMapping(value = "/network/init/{fullClassName}")
   public void init(@PathVariable("fullClassName") String fullClassName,
-      @RequestBody WParameter parameters) {
+      @RequestBody WParameters parameters) {
     server.init(fullClassName, parameters);
   }
 

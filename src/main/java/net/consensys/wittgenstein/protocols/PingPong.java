@@ -2,7 +2,7 @@ package net.consensys.wittgenstein.protocols;
 
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.Message;
-import net.consensys.wittgenstein.server.WParameter;
+import net.consensys.wittgenstein.server.WParameters;
 
 /**
  * A simulation of a trivial protocol to be used as a sample.
@@ -40,7 +40,7 @@ public class PingPong implements Protocol {
   }
 
   @SuppressWarnings("WeakerAccess")
-  public static class PingPongParameters extends WParameter {
+  public static class PingPongParameters extends WParameters {
     final int nodeCt;
     final String nodeBuilderName;
     final String networkLatencyName;
