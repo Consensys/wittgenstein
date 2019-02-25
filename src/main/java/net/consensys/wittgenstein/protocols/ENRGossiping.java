@@ -20,11 +20,6 @@ public class ENRGossiping implements Protocol {
   private final NodeBuilder nb;
   private List<ETHNode> changedNodes;
 
-
-  public NodeBuilder getNb() {
-    return nb;
-  }
-
   static class ENRParameters extends WParameter {
     /**
      * timeToChange is used to describe the time period, in s, that needs to pass in order to change
@@ -66,11 +61,11 @@ public class ENRGossiping implements Protocol {
     private final int capPerNode;
 
     private ENRParameters() {
-      this.NODES = 4000;
-      this.timeToChange = 1000 * 60 * 60 * 2;
-      this.capGossipTime = 1000 * 60 * 5;
+      this.NODES = 1000;
+      this.timeToChange = 1000 * 10 ;
+      this.capGossipTime = 1000 * 5 ;
       this.discardTime = 100;
-      this.timeToLeave = 1000 * 60 * 60 * 5;
+      this.timeToLeave = 1000 * 10 ;
       this.totalPeers = 5;
       this.changingNodes = 20;
       this.maxPeers = 50;
@@ -135,6 +130,10 @@ public class ENRGossiping implements Protocol {
     }
   }
 
+  private void addNewNode(){
+    network.addNode(new ETHNode(network.rd,this.nb,generateCap()));
+  }
+
   @Override
   public void init() {
     for (int i = 0; i < params.NODES; i++) {
@@ -142,6 +141,12 @@ public class ENRGossiping implements Protocol {
     }
     network.setPeers();
 
+    selectChangingNodes();
+    //A percentage of Nodes change their capabilities every X time as defined by the protocol parameters
+    for (ETHNode n : changedNodes) {
+      int start = network.rd.nextInt(params.timeToChange) + 1;
+      network.registerPeriodicTask(n::changeCap, start, params.timeToChange, n);
+    }
     Map<String, AtomicInteger> caps = new HashMap<>();
     for (ETHNode n : network.allNodes) {
       for (String s : n.capabilities) {
@@ -155,6 +160,9 @@ public class ENRGossiping implements Protocol {
       }
       System.out.println(i.getKey() + ": " + i.getValue().get());
     }
+    int startAdding = network.rd.nextInt(params.timeToLeave);
+
+    network.registerPeriodicTask(this::addNewNode,startAdding,params.timeToLeave,network.getNodeById(0));
   }
 
   /**
@@ -210,14 +218,6 @@ public class ENRGossiping implements Protocol {
       if (isFullyConnected()) {
         doneAt = 1;
       }
-
-      selectChangingNodes();
-      //A percentage of Nodes change their capabilities every X time as defined by the protocol parameters
-      for (ETHNode n : changedNodes) {
-        int start = network.rd.nextInt(params.timeToChange) + 1;
-        network.registerPeriodicTask(n::changeCap, start, params.timeToChange, n);
-      }
-
       //Nodes broadcast their capabilities every capGossipTime ms with a lag of rand*100 ms
       int startBroadcast = network.rd.nextInt(params.capGossipTime) + 1;
       network.registerPeriodicTask(this::broadcastCapabilities, startBroadcast,
@@ -225,7 +225,9 @@ public class ENRGossiping implements Protocol {
 
       // All nodes have to leave a day.
       int startExit = network.rd.nextInt(params.timeToLeave);
-      //network.registerTask(this::exitNetwork, startExit, this);
+      network.registerTask(this::exitNetwork, startExit, this);
+
+
     }
 
     @Override
@@ -331,7 +333,7 @@ public class ENRGossiping implements Protocol {
   }
 
   private void capSearch() {
-    Predicate<Protocol> contIf = p1 -> p1.network().time <= 10000000;
+    Predicate<Protocol> contIf = p1 -> p1.network().time <= 1000000 && p1.network().allNodes.stream().filter(n -> n.doneAt>0 && !n.down).count()!=p1.network().allNodes.size();
 
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
       final List<String> fields = new StatsHelper.Counter(0).fields();
