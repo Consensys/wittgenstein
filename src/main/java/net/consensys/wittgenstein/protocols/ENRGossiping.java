@@ -62,10 +62,10 @@ public class ENRGossiping implements Protocol {
 
     private ENRParameters() {
       this.NODES = 1000;
-      this.timeToChange = 1000 * 10 ;
-      this.capGossipTime = 1000 * 5 ;
+      this.timeToChange = 1000 * 10;
+      this.capGossipTime = 1000 * 5;
       this.discardTime = 100;
-      this.timeToLeave = 1000 * 10 ;
+      this.timeToLeave = 1000 * 10;
       this.totalPeers = 5;
       this.changingNodes = 20;
       this.maxPeers = 50;
@@ -130,8 +130,8 @@ public class ENRGossiping implements Protocol {
     }
   }
 
-  private void addNewNode(){
-    network.addNode(new ETHNode(network.rd,this.nb,generateCap()));
+  private void addNewNode() {
+    network.addNode(new ETHNode(network.rd, this.nb, generateCap()));
   }
 
   @Override
@@ -162,7 +162,8 @@ public class ENRGossiping implements Protocol {
     }
     int startAdding = network.rd.nextInt(params.timeToLeave);
 
-    network.registerPeriodicTask(this::addNewNode,startAdding,params.timeToLeave,network.getNodeById(0));
+    network.registerPeriodicTask(this::addNewNode, startAdding, params.timeToLeave,
+        network.getNodeById(0));
   }
 
   /**
@@ -333,7 +334,10 @@ public class ENRGossiping implements Protocol {
   }
 
   private void capSearch() {
-    Predicate<Protocol> contIf = p1 -> p1.network().time <= 1000000 && p1.network().allNodes.stream().filter(n -> n.doneAt>0 && !n.down).count()!=p1.network().allNodes.size();
+    Predicate<Protocol> contIf = p1 -> p1.network().time <= 1000000 && p1.network().allNodes
+        .stream()
+        .filter(n -> n.doneAt > 0 && !n.down)
+        .count() != p1.network().allNodes.size();
 
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
       final List<String> fields = new StatsHelper.Counter(0).fields();
