@@ -1,13 +1,17 @@
 package net.consensys.wittgenstein.protocols;
 
 
+import net.consensys.wittgenstein.core.NetworkLatency;
+import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 
 public class CasperIMDTest {
-  private final CasperIMD ci = new CasperIMD(5, false, 5, 80, 1000, 1);
+
+  private final CasperIMD ci =
+      new CasperIMD(new CasperIMD.CasperParemeters(5, false, 5, 80, 1000, 1, null, null));
   private final CasperIMD.BlockProducer bp1 = ci.new BlockProducer(ci.genesis);
   private final CasperIMD.BlockProducer bp2 = ci.new BlockProducer(ci.genesis);
   private final CasperIMD.Attester at1 = ci.new Attester(ci.genesis);
@@ -23,7 +27,7 @@ public class CasperIMDTest {
   public void testInit() {
     ci.network.time = 0;
     ci.init(ci.new ByzBlockProducerWF(0, ci.genesis));
-    Assert.assertEquals(5 * 80, ci.attestersCount);
+    Assert.assertEquals(5 * 80, ci.params.attestersCount);
     Assert.assertEquals(0, ci.network.msgs.sizeAt(1));
     Assert.assertEquals("One block producer start at second 8", 1, ci.network.msgs.sizeAt(8000));
     Assert.assertEquals("Next block producer", 1, ci.network.msgs.sizeAt(16000));
@@ -154,10 +158,10 @@ public class CasperIMDTest {
     //    b.h == 3  => contains attestation for h == 2 && h == 1
     //    b.h == 4  => contains attestation for h == 3 && h == 2
     //    b.h == 5  => contains attestation for h == 4 && h == 3
-    b = bp1.buildBlock(bp1.head, a1.height + ci.cycleLength);
+    b = bp1.buildBlock(bp1.head, a1.height + ci.params.cycleLength);
     Assert.assertTrue(b.attestationsByHeight.containsKey(2));
 
-    b = bp1.buildBlock(bp1.head, a1.height + ci.cycleLength + 1);
+    b = bp1.buildBlock(bp1.head, a1.height + ci.params.cycleLength + 1);
     Assert.assertFalse(b.attestationsByHeight.containsKey(2));
   }
 
@@ -255,7 +259,8 @@ public class CasperIMDTest {
 
   @Test
   public void testCopy() {
-    CasperIMD p1 = new CasperIMD(5, false, 5, 80, 1000, 1);
+    CasperIMD p1 =
+        new CasperIMD(new CasperIMD.CasperParemeters(5, false, 5, 80, 1000, 1, null, null));
     CasperIMD p2 = p1.copy();
     p1.init();
     p2.init();

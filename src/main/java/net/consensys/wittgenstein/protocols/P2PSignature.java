@@ -4,6 +4,7 @@ import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
+import net.consensys.wittgenstein.server.WParameters;
 import net.consensys.wittgenstein.tools.Graph;
 import java.io.File;
 import java.io.IOException;
@@ -19,52 +20,9 @@ import java.util.*;
  */
 @SuppressWarnings("WeakerAccess")
 public class P2PSignature implements Protocol {
-
-  /**
-   * The number of nodes in the network participating in signing
-   */
-  final int signingNodeCount;
-
-  /**
-   * The number of nodes participating without signing.
-   */
-  final int relayingNodeCount;
-
-  /**
-   * The number of signatures to reach to finish the protocol.
-   */
-  final int threshold;
-
-  /**
-   * The typical number of peers a peer has. At least 3.
-   */
-  final int connectionCount;
-
-  /**
-   * The time it takes to do a pairing for a node.
-   */
-  final int pairingTime;
-
-  /**
-   * The protocol sends a set of sigs every 'sigsSendPeriod' milliseconds
-   */
-  final int sigsSendPeriod;
-
-  /**
-   * @see P2PSigNode#sendSigs for the two strategies on aggregation.
-   */
-  final boolean doubleAggregateStrategy;
-
-  /**
-   * If true the nodes send their state to the peers they are connected with. If false they don't.
-   */
-  final boolean withState = true;
-
-  /**
-   * Use san fermin in parallel with gossiping.
-   */
-  final boolean sanFermin;
-
+  P2PSignatureParameters params;
+  final P2PNetwork<P2PSigNode> network;
+  final NodeBuilder nb;
 
   enum SendSigsStrategy {
     /**
@@ -84,35 +42,103 @@ public class P2PSignature implements Protocol {
      */
     cmp_diff
   }
+  public static class P2PSignatureParameters extends WParameters {
+
+    /**
+     * The number of nodes in the network participating in signing
+     */
+    final int signingNodeCount;
+
+    /**
+     * The number of nodes participating without signing.
+     */
+    final int relayingNodeCount;
+
+    /**
+     * The number of signatures to reach to finish the protocol.
+     */
+    final int threshold;
+
+    /**
+     * The typical number of peers a peer has. At least 3.
+     */
+    final int connectionCount;
+
+    /**
+     * The time it takes to do a pairing for a node.
+     */
+    final int pairingTime;
+
+    /**
+     * The protocol sends a set of sigs every 'sigsSendPeriod' milliseconds
+     */
+    final int sigsSendPeriod;
+
+    /**
+     * @see P2PSigNode#sendSigs for the two strategies on aggregation.
+     */
+    final boolean doubleAggregateStrategy;
+
+    /**
+     * If true the nodes send their state to the peers they are connected with. If false they don't.
+     */
+    final boolean withState = true;
+
+    /**
+     * Use san fermin in parallel with gossiping.
+     */
+    final boolean sanFermin;
 
 
-  /**
-   * For the compression scheme: we can use log 2 (the default or other values).
-   */
-  final int sigRange;
+    /**
+     * For the compression scheme: we can use log 2 (the default or other values).
+     */
+    final int sigRange;
+    final String nodeBuilderName;
+    final String networkLatencyName;
 
+    final SendSigsStrategy sendSigsStrategy;
 
-  final SendSigsStrategy sendSigsStrategy;
+    P2PSignatureParameters() {
+      this.signingNodeCount = 1000;
+      this.relayingNodeCount = 20;
+      this.threshold = 99;
+      this.connectionCount = 40;
+      this.pairingTime = 100;
+      this.sigsSendPeriod = 1000;
+      this.doubleAggregateStrategy = true;
+      this.sanFermin = true;
+      this.sendSigsStrategy = this.sanFermin ? SendSigsStrategy.cmp_all : SendSigsStrategy.dif;
+      this.sigRange = 20;
+      this.nodeBuilderName = null;
+      this.networkLatencyName = null;
+    }
 
+    P2PSignatureParameters(int signingNodeCount, int relayingNodeCount, int threshold,
+        int connectionCount, int pairingTime, int sigsSendPeriod, boolean doubleAggregateStrategy,
+        boolean sanFermin, SendSigsStrategy sendSigsStrategy, int sigRange, String nodeBuilderName,
+        String networkLatencyName) {
+      this.signingNodeCount = signingNodeCount;
+      this.relayingNodeCount = relayingNodeCount;
+      this.threshold = threshold;
+      this.connectionCount = connectionCount;
+      this.pairingTime = pairingTime;
+      this.sigsSendPeriod = sigsSendPeriod;
+      this.doubleAggregateStrategy = doubleAggregateStrategy;
+      this.sanFermin = sanFermin;
+      this.sendSigsStrategy = this.sanFermin ? SendSigsStrategy.cmp_all : sendSigsStrategy;
+      this.sigRange = sigRange;
+      this.nodeBuilderName = nodeBuilderName;
+      this.networkLatencyName = networkLatencyName;
+    }
+  }
 
-  final P2PNetwork<P2PSigNode> network;
-  final NodeBuilder nb;
-
-  public P2PSignature(int signingNodeCount, int relayingNodeCount, int threshold,
-      int connectionCount, int pairingTime, int sigsSendPeriod, boolean doubleAggregateStrategy,
-      boolean sanFermin, SendSigsStrategy sendSigsStrategy, int sigRange) {
-    this.signingNodeCount = signingNodeCount;
-    this.relayingNodeCount = relayingNodeCount;
-    this.threshold = threshold;
-    this.connectionCount = connectionCount;
-    this.pairingTime = pairingTime;
-    this.sigsSendPeriod = sigsSendPeriod;
-    this.doubleAggregateStrategy = doubleAggregateStrategy;
-    this.sanFermin = sanFermin;
-    this.sendSigsStrategy = this.sanFermin ? SendSigsStrategy.cmp_all : sendSigsStrategy;
-    this.sigRange = sigRange;
-    this.network = new P2PNetwork<>(connectionCount, false);
-    this.nb = new NodeBuilder.NodeBuilderWithRandomPosition();
+  public P2PSignature(P2PSignatureParameters params) {
+    this.params = params;
+    this.network = new P2PNetwork<>(params.connectionCount, false);
+    this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);
+    this.network
+        .setNetworkLatency(new RegistryNetworkLatencies().getByName(params.networkLatencyName));
   }
 
   static class State extends Message<P2PSigNode> {
@@ -161,7 +187,7 @@ public class P2PSignature implements Protocol {
    * @return the number of signatures to include
    */
   int compressedSize(BitSet sigs) {
-    if (sigs.length() == signingNodeCount) {
+    if (sigs.length() == params.signingNodeCount) {
       // Shortcuts: if we have all sigs, then we just send
       //  an aggregated signature
       return 1;
@@ -178,14 +204,14 @@ public class P2PSignature implements Protocol {
         sigCt -= mergeRanges(firstOneAt, pos);
         firstOneAt = -1;
       } else if (compressing) {
-        if ((pos + 1) % sigRange == 0) {
+        if ((pos + 1) % params.sigRange == 0) {
           // We compressed the whole range, but now we're starting a new one...
           compressing = false;
           wasCompressing = true;
         }
       } else {
         sigCt++;
-        if (pos % sigRange == 0) {
+        if (pos % params.sigRange == 0) {
           compressing = true;
           if (!wasCompressing) {
             firstOneAt = pos;
@@ -209,11 +235,11 @@ public class P2PSignature implements Protocol {
       return 0;
     }
     // We start only at the beginning of a range
-    if (firstOneAt % (sigRange * 2) != 0) {
-      firstOneAt += (sigRange * 2) - (firstOneAt % (sigRange * 2));
+    if (firstOneAt % (params.sigRange * 2) != 0) {
+      firstOneAt += (params.sigRange * 2) - (firstOneAt % (params.sigRange * 2));
     }
 
-    int rangeCt = (pos - firstOneAt) / sigRange;
+    int rangeCt = (pos - firstOneAt) / params.sigRange;
     if (rangeCt < 2) {
       return 0;
     }
@@ -221,7 +247,7 @@ public class P2PSignature implements Protocol {
     int max = MoreMath.log2(rangeCt);
     while (max > 0) {
       int sizeInBlocks = (int) Math.pow(2, max);
-      int size = sizeInBlocks * sigRange;
+      int size = sizeInBlocks * params.sigRange;
       if (firstOneAt % size == 0) {
         return (sizeInBlocks - 1) + mergeRanges(firstOneAt + size, pos);
       }
@@ -260,7 +286,7 @@ public class P2PSignature implements Protocol {
 
 
   public class P2PSigNode extends P2PNode<P2PSigNode> {
-    final BitSet verifiedSignatures = new BitSet(signingNodeCount);
+    final BitSet verifiedSignatures = new BitSet(params.signingNodeCount);
     final Set<BitSet> toVerify = new HashSet<>();
     final Map<Integer, State> peersState = new HashMap<>();
     final boolean justRelay;
@@ -279,11 +305,11 @@ public class P2PSignature implements Protocol {
       if (round < 1) {
         throw new IllegalArgumentException("round=" + round);
       }
-      BitSet res = new BitSet(signingNodeCount);
+      BitSet res = new BitSet(params.signingNodeCount);
       int cMask = (1 << round) - 1;
       int start = (cMask | nodeId) ^ cMask;
       int end = nodeId | cMask;
-      end = Math.min(end, signingNodeCount - 1);
+      end = Math.min(end, params.signingNodeCount - 1);
       res.set(start, end + 1);
       res.set(nodeId, false);
 
@@ -298,7 +324,7 @@ public class P2PSignature implements Protocol {
       int newCard = state.desc.cardinality();
       State old = peersState.get(state.who.nodeId);
 
-      if (newCard < threshold && (old == null || old.desc.cardinality() < newCard)) {
+      if (newCard < params.threshold && (old == null || old.desc.cardinality() < newCard)) {
         peersState.put(state.who.nodeId, state);
       }
     }
@@ -313,13 +339,13 @@ public class P2PSignature implements Protocol {
       int newCard = verifiedSignatures.cardinality();
 
       if (newCard > oldCard) {
-        if (withState) {
+        if (params.withState) {
           sendStateToPeers();
         }
 
-        if (sanFermin) {
+        if (params.sanFermin) {
           int r = 2;
-          while (r < 30 && r < MoreMath.log2(signingNodeCount)) {
+          while (r < 30 && r < MoreMath.log2(params.signingNodeCount)) {
             BitSet nodesAtRound = sanFerminPeers(r);
             nodesAtRound.and(sigs);
             if (nodesAtRound.length() != 0) {
@@ -354,7 +380,7 @@ public class P2PSignature implements Protocol {
 
         }
 
-        if (!done && verifiedSignatures.cardinality() >= threshold) {
+        if (!done && verifiedSignatures.cardinality() >= params.threshold) {
           doneAt = network.time;
           done = true;
           while (!peersState.isEmpty()) {
@@ -423,19 +449,19 @@ public class P2PSignature implements Protocol {
         }
       }
 
-      if (!withState) {
+      if (!params.withState) {
         found = new State(peers.get(network.rd.nextInt(peers.size())));
       }
 
 
       if (found != null) {
         SendSigs ss;
-        if (sendSigsStrategy == SendSigsStrategy.dif) {
+        if (params.sendSigsStrategy == SendSigsStrategy.dif) {
           ss = new SendSigs(toSend);
-        } else if (sendSigsStrategy == SendSigsStrategy.cmp_all) {
+        } else if (params.sendSigsStrategy == SendSigsStrategy.cmp_all) {
           ss = new SendSigs((BitSet) verifiedSignatures.clone(),
               compressedSize(verifiedSignatures));
-        } else if (sendSigsStrategy == SendSigsStrategy.cmp_diff) {
+        } else if (params.sendSigsStrategy == SendSigsStrategy.cmp_diff) {
           int s1 = compressedSize(verifiedSignatures);
           int s2 = compressedSize(toSend);
           ss = new SendSigs((BitSet) verifiedSignatures.clone(), Math.min(s1, s2));
@@ -456,7 +482,7 @@ public class P2PSignature implements Protocol {
 
 
     public void checkSigs() {
-      if (doubleAggregateStrategy) {
+      if (params.doubleAggregateStrategy) {
         checkSigs2();
       } else {
         checkSigs1();
@@ -493,7 +519,7 @@ public class P2PSignature implements Protocol {
         toVerify.remove(best);
         final BitSet tBest = best;
         network.registerTask(() -> P2PSigNode.this.updateVerifiedSignatures(tBest),
-            network.time + pairingTime * 2, P2PSigNode.this);
+            network.time + params.pairingTime * 2, P2PSigNode.this);
       }
     }
 
@@ -522,15 +548,15 @@ public class P2PSignature implements Protocol {
           // There is at least one signature we don't have yet
           final BitSet tBest = agg;
           network.registerTask(() -> P2PSigNode.this.updateVerifiedSignatures(tBest),
-              network.time + pairingTime * 2, P2PSigNode.this);
+              network.time + params.pairingTime * 2, P2PSigNode.this);
         }
       }
     }
 
     @Override
     public String toString() {
-      return "P2PSigNode{" + "nodeId=" + nodeId + " sendSigsStrategy=" + sendSigsStrategy
-          + " sigRange=" + sigRange + ", doneAt=" + doneAt + ", sigs="
+      return "P2PSigNode{" + "nodeId=" + nodeId + " sendSigsStrategy=" + params.sendSigsStrategy
+          + " sigRange=" + params.sigRange + ", doneAt=" + doneAt + ", sigs="
           + verifiedSignatures.cardinality() + ", msgReceived=" + msgReceived + ", msgSent="
           + msgSent + ", KBytesSent=" + bytesSent / 1024 + ", KBytesReceived="
           + bytesReceived / 1024 + '}';
@@ -539,25 +565,25 @@ public class P2PSignature implements Protocol {
 
   @Override
   public void init() {
-    Set<Integer> justRelay = new HashSet<>(relayingNodeCount);
-    while (justRelay.size() < relayingNodeCount) {
-      justRelay.add(network.rd.nextInt(signingNodeCount + relayingNodeCount));
+    Set<Integer> justRelay = new HashSet<>(params.relayingNodeCount);
+    while (justRelay.size() < params.relayingNodeCount) {
+      justRelay.add(network.rd.nextInt(params.signingNodeCount + params.relayingNodeCount));
     }
 
-    for (int i = 0; i < signingNodeCount + relayingNodeCount; i++) {
+    for (int i = 0; i < params.signingNodeCount + params.relayingNodeCount; i++) {
       final P2PSigNode n = new P2PSigNode(justRelay.contains(i));
       network.addNode(n);
-      if (withState && !sanFermin) {
+      if (params.withState && !params.sanFermin) {
         network.registerTask(n::sendStateToPeers, 1, n);
       }
-      network.registerConditionalTask(n::sendSigs, 1, sigsSendPeriod, n,
+      network.registerConditionalTask(n::sendSigs, 1, params.sigsSendPeriod, n,
           () -> !(n.peersState.isEmpty()), () -> !n.done);
-      network.registerConditionalTask(n::checkSigs, 1, pairingTime, n, () -> !n.toVerify.isEmpty(),
-          () -> !n.done);
+      network.registerConditionalTask(n::checkSigs, 1, params.pairingTime, n,
+          () -> !n.toVerify.isEmpty(), () -> !n.done);
     }
 
-    if (sanFermin) {
-      for (int i = 0; i < signingNodeCount; i++) {
+    if (params.sanFermin) {
+      for (int i = 0; i < params.signingNodeCount; i++) {
         final P2PSigNode n = network.getNodeById(i);
         SendSigs sigs = new SendSigs(n.verifiedSignatures);
         int peerId = n.sanFerminPeers(1).length() - 1;
@@ -574,22 +600,24 @@ public class P2PSignature implements Protocol {
   }
 
   public static void sigsPerTime() {
-    NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
+    String nl = new NetworkLatency.NetworkLatencyByDistance().getClass().getSimpleName();
+    String nb = RegistryNodeBuilders.RANDOM_POSITION;
     int nodeCt = 300;
     List<Graph.Series> rawResultsMin = new ArrayList<>();
     List<Graph.Series> rawResultsMax = new ArrayList<>();
     List<Graph.Series> rawResultsAvg = new ArrayList<>();
 
-    P2PSignature psTemplate = new P2PSignature(nodeCt, nodeCt * 0, nodeCt, 15, 3, 50, true, false,
-        SendSigsStrategy.all, 2);
-    psTemplate.network.setNetworkLatency(nl);
+    P2PSignature psTemplate = new P2PSignature(new P2PSignatureParameters(nodeCt, nodeCt * 0,
+        nodeCt, 15, 3, 50, true, false, SendSigsStrategy.all, 2, nb, nl));
 
     String desc = "signingNodeCount=" + nodeCt
-        + (psTemplate.sanFermin ? ""
-            : ", totalNodes=" + (psTemplate.signingNodeCount + psTemplate.relayingNodeCount))
-        + ", gossip " + (psTemplate.sanFermin ? " + San Fermin" : "alone") + ", gossip period="
-        + psTemplate.sigsSendPeriod
-        + (!psTemplate.sanFermin ? ", compression=" + psTemplate.sendSigsStrategy : "");
+        + (psTemplate.params.sanFermin ? ""
+            : ", totalNodes="
+                + (psTemplate.params.signingNodeCount + psTemplate.params.relayingNodeCount))
+        + ", gossip " + (psTemplate.params.sanFermin ? " + San Fermin" : "alone")
+        + ", gossip period=" + psTemplate.params.sigsSendPeriod
+        + (!psTemplate.params.sanFermin ? ", compression=" + psTemplate.params.sendSigsStrategy
+            : "");
     System.out.println(nl + " " + desc);
     Graph graph = new Graph("number of signatures per time (" + desc + ")", "time in ms",
         "number of signatures");
@@ -608,7 +636,6 @@ public class P2PSignature implements Protocol {
       rawResultsMax.add(curMax);
 
       P2PSignature ps1 = psTemplate.copy();
-      ps1.network.setNetworkLatency(nl);
       ps1.network.rd.setSeed(i);
       ps1.init();
 
@@ -619,7 +646,7 @@ public class P2PSignature implements Protocol {
         curMin.addLine(new Graph.ReportLine(ps1.network.time, s.min));
         curMax.addLine(new Graph.ReportLine(ps1.network.time, s.max));
         curAvg.addLine(new Graph.ReportLine(ps1.network.time, s.avg));
-      } while (s.min != ps1.signingNodeCount);
+      } while (s.min != ps1.params.signingNodeCount);
       graph.addSerie(curMin);
       graph.addSerie(curMax);
       graph.addSerie(curAvg);
@@ -657,22 +684,20 @@ public class P2PSignature implements Protocol {
   }
 
   public P2PSignature copy() {
-    return new P2PSignature(signingNodeCount, relayingNodeCount, threshold, connectionCount,
-        pairingTime, sigsSendPeriod, doubleAggregateStrategy, sanFermin, sendSigsStrategy,
-        sigRange);
+    return new P2PSignature(params);
   }
 
   public static void sigsPerStrategy() {
     int nodeCt = 1000;
 
-    NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
-    P2PSignature ps1 =
-        new P2PSignature(nodeCt, 0, nodeCt, 15, 3, 20, true, false, SendSigsStrategy.all, 1);
-    ps1.network.setNetworkLatency(nl);
+    String nl = new NetworkLatency.NetworkLatencyByDistance().getClass().getSimpleName();
+    String nb = RegistryNodeBuilders.RANDOM_POSITION;
+    P2PSignature ps1 = new P2PSignature(new P2PSignatureParameters(nodeCt, 0, nodeCt, 15, 3, 20,
+        true, false, SendSigsStrategy.all, 1, nb, nl));
 
-    P2PSignature ps2 =
-        new P2PSignature(nodeCt, 0, nodeCt, 15, 3, 20, false, false, SendSigsStrategy.all, 1);
-    ps2.network.setNetworkLatency(nl);
+    P2PSignature ps2 = new P2PSignature(new P2PSignatureParameters(nodeCt, 0, nodeCt, 15, 3, 20,
+        false, false, SendSigsStrategy.all, 1, nb, nl));
+
 
     Graph graph = new Graph("number of sig per time", "time in ms", "sig count");
     Graph.Series series1avg = new Graph.Series("sig count - full aggregate strategy");

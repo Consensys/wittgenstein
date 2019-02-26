@@ -1,13 +1,17 @@
 package net.consensys.wittgenstein.protocols;
 
+import net.consensys.wittgenstein.core.NetworkLatency;
+import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class SnowflakeTest {
+  final String nb = RegistryNodeBuilders.RANDOM_POSITION;
+  final String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
 
   @Test
   public void testSimple() {
-    Snowflake p = new Snowflake(100, 5, 7, 4.0 / 7.0, 3);
+    Snowflake p = new Snowflake(new Snowflake.SnowflakeParameters(100, 5, 7, 4.0 / 7.0, 3, nb, nl));
     p.init();
     p.network().run(10);
 
@@ -20,7 +24,7 @@ public class SnowflakeTest {
 
   @Test
   public void testCopy() {
-    Snowflake p1 = new Snowflake(60, 5, 7, 4.0 / 7.0, 3);
+    Snowflake p1 = new Snowflake(new Snowflake.SnowflakeParameters(60, 5, 7, 4.0 / 7.0, 3, nb, nl));
     Snowflake p2 = p1.copy();
     p1.init();
     p1.network().runMs(200);
@@ -38,7 +42,8 @@ public class SnowflakeTest {
 
   @Test
   public void testPlay() {
-    Snowflake p1 = new Snowflake(100, 5, 7, 4.0 / 7.0, 3);
+    Snowflake p1 =
+        new Snowflake(new Snowflake.SnowflakeParameters(100, 5, 7, 4.0 / 7.0, 3, nb, nl));
     p1.play();
   }
 
