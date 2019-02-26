@@ -3,52 +3,73 @@ package net.consensys.wittgenstein.protocols;
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
+import net.consensys.wittgenstein.server.WParameters;
 import java.util.*;
 import java.util.function.Predicate;
 
 public class Snowflake implements Protocol {
-  private final int NODES_AV;
-  private Network<SnowflakeNode> network = new Network<>();
+
+  private Network<SnowflakeNode> network;
   final NodeBuilder nb;
   private static final int COLOR_NB = 2;
+  SnowflakeParameters params;
 
-  /**
-   * M is the number of rounds. "Finally, the node decides the color it ended up with at time m []
-   * we will show that m grows logarithmically with n."
-   */
-  private final int M;
+  public static class SnowflakeParameters extends WParameters {
+    private final int NODES_AV;
+    /**
+     * M is the number of rounds. "Finally, the node decides the color it ended up with at time m []
+     * we will show that m grows logarithmically with n."
+     */
+    private final int M;
 
-  /**
-   * K is the sample size you take
-   */
-  private final int K;
+    /**
+     * K is the sample size you take
+     */
+    private final int K;
 
-  /**
-   * A stands for the alpha threshold
-   */
-  private final double A;
-  private double AK;
+    /**
+     * A stands for the alpha threshold
+     */
+    private final double A;
+    private double AK;
 
-  private final int B;
+    private final int B;
+    final String nodeBuilderName;
+    final String networkLatencyName;
 
-  Snowflake(int nodeAv, int M, int K, double A, int B) {
-    this.NODES_AV = nodeAv;
-    this.M = M;
-    this.K = K;
-    this.A = A;
-    this.B = B;
-    this.AK = A * K;
-    this.nb = new NodeBuilder.NodeBuilderWithRandomPosition();
+    SnowflakeParameters(int nodeAv, int M, int K, double A, int B, String nodeBuilderName,
+        String networkLatencyName) {
+      this.NODES_AV = nodeAv;
+      this.M = M;
+      this.K = K;
+      this.A = A;
+      this.B = B;
+      this.AK = A * K;
+      this.nodeBuilderName = nodeBuilderName;
+      this.networkLatencyName = networkLatencyName;
+    }
+
+    SnowflakeParameters() {
+      this(100, 4, 7, 4, 7, null, null);
+    }
+  }
+
+  Snowflake(SnowflakeParameters params) {
+    this.params = params;
+    this.network = new Network<>();
+    this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);
+    this.network
+        .setNetworkLatency(new RegistryNetworkLatencies().getByName(params.networkLatencyName));
   }
 
   @Override
   public Snowflake copy() {
-    return new Snowflake(NODES_AV, M, K, A, B);
+    return new Snowflake(params);
   }
 
   @Override
   public void init() {
-    for (int i = 0; i < NODES_AV; i++) {
+    for (int i = 0; i < params.NODES_AV; i++) {
       network.addNode(new SnowflakeNode(network.rd, nb));
     }
     SnowflakeNode uncolored1 = network().getNodeById(0);
@@ -109,10 +130,10 @@ public class Snowflake implements Protocol {
     }
 
     List<SnowflakeNode> getRandomRemotes() {
-      List<SnowflakeNode> res = new ArrayList<>(K);
+      List<SnowflakeNode> res = new ArrayList<>(params.K);
 
-      while (res.size() != K) {
-        int r = network.rd.nextInt(NODES_AV);
+      while (res.size() != params.K) {
+        int r = network.rd.nextInt(params.NODES_AV);
         if (r != nodeId && !res.contains(network.getNodeById(r))) {
           res.add(network.getNodeById(r));
         }
@@ -146,17 +167,17 @@ public class Snowflake implements Protocol {
       Answer asw = answerIP.get(queryId);
       asw.colorsFound[color]++;
       // in this case we assume that messages received correspond to the query answers
-      if (asw.answerCount() == K) {
+      if (asw.answerCount() == params.K) {
         answerIP.remove(queryId);
-        if (asw.colorsFound[otherColor()] > AK) {
+        if (asw.colorsFound[otherColor()] > params.AK) {
           myColor = otherColor();
           cnt = 0;
         } else {
-          if (asw.colorsFound[myColor] > AK) {
+          if (asw.colorsFound[myColor] > params.AK) {
             cnt++;
           }
         }
-        if (cnt <= B) {
+        if (cnt <= params.B) {
           sendQuery(asw.round + 1);
         }
       }
@@ -170,8 +191,8 @@ public class Snowflake implements Protocol {
 
     @Override
     public String toString() {
-      return "SanFerminNode{" + "nodeId=" + nodeId + ", thresholdAt=" + K + ", doneAt=" + doneAt
-          + ", msgReceived=" + msgReceived + ", msgSent=" + msgSent + ", KBytesSent="
+      return "SanFerminNode{" + "nodeId=" + nodeId + ", thresholdAt=" + params.K + ", doneAt="
+          + doneAt + ", msgReceived=" + msgReceived + ", msgSent=" + msgSent + ", KBytesSent="
           + bytesSent / 1024 + ", KBytesReceived=" + bytesReceived / 1024 + '}';
     }
 
@@ -225,7 +246,7 @@ public class Snowflake implements Protocol {
       for (Node n : p1.network().allNodes) {
         SnowflakeNode gn = (SnowflakeNode) n;
         colors = getDominantColor(p1.network().allNodes);
-        if ((gn.cnt < B && colors[1] != 100) || (gn.cnt < B && colors[2] != 100)) {
+        if ((gn.cnt < params.B && colors[1] != 100) || (gn.cnt < params.B && colors[2] != 100)) {
           return true;
         }
       }
@@ -246,11 +267,11 @@ public class Snowflake implements Protocol {
 
   @Override
   public String toString() {
-    return "Snowflake{" + "nodes=" + NODES_AV + ", latency=" + network.networkLatency + ", M=" + M
-        + ", AK=" + AK + ", B=" + B + '}';
+    return "Snowflake{" + "nodes=" + params.NODES_AV + ", latency=" + network.networkLatency
+        + ", M=" + params.M + ", AK=" + params.AK + ", B=" + params.B + '}';
   }
 
   public static void main(String... args) {
-    new Snowflake(100, 5, 7, 4.0 / 7.0, 3).play();
+    new Snowflake(new SnowflakeParameters(100, 5, 7, 4.0 / 7.0, 3, null, null)).play();
   }
 }

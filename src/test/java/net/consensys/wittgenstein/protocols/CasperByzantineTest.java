@@ -5,7 +5,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class CasperByzantineTest {
-  private final CasperIMD ci = new CasperIMD(1, false, 2, 2, 1000, 1);
+  private final CasperIMD ci =
+      new CasperIMD(new CasperIMD.CasperParemeters(1, false, 2, 2, 1000, 1, null, null));
 
   @Test
   public void testByzantineWF() {

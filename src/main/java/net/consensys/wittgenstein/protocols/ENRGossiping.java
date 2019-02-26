@@ -20,11 +20,6 @@ public class ENRGossiping implements Protocol {
   private final NodeBuilder nb;
   private List<ETHNode> changedNodes;
 
-
-  public NodeBuilder getNb() {
-    return nb;
-  }
-
   static class ENRParameters extends WParameters {
     /**
      * timeToChange is used to describe the time period, in s, that needs to pass in order to change

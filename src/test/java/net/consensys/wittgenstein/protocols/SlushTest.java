@@ -1,13 +1,17 @@
 package net.consensys.wittgenstein.protocols;
 
+import net.consensys.wittgenstein.core.NetworkLatency;
+import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class SlushTest {
+  final String nb = RegistryNodeBuilders.RANDOM_POSITION;
+  final String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
 
   @Test
   public void testSimple() {
-    Slush p = new Slush(100, 5, 7, 4.0 / 7.0);
+    Slush p = new Slush(new Slush.SlushParameters(100, 5, 7, 4.0 / 7.0, nb, nl));
     p.init();
     p.network().run(10);
 
@@ -20,7 +24,7 @@ public class SlushTest {
 
   @Test
   public void testCopy() {
-    Slush p1 = new Slush(60, 5, 7, 4.0 / 7.0);
+    Slush p1 = new Slush(new Slush.SlushParameters(60, 5, 7, 4.0 / 7.0, nb, nl));
     Slush p2 = p1.copy();
     p1.init();
     p1.network().runMs(200);
@@ -38,7 +42,7 @@ public class SlushTest {
 
   @Test
   public void testPlay() {
-    Slush p1 = new Slush(120, 5, 7, 4.0 / 7.0);
+    Slush p1 = new Slush(new Slush.SlushParameters(120, 5, 7, 4.0 / 7.0, nb, nl));
     p1.play();
   }
 }
