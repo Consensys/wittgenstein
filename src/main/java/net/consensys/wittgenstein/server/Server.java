@@ -37,7 +37,7 @@ public class Server implements IServer {
 
     for (Constructor<?> c : clazz.getConstructors()) {
       if (c.getParameterCount() == 1
-          && WParameter.class.isAssignableFrom(c.getParameterTypes()[0])) {
+          && WParameters.class.isAssignableFrom(c.getParameterTypes()[0])) {
         return c;
       }
     }
@@ -46,7 +46,7 @@ public class Server implements IServer {
   }
 
   @Override
-  public void init(String fullClassName, WParameter parameters) {
+  public void init(String fullClassName, WParameters parameters) {
     Constructor<?> c = getConstructor(fullClassName);
     protocol = (Protocol) Reflects.newInstance(c, parameters);
     protocol.init();
@@ -69,7 +69,7 @@ public class Server implements IServer {
   }
 
   @Override
-  public WParameter getProtocolParameters(String fullClassName) {
+  public WParameters getProtocolParameters(String fullClassName) {
     Class<?> clazz = Reflects.forName(fullClassName);
     Constructor<?> bc = null;
     for (Constructor<?> c : clazz.getConstructors()) {
@@ -81,14 +81,14 @@ public class Server implements IServer {
       throw new IllegalStateException("no constructor in " + fullClassName);
     }
 
-    return (WParameter) Reflects.newInstance(bc.getParameters()[0].getType());
+    return (WParameters) Reflects.newInstance(bc.getParameters()[0].getType());
   }
 
   public List<Class<?>> getParametersName() {
     List<Class<?>> res = new ArrayList<>();
     for (String s : getProtocols()) {
       try {
-        WParameter wp = getProtocolParameters(s);
+        WParameters wp = getProtocolParameters(s);
         res.add(wp.getClass());
       } catch (Throwable ignored) {
       }
@@ -161,7 +161,7 @@ public class Server implements IServer {
     List<String> ps = server.getProtocols();
     System.out.println(ps);
     String clazz = "net.consensys.wittgenstein.protocols.P2PFlood";
-    WParameter params = server.getProtocolParameters(clazz);
+    WParameters params = server.getProtocolParameters(clazz);
     System.out.println(params);
     server.init(clazz, params);
     server.runMs(100);

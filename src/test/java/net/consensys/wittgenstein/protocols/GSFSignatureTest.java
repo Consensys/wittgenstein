@@ -1,11 +1,17 @@
 package net.consensys.wittgenstein.protocols;
 
+import net.consensys.wittgenstein.core.NetworkLatency;
+import net.consensys.wittgenstein.core.NodeBuilder;
+import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 public class GSFSignatureTest {
-  private GSFSignature p = new GSFSignature(32, 1, 3, 20, 10, 10, 0);
+  private String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
+  private String nb = RegistryNodeBuilders.RANDOM_POSITION;
+  private GSFSignature p =
+      new GSFSignature(new GSFSignature.GSFSignatureParameters(32, 1, 3, 20, 10, 10, 0, nb, nl));
   private GSFSignature.GSFNode n0;
 
   @Before
@@ -55,7 +61,8 @@ public class GSFSignatureTest {
   // TODO
   //@Test
   public void testNonPowerTwoNodeCount() {
-    GSFSignature p = new GSFSignature(31, 1, 3, 20, 10, 10, 0.1);
+    GSFSignature p = new GSFSignature(
+        new GSFSignature.GSFSignatureParameters(31, 1, 3, 20, 10, 10, 0.1, nb, nl));
     p.init();
     GSFSignature.GSFNode n3 = p.network.getNodeById(3);
     Assert.assertEquals(6, n3.levels.size());
@@ -64,7 +71,8 @@ public class GSFSignatureTest {
 
   @Test
   public void testDeadNodes() {
-    GSFSignature p = new GSFSignature(32, 0.8, 3, 20, 10, 10, 0.1);
+    GSFSignature p = new GSFSignature(
+        new GSFSignature.GSFSignatureParameters(32, 0.8, 3, 20, 10, 10, 0.1, nb, nl));
     p.init();
     long dead = p.network.allNodes.stream().filter(n -> n.down).count();
     Assert.assertEquals(3, dead);
@@ -85,7 +93,8 @@ public class GSFSignatureTest {
 
   @Test
   public void testSimpleRun() {
-    GSFSignature p = new GSFSignature(32, 1, 3, 20, 10, 10, 0);
+    GSFSignature p =
+        new GSFSignature(new GSFSignature.GSFSignatureParameters(32, 1, 3, 20, 10, 10, 0, nb, nl));
     p.init();
     p.network.run(10);
     Assert.assertEquals(32, p.network().allNodes.size());
@@ -96,7 +105,8 @@ public class GSFSignatureTest {
 
   @Test
   public void testSimpleThreshold() {
-    GSFSignature p = new GSFSignature(64, .50, 3, 20, 10, 10, .2);
+    GSFSignature p = new GSFSignature(
+        new GSFSignature.GSFSignatureParameters(64, .50, 3, 20, 10, 10, .2, nb, nl));
     p.init();
     p.network.run(10);
 
@@ -113,7 +123,8 @@ public class GSFSignatureTest {
 
   @Test
   public void testCopy() {
-    GSFSignature p1 = new GSFSignature(128, .75, 6, 10, 5, 10, .2);
+    GSFSignature p1 = new GSFSignature(
+        new GSFSignature.GSFSignatureParameters(128, .75, 6, 10, 5, 10, .2, nb, nl));
     GSFSignature p2 = p1.copy();
     p1.init();
     p2.init();

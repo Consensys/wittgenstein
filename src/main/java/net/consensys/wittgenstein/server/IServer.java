@@ -10,11 +10,11 @@ public interface IServer {
 
   int getTime();
 
-  void init(String fullClassName, WParameter parameters);
+  void init(String fullClassName, WParameters parameters);
 
   List<String> getProtocols();
 
-  WParameter getProtocolParameters(String fullClassName);
+  WParameters getProtocolParameters(String fullClassName);
 
   void runMs(int ms);
 

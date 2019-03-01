@@ -8,7 +8,7 @@ import net.consensys.wittgenstein.core.utils.Strings;
  * json object, allowing to run a protocol from a distant system using http/json calls.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-public class WParameter {
+public class WParameters {
   @Override
   public String toString() {
     return Strings.toString(this);

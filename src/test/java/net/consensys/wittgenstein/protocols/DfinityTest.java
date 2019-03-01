@@ -1,12 +1,17 @@
 package net.consensys.wittgenstein.protocols;
 
 import net.consensys.wittgenstein.core.NetworkLatency;
+import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+// Add more tests
 public class DfinityTest {
-  private final Dfinity dfinity = new Dfinity(10, 10, 10, 1, 1, 0);
+  String nb = RegistryNodeBuilders.RANDOM_POSITION;
+  String nl = NetworkLatency.NetworkNoLatency.class.getSimpleName();
+  private final Dfinity dfinity =
+      new Dfinity(new Dfinity.DfinityParameters(10, 10, 10, 1, 1, 0, nb, nl));
 
   @Before
   public void before() {
@@ -22,7 +27,7 @@ public class DfinityTest {
 
   //TODO @Test
   public void testCopy() {
-    Dfinity p1 = new Dfinity(10, 50, 25, 100, 1, 5);
+    Dfinity p1 = new Dfinity(new Dfinity.DfinityParameters(10, 50, 25, 100, 1, 5, nb, nl));
     Dfinity p2 = p1.copy();
     p1.init();
     p2.init();

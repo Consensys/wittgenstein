@@ -4,7 +4,7 @@ import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.FloodMessage;
 import net.consensys.wittgenstein.core.messages.StatusFloodMessage;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
-import net.consensys.wittgenstein.server.WParameter;
+import net.consensys.wittgenstein.server.WParameters;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
@@ -19,8 +19,10 @@ public class ENRGossiping implements Protocol {
   private final ENRParameters params;
   private final NodeBuilder nb;
   private List<ETHNode> changedNodes;
+  int counter = 0;
 
-  static class ENRParameters extends WParameter {
+  static class ENRParameters extends WParameters {
+
     /**
      * timeToChange is used to describe the time period, in s, that needs to pass in order to change
      * your capabilities i.e.: when you create new key-value pairs for your record. Only a given
@@ -61,16 +63,16 @@ public class ENRGossiping implements Protocol {
     private final int capPerNode;
 
     private ENRParameters() {
-      this.NODES = 1000;
+      this.NODES = 100;
       this.timeToChange = 1000 * 10;
       this.capGossipTime = 1000 * 5;
       this.discardTime = 100;
-      this.timeToLeave = 1000 * 10;
+      this.timeToLeave = 1000 * 100;
       this.totalPeers = 5;
-      this.changingNodes = 20;
-      this.maxPeers = 50;
-      this.numberOfDifferentCapabilities = 100;
-      this.capPerNode = 20;
+      this.changingNodes = 10;
+      this.maxPeers = 10;
+      this.numberOfDifferentCapabilities = 10;
+      this.capPerNode = 5;
       this.nodeBuilderName = null;
       this.networkLatencyName = null;
     }
@@ -131,7 +133,10 @@ public class ENRGossiping implements Protocol {
   }
 
   private void addNewNode() {
-    network.addNode(new ETHNode(network.rd, this.nb, generateCap()));
+    ETHNode n = new ETHNode(network.rd, this.nb, generateCap());
+    network.addNode(n);
+    n.start();
+    //System.out.println("Total Nodes: "+ network.allNodes.size());
   }
 
   @Override
@@ -227,7 +232,6 @@ public class ENRGossiping implements Protocol {
       // All nodes have to leave a day.
       int startExit = network.rd.nextInt(params.timeToLeave);
       network.registerTask(this::exitNetwork, startExit, this);
-
 
     }
 
@@ -330,6 +334,7 @@ public class ENRGossiping implements Protocol {
     void exitNetwork() {
       network.disconnect(this);
       network.getNodeById(nodeId).stop();
+      System.out.println("node "+nodeId+" has left.\n total that has le"+ ++counter);
     }
   }
 
@@ -349,10 +354,10 @@ public class ENRGossiping implements Protocol {
 
       @Override
       public StatsHelper.Stat get(List<? extends Node> liveNodes) {
-        return new StatsHelper.Counter(liveNodes.stream().filter(n -> n.getDoneAt() > 0).count());
+        return new StatsHelper.Counter(liveNodes.stream().filter(n -> n.getDoneAt() > 0 && !n.down).count());
       }
     };
-
+    System.out.println("nodes that have left: ");
     ProgressPerTime ppp =
         new ProgressPerTime(this, "", "Nodes that have found capabilities", sg, 1, null);
     ppp.run(contIf);

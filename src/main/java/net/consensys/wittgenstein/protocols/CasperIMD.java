@@ -2,6 +2,7 @@ package net.consensys.wittgenstein.protocols;
 
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.Message;
+import net.consensys.wittgenstein.server.WParameters;
 import net.consensys.wittgenstein.tools.Graph;
 import java.io.File;
 import java.io.IOException;
@@ -13,73 +14,90 @@ import java.util.*;
  */
 @SuppressWarnings({"WeakerAccess", "SameParameterValue", "unused"})
 public class CasperIMD implements Protocol {
-  final int SLOT_DURATION = 8000;
+  CasperParemeters params;
 
-  /**
-   * Number of rounds per cycle. 64 in the spec
-   */
-  final int cycleLength;
+  static class CasperParemeters extends WParameters {
+    final int SLOT_DURATION = 8000;
 
-  /**
-   * On tie, the best strategy is randomness. But unit tests are simpler with determinist strategy.
-   */
-  final boolean randomOnTies;
+    /**
+     * Number of rounds per cycle. 64 in the spec
+     */
+    final int cycleLength;
 
-  /**
-   * Number of block producers. There is a single block producer per round.
-   */
-  final int blockProducersCount;
+    /**
+     * On tie, the best strategy is randomness. But unit tests are simpler with determinist
+     * strategy.
+     */
+    final boolean randomOnTies;
 
-  /**
-   * Number of attesters in a round. Spec says 892.
-   */
-  final int attestersPerRound;
+    /**
+     * Number of block producers. There is a single block producer per round.
+     */
+    final int blockProducersCount;
 
-  /**
-   * Calculated attestersPerRound * cycleLength
-   */
-  final int attestersCount;
+    /**
+     * Number of attesters in a round. Spec says 892.
+     */
+    final int attestersPerRound;
 
-  /**
-   * Time to build a block. Same for all blocks & all block producers.
-   */
-  final int blockConstructionTime;
+    /**
+     * Calculated attestersPerRound * cycleLength
+     */
+    final int attestersCount;
 
-  /**
-   * Time to build an attestation. Same for all.
-   */
-  final int attestationConstructionTime;
+    /**
+     * Time to build a block. Same for all blocks & all block producers.
+     */
+    final int blockConstructionTime;
+
+    /**
+     * Time to build an attestation. Same for all.
+     */
+    final int attestationConstructionTime;
+    final String nodeBuilderName;
+    final String networkLatencyName;
+
+    CasperParemeters() {
+      this(4, true, 5, 80, 1000, 1, null, null);
+    }
+
+    CasperParemeters(int cycleLength, boolean randomOnTies, int blockProducersCount,
+        int attestersPerRound, int blockConstructionTime, int attestationConstructionTime,
+        String nodeBuilderName, String networkLatencyName) {
+      this.cycleLength = cycleLength;
+      this.randomOnTies = randomOnTies;
+      this.blockProducersCount = blockProducersCount;
+      this.attestersPerRound = attestersPerRound;
+      this.attestersCount = attestersPerRound * cycleLength;
+      this.blockConstructionTime = blockConstructionTime;
+      this.attestationConstructionTime = attestationConstructionTime;
+      this.nodeBuilderName = nodeBuilderName;
+      this.networkLatencyName = networkLatencyName;
+    }
+  }
 
   public CasperIMD copy() {
-    return new CasperIMD(cycleLength, randomOnTies, blockProducersCount, attestersPerRound,
-        blockConstructionTime, attestationConstructionTime);
+    return new CasperIMD(params);
   }
 
   public BlockChainNetwork<CasperBlock, CasperNode> network() {
     return network;
   }
 
-  public CasperIMD() {
-    this(5, true, 5, 80, 1000, 1);
-  }
 
-  public CasperIMD(int cycleLength, boolean randomOnTies, int blockProducersCount,
-      int attestersPerRound, int blockConstructionTime, int attestationConstructionTime) {
-    this.cycleLength = cycleLength;
-    this.randomOnTies = randomOnTies;
-    this.blockProducersCount = blockProducersCount;
-    this.attestersPerRound = attestersPerRound;
-    this.attestersCount = attestersPerRound * cycleLength;
-    this.blockConstructionTime = blockConstructionTime;
-    this.attestationConstructionTime = attestationConstructionTime;
-
-    this.network.setNetworkLatency(new NetworkLatency.NetworkLatencyByDistance());
+  public CasperIMD(CasperParemeters params) {
+    this.params = params;
+    this.network = new BlockChainNetwork<>();
+    this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);
+    this.network
+        .setNetworkLatency(new RegistryNetworkLatencies().getByName(params.networkLatencyName));
     this.network.addObserver(new CasperNode(false, genesis) {});
+
   }
 
 
-  final BlockChainNetwork<CasperBlock, CasperNode> network = new BlockChainNetwork<>();
-  final NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
+  final BlockChainNetwork<CasperBlock, CasperNode> network;
+  final NodeBuilder nb;
   final CasperBlock genesis = new CasperBlock();
 
   final List<Attester> attesters = new ArrayList<>();
@@ -110,7 +128,7 @@ public class CasperIMD implements Protocol {
       //  from the attestations to our parents, so that makes sense. But it means that the attestation
       //  is valid for all sons of the same parent (hence the need to add 'head'.)
       for (Block cur = attester.head.parent; cur != null
-          && cur.height >= attester.head.height - cycleLength; cur = cur.parent) {
+          && cur.height >= attester.head.height - params.cycleLength; cur = cur.parent) {
         hs.add(cur.id);
       }
     }
@@ -229,7 +247,7 @@ public class CasperIMD implements Protocol {
       if (b1Votes < b2Votes)
         return o2;
 
-      if (randomOnTies) {
+      if (params.randomOnTies) {
         // VB: I’d say break ties via client-side randomness. Seems safest in the existing cases where it’s been studied.
         return network.rd.nextBoolean() ? o1 : o2;
       } else {
@@ -273,7 +291,7 @@ public class CasperIMD implements Protocol {
 
     private Set<Long> attestsFor(int height) {
       Set<Long> as = new HashSet<>();
-      for (Block c = head; c != genesis && height - cycleLength >= c.height; c = c.parent) {
+      for (Block c = head; c != genesis && height - params.cycleLength >= c.height; c = c.parent) {
         as.add(c.id);
       }
       return as;
@@ -284,7 +302,7 @@ public class CasperIMD implements Protocol {
     public boolean onBlock(final CasperBlock b) {
       // Spec: The node’s local clock time is greater than or equal to the minimum timestamp as
       // computed by GENESIS_TIME + slot_number * SLOT_DURATION
-      final int delta = network.time - genesis.proposalTime + b.height * SLOT_DURATION;
+      final int delta = network.time - genesis.proposalTime + b.height * params.SLOT_DURATION;
       if (delta >= 0) {
         blocksToReevaluate.add(head); // if head loose the race it may win later.
         blocksToReevaluate.add(b);
@@ -357,7 +375,7 @@ public class CasperIMD implements Protocol {
     protected Runnable getPeriodicTask() {
       return () -> {
         reevaluateHead();
-        createAndSendBlock(network.time / SLOT_DURATION);
+        createAndSendBlock(network.time / params.SLOT_DURATION);
       };
     }
 
@@ -370,22 +388,22 @@ public class CasperIMD implements Protocol {
       //
       // So we merge all the previous blocks and the ones we received
       Map<Integer, Set<Attestation>> res = new HashMap<>();
-      for (int i = height - 1; i >= 0 && i >= height - cycleLength; i--) {
+      for (int i = height - 1; i >= 0 && i >= height - params.cycleLength; i--) {
         res.put(i, new HashSet<>());
       }
 
       // phase 1: take all attestations already included in our parent's blocks.
       // as each block includes only the new attestations, we need to go through all parents < cycleLength
       Set<Attestation> allFromBlocks = new HashSet<>();
-      for (CasperBlock cur = base; cur != genesis && cur.height >= height - cycleLength; cur =
-          cur.parent) {
+      for (CasperBlock cur = base; cur != genesis
+          && cur.height >= height - params.cycleLength; cur = cur.parent) {
         for (Set<Attestation> ats : cur.attestationsByHeight.values()) {
           allFromBlocks.addAll(ats);
         }
       }
 
       // phase 2: add all missing attestations
-      for (CasperBlock cur = base; cur != null && cur.height >= height - cycleLength; cur =
+      for (CasperBlock cur = base; cur != null && cur.height >= height - params.cycleLength; cur =
           cur.parent) {
 
         Set<Attestation> as = attestationsByHead.getOrDefault(cur.id, Collections.emptySet());
@@ -406,8 +424,8 @@ public class CasperIMD implements Protocol {
 
     void createAndSendBlock(int height) {
       head = buildBlock(head, height);
-      network.sendAll(new BlockChainNetwork.SendBlock<>(head), network.time + blockConstructionTime,
-          this);
+      network.sendAll(new BlockChainNetwork.SendBlock<>(head),
+          network.time + params.blockConstructionTime, this);
     }
 
     @Override
@@ -425,7 +443,7 @@ public class CasperIMD implements Protocol {
 
     @Override
     protected Runnable getPeriodicTask() {
-      return () -> vote(network.time / SLOT_DURATION);
+      return () -> vote(network.time / params.SLOT_DURATION);
     }
 
     void vote(int height) {
@@ -436,7 +454,7 @@ public class CasperIMD implements Protocol {
       // and publish a (signed) attestation
       reevaluateHead();
       Attestation v = new Attestation(this, height);
-      network.sendAll(v, network.time + attestationConstructionTime, this);
+      network.sendAll(v, network.time + params.attestationConstructionTime, this);
     }
 
     @Override
@@ -455,22 +473,24 @@ public class CasperIMD implements Protocol {
     bps.add(byzantineNode);
     network.addNode(byzantineNode);
     network.registerPeriodicTask(byzantineNode.getPeriodicTask(),
-        SLOT_DURATION + byzantineNode.delay, SLOT_DURATION * blockProducersCount, byzantineNode);
+        params.SLOT_DURATION + byzantineNode.delay,
+        params.SLOT_DURATION * params.blockProducersCount, byzantineNode);
 
-    for (int i = 1; i < blockProducersCount; i++) {
+    for (int i = 1; i < params.blockProducersCount; i++) {
       BlockProducer n = new BlockProducer(genesis);
       bps.add(n);
       network.addNode(n);
-      network.registerPeriodicTask(n.getPeriodicTask(), SLOT_DURATION * (i + 1),
-          SLOT_DURATION * blockProducersCount, n);
+      network.registerPeriodicTask(n.getPeriodicTask(), params.SLOT_DURATION * (i + 1),
+          params.SLOT_DURATION * params.blockProducersCount, n);
     }
 
-    for (int i = 0; i < attestersCount; i++) {
+    for (int i = 0; i < params.attestersCount; i++) {
       Attester n = new Attester(genesis);
       attesters.add(n);
       network.addNode(n);
       network.registerPeriodicTask(n.getPeriodicTask(),
-          SLOT_DURATION * (1 + i % cycleLength) + 4000, SLOT_DURATION * cycleLength, n);
+          params.SLOT_DURATION * (1 + i % params.cycleLength) + 4000,
+          params.SLOT_DURATION * params.cycleLength, n);
     }
 
   }
@@ -506,7 +526,7 @@ public class CasperIMD implements Protocol {
       }
 
       int slotTime = time - delay;
-      h = slotTime / SLOT_DURATION;
+      h = slotTime / params.SLOT_DURATION;
 
       if (h != toSend)
         throw new IllegalStateException("h=" + h + ", toSend=" + toSend);
@@ -530,7 +550,7 @@ public class CasperIMD implements Protocol {
 
         createAndSendBlock(toSend);
         int lastSent = toSend;
-        toSend += blockProducersCount;
+        toSend += params.blockProducersCount;
       };
     }
 
@@ -564,7 +584,7 @@ public class CasperIMD implements Protocol {
 
         createAndSendBlock(toSend);
         int lastSent = toSend;
-        toSend += blockProducersCount;
+        toSend += params.blockProducersCount;
       };
     }
   }
@@ -597,7 +617,7 @@ public class CasperIMD implements Protocol {
 
         createAndSendBlock(toSend);
         int lastSent = toSend;
-        toSend += blockProducersCount;
+        toSend += params.blockProducersCount;
       };
     }
 
@@ -628,7 +648,7 @@ public class CasperIMD implements Protocol {
           // If we're the first producer we need to kick off the system.
           reevaluateH(network.time);
           createAndSendBlock(h);
-          toSend += blockProducersCount;
+          toSend += params.blockProducersCount;
         }
       };
     }
@@ -638,7 +658,7 @@ public class CasperIMD implements Protocol {
       if (super.onBlock(b)) {
         if (b.height == toSend - 1) {
 
-          int perfectDate = SLOT_DURATION * toSend + delay;
+          int perfectDate = params.SLOT_DURATION * toSend + delay;
 
           Runnable r = new Runnable() {
             final int th = toSend;
@@ -647,10 +667,10 @@ public class CasperIMD implements Protocol {
             public void run() {
               head = buildBlock(b, th);
               network.sendAll(new BlockChainNetwork.SendBlock<>(head),
-                  network.time + blockConstructionTime, ByzBlockProducerWF.this);
+                  network.time + params.blockConstructionTime, ByzBlockProducerWF.this);
             }
           };
-          toSend += blockProducersCount;
+          toSend += params.blockProducersCount;
 
           if (network.time >= perfectDate) {
             r.run();
@@ -676,7 +696,9 @@ public class CasperIMD implements Protocol {
   private static boolean latencyPrinted = false;
 
   private static void runSet(int delay, boolean randomOnTies, Graph.Series report) {
-    CasperIMD bc = new CasperIMD(5, randomOnTies, 5, 80, 1000, 1);
+    String nb = RegistryNodeBuilders.RANDOM_POSITION;
+    String snl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
+    CasperIMD bc = new CasperIMD(new CasperParemeters(5, randomOnTies, 5, 80, 1000, 1, nb, snl));
     //bc.network.setNetworkLatency(new NetworkLatency.EthScanNetworkLatency());
 
     ByzBlockProducer badNode = bc.new ByzBlockProducerWF(delay, bc.genesis);

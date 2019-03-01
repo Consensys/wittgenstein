@@ -3,7 +3,7 @@ package net.consensys.wittgenstein.protocols;
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.FloodMessage;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
-import net.consensys.wittgenstein.server.WParameter;
+import net.consensys.wittgenstein.server.WParameters;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -39,7 +39,7 @@ public class P2PFlood implements Protocol {
     }
   }
 
-  public static class P2PFloodParameters extends WParameter {
+  public static class P2PFloodParameters extends WParameters {
     /**
      * The total number of nodes in the network
      */

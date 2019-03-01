@@ -3,44 +3,65 @@ package net.consensys.wittgenstein.protocols;
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
+import net.consensys.wittgenstein.server.WParameters;
 import java.util.*;
 import java.util.function.Predicate;
 
 public class Slush implements Protocol {
-  private final int NODES_AV;
-  private final Network<SlushNode> network = new Network<>();
+  private final Network<SlushNode> network;
   final NodeBuilder nb;
+  SlushParameters params;
   private static final int COLOR_NB = 2;
 
-  /**
-   * M is the number of rounds. "Finally, the node decides the color it ended up with at time m []
-   * we will show that m grows logarithmically with n."
-   */
-  private final int M;
+  public static class SlushParameters extends WParameters {
+    private final int NODES_AV;
 
-  /**
-   * K is the sample size you take
-   */
-  private final int K;
+    /**
+     * M is the number of rounds. "Finally, the node decides the color it ended up with at time m []
+     * we will show that m grows logarithmically with n."
+     */
+    private final int M;
 
-  /**
-   * A stands for the alpha threshold
-   */
-  private final double A;
-  private double AK;
+    /**
+     * K is the sample size you take
+     */
+    private final int K;
 
-  public Slush(int NODES_AV, int M, int K, double A) {
-    this.NODES_AV = NODES_AV;
-    this.M = M;
-    this.K = K;
-    this.A = A;
-    this.AK = K * A;
-    this.nb = new NodeBuilder.NodeBuilderWithRandomPosition();
+    /**
+     * A stands for the alpha threshold
+     */
+    private final double A;
+    private double AK;
+    final String nodeBuilderName;
+    final String networkLatencyName;
+
+    SlushParameters(int NODES_AV, int M, int K, double A, String nodeBuilderName,
+        String networkLatencyName) {
+      this.NODES_AV = NODES_AV;
+      this.M = M;
+      this.K = K;
+      this.A = A;
+      this.AK = K * A;
+      this.nodeBuilderName = nodeBuilderName;
+      this.networkLatencyName = networkLatencyName;
+    }
+
+    SlushParameters() {
+      this(100, 4, 7, 4, null, null);
+    }
+  }
+
+  Slush(SlushParameters params) {
+    this.params = params;
+    this.network = new Network<>();
+    this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);
+    this.network
+        .setNetworkLatency(new RegistryNetworkLatencies().getByName(params.networkLatencyName));
   }
 
   @Override
   public void init() {
-    for (int i = 0; i < NODES_AV; i++) {
+    for (int i = 0; i < params.NODES_AV; i++) {
       network.addNode(new SlushNode(network.rd, nb));
     }
     SlushNode uncolored1 = network().getNodeById(0);
@@ -59,7 +80,7 @@ public class Slush implements Protocol {
 
   @Override
   public Slush copy() {
-    return new Slush(NODES_AV, M, K, A);
+    return new Slush(params);
   }
 
   static class Query extends Message<SlushNode> {
@@ -103,10 +124,10 @@ public class Slush implements Protocol {
     }
 
     List<SlushNode> getRandomRemotes() {
-      List<SlushNode> res = new ArrayList<>(K);
+      List<SlushNode> res = new ArrayList<>(params.K);
 
-      while (res.size() != K) {
-        int r = network.rd.nextInt(NODES_AV);
+      while (res.size() != params.K) {
+        int r = network.rd.nextInt(params.NODES_AV);
         if (r != nodeId && !res.contains(network.getNodeById(r))) {
           res.add(network.getNodeById(r));
         }
@@ -141,13 +162,13 @@ public class Slush implements Protocol {
       Answer asw = answerIP.get(queryId);
       asw.colorsFound[color]++;
       // in this case we assume that messages received correspond to the query answers
-      if (asw.answerCount() == K) {
+      if (asw.answerCount() == params.K) {
         answerIP.remove(queryId);
-        if (asw.colorsFound[otherColor()] > AK) {
+        if (asw.colorsFound[otherColor()] > params.AK) {
           myColor = otherColor();
         }
 
-        if (round < M) {
+        if (round < params.M) {
           round++;
           sendQuery(asw.round + 1);
         }
@@ -162,7 +183,7 @@ public class Slush implements Protocol {
 
     @Override
     public String toString() {
-      return "SlushNode{" + "nodeId=" + nodeId + ", thresholdAt=" + K + ", doneAt=" + doneAt
+      return "SlushNode{" + "nodeId=" + nodeId + ", thresholdAt=" + params.K + ", doneAt=" + doneAt
           + ", msgReceived=" + msgReceived + ", msgSent=" + msgSent + ", KBytesSent="
           + bytesSent / 1024 + ", KBytesReceived=" + bytesReceived / 1024 + '}';
     }
@@ -213,7 +234,8 @@ public class Slush implements Protocol {
       for (Node n : p1.network().allNodes) {
         SlushNode gn = (SlushNode) n;
         colors = getDominantColor(p1.network().allNodes);
-        if ((gn.round < this.M && colors[1] != 100) || (gn.round < this.M && colors[2] != 100)) {
+        if ((gn.round < this.params.M && colors[1] != 100)
+            || (gn.round < this.params.M && colors[2] != 100)) {
           return true;
         }
       }
@@ -235,12 +257,12 @@ public class Slush implements Protocol {
 
   @Override
   public String toString() {
-    return "Slush{" + "Nodes=" + NODES_AV + ", latency=" + network.networkLatency + ", M=" + M
-        + ", AK=" + AK + '}';
+    return "Slush{" + "Nodes=" + params.NODES_AV + ", latency=" + network.networkLatency + ", M="
+        + params.M + ", AK=" + params.AK + '}';
   }
 
   public static void main(String... args) {
-    new Slush(100, 5, 7, 4.0 / 7.0).play();
+    new Slush(new SlushParameters(100, 5, 7, 4.0 / 7.0, null, null)).play();
   }
 
 }

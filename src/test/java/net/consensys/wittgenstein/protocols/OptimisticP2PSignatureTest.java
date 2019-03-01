@@ -1,15 +1,21 @@
 package net.consensys.wittgenstein.protocols;
 
+import net.consensys.wittgenstein.core.NetworkLatency;
 import net.consensys.wittgenstein.core.Node;
+import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class OptimisticP2PSignatureTest {
+  private String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
+  private String nb = RegistryNodeBuilders.RANDOM_POSITION;
 
   @Test
   public void testSimple() {
     int nCt = 100;
-    OptimisticP2PSignature p = new OptimisticP2PSignature(nCt, nCt / 2 + 1, 13, 3);
+    OptimisticP2PSignature p =
+        new OptimisticP2PSignature(new OptimisticP2PSignature.OptimisticP2PSignatureParameters(nCt,
+            nCt / 2 + 1, 13, 3, nb, nl));
     p.init();
     p.network().run(10);
 
@@ -25,7 +31,8 @@ public class OptimisticP2PSignatureTest {
 
   @Test
   public void testCopy() {
-    OptimisticP2PSignature p1 = new OptimisticP2PSignature(200, 160, 10, 2);
+    OptimisticP2PSignature p1 = new OptimisticP2PSignature(
+        new OptimisticP2PSignature.OptimisticP2PSignatureParameters(200, 160, 10, 2, nb, nl));
     OptimisticP2PSignature p2 = p1.copy();
     p1.init();
     p1.network().runMs(200);
