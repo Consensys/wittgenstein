@@ -222,17 +222,20 @@ public class ENRGossiping implements Protocol {
     @Override
     public void start() {
       if (isFullyConnected()) {
-        doneAt = 1;
+        doneAt = Math.max(1, network.time);
       }
-      //Nodes broadcast their capabilities every capGossipTime ms with a lag of rand*100 ms
-      int startBroadcast = network.rd.nextInt(params.capGossipTime) + 1;
-      network.registerPeriodicTask(this::broadcastCapabilities, startBroadcast,
-          params.capGossipTime, this);
 
       // All nodes have to leave a day.
-      int startExit = network.rd.nextInt(params.timeToLeave);
+      int startExit = network.time + network.rd.nextInt(params.timeToLeave);
       network.registerTask(this::exitNetwork, startExit, this);
 
+      //Nodes broadcast their capabilities every capGossipTime ms with a lag of rand*100 ms
+      int startBroadcast = network.rd.nextInt(params.capGossipTime) + 1;
+      if (startBroadcast > startExit) {
+        // If you're very unlucky you will die before having really started.
+        network.registerPeriodicTask(this::broadcastCapabilities, network.time + startBroadcast,
+            params.capGossipTime, this);
+      }
     }
 
     @Override
