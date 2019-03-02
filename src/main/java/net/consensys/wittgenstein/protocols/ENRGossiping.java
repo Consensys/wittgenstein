@@ -334,7 +334,7 @@ public class ENRGossiping implements Protocol {
     void exitNetwork() {
       network.disconnect(this);
       network.getNodeById(nodeId).stop();
-      System.out.println("node "+nodeId+" has left.\n total that has le"+ ++counter);
+      System.out.println("node " + nodeId + " has left.\n total that has le" + ++counter);
     }
   }
 
@@ -354,7 +354,8 @@ public class ENRGossiping implements Protocol {
 
       @Override
       public StatsHelper.Stat get(List<? extends Node> liveNodes) {
-        return new StatsHelper.Counter(liveNodes.stream().filter(n -> n.getDoneAt() > 0 && !n.down).count());
+        return new StatsHelper.Counter(
+            liveNodes.stream().filter(n -> n.getDoneAt() > 0 && !n.down).count());
       }
     };
     System.out.println("nodes that have left: ");
