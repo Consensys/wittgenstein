@@ -230,7 +230,7 @@ public class ENRGossiping implements Protocol {
       network.registerTask(this::exitNetwork, startExit, this);
 
       //Nodes broadcast their capabilities every capGossipTime ms with a lag of rand*100 ms
-      int startBroadcast = network.time +  network.rd.nextInt(params.capGossipTime) + 1;
+      int startBroadcast = network.time + network.rd.nextInt(params.capGossipTime) + 1;
       if (startBroadcast > startExit) {
         // If you're very unlucky you will die before having really started.
         network.registerPeriodicTask(this::broadcastCapabilities, startBroadcast,
