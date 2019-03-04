@@ -19,7 +19,7 @@ public class ENRGossiping implements Protocol {
   private final ENRParameters params;
   private final NodeBuilder nb;
   private List<ETHNode> changedNodes;
-  int counter = 0;
+  private int counter = 0;
 
   static class ENRParameters extends WParameters {
 
@@ -230,10 +230,10 @@ public class ENRGossiping implements Protocol {
       network.registerTask(this::exitNetwork, startExit, this);
 
       //Nodes broadcast their capabilities every capGossipTime ms with a lag of rand*100 ms
-      int startBroadcast = network.rd.nextInt(params.capGossipTime) + 1;
+      int startBroadcast = network.time +  network.rd.nextInt(params.capGossipTime) + 1;
       if (startBroadcast > startExit) {
         // If you're very unlucky you will die before having really started.
-        network.registerPeriodicTask(this::broadcastCapabilities, network.time + startBroadcast,
+        network.registerPeriodicTask(this::broadcastCapabilities, startBroadcast,
             params.capGossipTime, this);
       }
     }
