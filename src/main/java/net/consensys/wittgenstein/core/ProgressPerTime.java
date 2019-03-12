@@ -76,6 +76,7 @@ public class ProgressPerTime {
         if (p.network().time % 10000 == 0) {
           System.out.println("time goes by... time=" + (p.network().time / 1000) + ", stats=" + s);
         }
+        liveNodes = p.network().allNodes.stream().filter(n -> !n.down).collect(Collectors.toList());
       } while (contIf.test(p));
       long endAt = System.currentTimeMillis();
 

@@ -19,7 +19,6 @@ public class ENRGossiping implements Protocol {
   private final ENRParameters params;
   private final NodeBuilder nb;
   private List<ETHNode> changedNodes;
-  private int counter = 0;
 
   static class ENRParameters extends WParameters {
 
@@ -350,10 +349,7 @@ public class ENRGossiping implements Protocol {
   }
 
   private void capSearch() {
-    Predicate<Protocol> contIf = p1 -> p1.network().time <= 1000000 && p1.network().allNodes
-        .stream()
-        .filter(n -> n.doneAt > 0 && !n.down)
-        .count() != p1.network().allNodes.size();
+    Predicate<Protocol> contIf = p1 -> p1.network().time <= 1000000;
 
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
       final List<String> fields = new StatsHelper.Counter(0).fields();
