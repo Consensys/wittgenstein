@@ -65,9 +65,9 @@ public class ENRGossiping implements Protocol {
     private ENRParameters() {
       this.NODES = 100;
       this.timeToChange = 1000 * 60 * 60 * 10;
-      this.capGossipTime = 1000 *60* 5;
+      this.capGossipTime = 1000 * 60 * 5;
       this.discardTime = 100;
-      this.timeToLeave = 1000 * 60 ;
+      this.timeToLeave = 1000 * 60;
       this.totalPeers = 5;
       this.changingNodes = 10;
       this.maxPeers = 50;
@@ -135,12 +135,12 @@ public class ENRGossiping implements Protocol {
   private void addNewNode() {
     ETHNode n = new ETHNode(network.rd, this.nb, generateCap());
     network.addNode(n);
-    while(n.peers.size()<params.totalPeers) {
+    while (n.peers.size() < params.totalPeers) {
       int peerId = network.rd.nextInt(network.allNodes.size());
-      if(!network.getNodeById(peerId).down)
-      network.createLink(n,network.getNodeById(peerId));
+      if (!network.getNodeById(peerId).down)
+        network.createLink(n, network.getNodeById(peerId));
     }
-    System.out.println("New node: "+n.nodeId+" has "+n.peers.size()+" peers");
+    System.out.println("New node: " + n.nodeId + " has " + n.peers.size() + " peers");
     n.start();
   }
 
@@ -171,7 +171,8 @@ public class ENRGossiping implements Protocol {
       System.out.println(i.getKey() + ": " + i.getValue().get());
     }
     int startAdding = network.rd.nextInt(params.timeToLeave);
-    network.registerPeriodicTask(this::addNewNode, startAdding, params.timeToLeave/2, network.getNodeById(0));
+    network.registerPeriodicTask(this::addNewNode, startAdding, params.timeToLeave / 2,
+        network.getNodeById(0));
   }
 
   /**
@@ -229,7 +230,8 @@ public class ENRGossiping implements Protocol {
       }
 
       // All nodes have to leave a day.
-      int startExit = network.time + network.rd.nextInt(params.timeToLeave) * network.allNodes.size();
+      int startExit =
+          network.time + network.rd.nextInt(params.timeToLeave) * network.allNodes.size();
       network.registerTask(this::exitNetwork, startExit, this);
 
       //Nodes broadcast their capabilities every capGossipTime ms with a lag of rand*100 ms
@@ -259,7 +261,7 @@ public class ENRGossiping implements Protocol {
         // This node has nothing interesting for us.
         return;
       }
-      if(addedValue == 0 && this.peers.size()<params.maxPeers){
+      if (addedValue == 0 && this.peers.size() < params.maxPeers) {
         connect(rc.source);
       }
 
