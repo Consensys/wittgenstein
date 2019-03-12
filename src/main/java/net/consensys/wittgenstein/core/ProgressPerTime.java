@@ -89,6 +89,9 @@ public class ProgressPerTime {
       System.out.println("msg rcvd: " + StatsHelper.getStatsOn(liveNodes, Node::getMsgReceived));
       System.out.println("done at: " + StatsHelper.getStatsOn(liveNodes, Node::getDoneAt));
       System.out.println("Simulation execution time: " + ((endAt - startAt) / 1000) + "s");
+      System.out.println("");
+      System.out.println("Number of nodes that are down"+p.network().allNodes.stream().filter(n->((Node) n).down == true).count());
+      System.out.println("Total Number of peers "+p.network().allNodes.size());
     }
 
     protocol.init();
