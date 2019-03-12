@@ -21,7 +21,6 @@ public class ENRGossiping implements Protocol {
   private List<ETHNode> changedNodes;
 
   static class ENRParameters extends WParameters {
-
     /**
      * timeToChange is used to describe the time period, in s, that needs to pass in order to change
      * your capabilities i.e.: when you create new key-value pairs for your record. Only a given
