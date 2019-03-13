@@ -66,7 +66,7 @@ public class ENRGossiping implements Protocol {
       this.timeToChange = 1000 * 60 * 60 * 10;
       this.capGossipTime = 1000 * 60 * 5;
       this.discardTime = 100;
-      this.timeToLeave = 1000 * 60;
+      this.timeToLeave = 1000 * 60 * 60 * 5;
       this.totalPeers = 5;
       this.changingNodes = 10;
       this.maxPeers = 50;
@@ -139,6 +139,7 @@ public class ENRGossiping implements Protocol {
       if (!network.getNodeById(peerId).down)
         network.createLink(n, network.getNodeById(peerId));
     }
+    // All nodes have to leave a day.
     System.out.println("New node: " + n.nodeId + " has " + n.peers.size() + " peers");
     n.start();
   }
@@ -169,8 +170,8 @@ public class ENRGossiping implements Protocol {
       }
       System.out.println(i.getKey() + ": " + i.getValue().get());
     }
-    int startAdding = network.rd.nextInt(params.timeToLeave);
-    network.registerPeriodicTask(this::addNewNode, startAdding, params.timeToLeave / 2,
+    // Divided by 2 to aim for the expected value
+    network.registerPeriodicTask(this::addNewNode, 0, params.timeToLeave / 2,
         network.getNodeById(0));
   }
 
@@ -199,12 +200,18 @@ public class ENRGossiping implements Protocol {
   public class ETHNode extends P2PNode<ETHNode> {
     Set<String> capabilities;
     private int records = 0;
+    public int startTime;
 
 
     boolean isFullyConnected() {
       return score(peers) >= capabilities.size();
     }
 
+    /**
+     * Calculates the added value of being connected to the node 'p'
+     * 
+     * @return 0 if no value, > 0 if there is a value, the higher the better
+     */
     int addedValue(ETHNode p) {
       int s1 = score(peers);
       List<ETHNode> added = new ArrayList<>(peers);
@@ -224,14 +231,18 @@ public class ENRGossiping implements Protocol {
 
     @Override
     public void start() {
+      startTime = network.time;
       if (isFullyConnected()) {
         doneAt = Math.max(1, network.time);
       }
-
-      // All nodes have to leave a day.
-      int startExit =
-          network.time + network.rd.nextInt(params.timeToLeave) * network.allNodes.size();
-      network.registerTask(this::exitNetwork, startExit, this);
+      // Nodes that join the network after the initial setup will leave, at start network.time =0
+      int startExit = Integer.MAX_VALUE;
+      if (network.time > 1) {
+        // The nodes added at the beginning won't exit the network: this makes
+        //  the simulation simpler
+        startExit = network.time + network.rd.nextInt(params.timeToLeave);
+        network.registerTask(this::exitNetwork, startExit, this);
+      }
 
       //Nodes broadcast their capabilities every capGossipTime ms with a lag of rand*100 ms
       int startBroadcast = network.time + network.rd.nextInt(params.capGossipTime) + 1;
@@ -256,12 +267,9 @@ public class ENRGossiping implements Protocol {
       }
       int addedValue = addedValue(rc.source);
 
-      if (addedValue < 0) {
+      if (addedValue == 0) {
         // This node has nothing interesting for us.
         return;
-      }
-      if (addedValue == 0 && this.peers.size() < params.maxPeers) {
-        connect(rc.source);
       }
 
       if (peers.size() >= params.maxPeers) {
@@ -276,10 +284,10 @@ public class ENRGossiping implements Protocol {
     void connect(ETHNode n) {
       network.createLink(this, n);
       if (doneAt == 0 && isFullyConnected()) {
-        doneAt = network.time;
+        doneAt = network.time - startTime;
       }
       if (n.doneAt == 0 && n.isFullyConnected()) {
-        n.doneAt = network.time;
+        n.doneAt = network.time - n.startTime;
       }
     }
 
@@ -343,16 +351,20 @@ public class ENRGossiping implements Protocol {
     }
 
     void exitNetwork() {
+      long live = network.allNodes.stream().filter(n -> !n.down).count();
+      if (live <= params.totalPeers) {
+        throw new IllegalStateException("We don't have enough peers left, live=" + live
+            + ", params.totalPeers=" + params.totalPeers);
+      }
       network.disconnect(this);
       network.getNodeById(nodeId).stop();
     }
   }
 
   private void capSearch() {
-    Predicate<Protocol> contIf = p1 -> p1.network().time <= 1000000;
-
+    Predicate<Protocol> contIf = p1 -> p1.network().time <= 1000 * 60 * 60 * 10;
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
-      final List<String> fields = new StatsHelper.Counter(0).fields();
+      final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
 
       @Override
       public List<String> fields() {
@@ -361,11 +373,10 @@ public class ENRGossiping implements Protocol {
 
       @Override
       public StatsHelper.Stat get(List<? extends Node> liveNodes) {
-        return new StatsHelper.Counter(
-            liveNodes.stream().filter(n -> n.getDoneAt() > 0 && !n.down).count());
+        return StatsHelper.getStatsOn(liveNodes, n -> ((ETHNode) n).doneAt);
       }
+
     };
-    System.out.println("nodes that have left: ");
     ProgressPerTime ppp =
         new ProgressPerTime(this, "", "Nodes that have found capabilities", sg, 1, null);
     ppp.run(contIf);
