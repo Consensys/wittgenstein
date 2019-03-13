@@ -14,6 +14,7 @@ import java.util.function.Predicate;
  * all its peer. That's the "Flood routing" protocol documented here:
  * https://github.com/libp2p/specs/tree/master/pubsub/gossipsub
  */
+@SuppressWarnings("WeakerAccess")
 public class P2PFlood implements Protocol {
   private final P2PFloodParameters params;
   private final P2PNetwork<P2PFloodNode> network;
@@ -106,7 +107,7 @@ public class P2PFlood implements Protocol {
     }
   }
 
-  P2PFlood(P2PFloodParameters params) {
+  public P2PFlood(P2PFloodParameters params) {
     this.params = params;
     this.network = new P2PNetwork<>(params.peersCount, true);
     this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);
