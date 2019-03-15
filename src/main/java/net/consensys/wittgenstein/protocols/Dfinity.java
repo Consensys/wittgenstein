@@ -61,7 +61,7 @@ public class Dfinity implements Protocol {
       this.networkLatencyName = networkLatencyName;
     }
 
-    DfinityParameters() {
+    public DfinityParameters() {
       this(10, 10, 10, 1, 1, 0, null, null);
     }
   }

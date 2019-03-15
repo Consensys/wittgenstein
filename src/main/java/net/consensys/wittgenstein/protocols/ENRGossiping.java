@@ -20,7 +20,7 @@ public class ENRGossiping implements Protocol {
   private final NodeBuilder nb;
   private List<ETHNode> changedNodes;
 
-  static class ENRParameters extends WParameters {
+  public static class ENRParameters extends WParameters {
     /**
      * timeToChange is used to describe the time period, in s, that needs to pass in order to change
      * your capabilities i.e.: when you create new key-value pairs for your record. Only a given
@@ -60,7 +60,7 @@ public class ENRGossiping implements Protocol {
     private final int numberOfDifferentCapabilities;
     private final int capPerNode;
 
-    private ENRParameters() {
+    public ENRParameters() {
       this.NODES = 100;
       this.timeToChange = 1000 * 60 * 60 * 10;
       this.capGossipTime = 1000 * 60 * 5;
