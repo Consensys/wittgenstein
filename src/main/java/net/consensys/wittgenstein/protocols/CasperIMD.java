@@ -16,7 +16,7 @@ import java.util.*;
 public class CasperIMD implements Protocol {
   CasperParemeters params;
 
-  static class CasperParemeters extends WParameters {
+  public static class CasperParemeters extends WParameters {
     final int SLOT_DURATION = 8000;
 
     /**
@@ -57,11 +57,11 @@ public class CasperIMD implements Protocol {
     final String nodeBuilderName;
     final String networkLatencyName;
 
-    CasperParemeters() {
+    public CasperParemeters() {
       this(4, true, 5, 80, 1000, 1, null, null);
     }
 
-    CasperParemeters(int cycleLength, boolean randomOnTies, int blockProducersCount,
+    public CasperParemeters(int cycleLength, boolean randomOnTies, int blockProducersCount,
         int attestersPerRound, int blockConstructionTime, int attestationConstructionTime,
         String nodeBuilderName, String networkLatencyName) {
       this.cycleLength = cycleLength;
