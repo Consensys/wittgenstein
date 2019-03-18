@@ -90,9 +90,9 @@ public class SanFerminSignature implements Protocol {
     final String networkLatencyName;
 
     public SanFerminSignatureParameters() {
-      this.nodeCount = 32768 / 8;
+      this.nodeCount = 32768 / 32;
       this.powerOfTwo = MoreMath.log2(nodeCount);
-      this.threshold = 32768 / 8;
+      this.threshold = 32768 / 32;
       this.pairingTime = 2;
       this.signatureSize = 48;
       this.replyTimeout = 300;

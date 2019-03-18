@@ -91,7 +91,7 @@ public class WServerTest {
 
       ResponseEntity<Void> responseInit = restTemplate.exchange(requestEntity, Void.class);
 
-      Assert.assertEquals(HttpStatus.OK, responseInit.getStatusCode());
+      Assert.assertEquals(p, HttpStatus.OK, responseInit.getStatusCode());
 
       List<Node> allNodes = Collections.emptyList();
       try {
@@ -100,7 +100,6 @@ public class WServerTest {
         Assert.fail(p);
       }
       Assert.assertNotEquals(p, 0, allNodes.size());
-
     }
   }
 

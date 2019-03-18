@@ -58,7 +58,7 @@ public class CasperIMD implements Protocol {
     final String networkLatencyName;
 
     public CasperParemeters() {
-      this(4, true, 5, 80, 1000, 1, null, null);
+      this(4, true, 2, 20, 1000, 1, null, null);
     }
 
     public CasperParemeters(int cycleLength, boolean randomOnTies, int blockProducersCount,

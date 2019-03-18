@@ -7,6 +7,7 @@ import net.consensys.wittgenstein.server.WParameters;
 import java.util.*;
 import java.util.function.Predicate;
 
+@SuppressWarnings("WeakerAccess")
 public class Slush implements Protocol {
   private final Network<SlushNode> network;
   final NodeBuilder nb;

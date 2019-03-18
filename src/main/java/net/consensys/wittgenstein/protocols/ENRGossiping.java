@@ -20,6 +20,7 @@ public class ENRGossiping implements Protocol {
   private final NodeBuilder nb;
   private List<ETHNode> changedNodes;
 
+  @SuppressWarnings("WeakerAccess")
   public static class ENRParameters extends WParameters {
     /**
      * timeToChange is used to describe the time period, in s, that needs to pass in order to change
@@ -51,7 +52,7 @@ public class ENRGossiping implements Protocol {
     final int totalPeers;
     final int NODES;
     /**
-     * chaningNodes is the % of nodes that regularly change their capabilities
+     * changingNodes is the % of nodes that regularly change their capabilities
      */
     final float changingNodes;
     private final int maxPeers;

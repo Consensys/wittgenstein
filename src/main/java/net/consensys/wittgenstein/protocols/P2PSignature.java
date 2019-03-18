@@ -100,7 +100,7 @@ public class P2PSignature implements Protocol {
     final SendSigsStrategy sendSigsStrategy;
 
     public P2PSignatureParameters() {
-      this.signingNodeCount = 1000;
+      this.signingNodeCount = 100;
       this.relayingNodeCount = 20;
       this.threshold = 99;
       this.connectionCount = 40;

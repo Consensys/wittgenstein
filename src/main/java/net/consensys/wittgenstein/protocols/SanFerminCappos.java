@@ -86,11 +86,11 @@ public class SanFerminCappos implements Protocol {
     public List<SanFerminNode> finishedNodes;
 
     public SanFerminParameters() {
-      this.nodeCount = 32768 / 8;
+      this.nodeCount = 32768 / 16;
       this.pairingTime = 2;
       this.signatureSize = 48;
       this.candidateCount = 50;
-      this.threshold = 32768 / 16;
+      this.threshold = 32768 / 32;
       this.timeout = 150;
       this.nodeBuilderName = null;
       this.networkLatencyName = null;

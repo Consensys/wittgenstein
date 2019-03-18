@@ -7,6 +7,7 @@ import net.consensys.wittgenstein.server.WParameters;
 import java.util.*;
 import java.util.function.Predicate;
 
+@SuppressWarnings("WeakerAccess")
 public class Snowflake implements Protocol {
 
   private Network<SnowflakeNode> network;
