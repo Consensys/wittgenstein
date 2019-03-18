@@ -37,7 +37,7 @@ public class Snowflake implements Protocol {
     final String nodeBuilderName;
     final String networkLatencyName;
 
-    SnowflakeParameters(int nodeAv, int M, int K, double A, int B, String nodeBuilderName,
+    public SnowflakeParameters(int nodeAv, int M, int K, double A, int B, String nodeBuilderName,
         String networkLatencyName) {
       this.NODES_AV = nodeAv;
       this.M = M;
@@ -49,12 +49,12 @@ public class Snowflake implements Protocol {
       this.networkLatencyName = networkLatencyName;
     }
 
-    SnowflakeParameters() {
+    public SnowflakeParameters() {
       this(100, 4, 7, 4, 7, null, null);
     }
   }
 
-  Snowflake(SnowflakeParameters params) {
+  public Snowflake(SnowflakeParameters params) {
     this.params = params;
     this.network = new Network<>();
     this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);

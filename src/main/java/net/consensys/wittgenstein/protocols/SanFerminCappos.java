@@ -85,7 +85,7 @@ public class SanFerminCappos implements Protocol {
 
     public List<SanFerminNode> finishedNodes;
 
-    SanFerminParameters(int nodeCount, int threshold, int pairingTime, int signatureSize,
+    public SanFerminParameters(int nodeCount, int threshold, int pairingTime, int signatureSize,
         int timeout, int candidateCount, String nodeBuilderName, String networkLatencyName) {
       this.nodeCount = nodeCount;
       this.pairingTime = pairingTime;
@@ -97,7 +97,7 @@ public class SanFerminCappos implements Protocol {
       this.networkLatencyName = networkLatencyName;
     }
 
-    SanFerminParameters() {
+    public SanFerminParameters() {
       this(1000, 99, 100, 1, 100000, 100, null, null);
     }
   }

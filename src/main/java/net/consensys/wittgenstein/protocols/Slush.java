@@ -35,7 +35,7 @@ public class Slush implements Protocol {
     final String nodeBuilderName;
     final String networkLatencyName;
 
-    SlushParameters(int NODES_AV, int M, int K, double A, String nodeBuilderName,
+    public SlushParameters(int NODES_AV, int M, int K, double A, String nodeBuilderName,
         String networkLatencyName) {
       this.NODES_AV = NODES_AV;
       this.M = M;
@@ -46,12 +46,12 @@ public class Slush implements Protocol {
       this.networkLatencyName = networkLatencyName;
     }
 
-    SlushParameters() {
+    public SlushParameters() {
       this(100, 4, 7, 4, null, null);
     }
   }
 
-  Slush(SlushParameters params) {
+  public Slush(SlushParameters params) {
     this.params = params;
     this.network = new Network<>();
     this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);

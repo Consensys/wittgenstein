@@ -44,9 +44,21 @@ public class GSFSignature implements Protocol {
     final String nodeBuilderName;
     final String networkLatencyName;
 
-    GSFSignatureParameters(int nodeCount, int threshold, int pairingTime, int timeoutPerLevelMs,
-        int periodDurationMs, int acceleratedCallsCount, int nodesDown, String nodeBuilderName,
-        String networkLatencyName) {
+    public GSFSignatureParameters() {
+      this.nodeCount = 32768 / 32;;
+      this.threshold = (int) (nodeCount * (0.99));
+      this.pairingTime = 3;
+      this.timeoutPerLevelMs = 50;
+      this.periodDurationMs = 10;
+      this.acceleratedCallsCount = 10;
+      this.nodesDown = 0;
+      this.nodeBuilderName = null;
+      this.networkLatencyName = null;
+    }
+
+    public GSFSignatureParameters(int nodeCount, int threshold, int pairingTime,
+        int timeoutPerLevelMs, int periodDurationMs, int acceleratedCallsCount, int nodesDown,
+        String nodeBuilderName, String networkLatencyName) {
       if (nodesDown >= nodeCount || nodesDown < 0 || threshold > nodeCount
           || (nodesDown + threshold > nodeCount)) {
         throw new IllegalArgumentException("nodeCount=" + nodeCount + ", threshold=" + threshold);
