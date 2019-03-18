@@ -12,6 +12,7 @@ import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
 import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -82,7 +83,20 @@ public class Server implements IServer {
           + "constructor taking a subclass of WParameters as unique parameter.");
     }
 
-    return (WParameters) Reflects.newInstance(bc.getParameters()[0].getType());
+    Class<?> type = bc.getParameters()[0].getType();
+    Constructor<?> cons;
+    try {
+      cons = type.getConstructor();
+    } catch (Exception e) {
+      throw new IllegalStateException(
+          "We need a public constructor without parameters for the parameters class." + type, e);
+    }
+
+    try {
+      return (WParameters) cons.newInstance();
+    } catch (Exception e) {
+      throw new IllegalStateException("Can't create without parameters " + type, e);
+    }
   }
 
   public List<Class<?>> getParametersName() {

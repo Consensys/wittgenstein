@@ -46,7 +46,8 @@ public class Reflects {
     try {
       return constructor.newInstance(args);
     } catch (Exception e) {
-      throw new IllegalArgumentException(e);
+      throw new IllegalArgumentException(
+          "Constructor not valid " + constructor + " error message" + e);
     }
   }
 

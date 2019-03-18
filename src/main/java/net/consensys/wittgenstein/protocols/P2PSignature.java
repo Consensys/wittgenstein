@@ -99,7 +99,7 @@ public class P2PSignature implements Protocol {
 
     final SendSigsStrategy sendSigsStrategy;
 
-    P2PSignatureParameters() {
+    public P2PSignatureParameters() {
       this.signingNodeCount = 1000;
       this.relayingNodeCount = 20;
       this.threshold = 99;
@@ -114,7 +114,7 @@ public class P2PSignature implements Protocol {
       this.networkLatencyName = null;
     }
 
-    P2PSignatureParameters(int signingNodeCount, int relayingNodeCount, int threshold,
+    public P2PSignatureParameters(int signingNodeCount, int relayingNodeCount, int threshold,
         int connectionCount, int pairingTime, int sigsSendPeriod, boolean doubleAggregateStrategy,
         boolean sanFermin, SendSigsStrategy sendSigsStrategy, int sigRange, String nodeBuilderName,
         String networkLatencyName) {

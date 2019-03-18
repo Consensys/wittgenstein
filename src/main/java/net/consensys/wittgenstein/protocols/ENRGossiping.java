@@ -94,7 +94,7 @@ public class ENRGossiping implements Protocol {
     }
   }
 
-  ENRGossiping(ENRParameters params) {
+  public ENRGossiping(ENRParameters params) {
     this.params = params;
     this.network = new P2PNetwork<>(params.totalPeers, true);
     this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);

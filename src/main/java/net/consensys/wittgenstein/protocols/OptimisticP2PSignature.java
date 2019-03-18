@@ -53,7 +53,7 @@ public class OptimisticP2PSignature implements Protocol {
     final String nodeBuilderName;
     final String networkLatencyName;
 
-    OptimisticP2PSignatureParameters() {
+    public OptimisticP2PSignatureParameters() {
       this.nodeCount = 1000;
       this.threshold = 99;
       this.connectionCount = 20;
@@ -62,7 +62,7 @@ public class OptimisticP2PSignature implements Protocol {
       this.networkLatencyName = null;
     }
 
-    OptimisticP2PSignatureParameters(int nodeCount, int threshold, int connectionCount,
+    public OptimisticP2PSignatureParameters(int nodeCount, int threshold, int connectionCount,
         int pairingTime, String nodeBuilderName, String networkLatencyName) {
       this.nodeCount = nodeCount;
       this.threshold = threshold;

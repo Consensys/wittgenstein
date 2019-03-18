@@ -355,7 +355,7 @@ public class CasperIMD implements Protocol {
       return "CasperNode{" + "nodeId=" + nodeId + '}';
     }
 
-    protected Runnable getPeriodicTask() {
+    protected Runnable periodicTask() {
       return null;
     }
   }
@@ -372,7 +372,7 @@ public class CasperIMD implements Protocol {
     }
 
     @Override
-    protected Runnable getPeriodicTask() {
+    protected Runnable periodicTask() {
       return () -> {
         reevaluateHead();
         createAndSendBlock(network.time / params.SLOT_DURATION);
@@ -442,7 +442,7 @@ public class CasperIMD implements Protocol {
     }
 
     @Override
-    protected Runnable getPeriodicTask() {
+    protected Runnable periodicTask() {
       return () -> vote(network.time / params.SLOT_DURATION);
     }
 
@@ -472,7 +472,7 @@ public class CasperIMD implements Protocol {
   void init(CasperIMD.ByzBlockProducer byzantineNode) {
     bps.add(byzantineNode);
     network.addNode(byzantineNode);
-    network.registerPeriodicTask(byzantineNode.getPeriodicTask(),
+    network.registerPeriodicTask(byzantineNode.periodicTask(),
         params.SLOT_DURATION + byzantineNode.delay,
         params.SLOT_DURATION * params.blockProducersCount, byzantineNode);
 
@@ -480,7 +480,7 @@ public class CasperIMD implements Protocol {
       BlockProducer n = new BlockProducer(genesis);
       bps.add(n);
       network.addNode(n);
-      network.registerPeriodicTask(n.getPeriodicTask(), params.SLOT_DURATION * (i + 1),
+      network.registerPeriodicTask(n.periodicTask(), params.SLOT_DURATION * (i + 1),
           params.SLOT_DURATION * params.blockProducersCount, n);
     }
 
@@ -488,7 +488,7 @@ public class CasperIMD implements Protocol {
       Attester n = new Attester(genesis);
       attesters.add(n);
       network.addNode(n);
-      network.registerPeriodicTask(n.getPeriodicTask(),
+      network.registerPeriodicTask(n.periodicTask(),
           params.SLOT_DURATION * (1 + i % params.cycleLength) + 4000,
           params.SLOT_DURATION * params.cycleLength, n);
     }
@@ -533,7 +533,7 @@ public class CasperIMD implements Protocol {
     }
 
     @Override
-    protected Runnable getPeriodicTask() {
+    protected Runnable periodicTask() {
       return () -> {
         reevaluateH(network.time);
 
@@ -572,7 +572,7 @@ public class CasperIMD implements Protocol {
     }
 
     @Override
-    protected Runnable getPeriodicTask() {
+    protected Runnable periodicTask() {
       return () -> {
         reevaluateH(network.time);
         if (head.id != 0 && head.height == h - 1) {
@@ -602,7 +602,7 @@ public class CasperIMD implements Protocol {
     int skipped = 0;
 
     @Override
-    protected Runnable getPeriodicTask() {
+    protected Runnable periodicTask() {
       return () -> {
         reevaluateH(network.time);
 
@@ -642,7 +642,7 @@ public class CasperIMD implements Protocol {
     }
 
     @Override
-    protected Runnable getPeriodicTask() {
+    protected Runnable periodicTask() {
       return () -> {
         if (head == genesis && toSend == 1) {
           // If we're the first producer we need to kick off the system.

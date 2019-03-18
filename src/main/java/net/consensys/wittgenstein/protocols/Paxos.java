@@ -30,7 +30,7 @@ public class Paxos implements Protocol {
   private final PaxosParameters params;
   private final NodeBuilder nb;
 
-  Paxos(PaxosParameters params) {
+  public Paxos(PaxosParameters params) {
     this.params = params;
     this.majority = params.acceptorCount / 2 + 1;
     this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilder);

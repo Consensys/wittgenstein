@@ -1,6 +1,8 @@
 package net.consensys.wittgenstein.protocols;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.json.ListNodeConverter;
 import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
@@ -44,9 +46,21 @@ public class GSFSignature implements Protocol {
     final String nodeBuilderName;
     final String networkLatencyName;
 
-    GSFSignatureParameters(int nodeCount, int threshold, int pairingTime, int timeoutPerLevelMs,
-        int periodDurationMs, int acceleratedCallsCount, int nodesDown, String nodeBuilderName,
-        String networkLatencyName) {
+    public GSFSignatureParameters() {
+      this.nodeCount = 32768 / 32;;
+      this.threshold = (int) (nodeCount * (0.99));
+      this.pairingTime = 3;
+      this.timeoutPerLevelMs = 50;
+      this.periodDurationMs = 10;
+      this.acceleratedCallsCount = 10;
+      this.nodesDown = 0;
+      this.nodeBuilderName = null;
+      this.networkLatencyName = null;
+    }
+
+    public GSFSignatureParameters(int nodeCount, int threshold, int pairingTime,
+        int timeoutPerLevelMs, int periodDurationMs, int acceleratedCallsCount, int nodesDown,
+        String nodeBuilderName, String networkLatencyName) {
       if (nodesDown >= nodeCount || nodesDown < 0 || threshold > nodeCount
           || (nodesDown + threshold > nodeCount)) {
         throw new IllegalArgumentException("nodeCount=" + nodeCount + ", threshold=" + threshold);
@@ -191,6 +205,7 @@ public class GSFSignature implements Protocol {
      */
     public class SFLevel {
       final int level;
+      @JsonSerialize(converter = ListNodeConverter.class)
       final List<GSFNode> peers; // The peers when we have all signatures for this level.
       final BitSet waitedSigs; // 1 for the signatures we should have at this level
       final BitSet verifiedSignatures = new BitSet(); // The signatures verified in this level

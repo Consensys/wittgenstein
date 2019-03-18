@@ -1,5 +1,6 @@
 package net.consensys.wittgenstein.server.ws;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.CollectionType;
 import net.consensys.wittgenstein.core.EnvelopeInfo;
@@ -19,6 +20,7 @@ import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.http.*;
 import org.springframework.test.context.junit4.SpringRunner;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -61,6 +63,45 @@ public class WServerTest {
 
     List<String> ps = objectMapper.readValue(response.getBody(), javaType);
     Assert.assertTrue(response.getBody(), ps.contains(PingPong.class.getName()));
+  }
+
+  @Test
+  public void testBasicAllProtocols() throws Exception {
+    HttpEntity<String> entity = new HttpEntity<>(null, headers);
+
+    ResponseEntity<String> response = restTemplate.exchange(createURLWithPort("/protocols"),
+        HttpMethod.GET, entity, String.class);
+
+    CollectionType javaType =
+        objectMapper.getTypeFactory().constructCollectionType(List.class, String.class);
+    List<String> ps = objectMapper.readValue(response.getBody(), javaType);
+
+    for (String p : ps) {
+      entity = new HttpEntity<>(null, headers);
+      response = restTemplate.exchange(createURLWithPort("/protocols/" + p), HttpMethod.GET, entity,
+          String.class);
+
+      WParameters params = objectMapper.readValue(response.getBody(), WParameters.class);
+      String jsonString = objectMapper.writeValueAsString(params);
+
+      RequestEntity<String> requestEntity = RequestEntity
+          .post(createURIWithPort("/network/init/" + p))
+          .contentType(MediaType.APPLICATION_JSON)
+          .body(jsonString);
+
+      ResponseEntity<Void> responseInit = restTemplate.exchange(requestEntity, Void.class);
+
+      Assert.assertEquals(HttpStatus.OK, responseInit.getStatusCode());
+
+      List<Node> allNodes = Collections.emptyList();
+      try {
+        allNodes = allNodeInfo();
+      } catch (Exception e) {
+        Assert.fail(p);
+      }
+      Assert.assertNotEquals(p, 0, allNodes.size());
+
+    }
   }
 
   @Test
