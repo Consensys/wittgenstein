@@ -123,7 +123,8 @@ public class Slush implements Protocol {
       super(rd, nb);
     }
 
-    List<SlushNode> getRandomRemotes() {
+
+    List<SlushNode> randomRemotes() {
       List<SlushNode> res = new ArrayList<>(params.K);
 
       while (res.size() != params.K) {
@@ -178,7 +179,7 @@ public class Slush implements Protocol {
     void sendQuery(int countInM) {
       Query q = new Query(++myQueryNonce, myColor);
       answerIP.put(q.id, new Answer(countInM));
-      network.send(q, this, getRandomRemotes());
+      network.send(q, this, randomRemotes());
     }
 
     @Override

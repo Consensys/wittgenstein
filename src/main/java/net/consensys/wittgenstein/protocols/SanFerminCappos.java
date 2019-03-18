@@ -1,5 +1,6 @@
 package net.consensys.wittgenstein.protocols;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.MoreMath;
@@ -160,6 +161,7 @@ public class SanFerminCappos implements Protocol {
      */
     public final String binaryId;
 
+    @JsonIgnore
     private SanFerminHelper<SanFerminNode> helper;
 
     /**

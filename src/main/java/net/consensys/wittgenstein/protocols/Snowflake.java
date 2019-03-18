@@ -129,7 +129,7 @@ public class Snowflake implements Protocol {
       super(rd, nb);
     }
 
-    List<SnowflakeNode> getRandomRemotes() {
+    List<SnowflakeNode> RandomRemotes() {
       List<SnowflakeNode> res = new ArrayList<>(params.K);
 
       while (res.size() != params.K) {
@@ -186,7 +186,7 @@ public class Snowflake implements Protocol {
     void sendQuery(int countInM) {
       Query q = new Query(++myQueryNonce, myColor);
       answerIP.put(q.id, new Answer(countInM));
-      network.send(q, this, getRandomRemotes());
+      network.send(q, this, RandomRemotes());
     }
 
     @Override

@@ -1,5 +1,6 @@
 package net.consensys.wittgenstein.protocols;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.MoreMath;
@@ -171,7 +172,8 @@ public class SanFerminSignature implements Protocol {
      */
     public int currentPrefixLength;
 
-    SanFerminHelper<SanFerminNode> candidateTree;
+    @JsonIgnore
+    private SanFerminHelper<SanFerminNode> candidateTree;
 
     /**
      * BitSet to save which node have we sent swaprequest so far

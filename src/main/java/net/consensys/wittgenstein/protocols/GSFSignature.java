@@ -1,6 +1,8 @@
 package net.consensys.wittgenstein.protocols;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.json.ListNodeConverter;
 import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
@@ -203,6 +205,7 @@ public class GSFSignature implements Protocol {
      */
     public class SFLevel {
       final int level;
+      @JsonSerialize(converter = ListNodeConverter.class)
       final List<GSFNode> peers; // The peers when we have all signatures for this level.
       final BitSet waitedSigs; // 1 for the signatures we should have at this level
       final BitSet verifiedSignatures = new BitSet(); // The signatures verified in this level

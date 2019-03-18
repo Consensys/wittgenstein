@@ -66,8 +66,7 @@ public class WServerTest {
   }
 
   @Test
-  public void verifyPublicConstructors() throws Exception {
-    System.setProperty("--illegal-access", "warn");
+  public void testBasicAllProtocols() throws Exception {
     HttpEntity<String> entity = new HttpEntity<>(null, headers);
 
     ResponseEntity<String> response = restTemplate.exchange(createURLWithPort("/protocols"),
@@ -94,7 +93,13 @@ public class WServerTest {
 
       Assert.assertEquals(HttpStatus.OK, responseInit.getStatusCode());
 
-      //List<Node> allNodes = allNodeInfo();
+      List<Node> allNodes = Collections.emptyList();
+      try {
+        allNodes = allNodeInfo();
+      } catch (Exception e) {
+        Assert.fail(p);
+      }
+      Assert.assertNotEquals(p, 0, allNodes.size());
 
     }
   }
