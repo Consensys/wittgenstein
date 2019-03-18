@@ -79,11 +79,21 @@ public class SanFerminCappos implements Protocol {
      */
     int timeout;
 
-
     final String nodeBuilderName;
     final String networkLatencyName;
 
     public List<SanFerminNode> finishedNodes;
+
+    public SanFerminParameters() {
+      this.nodeCount = 32768 / 2;
+      this.pairingTime = 2;
+      this.signatureSize = 48;
+      this.candidateCount = 50;
+      this.threshold = 32768 / 4;
+      this.timeout = 150;
+      this.nodeBuilderName = null;
+      this.networkLatencyName = null;
+    }
 
     public SanFerminParameters(int nodeCount, int threshold, int pairingTime, int signatureSize,
         int timeout, int candidateCount, String nodeBuilderName, String networkLatencyName) {
@@ -96,10 +106,6 @@ public class SanFerminCappos implements Protocol {
       this.nodeBuilderName = nodeBuilderName;
       this.networkLatencyName = networkLatencyName;
     }
-
-    public SanFerminParameters() {
-      this(1000, 99, 100, 1, 100000, 100, null, null);
-    }
   }
 
   public SanFerminCappos(SanFerminParameters params) {
@@ -109,6 +115,20 @@ public class SanFerminCappos implements Protocol {
     this.network
         .setNetworkLatency(new RegistryNetworkLatencies().getByName(params.networkLatencyName));
 
+
+  }
+
+
+  @Override
+  public Network<SanFerminNode> network() {
+    return network;
+  }
+
+  /**
+   * init makes each node starts swapping with each other when the network starts
+   */
+  @Override
+  public void init() {
     this.allNodes = new ArrayList<>(params.nodeCount);
     for (int i = 0; i < params.nodeCount; i++) {
       final SanFerminNode n = new SanFerminNode(this.nb);
@@ -122,23 +142,6 @@ public class SanFerminCappos implements Protocol {
 
 
     params.finishedNodes = new ArrayList<>();
-  }
-
-
-  @Override
-  public Network<SanFerminNode> network() {
-    return network;
-  }
-
-  @Override
-  public void init() {
-
-  }
-
-  /**
-   * init makes each node starts swapping with each other when the network starts
-   */
-  public void StartAll() {
     for (SanFerminNode n : allNodes)
       network.registerTask(n::goNextLevel, 1, n);
   }
@@ -461,7 +464,7 @@ public class SanFerminCappos implements Protocol {
     graph.addSerie(series1max);
     graph.addSerie(series1avg);
 
-    ps1.StartAll();
+    ps1.init();
 
     StatsHelper.SimpleStats s;
     final long limit = 6000;
@@ -497,4 +500,3 @@ public class SanFerminCappos implements Protocol {
     sigsPerTime();
   }
 }
-

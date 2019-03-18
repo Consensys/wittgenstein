@@ -1,5 +1,6 @@
 package net.consensys.wittgenstein.server.ws;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.CollectionType;
 import net.consensys.wittgenstein.core.EnvelopeInfo;
@@ -66,6 +67,7 @@ public class WServerTest {
 
   @Test
   public void verifyPublicConstructors() throws Exception {
+    System.setProperty("--illegal-access", "warn");
     HttpEntity<String> entity = new HttpEntity<>(null, headers);
 
     ResponseEntity<String> response = restTemplate.exchange(createURLWithPort("/protocols"),
@@ -79,10 +81,22 @@ public class WServerTest {
       entity = new HttpEntity<>(null, headers);
       response = restTemplate.exchange(createURLWithPort("/protocols/" + p), HttpMethod.GET, entity,
           String.class);
+
       WParameters params = objectMapper.readValue(response.getBody(), WParameters.class);
+      String jsonString = objectMapper.writeValueAsString(params);
+
+      RequestEntity<String> requestEntity = RequestEntity
+          .post(createURIWithPort("/network/init/" + p))
+          .contentType(MediaType.APPLICATION_JSON)
+          .body(jsonString);
+
+      ResponseEntity<Void> responseInit = restTemplate.exchange(requestEntity, Void.class);
+
+      Assert.assertEquals(HttpStatus.OK, responseInit.getStatusCode());
+
+      //List<Node> allNodes = allNodeInfo();
 
     }
-
   }
 
   @Test

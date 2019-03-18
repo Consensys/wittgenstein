@@ -88,6 +88,19 @@ public class SanFerminSignature implements Protocol {
     final String nodeBuilderName;
     final String networkLatencyName;
 
+    public SanFerminSignatureParameters() {
+      this.nodeCount = 32768 / 2;
+      this.powerOfTwo = MoreMath.log2(nodeCount);
+      this.threshold = 32768 / 2;
+      this.pairingTime = 2;
+      this.signatureSize = 48;
+      this.replyTimeout = 300;
+      this.candidateCount = 1;
+      this.shuffledLists = false;
+      this.nodeBuilderName = null;
+      this.networkLatencyName = null;
+    }
+
     public SanFerminSignatureParameters(int nodeCount, int threshold, int pairingTime,
         int signatureSize, int replyTimeout, int candidateCount, boolean shuffledLists,
         String nodeBuilderName, String nl) {
@@ -97,16 +110,11 @@ public class SanFerminSignature implements Protocol {
       this.pairingTime = pairingTime;
       this.signatureSize = signatureSize;
       this.replyTimeout = replyTimeout;
+      this.candidateCount = candidateCount;
+      this.shuffledLists = shuffledLists;
       this.nodeBuilderName = nodeBuilderName;
       this.networkLatencyName = nl;
     }
-
-
-    public SanFerminSignatureParameters() {
-      this(4000, 4000, 2, 48, 300, 1, false, null, null);
-    }
-
-
   }
 
   public SanFerminSignature(SanFerminSignatureParameters params) {
@@ -132,8 +140,6 @@ public class SanFerminSignature implements Protocol {
   public SanFerminSignature copy() {
     return new SanFerminSignature(params);
   }
-
-
 
   /**
    * init makes each node starts swapping with each other when the network starts
