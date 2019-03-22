@@ -5,7 +5,6 @@ import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import org.junit.Assert;
 import org.junit.Test;
-
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -40,12 +39,9 @@ public class ENRGossipingTest {
   }
 
   @Test
-  public void testPPT(){
-    String nb = RegistryNodeBuilders.RANDOM_POSITION;
-    String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
-    ENRGossiping p1 = new ENRGossiping(
-            new ENRGossiping.ENRParameters());
-    Predicate<Protocol> contIf = pp1 -> pp1.network().time <= 1000000;
+  public void testPPT() {
+    ENRGossiping p1 = new ENRGossiping(new ENRGossiping.ENRParameters());
+    Predicate<Protocol> contIf = pp1 -> pp1.network().time <= 1000 * 1000;
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
       final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
 
@@ -61,7 +57,7 @@ public class ENRGossipingTest {
 
     };
     ProgressPerTime ppp =
-            new ProgressPerTime(p1, "", "Nodes that have found capabilities", sg, 1, null);
+        new ProgressPerTime(p1, "", "Nodes that have found capabilities", sg, 1, null, 10);
     ppp.run(contIf);
   }
 }

@@ -8,6 +8,7 @@ import net.consensys.wittgenstein.server.WParameters;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * A Protocol that uses p2p flooding to gather data on time needed to find desired node capabilities
@@ -61,12 +62,16 @@ public class ENRGossiping implements Protocol {
     private final int numberOfDifferentCapabilities;
     private final int capPerNode;
 
+    public int minutesToMs(int mins) {
+      return mins * 1000 * 60;
+    }
+
     public ENRParameters() {
       this.NODES = 100;
-      this.timeToChange = 1000 * 60 * 60 * 10;
-      this.capGossipTime = 1000 * 60 * 5;
+      this.timeToChange = minutesToMs(10000);
+      this.capGossipTime = minutesToMs(5);
       this.discardTime = 100;
-      this.timeToLeave = 1000 * 60 * 10;
+      this.timeToLeave = minutesToMs(60);
       this.totalPeers = 5;
       this.changingNodes = 10;
       this.maxPeers = 50;
@@ -168,7 +173,7 @@ public class ENRGossiping implements Protocol {
       if (i.getValue().get() == 1) {
         throw new IllegalStateException("Capabilities are not well distributed");
       }
-     // System.out.println(i.getKey() + ": " + i.getValue().get());
+      // System.out.println(i.getKey() + ": " + i.getValue().get());
     }
     // Divided by 2 to aim for the expected value
     network.registerPeriodicTask(this::addNewNode, 0, params.timeToLeave / 8,
@@ -232,7 +237,7 @@ public class ENRGossiping implements Protocol {
     public void start() {
       startTime = network.time;
       if (isFullyConnected()) {
-        doneAt = Math.max(1, network.time);
+        setDoneAt(this);
       }
       // Nodes that join the network after the initial setup will leave, at start network.time =0
       int startExit = Integer.MAX_VALUE;
@@ -280,14 +285,16 @@ public class ENRGossiping implements Protocol {
       connect(rc.source);
     }
 
+    void setDoneAt(ETHNode n) {
+      if (n.doneAt == 0 && isFullyConnected()) {
+        n.doneAt = Math.max(1, network.time - n.startTime);
+      }
+    }
+
     void connect(ETHNode n) {
       network.createLink(this, n);
-      if (doneAt == 0 && isFullyConnected()) {
-        doneAt = network.time - startTime;
-      }
-      if (n.doneAt == 0 && n.isFullyConnected()) {
-        n.doneAt = network.time - n.startTime;
-      }
+      setDoneAt(this);
+      setDoneAt(n);
     }
 
     void broadcastCapabilities() {
@@ -361,7 +368,7 @@ public class ENRGossiping implements Protocol {
   }
 
   private void capSearch() {
-    Predicate<Protocol> contIf = p1 -> p1.network().time <= 100000;
+    Predicate<Protocol> contIf = p1 -> p1.network().time <= 1000 * 60 * 60 * 50;
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
       final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
 
@@ -372,12 +379,19 @@ public class ENRGossiping implements Protocol {
 
       @Override
       public StatsHelper.Stat get(List<? extends Node> liveNodes) {
-        return new StatsHelper.Counter(liveNodes.stream().filter(n ->(int)((ETHNode) n).getDoneAt() > 0 && n.nodeId>network.allNodes.size()).count() );
+        if (network.time < 10 * 60 * 2) {
+          //  return new StatsHelper.SimpleStats(0,0,0);
+        }
+        List<Node> nodes =
+            liveNodes.stream().filter(n -> n.nodeId > params.NODES && n.doneAt > 0).collect(
+                Collectors.toList());
+        StatsHelper.SimpleStats ss = StatsHelper.getStatsOn(nodes, n -> n.doneAt);
+        return ss;
       }
     };
 
-    ProgressPerTime ppp =
-        new ProgressPerTime(this, "", "Nodes that have found capabilities", sg, 1, null);
+    ProgressPerTime ppp = new ProgressPerTime(this, "", "Nodes that have found capabilities", sg, 1,
+        null, 1000 * 60 * 30);
     ppp.run(contIf);
 
   }

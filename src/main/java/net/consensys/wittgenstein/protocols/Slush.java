@@ -229,7 +229,7 @@ public class Slush implements Protocol {
       }
     };
     ProgressPerTime ppt =
-        new ProgressPerTime(this, desc, "Number of y-Colored Nodes", stats, 10, null);
+        new ProgressPerTime(this, desc, "Number of y-Colored Nodes", stats, 10, null, 10);
 
     Predicate<Protocol> contIf = p1 -> {
       int[] colors;

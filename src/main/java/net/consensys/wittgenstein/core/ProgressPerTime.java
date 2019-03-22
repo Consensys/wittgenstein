@@ -21,9 +21,11 @@ public class ProgressPerTime {
   private final StatsHelper.StatsGetter statsGetter;
   private final int roundCount;
   private final OnSingleRunEnd endCallback;
+  private final int statEachXms;
 
   public ProgressPerTime(Protocol template, String configDesc, String yAxisDesc,
-      StatsHelper.StatsGetter statsGetter, int roundCount, OnSingleRunEnd endCallback) {
+      StatsHelper.StatsGetter statsGetter, int roundCount, OnSingleRunEnd endCallback,
+      int statEachXms) {
     if (roundCount <= 0) {
       throw new IllegalArgumentException(
           "roundCount must be greater than 0. roundCount=" + roundCount);
@@ -35,6 +37,7 @@ public class ProgressPerTime {
     this.statsGetter = statsGetter;
     this.roundCount = roundCount;
     this.endCallback = endCallback;
+    this.statEachXms = statEachXms;
   }
 
   public interface OnSingleRunEnd {
@@ -62,13 +65,11 @@ public class ProgressPerTime {
         rawResults.get(field).add(gs);
       }
 
-      List<? extends Node> liveNodes =
-          p.network().allNodes.stream().filter(n -> !n.down).collect(Collectors.toList());
-
+      List<? extends Node> liveNodes;
       long startAt = System.currentTimeMillis();
       StatsHelper.Stat s;
       do {
-        p.network().runMs(10);
+        p.network().runMs(statEachXms);
         liveNodes = p.network().allNodes.stream().filter(n -> !n.down).collect(Collectors.toList());
         s = statsGetter.get(liveNodes);
         for (String field : statsGetter.fields()) {
@@ -90,7 +91,7 @@ public class ProgressPerTime {
       System.out.println("msg rcvd: " + StatsHelper.getStatsOn(liveNodes, Node::getMsgReceived));
       System.out.println("done at: " + StatsHelper.getStatsOn(liveNodes, Node::getDoneAt));
       System.out.println("Simulation execution time: " + ((endAt - startAt) / 1000) + "s");
-      System.out.println("Number of nodes that are down"
+      System.out.println("Number of nodes that are down: "
           + p.network().allNodes.stream().filter(n -> n.down).count());
       System.out.println("Total Number of peers " + p.network().allNodes.size());
     }
