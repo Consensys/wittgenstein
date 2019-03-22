@@ -66,7 +66,7 @@ public class ENRGossiping implements Protocol {
       this.timeToChange = 1000 * 60 * 60 * 10;
       this.capGossipTime = 1000 * 60 * 5;
       this.discardTime = 100;
-      this.timeToLeave = 1000 * 60 * 60 * 5;
+      this.timeToLeave = 1000 * 60 * 10;
       this.totalPeers = 5;
       this.changingNodes = 10;
       this.maxPeers = 50;
@@ -168,10 +168,10 @@ public class ENRGossiping implements Protocol {
       if (i.getValue().get() == 1) {
         throw new IllegalStateException("Capabilities are not well distributed");
       }
-      System.out.println(i.getKey() + ": " + i.getValue().get());
+     // System.out.println(i.getKey() + ": " + i.getValue().get());
     }
     // Divided by 2 to aim for the expected value
-    network.registerPeriodicTask(this::addNewNode, 0, params.timeToLeave / 2,
+    network.registerPeriodicTask(this::addNewNode, 0, params.timeToLeave / 8,
         network.getNodeById(0));
   }
 
@@ -201,7 +201,6 @@ public class ENRGossiping implements Protocol {
     Set<String> capabilities;
     private int records = 0;
     public int startTime;
-
 
     boolean isFullyConnected() {
       return score(peers) >= capabilities.size();
@@ -362,7 +361,7 @@ public class ENRGossiping implements Protocol {
   }
 
   private void capSearch() {
-    Predicate<Protocol> contIf = p1 -> p1.network().time <= 1000 * 60 * 60 * 10;
+    Predicate<Protocol> contIf = p1 -> p1.network().time <= 100000;
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
       final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
 
@@ -373,10 +372,10 @@ public class ENRGossiping implements Protocol {
 
       @Override
       public StatsHelper.Stat get(List<? extends Node> liveNodes) {
-        return StatsHelper.getStatsOn(liveNodes, n -> ((ETHNode) n).doneAt);
+        return new StatsHelper.Counter(liveNodes.stream().filter(n ->(int)((ETHNode) n).getDoneAt() > 0 && n.nodeId>network.allNodes.size()).count() );
       }
-
     };
+
     ProgressPerTime ppp =
         new ProgressPerTime(this, "", "Nodes that have found capabilities", sg, 1, null);
     ppp.run(contIf);

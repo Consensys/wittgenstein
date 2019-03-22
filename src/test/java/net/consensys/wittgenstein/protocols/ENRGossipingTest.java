@@ -2,8 +2,12 @@ package net.consensys.wittgenstein.protocols;
 
 
 import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.utils.StatsHelper;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.List;
+import java.util.function.Predicate;
 
 public class ENRGossipingTest {
 
@@ -33,5 +37,31 @@ public class ENRGossipingTest {
       Assert.assertEquals(n1.y, n2.y);
       Assert.assertEquals(n1.peers, n2.peers);
     }
+  }
+
+  @Test
+  public void testPPT(){
+    String nb = RegistryNodeBuilders.RANDOM_POSITION;
+    String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
+    ENRGossiping p1 = new ENRGossiping(
+            new ENRGossiping.ENRParameters());
+    Predicate<Protocol> contIf = pp1 -> pp1.network().time <= 1000000;
+    StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
+      final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
+
+      @Override
+      public List<String> fields() {
+        return fields;
+      }
+
+      @Override
+      public StatsHelper.Stat get(List<? extends Node> liveNodes) {
+        return StatsHelper.getStatsOn(liveNodes, n -> ((ENRGossiping.ETHNode) n).doneAt);
+      }
+
+    };
+    ProgressPerTime ppp =
+            new ProgressPerTime(p1, "", "Nodes that have found capabilities", sg, 1, null);
+    ppp.run(contIf);
   }
 }
