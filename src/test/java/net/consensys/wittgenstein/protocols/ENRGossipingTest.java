@@ -40,7 +40,10 @@ public class ENRGossipingTest {
 
   @Test
   public void testPPT() {
-    ENRGossiping p1 = new ENRGossiping(new ENRGossiping.ENRParameters());
+    String nb = RegistryNodeBuilders.RANDOM_POSITION;
+    String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
+    ENRGossiping p1 = new ENRGossiping(
+        new ENRGossiping.ENRParameters(100, 10, 25, 15000, 2, 20, 0.4f, 30, 20, 5, nb, nl));
     Predicate<Protocol> contIf = pp1 -> pp1.network().time <= 1000 * 1000;
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
       final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
