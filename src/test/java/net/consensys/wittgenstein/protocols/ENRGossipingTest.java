@@ -44,7 +44,7 @@ public class ENRGossipingTest {
     String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
     ENRGossiping p1 = new ENRGossiping(
         new ENRGossiping.ENRParameters(100, 10, 25, 15000, 2, 20, 0.4f, 30, 20, 5, nb, nl));
-    Predicate<Protocol> contIf = pp1 -> pp1.network().time <= 1000 * 1000;
+    Predicate<Protocol> contIf = pp1 -> pp1.network().time <= 1000 * 100;
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
       final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
 
@@ -60,7 +60,7 @@ public class ENRGossipingTest {
 
     };
     ProgressPerTime ppp =
-        new ProgressPerTime(p1, "", "Nodes that have found capabilities", sg, 1, null, 10);
+        new ProgressPerTime(p1, "", "Nodes that have found capabilities", sg, 1, null, 10000);
     ppp.run(contIf);
   }
 }
