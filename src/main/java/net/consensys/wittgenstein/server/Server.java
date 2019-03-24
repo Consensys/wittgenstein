@@ -11,7 +11,6 @@ import org.springframework.beans.factory.support.SimpleBeanDefinitionRegistry;
 import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
 import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
-
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Arrays;

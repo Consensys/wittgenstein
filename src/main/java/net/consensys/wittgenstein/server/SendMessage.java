@@ -1,7 +1,6 @@
 package net.consensys.wittgenstein.server;
 
 import net.consensys.wittgenstein.core.messages.Message;
-
 import java.util.List;
 
 @SuppressWarnings("WeakerAccess")
