@@ -1,6 +1,5 @@
 package net.consensys.wittgenstein.server.ws;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.CollectionType;
 import net.consensys.wittgenstein.core.EnvelopeInfo;
@@ -20,7 +19,6 @@ import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.http.*;
 import org.springframework.test.context.junit4.SpringRunner;
 import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -88,18 +86,29 @@ public class WServerTest {
           .post(createURIWithPort("/network/init/" + p))
           .contentType(MediaType.APPLICATION_JSON)
           .body(jsonString);
-
       ResponseEntity<Void> responseInit = restTemplate.exchange(requestEntity, Void.class);
-
       Assert.assertEquals(p, HttpStatus.OK, responseInit.getStatusCode());
 
       List<Node> allNodes = Collections.emptyList();
       try {
         allNodes = allNodeInfo();
       } catch (Exception e) {
-        Assert.fail(p);
+        Assert.fail("Can't get all nodes for " + p);
       }
       Assert.assertNotEquals(p, 0, allNodes.size());
+
+
+      try {
+        entity = new HttpEntity<>(null, headers);
+
+        ResponseEntity<String> responseMsg = restTemplate
+            .exchange(createURLWithPort("/network/messages"), HttpMethod.GET, entity, String.class);
+        Assert.assertEquals(HttpStatus.OK, responseMsg.getStatusCode());
+
+        // TODO: we should also check we can deserialize the messages, as in allMessagesInfo()
+      } catch (Exception e) {
+        Assert.fail("Can't get messages for " + p + ", " + e.getMessage());
+      }
     }
   }
 

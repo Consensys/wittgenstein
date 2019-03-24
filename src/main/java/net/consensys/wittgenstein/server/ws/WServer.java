@@ -92,7 +92,7 @@ public class WServer extends ExternalWS implements IServer, External {
   }
 
   /**
-   * We're mapping all fields in the parameters, not taking into account the getters/setters
+   * We map all fields in the parameters, not taking into account the getters/setters
    */
   @SuppressWarnings("unused")
   @Bean

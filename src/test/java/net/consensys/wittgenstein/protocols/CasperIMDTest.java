@@ -1,8 +1,6 @@
 package net.consensys.wittgenstein.protocols;
 
 
-import net.consensys.wittgenstein.core.NetworkLatency;
-import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;

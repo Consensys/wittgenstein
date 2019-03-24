@@ -11,9 +11,12 @@ import org.springframework.beans.factory.support.SimpleBeanDefinitionRegistry;
 import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
 import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
+
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -169,20 +172,4 @@ public class Server implements IServer {
   public List<EnvelopeInfo<?>> getMessages() {
     return protocol.network().msgs.peekMessages();
   }
-
-
-  public static void main(String... args) {
-    Server server = new Server();
-    List<String> ps = server.getProtocols();
-    System.out.println(ps);
-    String clazz = "net.consensys.wittgenstein.protocols.P2PFlood";
-    WParameters params = server.getProtocolParameters(clazz);
-    System.out.println(params);
-    server.init(clazz, params);
-    server.runMs(100);
-    System.out.println(server.protocol);
-    System.out.println(server.getNodeInfo());
-    System.out.println("" + server.getTime());
-  }
-
 }
