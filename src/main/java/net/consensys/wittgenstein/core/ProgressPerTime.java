@@ -70,7 +70,7 @@ public class ProgressPerTime {
       StatsHelper.Stat s;
       do {
         p.network().runMs(statEachXms);
-        liveNodes = p.network().allNodes.stream().filter(n -> !n.down).collect(Collectors.toList());
+        liveNodes = p.network().allNodes;
         s = statsGetter.get(liveNodes);
         for (String field : statsGetter.fields()) {
           rawResult.get(field).addLine(new Graph.ReportLine(p.network().time, s.get(field)));

@@ -68,7 +68,7 @@ public class ENRGossiping implements Protocol {
 
     public ENRParameters() {
       this.NODES = 100;
-      this.timeToChange = minutesToMs(10000);
+      this.timeToChange = minutesToMs(100);
       this.capGossipTime = minutesToMs(5);
       this.discardTime = 100;
       this.timeToLeave = minutesToMs(60);
@@ -368,7 +368,7 @@ public class ENRGossiping implements Protocol {
   }
 
   private void capSearch() {
-    Predicate<Protocol> contIf = p1 -> p1.network().time <= 1000 * 60 * 60 * 50;
+    Predicate<Protocol> contIf = p1 -> p1.network().time <= 1000 * 60 * 60 * 10;
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
       final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
 
@@ -390,7 +390,7 @@ public class ENRGossiping implements Protocol {
       }
     };
 
-    ProgressPerTime ppp = new ProgressPerTime(this, "", "Nodes that have found capabilities", sg, 1,
+    ProgressPerTime ppp = new ProgressPerTime(this, "", "Average time in ms to find capabilities", sg, 1,
         null, 1000 * 60 * 30);
     ppp.run(contIf);
 
