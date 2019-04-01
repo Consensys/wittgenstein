@@ -390,8 +390,8 @@ public class ENRGossiping implements Protocol {
       }
     };
 
-    ProgressPerTime ppp = new ProgressPerTime(this, "", "Average time in ms to find capabilities", sg, 1,
-        null, 1000 * 60 * 30);
+    ProgressPerTime ppp = new ProgressPerTime(this, "", "Average time in ms to find capabilities",
+        sg, 1, null, 1000 * 60 * 30);
     ppp.run(contIf);
 
   }
