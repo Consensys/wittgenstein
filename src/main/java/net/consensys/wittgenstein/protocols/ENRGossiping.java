@@ -163,13 +163,12 @@ public class ENRGossiping implements Protocol {
     n.start();
   }
 
+  //Creates a matrix that looks at the nodes that posses one particular capabily and checks if its connected to the other nodes with that capability
   public void networkConnectivity(String fileName, List<Integer> nodesId) {
-
     int size = nodesId.size();
     List<ETHNode> nodes =
         this.network.allNodes.stream().filter(n -> nodesId.contains(n.nodeId)).collect(
-            Collectors.toList());
-    //List<? extends P2PNode> nodes = (List<? extends P2PNode>) p.network().allNodes;
+            Collectors.toList()); // select nodes that are in the nodesId list to verify if they are peers
     try {
       BufferedWriter br = new BufferedWriter(new FileWriter(fileName));
       StringBuilder sb = new StringBuilder();
@@ -188,7 +187,6 @@ public class ENRGossiping implements Protocol {
         }
         sb.append("\n");
       }
-      System.out.print(sb);
       br.write(String.valueOf(sb.toString()));
       br.close();
     } catch (IOException e) {
@@ -212,7 +210,6 @@ public class ENRGossiping implements Protocol {
       networkConnectivity(fileName, capSet);
     }
 
-    System.out.print("Multimap of Nodes" + sortedNodes);
     selectChangingNodes();
     //A percentage of Nodes change their capabilities every X time as defined by the protocol parameters
     for (ETHNode n : changedNodes) {
@@ -303,6 +300,7 @@ public class ENRGossiping implements Protocol {
         //  the simulation simpler
         startExit = network.time + network.rd.nextInt(params.timeToLeave);
         network.registerTask(this::exitNetwork, startExit, this);
+        //Check capabilities
         Multimap<String, Integer> sortedNodes = selectNodesByCap(network.allNodes);
         for (String key : sortedNodes.keySet()) {
           List<Integer> capSet =
@@ -310,8 +308,6 @@ public class ENRGossiping implements Protocol {
           String fileName = "adjMatrix/mid_" + key;
           networkConnectivity(fileName, capSet);
         }
-
-        System.out.print("Multimap of Nodes" + sortedNodes);
       }
 
       //Nodes broadcast their capabilities every capGossipTime ms with a lag of rand*100 ms
