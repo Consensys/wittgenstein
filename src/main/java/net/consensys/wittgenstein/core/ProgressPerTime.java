@@ -1,8 +1,11 @@
 package net.consensys.wittgenstein.core;
 
 import net.consensys.wittgenstein.core.utils.StatsHelper;
+import net.consensys.wittgenstein.protocols.ENRGossiping;
 import net.consensys.wittgenstein.tools.Graph;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -55,7 +58,7 @@ public class ProgressPerTime {
       Protocol p = protocol.copy();
       p.network().rd.setSeed(r);
       p.init();
-
+      // networkConnectivity(p,"initialMatrix.csv",);
       System.out.println("round=" + r + ", " + p + " " + configDesc);
 
       Map<String, Graph.Series> rawResult = new HashMap<>();
@@ -94,6 +97,7 @@ public class ProgressPerTime {
       System.out.println("Number of nodes that are down: "
           + p.network().allNodes.stream().filter(n -> n.down).count());
       System.out.println("Total Number of peers " + p.network().allNodes.size());
+      //networkConnectivity(p,"finalMatrix.csv");
     }
 
     protocol.init();

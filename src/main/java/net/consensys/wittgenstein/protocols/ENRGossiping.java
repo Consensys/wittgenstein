@@ -1,10 +1,16 @@
 package net.consensys.wittgenstein.protocols;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.FloodMessage;
 import net.consensys.wittgenstein.core.messages.StatusFloodMessage;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.server.WParameters;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
@@ -128,6 +134,14 @@ public class ENRGossiping implements Protocol {
     return caps;
   }
 
+  public Multimap<String, Integer> selectNodesByCap(List<ETHNode> nodes) {
+    Multimap<String, Integer> map = ArrayListMultimap.create();
+    for (ETHNode n : nodes) {
+      n.capabilities.forEach(cap -> map.put(cap, n.nodeId));
+    }
+    return map;
+  }
+
   private void selectChangingNodes() {
     int changingCapNodes = (int) (params.totalPeers * params.changingNodes);
     changedNodes = new ArrayList<>(changingCapNodes);
@@ -145,8 +159,41 @@ public class ENRGossiping implements Protocol {
         network.createLink(n, network.getNodeById(peerId));
     }
     // All nodes have to leave a day.
-    System.out.println("New node: " + n.nodeId + " has " + n.peers.size() + " peers");
+    // System.out.println("New node: " + n.nodeId + " has " + n.peers.size() + " peers");
     n.start();
+  }
+
+  public void networkConnectivity(String fileName, List<Integer> nodesId) {
+
+    int size = nodesId.size();
+    List<ETHNode> nodes =
+        this.network.allNodes.stream().filter(n -> nodesId.contains(n.nodeId)).collect(
+            Collectors.toList());
+    //List<? extends P2PNode> nodes = (List<? extends P2PNode>) p.network().allNodes;
+    try {
+      BufferedWriter br = new BufferedWriter(new FileWriter(fileName));
+      StringBuilder sb = new StringBuilder();
+      for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+          //if peer i has peer j in it's peer list return true otherwise return false
+          if (nodes.get(i).peers.contains(nodes.get(j))) {
+            sb.append(1);
+
+          } else {
+            sb.append(0);
+          }
+          if (j < size - 1) {
+            sb.append(",");
+          }
+        }
+        sb.append("\n");
+      }
+      System.out.print(sb);
+      br.write(String.valueOf(sb.toString()));
+      br.close();
+    } catch (IOException e) {
+      System.err.println("Can't generate the adjencency Matrix: " + e.getMessage());
+    }
   }
 
   @Override
@@ -155,7 +202,17 @@ public class ENRGossiping implements Protocol {
       network.addNode(new ETHNode(network.rd, this.nb, generateCap()));
     }
     network.setPeers();
+    File dir = new File("adjMatrix");
+    dir.mkdir();
+    Multimap<String, Integer> sortedNodes = selectNodesByCap(network.allNodes);
+    for (String key : sortedNodes.keySet()) {
+      List<Integer> capSet =
+          ((List<Integer>) sortedNodes.get(key).stream().collect(Collectors.toList()));
+      String fileName = "adjMatrix/initial_" + key;
+      networkConnectivity(fileName, capSet);
+    }
 
+    System.out.print("Multimap of Nodes" + sortedNodes);
     selectChangingNodes();
     //A percentage of Nodes change their capabilities every X time as defined by the protocol parameters
     for (ETHNode n : changedNodes) {
@@ -246,6 +303,15 @@ public class ENRGossiping implements Protocol {
         //  the simulation simpler
         startExit = network.time + network.rd.nextInt(params.timeToLeave);
         network.registerTask(this::exitNetwork, startExit, this);
+        Multimap<String, Integer> sortedNodes = selectNodesByCap(network.allNodes);
+        for (String key : sortedNodes.keySet()) {
+          List<Integer> capSet =
+              ((List<Integer>) sortedNodes.get(key).stream().collect(Collectors.toList()));
+          String fileName = "adjMatrix/mid_" + key;
+          networkConnectivity(fileName, capSet);
+        }
+
+        System.out.print("Multimap of Nodes" + sortedNodes);
       }
 
       //Nodes broadcast their capabilities every capGossipTime ms with a lag of rand*100 ms
@@ -392,6 +458,7 @@ public class ENRGossiping implements Protocol {
 
     ProgressPerTime ppp = new ProgressPerTime(this, "", "Average time in ms to find capabilities",
         sg, 1, null, 1000 * 60 * 30);
+
     ppp.run(contIf);
 
   }
@@ -406,7 +473,8 @@ public class ENRGossiping implements Protocol {
         + '}';
   }
 
-  public static void main(String... args) {
+
+  public static void main(String... args) throws IOException {
     new ENRGossiping(new ENRParameters()).capSearch();
   }
 }
