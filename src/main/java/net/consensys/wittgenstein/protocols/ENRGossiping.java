@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -452,7 +453,7 @@ public class ENRGossiping implements Protocol {
     };
 
     ProgressPerTime ppp = new ProgressPerTime(this, "", "Average time in ms to find capabilities",
-        sg, 1, null, 1000 * 60 * 30);
+        sg, 1, null, 1000 * 60 * 30, TimeUnit.MINUTES);
 
     ppp.run(contIf);
 

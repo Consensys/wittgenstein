@@ -8,6 +8,7 @@ import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.server.WParameters;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
 /**
@@ -637,7 +638,8 @@ public class GSFSignature implements Protocol {
       System.out.println("min/avg/max queueSize=" + ss.min + "/" + ss.avg + "/" + ss.max);
     };
 
-    ProgressPerTime ppt = new ProgressPerTime(p, "", "number of signatures", sg, 1, cb, 10);
+    ProgressPerTime ppt =
+        new ProgressPerTime(p, "", "number of signatures", sg, 1, cb, 10, TimeUnit.MILLISECONDS);
 
     Predicate<Protocol> contIf = p1 -> {
       for (Node n : p1.network().allNodes) {

@@ -60,7 +60,7 @@ public class ENRGossipingTest {
 
     };
     ProgressPerTime ppp =
-        new ProgressPerTime(p1, "", "Nodes that have found capabilities", sg, 1, null, 10000);
+        new ProgressPerTime(p1, "", "Nodes that have found capabilities", sg, 1, null, 10000, );
     ppp.run(contIf);
   }
 }

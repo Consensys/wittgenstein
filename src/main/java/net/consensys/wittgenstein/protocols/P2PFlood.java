@@ -7,6 +7,7 @@ import net.consensys.wittgenstein.server.WParameters;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
 /**
@@ -189,7 +190,7 @@ public class P2PFlood implements Protocol {
       }
     };
 
-    new ProgressPerTime(p, "", "node count", sg, 1, null, 10).run(contIf);
+    new ProgressPerTime(p, "", "node count", sg, 1, null, 10, TimeUnit.MILLISECONDS).run(contIf);
   }
 
   public static void main(String... args) {
