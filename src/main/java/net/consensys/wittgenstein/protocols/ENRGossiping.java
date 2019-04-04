@@ -163,7 +163,8 @@ public class ENRGossiping implements Protocol {
     n.start();
   }
 
-  //Creates a matrix that looks at the nodes that posses one particular capabily and checks if its connected to the other nodes with that capability
+  //Creates a matrix that looks at the nodes that possess one particular capability and checks if
+  //  its connected to the other nodes with that capability
   public void networkConnectivity(String fileName, List<Integer> nodesId) {
     int size = nodesId.size();
     List<ETHNode> nodes =
@@ -187,7 +188,7 @@ public class ENRGossiping implements Protocol {
         }
         sb.append("\n");
       }
-      br.write(String.valueOf(sb.toString()));
+      br.write(sb.toString());
       br.close();
     } catch (IOException e) {
       System.err.println("Can't generate the adjencency Matrix: " + e.getMessage());
@@ -204,8 +205,7 @@ public class ENRGossiping implements Protocol {
     dir.mkdir();
     Multimap<String, Integer> sortedNodes = selectNodesByCap(network.allNodes);
     for (String key : sortedNodes.keySet()) {
-      List<Integer> capSet =
-          ((List<Integer>) sortedNodes.get(key).stream().collect(Collectors.toList()));
+      List<Integer> capSet = new ArrayList<>(sortedNodes.get(key));
       String fileName = "adjMatrix/initial_" + key;
       networkConnectivity(fileName, capSet);
     }
@@ -303,8 +303,7 @@ public class ENRGossiping implements Protocol {
         //Check capabilities
         Multimap<String, Integer> sortedNodes = selectNodesByCap(network.allNodes);
         for (String key : sortedNodes.keySet()) {
-          List<Integer> capSet =
-              ((List<Integer>) sortedNodes.get(key).stream().collect(Collectors.toList()));
+          List<Integer> capSet = new ArrayList<>(sortedNodes.get(key));
           String fileName = "adjMatrix/mid_" + key;
           networkConnectivity(fileName, capSet);
         }
