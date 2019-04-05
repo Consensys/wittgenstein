@@ -26,6 +26,7 @@ public class ENRGossiping implements Protocol {
   private final ENRParameters params;
   private final NodeBuilder nb;
   private List<ETHNode> changedNodes;
+  private Set<ETHNode> nodesInIsland = new HashSet<>();
 
   @SuppressWarnings("WeakerAccess")
   public static class ENRParameters extends WParameters {
@@ -163,40 +164,6 @@ public class ENRGossiping implements Protocol {
     n.start();
   }
 
-  //Creates a matrix that looks at the nodes that possess one particular capability and checks if
-  //  its connected to the other nodes with that capability
-  public void networkConnectivity(String fileName, List<Integer> nodesId) {
-    int size = nodesId.size();
-    List<ETHNode> nodes =
-        this.network.allNodes.stream().filter(n -> nodesId.contains(n.nodeId) && !n.down).collect(
-            Collectors.toList()); // select nodes that are in the nodesId list to verify if they are peers
-    try {
-      BufferedWriter br = new BufferedWriter(new FileWriter(fileName));
-      StringBuilder sb = new StringBuilder();
-      for (int i = 0; i < size; i++) {
-        sb.append(i + "  ");
-        for (int j = 0; j < size; j++) {
-          //if peer i has peer j in it's peer list return true otherwise return false
-          if (nodes.get(i).peers.contains(nodes.get(j))) {
-            sb.append(1);
-
-          } else {
-            sb.append(0);
-          }
-          if (j < size - 1) {
-            sb.append(",");
-          }
-        }
-        sb.append("\n");
-      }
-      br.write(sb.toString());
-      br.close();
-    } catch (IOException e) {
-      System.err.println("Can't generate the adjencency Matrix: " + e.getMessage());
-    }
-  }
-
-
   @Override
   public void init() {
     for (int i = 0; i < params.NODES; i++) {
@@ -257,7 +224,8 @@ public class ENRGossiping implements Protocol {
     public int startTime;
 
     boolean isFullyConnected() {
-      return score(peers) >= PEERS_PER_CAP * capabilities.size();
+      //return score(peers) >= PEERS_PER_CAP * capabilities.size();
+      return score(peers) >= capabilities.size();
     }
 
     /**
@@ -339,54 +307,58 @@ public class ENRGossiping implements Protocol {
       if (n.doneAt == 0 && isFullyConnected()) {
         n.doneAt = Math.max(1, network.time - n.startTime);
         //verify indeed you are part of the network
-        Multimap<String, ETHNode> sortedNodes = selectNodesByCap(
-            network.allNodes.stream().filter(e -> !e.down).collect(Collectors.toList()));// generates table for a multimap with all the capabilities and nodes
-        List<String> capKeys =
-            sortedNodes.keySet().stream().filter(this.capabilities::contains).collect(
-                (Collectors.toList()));
-        for (String key : capKeys) {
-          List<ETHNode> capSet = new ArrayList<>(sortedNodes.get(key));
-          search(capSet);
-        }
+      }
+      Multimap<String, ETHNode> sortedNodes = selectNodesByCap(
+          network.allNodes.stream().filter(e -> !e.down).collect(Collectors.toList()));// generates table for a multimap with all the capabilities and nodes
+      List<String> capKeys =
+          sortedNodes.keySet().stream().filter(this.capabilities::contains).collect(
+              (Collectors.toList()));
+      for (String key : capKeys) {
+        List<ETHNode> capSet = new ArrayList<>(sortedNodes.get(key));
+        search(capSet);
       }
     }
 
+    //Method keeps searching nodes peer by capability and verifies that the total number of nodes connected is over a certain treshold
     void search(List<ETHNode> nodesByCap) {
       int threshold = nodesByCap.size() / 2;
       int count = 0;
-      Queue<ETHNode> queue = new LinkedList<>();
-      Set<ETHNode> explored = new HashSet<>(Arrays.asList());
+      Set<ETHNode> queue = new HashSet<>();
+      Set<ETHNode> explored = new HashSet<>();
       List<ETHNode> nodes =
           nodesByCap.stream().filter(this.peers::contains).collect(Collectors.toList());
       queue.addAll(nodes);
       explored.add(this);
+
+
       while (!queue.isEmpty()) {
-        ETHNode current = queue.remove();
+        ETHNode current = queue.iterator().next();
         if (count >= threshold) {
           break;
         }
         if (current.equals(this)) {
-          //System.out.print(explored);
           break;
         } else {
           List<ETHNode> childNodes =
               nodesByCap.stream().filter(current.peers::contains).collect(Collectors.toList());
-
-          if (childNodes.isEmpty()) {
-            break;
-          } else {
+          for (ETHNode n : explored) {
+            childNodes.remove(n);
+          }
+          queue.remove(current);
+          if (!childNodes.isEmpty()) {
             count++;
             queue.addAll(childNodes);
           }
           explored.add(current);
         }
-
       }
       System.out.println(explored);
       System.out.println(this.nodeId + " node is connected to " + explored.size()
           + " there are a total of " + nodesByCap.size() + " in this network");
       if (explored.size() < threshold) {
         System.out.println("You are in a islot" + this.nodeId);
+        nodesInIsland.add(this);
+        System.out.println("TOTAL NODES PARTITIONED: " + nodesInIsland.size());
       }
     }
 
@@ -412,7 +384,7 @@ public class ENRGossiping implements Protocol {
     /**
      * Count the number of matching capabilities if we're connected to this list of peers.
      */
-    int score() {
+    int score(List<ETHNode> peers) {
       Set<String> found = new HashSet<>();
       for (ETHNode n : peers) {
         for (String s : n.capabilities) {
@@ -427,7 +399,7 @@ public class ENRGossiping implements Protocol {
       return found.size();
     }
 
-    int score(List<ETHNode> peers) {
+    int score() {
       int score = 0;
       List<String> found = new ArrayList<>();
       for (ETHNode n : this.peers) {
@@ -526,7 +498,7 @@ public class ENRGossiping implements Protocol {
   }
 
 
-  public static void main(String... args) throws IOException {
+  public static void main(String... args) {
     new ENRGossiping(new ENRParameters()).capSearch();
   }
 }

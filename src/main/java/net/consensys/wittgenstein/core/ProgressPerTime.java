@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * This class runs a scenario for a protocol
@@ -71,7 +72,8 @@ public class ProgressPerTime {
       StatsHelper.Stat s;
       do {
         p.network().runMs(statEachXms);
-        liveNodes = p.network().allNodes;
+        liveNodes = liveNodes =
+            p.network().allNodes.stream().filter(n -> !n.down).collect(Collectors.toList());
         s = statsGetter.get(liveNodes);
         for (String field : statsGetter.fields()) {
           long t = timeUnit.convert(p.network().time, TimeUnit.MILLISECONDS);
