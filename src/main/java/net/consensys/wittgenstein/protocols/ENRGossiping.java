@@ -8,14 +8,13 @@ import net.consensys.wittgenstein.core.messages.StatusFloodMessage;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.server.WParameters;
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * A Protocol that uses p2p flooding to gather data on time needed to find desired node capabilities
@@ -164,7 +163,8 @@ public class ENRGossiping implements Protocol {
     n.start();
   }
 
-  //Creates a matrix that looks at the nodes that posses one particular capabily and checks if its connected to the other nodes with that capability
+  //Creates a matrix that looks at the nodes that possess one particular capability and checks if
+  //  its connected to the other nodes with that capability
   public void networkConnectivity(String fileName, List<Integer> nodesId) {
     int size = nodesId.size();
     List<ETHNode> nodes =
@@ -189,7 +189,7 @@ public class ENRGossiping implements Protocol {
         }
         sb.append("\n");
       }
-      br.write(String.valueOf(sb.toString()));
+      br.write(sb.toString());
       br.close();
     } catch (IOException e) {
       System.err.println("Can't generate the adjencency Matrix: " + e.getMessage());
@@ -350,7 +350,7 @@ public class ENRGossiping implements Protocol {
       }
     }
 
-    public void search(List<ETHNode> nodesByCap) {
+    void search(List<ETHNode> nodesByCap) {
       int threshold = nodesByCap.size() / 2;
       int count = 0;
       Queue<ETHNode> queue = new LinkedList<>();
@@ -490,7 +490,7 @@ public class ENRGossiping implements Protocol {
     };
 
     ProgressPerTime ppp = new ProgressPerTime(this, "", "Average time in ms to find capabilities",
-        sg, 1, null, 1000 * 60 * 30);
+        sg, 1, null, 1000 * 60 * 30, TimeUnit.MINUTES);
 
     ppp.run(contIf);
 

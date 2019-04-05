@@ -6,6 +6,7 @@ import net.consensys.wittgenstein.core.utils.StatsHelper;
 import org.junit.Assert;
 import org.junit.Test;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
 public class ENRGossipingTest {
@@ -59,8 +60,8 @@ public class ENRGossipingTest {
       }
 
     };
-    ProgressPerTime ppp =
-        new ProgressPerTime(p1, "", "Nodes that have found capabilities", sg, 1, null, 10000);
+    ProgressPerTime ppp = new ProgressPerTime(p1, "", "Nodes that have found capabilities", sg, 1,
+        null, 10000, TimeUnit.MILLISECONDS);
     ppp.run(contIf);
   }
 }

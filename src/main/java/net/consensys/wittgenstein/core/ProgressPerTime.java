@@ -1,18 +1,15 @@
 package net.consensys.wittgenstein.core;
 
 import net.consensys.wittgenstein.core.utils.StatsHelper;
-import net.consensys.wittgenstein.protocols.ENRGossiping;
 import net.consensys.wittgenstein.tools.Graph;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 /**
  * This class runs a scenario for a protocol
@@ -25,10 +22,11 @@ public class ProgressPerTime {
   private final int roundCount;
   private final OnSingleRunEnd endCallback;
   private final int statEachXms;
+  private final TimeUnit timeUnit;
 
   public ProgressPerTime(Protocol template, String configDesc, String yAxisDesc,
       StatsHelper.StatsGetter statsGetter, int roundCount, OnSingleRunEnd endCallback,
-      int statEachXms) {
+      int statEachXms, TimeUnit timeUnit) {
     if (roundCount <= 0) {
       throw new IllegalArgumentException(
           "roundCount must be greater than 0. roundCount=" + roundCount);
@@ -41,6 +39,7 @@ public class ProgressPerTime {
     this.roundCount = roundCount;
     this.endCallback = endCallback;
     this.statEachXms = statEachXms;
+    this.timeUnit = timeUnit == null ? TimeUnit.MILLISECONDS : timeUnit;
   }
 
   public interface OnSingleRunEnd {
@@ -58,7 +57,6 @@ public class ProgressPerTime {
       Protocol p = protocol.copy();
       p.network().rd.setSeed(r);
       p.init();
-      // networkConnectivity(p,"initialMatrix.csv",);
       System.out.println("round=" + r + ", " + p + " " + configDesc);
 
       Map<String, Graph.Series> rawResult = new HashMap<>();
@@ -76,7 +74,8 @@ public class ProgressPerTime {
         liveNodes = p.network().allNodes;
         s = statsGetter.get(liveNodes);
         for (String field : statsGetter.fields()) {
-          rawResult.get(field).addLine(new Graph.ReportLine(p.network().time, s.get(field)));
+          long t = timeUnit.convert(p.network().time, TimeUnit.MILLISECONDS);
+          rawResult.get(field).addLine(new Graph.ReportLine(t, s.get(field)));
         }
         if (p.network().time % 10000 == 0) {
           System.out.println("time goes by... time=" + (p.network().time / 1000) + ", stats=" + s);
@@ -97,11 +96,11 @@ public class ProgressPerTime {
       System.out.println("Number of nodes that are down: "
           + p.network().allNodes.stream().filter(n -> n.down).count());
       System.out.println("Total Number of peers " + p.network().allNodes.size());
-      //networkConnectivity(p,"finalMatrix.csv");
     }
 
     protocol.init();
-    Graph graph = new Graph(protocol + " " + configDesc, "time in ms", yAxisDesc);
+    Graph graph = new Graph(protocol + " " + configDesc,
+        "time in " + timeUnit.toString().toLowerCase(), yAxisDesc);
 
     for (String field : statsGetter.fields()) {
       Graph.StatSeries s = Graph.statSeries(field, rawResults.get(field));
