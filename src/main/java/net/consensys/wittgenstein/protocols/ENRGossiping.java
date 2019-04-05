@@ -73,16 +73,16 @@ public class ENRGossiping implements Protocol {
     }
 
     public ENRParameters() {
-      this.NODES = 100;
-      this.timeToChange = minutesToMs(100);
+      this.NODES = 25;
+      this.timeToChange = minutesToMs(10);
       this.capGossipTime = minutesToMs(5);
       this.discardTime = 100;
       this.timeToLeave = minutesToMs(60);
-      this.totalPeers = 5;
+      this.totalPeers = 2;
       this.changingNodes = 10;
-      this.maxPeers = 50;
-      this.numberOfDifferentCapabilities = 15;
-      this.capPerNode = 5;
+      this.maxPeers = 10;
+      this.numberOfDifferentCapabilities = 5;
+      this.capPerNode = 2;
       this.nodeBuilderName = null;
       this.networkLatencyName = null;
     }
@@ -134,10 +134,10 @@ public class ENRGossiping implements Protocol {
     return caps;
   }
 
-  public Multimap<String, Integer> selectNodesByCap(List<ETHNode> nodes) {
-    Multimap<String, Integer> map = ArrayListMultimap.create();
+  public Multimap<String, ETHNode> selectNodesByCap(List<ETHNode> nodes) {
+    Multimap<String, ETHNode> map = ArrayListMultimap.create();
     for (ETHNode n : nodes) {
-      n.capabilities.forEach(cap -> map.put(cap, n.nodeId));
+      n.capabilities.forEach(cap -> map.put(cap, n));
     }
     return map;
   }
@@ -167,12 +167,13 @@ public class ENRGossiping implements Protocol {
   public void networkConnectivity(String fileName, List<Integer> nodesId) {
     int size = nodesId.size();
     List<ETHNode> nodes =
-        this.network.allNodes.stream().filter(n -> nodesId.contains(n.nodeId)).collect(
+        this.network.allNodes.stream().filter(n -> nodesId.contains(n.nodeId) && !n.down).collect(
             Collectors.toList()); // select nodes that are in the nodesId list to verify if they are peers
     try {
       BufferedWriter br = new BufferedWriter(new FileWriter(fileName));
       StringBuilder sb = new StringBuilder();
       for (int i = 0; i < size; i++) {
+        sb.append(i + "  ");
         for (int j = 0; j < size; j++) {
           //if peer i has peer j in it's peer list return true otherwise return false
           if (nodes.get(i).peers.contains(nodes.get(j))) {
@@ -194,21 +195,13 @@ public class ENRGossiping implements Protocol {
     }
   }
 
+
   @Override
   public void init() {
     for (int i = 0; i < params.NODES; i++) {
       network.addNode(new ETHNode(network.rd, this.nb, generateCap()));
     }
     network.setPeers();
-    File dir = new File("adjMatrix");
-    dir.mkdir();
-    Multimap<String, Integer> sortedNodes = selectNodesByCap(network.allNodes);
-    for (String key : sortedNodes.keySet()) {
-      List<Integer> capSet =
-          ((List<Integer>) sortedNodes.get(key).stream().collect(Collectors.toList()));
-      String fileName = "adjMatrix/initial_" + key;
-      networkConnectivity(fileName, capSet);
-    }
 
     selectChangingNodes();
     //A percentage of Nodes change their capabilities every X time as defined by the protocol parameters
@@ -301,13 +294,6 @@ public class ENRGossiping implements Protocol {
         startExit = network.time + network.rd.nextInt(params.timeToLeave);
         network.registerTask(this::exitNetwork, startExit, this);
         //Check capabilities
-        Multimap<String, Integer> sortedNodes = selectNodesByCap(network.allNodes);
-        for (String key : sortedNodes.keySet()) {
-          List<Integer> capSet =
-              ((List<Integer>) sortedNodes.get(key).stream().collect(Collectors.toList()));
-          String fileName = "adjMatrix/mid_" + key;
-          networkConnectivity(fileName, capSet);
-        }
       }
 
       //Nodes broadcast their capabilities every capGossipTime ms with a lag of rand*100 ms
@@ -350,8 +336,54 @@ public class ENRGossiping implements Protocol {
     void setDoneAt(ETHNode n) {
       if (n.doneAt == 0 && isFullyConnected()) {
         n.doneAt = Math.max(1, network.time - n.startTime);
+        //verify indeed you are part of the network
+        Multimap<String, ETHNode> sortedNodes = selectNodesByCap(network.allNodes);// generates table for a multimap with all the capabilities and nodes
+        for (String key : sortedNodes.keySet()) {
+          List<ETHNode> capSet = new ArrayList<>(sortedNodes.get(key));
+          search(capSet);
+        }
       }
     }
+
+    public void search(List<ETHNode> nodesByCap) {
+      int threshold = nodesByCap.size() / 2;
+      int count = 0;
+      Queue<ETHNode> queue = new LinkedList<>();
+      ArrayList<ETHNode> explored = new ArrayList<>();
+      List<ETHNode> nodes =
+          nodesByCap.stream().filter(this.peers::contains).collect(Collectors.toList());
+      queue.addAll(nodes);
+      explored.add(this);
+      while (!queue.isEmpty()) {
+        ETHNode current = queue.remove();
+        if (count >= threshold) {
+          break;
+        }
+        if (current.equals(this)) {
+          //System.out.print(explored);
+          break;
+        } else {
+          List<ETHNode> childNodes =
+              nodesByCap.stream().filter(current.peers::contains).collect(Collectors.toList());
+
+          if (childNodes.isEmpty()) {
+            break;
+          } else {
+            count++;
+            queue.addAll(childNodes);
+          }
+          explored.add(current);
+        }
+
+      }
+      System.out.println(explored);
+      System.out.println("node is connected to " + explored.size() + " there are a total of "
+          + nodesByCap.size() + " in this network");
+      if (explored.size() < threshold) {
+        System.out.print("You are in a islot");
+      }
+    }
+
 
     void connect(ETHNode n) {
       network.createLink(this, n);
