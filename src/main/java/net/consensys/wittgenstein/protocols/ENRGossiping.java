@@ -340,7 +340,9 @@ public class ENRGossiping implements Protocol {
         //verify indeed you are part of the network
         Multimap<String, ETHNode> sortedNodes = selectNodesByCap(
             network.allNodes.stream().filter(e -> !e.down).collect(Collectors.toList()));// generates table for a multimap with all the capabilities and nodes
-        List<String> capKeys = sortedNodes.keySet().stream().filter(this.capabilities::contains).collect((Collectors.toList()));
+        List<String> capKeys =
+            sortedNodes.keySet().stream().filter(this.capabilities::contains).collect(
+                (Collectors.toList()));
         for (String key : capKeys) {
           List<ETHNode> capSet = new ArrayList<>(sortedNodes.get(key));
           search(capSet);
@@ -380,8 +382,8 @@ public class ENRGossiping implements Protocol {
 
       }
       System.out.println(explored);
-      System.out.println(this.nodeId+ " node is connected to " + explored.size() + " there are a total of "
-          + nodesByCap.size() + " in this network");
+      System.out.println(this.nodeId + " node is connected to " + explored.size()
+          + " there are a total of " + nodesByCap.size() + " in this network");
       if (explored.size() < threshold) {
         System.out.println("You are in a islot" + this.nodeId);
       }
