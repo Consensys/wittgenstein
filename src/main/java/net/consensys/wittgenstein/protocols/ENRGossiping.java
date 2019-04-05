@@ -73,16 +73,16 @@ public class ENRGossiping implements Protocol {
     }
 
     public ENRParameters() {
-      this.NODES = 25;
-      this.timeToChange = minutesToMs(10);
+      this.NODES = 100;
+      this.timeToChange = minutesToMs(10000);
       this.capGossipTime = minutesToMs(5);
       this.discardTime = 100;
       this.timeToLeave = minutesToMs(60);
-      this.totalPeers = 2;
+      this.totalPeers = 5;
       this.changingNodes = 10;
-      this.maxPeers = 20;
-      this.numberOfDifferentCapabilities = 5;
-      this.capPerNode = 3;
+      this.maxPeers = 50;
+      this.numberOfDifferentCapabilities = 15;
+      this.capPerNode = 5;
       this.nodeBuilderName = null;
       this.networkLatencyName = null;
     }
@@ -249,6 +249,7 @@ public class ENRGossiping implements Protocol {
     }
   }
 
+  private final static int PEERS_PER_CAP = 3;
 
   public class ETHNode extends P2PNode<ETHNode> {
     Set<String> capabilities;
@@ -256,7 +257,7 @@ public class ENRGossiping implements Protocol {
     public int startTime;
 
     boolean isFullyConnected() {
-      return score(peers) >= capabilities.size();
+      return score(peers) >= PEERS_PER_CAP * capabilities.size();
     }
 
     /**
@@ -411,7 +412,7 @@ public class ENRGossiping implements Protocol {
     /**
      * Count the number of matching capabilities if we're connected to this list of peers.
      */
-    int score(List<ETHNode> peers) {
+    int score() {
       Set<String> found = new HashSet<>();
       for (ETHNode n : peers) {
         for (String s : n.capabilities) {
@@ -424,6 +425,24 @@ public class ENRGossiping implements Protocol {
         throw new IllegalStateException("found.size() > capabilities.size()");
       }
       return found.size();
+    }
+
+    int score(List<ETHNode> peers) {
+      int score = 0;
+      List<String> found = new ArrayList<>();
+      for (ETHNode n : this.peers) {
+        for (String s : n.capabilities) {
+          if (capabilities.contains(s)) {
+            found.add(s);
+          }
+        }
+      }
+
+      for (String cap : found) {
+        score += Math.min(Collections.frequency(found, cap), PEERS_PER_CAP);
+      }
+
+      return score;
     }
 
     /**
