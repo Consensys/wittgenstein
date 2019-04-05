@@ -15,6 +15,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * A Protocol that uses p2p flooding to gather data on time needed to find desired node capabilities
@@ -80,9 +81,9 @@ public class ENRGossiping implements Protocol {
       this.timeToLeave = minutesToMs(60);
       this.totalPeers = 2;
       this.changingNodes = 10;
-      this.maxPeers = 10;
+      this.maxPeers = 20;
       this.numberOfDifferentCapabilities = 5;
-      this.capPerNode = 2;
+      this.capPerNode = 3;
       this.nodeBuilderName = null;
       this.networkLatencyName = null;
     }
@@ -339,7 +340,8 @@ public class ENRGossiping implements Protocol {
         //verify indeed you are part of the network
         Multimap<String, ETHNode> sortedNodes = selectNodesByCap(
             network.allNodes.stream().filter(e -> !e.down).collect(Collectors.toList()));// generates table for a multimap with all the capabilities and nodes
-        for (String key : sortedNodes.keySet()) {
+        List<String> capKeys = sortedNodes.keySet().stream().filter(this.capabilities::contains).collect((Collectors.toList()));
+        for (String key : capKeys) {
           List<ETHNode> capSet = new ArrayList<>(sortedNodes.get(key));
           search(capSet);
         }
@@ -378,7 +380,7 @@ public class ENRGossiping implements Protocol {
 
       }
       System.out.println(explored);
-      System.out.println("node is connected to " + explored.size() + " there are a total of "
+      System.out.println(this.nodeId+ " node is connected to " + explored.size() + " there are a total of "
           + nodesByCap.size() + " in this network");
       if (explored.size() < threshold) {
         System.out.println("You are in a islot" + this.nodeId);
