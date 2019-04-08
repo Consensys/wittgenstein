@@ -7,9 +7,6 @@ import net.consensys.wittgenstein.core.messages.FloodMessage;
 import net.consensys.wittgenstein.core.messages.StatusFloodMessage;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.server.WParameters;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -26,7 +23,7 @@ public class ENRGossiping implements Protocol {
   private final ENRParameters params;
   private final NodeBuilder nb;
   private List<ETHNode> changedNodes;
-  private Set<ETHNode> nodesInIsland = new HashSet<>();
+  private HashMap<String, ETHNode> nodesInIsland = new HashMap<>();
 
   @SuppressWarnings("WeakerAccess")
   public static class ENRParameters extends WParameters {
@@ -83,7 +80,7 @@ public class ENRGossiping implements Protocol {
       this.changingNodes = 10;
       this.maxPeers = 50;
       this.numberOfDifferentCapabilities = 15;
-      this.capPerNode = 5;
+      this.capPerNode = 3;
       this.nodeBuilderName = null;
       this.networkLatencyName = null;
     }
@@ -159,8 +156,6 @@ public class ENRGossiping implements Protocol {
       if (!network.getNodeById(peerId).down)
         network.createLink(n, network.getNodeById(peerId));
     }
-    // All nodes have to leave a day.
-    // System.out.println("New node: " + n.nodeId + " has " + n.peers.size() + " peers");
     n.start();
   }
 
@@ -171,12 +166,12 @@ public class ENRGossiping implements Protocol {
     }
     network.setPeers();
 
-    selectChangingNodes();
-    //A percentage of Nodes change their capabilities every X time as defined by the protocol parameters
-    for (ETHNode n : changedNodes) {
-      int start = network.rd.nextInt(params.timeToChange) + 1;
-      network.registerPeriodicTask(n::changeCap, start, params.timeToChange, n);
-    }
+    //    selectChangingNodes();
+    //    //A percentage of Nodes change their capabilities every X time as defined by the protocol parameters
+    //    for (ETHNode n : changedNodes) {
+    //      int start = network.rd.nextInt(params.timeToChange) + 1;
+    //      network.registerPeriodicTask(n::changeCap, start, params.timeToChange, n);
+    //    }
     Map<String, AtomicInteger> caps = new HashMap<>();
     for (ETHNode n : network.allNodes) {
       for (String s : n.capabilities) {
@@ -188,7 +183,7 @@ public class ENRGossiping implements Protocol {
       if (i.getValue().get() == 1) {
         throw new IllegalStateException("Capabilities are not well distributed");
       }
-      // System.out.println(i.getKey() + ": " + i.getValue().get());
+      //System.out.println(i.getKey() + ": " + i.getValue().get());
     }
     // Divided by 2 to aim for the expected value
     network.registerPeriodicTask(this::addNewNode, 0, params.timeToLeave / 8,
@@ -224,8 +219,21 @@ public class ENRGossiping implements Protocol {
     public int startTime;
 
     boolean isFullyConnected() {
-      //return score(peers) >= PEERS_PER_CAP * capabilities.size();
-      return score(peers) >= capabilities.size();
+      if (score(peers) < capabilities.size() * PEERS_PER_CAP)
+        return false;
+
+      Multimap<String, ETHNode> sortedNodes = selectNodesByCap(
+          network.allNodes.stream().filter(e -> !e.down).collect(Collectors.toList()));// generates table for a multimap with all the capabilities and nodes
+      List<String> capKeys =
+          sortedNodes.keySet().stream().filter(this.capabilities::contains).collect(
+              (Collectors.toList()));
+      for (String key : capKeys) {
+        List<ETHNode> capSet = new ArrayList<>(sortedNodes.get(key));
+        if (isPartOfNetwork(capSet, key)) {
+          return false;
+        }
+      }
+      return true;
     }
 
     /**
@@ -259,11 +267,9 @@ public class ENRGossiping implements Protocol {
       // Nodes that join the network after the initial setup will leave, at start network.time =0
       int startExit = Integer.MAX_VALUE;
       if (network.time > 1) {
-        // The nodes added at the beginning won't exit the network: this makes
-        //  the simulation simpler
+        // The nodes added at the beginning won't exit the network: this makes the simulation simpler
         startExit = network.time + network.rd.nextInt(params.timeToLeave);
-        network.registerTask(this::exitNetwork, startExit, this);
-        //Check capabilities
+        // network.registerTask(this::exitNetwork, startExit, this);
       }
 
       //Nodes broadcast their capabilities every capGossipTime ms with a lag of rand*100 ms
@@ -304,25 +310,13 @@ public class ENRGossiping implements Protocol {
     }
 
     void setDoneAt(ETHNode n) {
-      if (n.doneAt == 0 && isFullyConnected()) {
+      if (n.doneAt == 0 && isFullyConnected())
         n.doneAt = Math.max(1, network.time - n.startTime);
-        //verify indeed you are part of the network
-      }
-      Multimap<String, ETHNode> sortedNodes = selectNodesByCap(
-          network.allNodes.stream().filter(e -> !e.down).collect(Collectors.toList()));// generates table for a multimap with all the capabilities and nodes
-      List<String> capKeys =
-          sortedNodes.keySet().stream().filter(this.capabilities::contains).collect(
-              (Collectors.toList()));
-      for (String key : capKeys) {
-        List<ETHNode> capSet = new ArrayList<>(sortedNodes.get(key));
-        search(capSet);
-      }
     }
 
     //Method keeps searching nodes peer by capability and verifies that the total number of nodes connected is over a certain treshold
-    void search(List<ETHNode> nodesByCap) {
+    boolean isPartOfNetwork(List<ETHNode> nodesByCap, String cap) {
       int threshold = nodesByCap.size() / 2;
-      int count = 0;
       Set<ETHNode> queue = new HashSet<>();
       Set<ETHNode> explored = new HashSet<>();
       List<ETHNode> nodes =
@@ -330,38 +324,28 @@ public class ENRGossiping implements Protocol {
       queue.addAll(nodes);
       explored.add(this);
 
-
       while (!queue.isEmpty()) {
         ETHNode current = queue.iterator().next();
-        if (count >= threshold) {
-          break;
-        }
-        if (current.equals(this)) {
-          break;
-        } else {
-          List<ETHNode> childNodes =
-              nodesByCap.stream().filter(current.peers::contains).collect(Collectors.toList());
-          for (ETHNode n : explored) {
-            childNodes.remove(n);
-          }
+        if (!current.equals(this)) {
+          List<ETHNode> childNodes = nodesByCap
+              .stream()
+              .filter(n -> current.peers.contains(n) && !explored.contains(n))
+              .collect(Collectors.toList());
           queue.remove(current);
           if (!childNodes.isEmpty()) {
-            count++;
             queue.addAll(childNodes);
           }
           explored.add(current);
         }
       }
-      System.out.println(explored);
-      System.out.println(this.nodeId + " node is connected to " + explored.size()
-          + " there are a total of " + nodesByCap.size() + " in this network");
-      if (explored.size() < threshold) {
-        System.out.println("You are in a islot" + this.nodeId);
-        nodesInIsland.add(this);
-        System.out.println("TOTAL NODES PARTITIONED: " + nodesInIsland.size());
-      }
-    }
 
+      if (explored.size() < threshold) {
+        System.out.println("Node with ID: " + this.nodeId + " is connected to "
+            + (explored.size() - 1) + " nodes & there are a total of " + nodesByCap.size()
+            + " in network of cap: " + cap);
+      }
+      return explored.size() < threshold;
+    }
 
     void connect(ETHNode n) {
       network.createLink(this, n);
@@ -384,7 +368,7 @@ public class ENRGossiping implements Protocol {
     /**
      * Count the number of matching capabilities if we're connected to this list of peers.
      */
-    int score(List<ETHNode> peers) {
+    int score() {
       Set<String> found = new HashSet<>();
       for (ETHNode n : peers) {
         for (String s : n.capabilities) {
@@ -399,21 +383,19 @@ public class ENRGossiping implements Protocol {
       return found.size();
     }
 
-    int score() {
+    int score(List<ETHNode> peers) {
       int score = 0;
       List<String> found = new ArrayList<>();
-      for (ETHNode n : this.peers) {
+      for (ETHNode n : peers) {
         for (String s : n.capabilities) {
           if (capabilities.contains(s)) {
             found.add(s);
           }
         }
       }
-
       for (String cap : found) {
         score += Math.min(Collections.frequency(found, cap), PEERS_PER_CAP);
       }
-
       return score;
     }
 
@@ -470,10 +452,10 @@ public class ENRGossiping implements Protocol {
       @Override
       public StatsHelper.Stat get(List<? extends Node> liveNodes) {
         if (network.time < 10 * 60 * 2) {
-          //  return new StatsHelper.SimpleStats(0,0,0);
+          //return new StatsHelper.SimpleStats(0,0,0);
         }
         List<Node> nodes =
-            liveNodes.stream().filter(n -> n.nodeId > params.NODES && n.doneAt > 0).collect(
+            liveNodes.stream().filter(n -> n.nodeId > params.NODES && n.doneAt > 1).collect(
                 Collectors.toList());
         StatsHelper.SimpleStats ss = StatsHelper.getStatsOn(nodes, n -> n.doneAt);
         return ss;

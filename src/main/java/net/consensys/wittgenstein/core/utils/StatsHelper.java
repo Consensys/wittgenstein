@@ -117,6 +117,8 @@ public class StatsHelper {
   }
 
   public static SimpleStats getStatsOn(List<? extends Node> nodes, Get get) {
+    if (nodes.isEmpty())
+      return new SimpleStats(0, 0, 0);
     long min = Long.MAX_VALUE;
     long max = Long.MIN_VALUE;
     long tot = 0;

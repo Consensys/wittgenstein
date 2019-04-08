@@ -72,8 +72,7 @@ public class ProgressPerTime {
       StatsHelper.Stat s;
       do {
         p.network().runMs(statEachXms);
-        liveNodes = liveNodes =
-            p.network().allNodes.stream().filter(n -> !n.down).collect(Collectors.toList());
+        liveNodes = p.network().allNodes.stream().filter(n -> !n.down).collect(Collectors.toList());
         s = statsGetter.get(liveNodes);
         for (String field : statsGetter.fields()) {
           long t = timeUnit.convert(p.network().time, TimeUnit.MILLISECONDS);
