@@ -166,12 +166,12 @@ public class ENRGossiping implements Protocol {
     }
     network.setPeers();
 
-    //    selectChangingNodes();
-    //    //A percentage of Nodes change their capabilities every X time as defined by the protocol parameters
-    //    for (ETHNode n : changedNodes) {
-    //      int start = network.rd.nextInt(params.timeToChange) + 1;
-    //      network.registerPeriodicTask(n::changeCap, start, params.timeToChange, n);
-    //    }
+        selectChangingNodes();
+        //A percentage of Nodes change their capabilities every X time as defined by the protocol parameters
+        for (ETHNode n : changedNodes) {
+          int start = network.rd.nextInt(params.timeToChange) + 1;
+          network.registerPeriodicTask(n::changeCap, start, params.timeToChange, n);
+        }
     Map<String, AtomicInteger> caps = new HashMap<>();
     for (ETHNode n : network.allNodes) {
       for (String s : n.capabilities) {
@@ -269,7 +269,7 @@ public class ENRGossiping implements Protocol {
       if (network.time > 1) {
         // The nodes added at the beginning won't exit the network: this makes the simulation simpler
         startExit = network.time + network.rd.nextInt(params.timeToLeave);
-        // network.registerTask(this::exitNetwork, startExit, this);
+        network.registerTask(this::exitNetwork, startExit, this);
       }
 
       //Nodes broadcast their capabilities every capGossipTime ms with a lag of rand*100 ms
@@ -462,7 +462,7 @@ public class ENRGossiping implements Protocol {
       }
     };
 
-    ProgressPerTime ppp = new ProgressPerTime(this, "", "Average time in ms to find capabilities",
+    ProgressPerTime ppp = new ProgressPerTime(this, "", "Average time (in min) to find capabilities",
         sg, 1, null, 1000 * 60 * 30, TimeUnit.MINUTES);
 
     ppp.run(contIf);
