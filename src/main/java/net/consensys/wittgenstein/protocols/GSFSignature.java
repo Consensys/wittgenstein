@@ -22,6 +22,7 @@ public class GSFSignature implements Protocol {
   final Network<GSFNode> network = new Network<>();
   NodeBuilder nb;
 
+
   public static class GSFSignatureParameters extends WParameters {
     /**
      * The number of nodes in the network
@@ -46,6 +47,8 @@ public class GSFSignature implements Protocol {
     final String nodeBuilderName;
     final String networkLatencyName;
 
+    // Used for json / http server
+    @SuppressWarnings("unused")
     public GSFSignatureParameters() {
       this.nodeCount = 32768 / 32;;
       this.threshold = (int) (nodeCount * (0.99));
@@ -85,18 +88,11 @@ public class GSFSignature implements Protocol {
     }
   }
 
-
-  public GSFSignature(GSFSignatureParameters params, NodeBuilder nb, NetworkLatency nl) {
-    this.params = params;
-    this.nb = nb;
-    this.network.setNetworkLatency(nl);
-  }
-
   public GSFSignature(GSFSignatureParameters params) {
     this.params = params;
-    this.nb = new NodeBuilder.NodeBuilderWithRandomPosition();
-    this.network.setNetworkLatency(new NetworkLatency.IC3NetworkLatency());
-
+    this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);
+    this.network
+        .setNetworkLatency(new RegistryNetworkLatencies().getByName(params.networkLatencyName));
   }
 
 
@@ -206,7 +202,8 @@ public class GSFSignature implements Protocol {
     public class SFLevel {
       final int level;
       @JsonSerialize(converter = ListNodeConverter.class)
-      final List<GSFNode> peers; // The peers when we have all signatures for this level.
+      final List<GSFNode> peers;
+      // The peers when we have all signatures for this level.
       final BitSet waitedSigs; // 1 for the signatures we should have at this level
       final BitSet verifiedSignatures = new BitSet(); // The signatures verified in this level
       final BitSet individualSignatures = new BitSet(); // The individual signatures received
@@ -555,7 +552,7 @@ public class GSFSignature implements Protocol {
 
   @Override
   public GSFSignature copy() {
-    return new GSFSignature(params, nb.copy(), this.network.networkLatency);
+    return new GSFSignature(params);
   }
 
   public void init() {
@@ -590,23 +587,16 @@ public class GSFSignature implements Protocol {
   }
 
   public static void sigsPerTime() {
-    int nodeCt = 32768 / 32;
+    int nodeCt = 32768 / 8;
 
-    String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
     final Node.SpeedModel sm = new Node.ParetoSpeed(1, 0.2, 0.4, 3);
-    String nb = RegistryNodeBuilders.AWS_SITE;
-    /*
-    nl = new NetworkLatency.NetworkLatencyByDistance();
-    nb =new Node.NodeBuilderWithRandomPosition(sm);
-    //nl = new NetworkLatency.NetworkNoLatency();
-       // nl = new NetworkLatency.IC3NetworkLatency();
-    
-    nl = new NetworkLatency.NetworkLatencyByCity(new CSVLatencyReader());
-    nb = new Node.NodeBuilderWithCity(new CSVLatencyReader().cities());
-    */
+    String nb = RegistryNodeBuilders.AWS_WITH_1THIRD_TOR;
+    String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
+
     int ts = (int) (.99 * nodeCt);
-    GSFSignature p =
-        new GSFSignature(new GSFSignatureParameters(nodeCt, ts, 3, 50, 10, 10, 0, nb, nl));
+    GSFSignatureParameters params =
+        new GSFSignatureParameters(nodeCt, ts, 4, 50, 20, 10, 0, nb, nl);
+    GSFSignature p = new GSFSignature(params);
 
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
       final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();

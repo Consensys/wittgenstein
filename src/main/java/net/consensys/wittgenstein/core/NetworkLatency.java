@@ -176,11 +176,24 @@ public abstract class NetworkLatency {
     }
   }
 
+  public static class NetworkFixedLatency extends NetworkLatency {
+    final int fixedLatency;
+
+    public NetworkFixedLatency(int fixedLatency) {
+      this.fixedLatency = fixedLatency;
+    }
+
+    public int getLatency(Node from, Node to, int delta) {
+      return fixedLatency;
+    }
+  }
+
   public static class NetworkNoLatency extends NetworkLatency {
     public int getLatency(Node from, Node to, int delta) {
       return 1;
     }
   }
+
 
   public static class MeasuredNetworkLatency extends NetworkLatency {
     final int[] longDistrib = new int[100];

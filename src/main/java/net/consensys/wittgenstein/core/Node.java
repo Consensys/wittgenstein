@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import net.consensys.wittgenstein.core.json.ExternalConverter;
 import net.consensys.wittgenstein.core.utils.GeneralizedParetoDistribution;
 import net.consensys.wittgenstein.server.External;
+import java.util.List;
 import java.util.Random;
 
 @SuppressWarnings({"WeakerAccess"})
@@ -33,6 +34,12 @@ public class Node {
    */
   public final int x;
   public final int y;
+
+  /**
+   * Some nodes can be behind Tor, or for any reason may suffer and extra latency (both in & out)
+   * when they communicate. By default there is no such latency.
+   */
+  public NetworkLatency extraLatency;
 
   /**
    * A protocol implementation may want to implement some byzantine behavior for some nodes. This
@@ -124,6 +131,42 @@ public class Node {
   }
 
 
+  public static class Aspect {
+    public Object getObjectValue(Random rd) {
+      return null;
+    }
+  }
+
+
+  public static class ExtraLatencyAspect extends Aspect {
+    final NetworkLatency tor = new NetworkLatency.NetworkFixedLatency(500);
+    final NetworkLatency zero = new NetworkLatency.NetworkFixedLatency(500);
+    final double ratio;
+
+    public ExtraLatencyAspect(double ratio) {
+      this.ratio = ratio;
+    }
+
+    public Object getObjectValue(Random rd) {
+      return rd.nextDouble() < ratio ? tor : zero;
+    }
+  }
+
+
+  public static class SpeedRatioAspect extends Aspect {
+    final SpeedModel sm;
+
+    SpeedRatioAspect(SpeedModel sm) {
+      this.sm = sm;
+    }
+
+    @Override
+    public Object getObjectValue(Random rd) {
+      return sm.getSpeedRatio(rd);
+    }
+  }
+
+
   /**
    * The SpeedModel allows model slow vs. fast nodes. By default, all the node have the same speed
    * ration (1.0), but it's possible to configure a network with slow (speed ratio > 1.0) or fast
@@ -132,19 +175,6 @@ public class Node {
    */
   public interface SpeedModel {
     double getSpeedRatio(Random rd);
-  }
-
-
-  public static class ConstantSpeed implements SpeedModel {
-    @Override
-    public double getSpeedRatio(Random rd) {
-      return 1.0;
-    }
-
-    @Override
-    public String toString() {
-      return this.getClass().getSimpleName();
-    }
   }
 
 
@@ -168,6 +198,15 @@ public class Node {
     }
   }
 
+  private static Object getAspectValue(Class<?> aspectClass, List<Aspect> aspects, Random rd,
+      Object defVal) {
+    for (Aspect aspect : aspects) {
+      if (aspect.getClass().equals(aspectClass)) {
+        return aspect.getObjectValue(rd);
+      }
+    }
+    return defVal;
+  }
 
   public Node(Random rd, NodeBuilder nb, boolean byzantine) {
     this.nodeId = nb.allocateNodeId();
@@ -185,7 +224,10 @@ public class Node {
     this.byzantine = byzantine;
     this.hash256 = nb.getHash(nodeId);
     this.cityName = nb.getCityName(rd);
-    this.speedRatio = nb.getSpeedRatio(rd);
+
+    this.speedRatio = (Double) getAspectValue(SpeedRatioAspect.class, nb.aspects, rd, 1.0);
+    this.extraLatency = (NetworkLatency) getAspectValue(ExtraLatencyAspect.class, nb.aspects, rd,
+        new NetworkLatency.NetworkFixedLatency(0));
   }
 
   public Node(Random rd, NodeBuilder nb) {
