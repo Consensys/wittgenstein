@@ -7,6 +7,8 @@ import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.server.WParameters;
+import net.consensys.wittgenstein.tools.NodeDrawer;
+import java.io.File;
 import java.util.*;
 import java.util.function.Predicate;
 
@@ -586,6 +588,74 @@ public class GSFSignature implements Protocol {
     return network;
   }
 
+
+  static class GFSGetter implements NodeDrawer.Getter {
+    final GSFSignatureParameters params;
+
+    GFSGetter(GSFSignatureParameters params) {
+      this.params = params;
+    }
+
+    @Override
+    public int getMax() {
+      return params.nodeCount;
+    }
+
+    @Override
+    public int getMin() {
+      return 1;
+    }
+
+    @Override
+    public int getVal(Node n) {
+      return ((GSFNode) n).verifiedSignatures.cardinality();
+    }
+
+    @Override
+    public boolean isSpecial(Node n) {
+      return n.extraLatency > 0;
+    }
+  }
+
+  public static void drawImgs() {
+    int nodeCt = 32768 / 8;
+
+    final Node.SpeedModel sm = new Node.ParetoSpeed(1, 0.2, 0.4, 3);
+    String nb = RegistryNodeBuilders.AWS_WITH_1THIRD_TOR;
+    String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
+
+    int ts = (int) (.99 * nodeCt);
+    GSFSignatureParameters params =
+        new GSFSignatureParameters(nodeCt, ts, 4, 50, 20, 10, 0, nb, nl);
+    GSFSignature p = new GSFSignature(params);
+
+    Predicate<Protocol> contIf = p1 -> {
+      for (Node n : p1.network().allNodes) {
+        GSFNode gn = (GSFNode) n;
+        // All up nodes must have reached the threshold, so if one live
+        //  node has not reached it we continue
+        if (!n.down && gn.verifiedSignatures.cardinality() < p.params.threshold) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    p.init();
+    NodeDrawer nd = new NodeDrawer(new GFSGetter(params));
+    int i = 0;
+    do {
+      p.network.runMs(10);
+
+      nd.drawNewState(p.network.liveNodes());
+      nd.writeLastToGif(new File("/tmp/img_" + i + ".gif"));
+      i++;
+
+    } while (contIf.test(p));
+    nd.writeAnimatedGif(new File("/tmp/handel_anim.gif"));
+  }
+
+
   public static void sigsPerTime() {
     int nodeCt = 32768 / 8;
 
@@ -645,6 +715,9 @@ public class GSFSignature implements Protocol {
   }
 
   public static void main(String... args) {
-    sigsPerTime();
+    drawImgs();
+
+
+
   }
 }

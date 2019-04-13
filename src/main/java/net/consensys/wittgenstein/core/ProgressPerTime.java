@@ -2,6 +2,7 @@ package net.consensys.wittgenstein.core;
 
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.tools.Graph;
+import net.consensys.wittgenstein.tools.NodeDrawer;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;

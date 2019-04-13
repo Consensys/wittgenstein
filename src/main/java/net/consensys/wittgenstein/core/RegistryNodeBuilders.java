@@ -12,6 +12,7 @@ public class RegistryNodeBuilders {
       NodeBuilder.NodeBuilderWithRandomPosition.class.getSimpleName() + "_constant_speed";
   public static final String AWS_SITE = "aws_sites_constant_speed";
   public static final String AWS_WITH_1THIRD_TOR = "aws_with_1third_tor";
+  public static final String AWS_WITH_HALF_TOR = "aws_with_half_tor";
   public static final String ALL_CITIES = "all_cities_constant_speed";
 
   public RegistryNodeBuilders() {
@@ -25,6 +26,12 @@ public class RegistryNodeBuilders {
         new NodeBuilder.NodeBuilderWithCity(NetworkLatency.AwsRegionNetworkLatency.cities());
     nb.aspects.add(new Node.ExtraLatencyAspect(.33));
     registry.put(AWS_WITH_1THIRD_TOR, nb);
+
+
+    nb = new NodeBuilder.NodeBuilderWithCity(NetworkLatency.AwsRegionNetworkLatency.cities());
+    nb.aspects.add(new Node.ExtraLatencyAspect(.5));
+    registry.put(AWS_WITH_HALF_TOR, nb);
+
   }
 
   public NodeBuilder getByName(String name) {

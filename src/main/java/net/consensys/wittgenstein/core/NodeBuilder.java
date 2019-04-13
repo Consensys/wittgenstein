@@ -9,8 +9,17 @@ import java.util.Random;
 
 @SuppressWarnings("WeakerAccess")
 public class NodeBuilder implements Cloneable {
+  /**
+   * Last node id allocated.
+   */
   private int nodeIds = 0;
+  /**
+   * Used to calculate a hash
+   */
   private final MessageDigest digest;
+  /**
+   * List of the aspects we can add to the node (speed, latency, ...)
+   */
   public final List<Node.Aspect> aspects = new ArrayList<>();
 
   public NodeBuilder() {

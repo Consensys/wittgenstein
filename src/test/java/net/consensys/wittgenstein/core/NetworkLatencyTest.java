@@ -52,7 +52,8 @@ public class NetworkLatencyTest {
     NetworkLatency nl = new NetworkLatency.IC3NetworkLatency();
 
     Node a0 = new Node(new Random(0), new NodeBuilder());
-    Assert.assertEquals(NetworkLatency.IC3NetworkLatency.S10 / 2, nl.getLatency(a0, a0, 0));
+    Node a00 = new Node(new Random(0), new NodeBuilder());
+    Assert.assertEquals(NetworkLatency.IC3NetworkLatency.S10 / 2, nl.getLatency(a0, a00, 0));
 
     NodeBuilder nb = new NodeBuilder() {
       @Override

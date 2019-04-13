@@ -39,7 +39,7 @@ public class Node {
    * Some nodes can be behind Tor, or for any reason may suffer and extra latency (both in & out)
    * when they communicate. By default there is no such latency.
    */
-  public NetworkLatency extraLatency;
+  public int extraLatency;
 
   /**
    * A protocol implementation may want to implement some byzantine behavior for some nodes. This
@@ -139,8 +139,6 @@ public class Node {
 
 
   public static class ExtraLatencyAspect extends Aspect {
-    final NetworkLatency tor = new NetworkLatency.NetworkFixedLatency(500);
-    final NetworkLatency zero = new NetworkLatency.NetworkFixedLatency(500);
     final double ratio;
 
     public ExtraLatencyAspect(double ratio) {
@@ -148,7 +146,7 @@ public class Node {
     }
 
     public Object getObjectValue(Random rd) {
-      return rd.nextDouble() < ratio ? tor : zero;
+      return rd.nextDouble() < ratio ? 500 : 0;
     }
   }
 
@@ -225,9 +223,8 @@ public class Node {
     this.hash256 = nb.getHash(nodeId);
     this.cityName = nb.getCityName(rd);
 
-    this.speedRatio = (Double) getAspectValue(SpeedRatioAspect.class, nb.aspects, rd, 1.0);
-    this.extraLatency = (NetworkLatency) getAspectValue(ExtraLatencyAspect.class, nb.aspects, rd,
-        new NetworkLatency.NetworkFixedLatency(0));
+    this.speedRatio = (double) getAspectValue(SpeedRatioAspect.class, nb.aspects, rd, 1.0);
+    this.extraLatency = (int) getAspectValue(Integer.class, nb.aspects, rd, 0);
   }
 
   public Node(Random rd, NodeBuilder nb) {
