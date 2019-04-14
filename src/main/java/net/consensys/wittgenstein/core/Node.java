@@ -225,7 +225,7 @@ public class Node {
     this.hash256 = nb.getHash(nodeId);
 
     this.speedRatio = (double) getAspectValue(SpeedRatioAspect.class, nb.aspects, rd, 1.0);
-    this.extraLatency = (int) getAspectValue(Integer.class, nb.aspects, rd, 0);
+    this.extraLatency = (int) getAspectValue(ExtraLatencyAspect.class, nb.aspects, rd, 0);
   }
 
   public Node(Random rd, NodeBuilder nb) {

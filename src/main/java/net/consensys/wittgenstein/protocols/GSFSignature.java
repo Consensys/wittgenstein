@@ -10,6 +10,7 @@ import net.consensys.wittgenstein.server.WParameters;
 import net.consensys.wittgenstein.tools.NodeDrawer;
 import java.io.File;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
 /**
@@ -621,8 +622,9 @@ public class GSFSignature implements Protocol {
     int nodeCt = 32768 / 8;
 
     final Node.SpeedModel sm = new Node.ParetoSpeed(1, 0.2, 0.4, 3);
-    String nb = RegistryNodeBuilders.AWS_WITH_1THIRD_TOR;
-    String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
+    String nb = RegistryNodeBuilders.RANDOM_POSITION;
+    String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
+    NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
 
     int ts = (int) (.99 * nodeCt);
     GSFSignatureParameters params =
@@ -644,15 +646,16 @@ public class GSFSignature implements Protocol {
     p.init();
     NodeDrawer nd = new NodeDrawer(new GFSNodeStatus(params));
     int i = 0;
+    int freq = 5;
     do {
-      p.network.runMs(10);
+      p.network.runMs(freq);
 
-      nd.drawNewState(p.network.liveNodes());
-      nd.writeLastToGif(new File("/tmp/img_" + i + ".gif"));
+      nd.drawNewState(p.network.time, TimeUnit.MILLISECONDS, p.network.liveNodes());
+      //  nd.writeLastToGif(new File("/tmp/img_" + i + ".gif"));
       i++;
 
     } while (contIf.test(p));
-    nd.writeAnimatedGif(new File("/tmp/handel_anim.gif"));
+    nd.writeAnimatedGif(freq, new File("/tmp/handel_anim.gif"));
   }
 
 
@@ -716,8 +719,5 @@ public class GSFSignature implements Protocol {
 
   public static void main(String... args) {
     drawImgs();
-
-
-
   }
 }

@@ -9,13 +9,17 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 public class NodeDrawer {
-  private final static int SIZE = 5;
+  private final static int SIZE = 7;
   private final static int MAX_X = Node.MAX_X;
   private final static int MAX_Y = Node.MAX_Y;
+
 
   private static class Pos {
     final int x;
@@ -27,12 +31,6 @@ public class NodeDrawer {
     }
   }
 
-  BufferedImage loadWM() {
-    String imgName = "world-map-2000px.png";
-
-    //ImageIO.read()
-    return null;
-  }
 
   /**
    * Keep tracks of the dots already used in the image, to be sure that the nodes are not
@@ -50,6 +48,7 @@ public class NodeDrawer {
   private final double min;
   private final double max;
   private final List<BufferedImage> imgs = new ArrayList<>();
+  private final BufferedImage background;
 
   public NodeDrawer(NodeStatus nodeStatus) {
     this.nodeStatus = nodeStatus;
@@ -59,6 +58,19 @@ public class NodeDrawer {
       throw new IllegalArgumentException(
           "bad values for min=" + nodeStatus.getMin() + "  or max=" + nodeStatus.getMax());
     }
+
+    try {
+      background = loadWM();
+    } catch (IOException e) {
+      throw new IllegalStateException("Can't load background", e);
+    }
+  }
+
+  private BufferedImage loadWM() throws IOException {
+    String imgName = "resources/world-map-2000px.png";
+    Path p = Paths.get(imgName);
+    BufferedImage bi = ImageIO.read(p.toFile());
+    return bi;
   }
 
   public interface NodeStatus {
@@ -86,10 +98,10 @@ public class NodeDrawer {
   }
 
   private boolean isFree(int x, int y) {
-    if (x > MAX_X - 5) {
+    if (x < 1 || x >= MAX_X - SIZE) {
       return false;
     }
-    if (y > MAX_Y - 5) {
+    if (y < 1 || y >= MAX_Y - SIZE) {
       return false;
     }
     for (int ix = 0; ix < SIZE; ix++) {
@@ -113,24 +125,46 @@ public class NodeDrawer {
     }
   }
 
+  private Pos tryAt(Node n, int x, int y) {
+    if (isFree(x, y)) {
+      Pos res = new Pos(x, y);
+      fill(x, y);
+      nodePos.put(n, res);
+      return res;
+    }
+    return null;
+  }
+
   private Pos findPos(Node n) {
     Pos res = nodePos.get(n);
     if (res != null) {
       return res;
     }
 
-    for (int y = 0; y < MAX_Y - SIZE; y++) {
-      for (int x = 0; x < MAX_X - SIZE; x++) {
-        if (isFree(x, y)) {
-          res = new Pos(x, y);
-          fill(x, y);
-          nodePos.put(n, res);
-          return res;
+    int deltaX = 0;
+    int deltaY = 0;
+    boolean wasX = false;
+    int round = 0;
+
+    while (round++ < 10000) {
+      for (int x = Math.max(1, n.x - deltaX); x < Math.min(MAX_X, n.x + deltaX); x += SIZE) {
+        for (int y = Math.max(1, n.y - deltaY); y < Math.min(MAX_Y, n.y + deltaY); y += SIZE) {
+          res = tryAt(n, x, y);
+          if (res != null) {
+            return res;
+          }
         }
+      }
+      if (wasX) {
+        deltaY += SIZE;
+        wasX = false;
+      } else {
+        deltaX += SIZE;
+        wasX = true;
       }
     }
 
-    throw new IllegalStateException("No free room!");
+    throw new IllegalStateException("No free room for node " + n + ", x=" + n.x + ", y=" + n.y);
 
   }
 
@@ -166,10 +200,10 @@ public class NodeDrawer {
     return makeColor((int) (510 * ratio));
   }
 
-  private BufferedImage draw(List<? extends Node> nodes) {
-
+  private BufferedImage draw(int time, TimeUnit tu, List<? extends Node> nodes) {
     BufferedImage bi = new BufferedImage(MAX_X, MAX_Y, BufferedImage.TYPE_INT_RGB);
     Graphics g = bi.getGraphics();
+    g.drawImage(background, 0, 0, Color.BLUE, null);
 
     for (Node n : nodes) {
       g.setColor(findColor(n));
@@ -177,20 +211,25 @@ public class NodeDrawer {
       g.fillRect(pos.x, pos.y, SIZE, SIZE);
       if (nodeStatus.isSpecial(n)) {
         g.setColor(Color.BLACK);
-        g.fillRect(pos.x + 2, pos.y + 2, 2, 2);
+        g.fillRect(pos.x + 1, pos.y + 1, 2, 2);
       }
     }
+
+    g.setColor(Color.BLACK);
+    g.drawString(time + " " + tu.toString().toLowerCase(), MAX_X - 400, MAX_Y - 50);
+
     return bi;
   }
 
-  public void drawNewState(List<? extends Node> nodes) {
-    imgs.add(draw(nodes));
+  public void drawNewState(int time, TimeUnit tu, List<? extends Node> nodes) {
+    imgs.add(draw(time, tu, nodes));
   }
 
-  public void writeAnimatedGif(File dest) {
+  public void writeAnimatedGif(int frequency, File dest) {
     try {
       ImageOutputStream output = new FileImageOutputStream(dest);
-      GifSequenceWriter writer = new GifSequenceWriter(output, imgs.get(0).getType(), 10, true);
+      GifSequenceWriter writer =
+          new GifSequenceWriter(output, imgs.get(0).getType(), frequency, true);
 
       for (BufferedImage bi : imgs) {
         writer.writeToSequence(bi);

@@ -92,17 +92,17 @@ public class NodeBuilder implements Cloneable {
 
       // We have only the positions for the cities
       //  in the AWS network latency object
-      citiesPosition.put("oregon", new int[] {500, 300});
-      citiesPosition.put("virginia", new int[] {800, 400});
-      citiesPosition.put("mumbai", new int[] {1300, 700});
-      citiesPosition.put("seoul", new int[] {1700, 790});
-      citiesPosition.put("singapour", new int[] {1600, 800});
-      citiesPosition.put("sydney", new int[] {1900, 1000});
-      citiesPosition.put("tokyo", new int[] {1500, 500});
-      citiesPosition.put("canada central", new int[] {400, 400});
-      citiesPosition.put("frankfurt", new int[] {1000, 400});
-      citiesPosition.put("ireland", new int[] {800, 350});
-      citiesPosition.put("london", new int[] {900, 380});
+      citiesPosition.put("oregon", new int[] {424, 325});
+      citiesPosition.put("virginia", new int[] {294, 301});
+      citiesPosition.put("mumbai", new int[] {1360, 440});
+      citiesPosition.put("seoul", new int[] {1641, 312});
+      citiesPosition.put("singapour", new int[] {1486, 580});
+      citiesPosition.put("sydney", new int[] {1773, 777});
+      citiesPosition.put("tokyo", new int[] {1708, 306});
+      citiesPosition.put("canada central", new int[] {422, 256});
+      citiesPosition.put("frankfurt", new int[] {1018, 220});
+      citiesPosition.put("ireland", new int[] {891, 200});
+      citiesPosition.put("london", new int[] {937, 205});
     }
 
     @Override
@@ -112,7 +112,7 @@ public class NodeBuilder implements Cloneable {
 
     int[] getPos(int rdInt) {
       String city = getCityName(rdInt);
-      int[] pos = citiesPosition.get(city);
+      int[] pos = citiesPosition.get(city.toLowerCase());
       return Objects.requireNonNullElseGet(pos, () -> new int[] {1, 1});
     }
 
