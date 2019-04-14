@@ -9,46 +9,89 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.*;
 import java.util.List;
 
 public class NodeDrawer {
-  final static int SIZE = 15;
-  final static int MAX_X = Node.MAX_X;
-  final static int MAX_Y = Node.MAX_Y;
-  static boolean[][] dots;
-  final Getter getter;
-  final double min;
-  final double max;
-  final List<BufferedImage> imgs = new ArrayList<>();
+  private final static int SIZE = 5;
+  private final static int MAX_X = Node.MAX_X;
+  private final static int MAX_Y = Node.MAX_Y;
 
-  public NodeDrawer(Getter getter) {
-    this.getter = getter;
-    this.min = getter.getMin() - 1; // to avoid division by zero.
-    this.max = getter.getMax();
-    if (min >= max || min < -1) {
-      throw new IllegalArgumentException(
-          "bad values for min=" + getter.getMin() + "  or max=" + getter.getMax());
+  private static class Pos {
+    final int x;
+    final int y;
+
+    private Pos(int x, int y) {
+      this.x = x;
+      this.y = y;
     }
   }
 
-  public interface Getter {
+  BufferedImage loadWM() {
+    String imgName = "world-map-2000px.png";
 
-    int getMax();
+    //ImageIO.read()
+    return null;
+  }
 
-    int getMin();
+  /**
+   * Keep tracks of the dots already used in the image, to be sure that the nodes are not
+   * overlapping.
+   */
+  private boolean[][] dots = new boolean[MAX_X][MAX_Y];
 
+  /**
+   * Keep track of the positions already allocated, so the nodes don't change their position between
+   * two frames.
+   */
+  private final Map<Node, Pos> nodePos = new HashMap<>();
+
+  private final NodeStatus nodeStatus;
+  private final double min;
+  private final double max;
+  private final List<BufferedImage> imgs = new ArrayList<>();
+
+  public NodeDrawer(NodeStatus nodeStatus) {
+    this.nodeStatus = nodeStatus;
+    this.min = nodeStatus.getMin() - 1; // to avoid division by zero.
+    this.max = nodeStatus.getMax();
+    if (min >= max || min < -1) {
+      throw new IllegalArgumentException(
+          "bad values for min=" + nodeStatus.getMin() + "  or max=" + nodeStatus.getMax());
+    }
+  }
+
+  public interface NodeStatus {
+
+    /**
+     * @return the value associated to this node
+     */
     int getVal(Node n);
 
+    /**
+     * @return the maximum value that can be associated to a node. This value will be shown as
+     *         green.
+     */
+    int getMax();
+
+    /**
+     * @return the minimum value that can be associated to a node. This value will be shown as red.
+     */
+    int getMin();
+
+    /**
+     * @return if the node is 'special'. This node will be marked with a dot;.
+     */
     boolean isSpecial(Node n);
   }
 
-  boolean freeY(int x, int y) {
-    if (x > MAX_X - 5)
+  private boolean isFree(int x, int y) {
+    if (x > MAX_X - 5) {
       return false;
-    if (y > MAX_Y - 5)
+    }
+    if (y > MAX_Y - 5) {
       return false;
+    }
     for (int ix = 0; ix < SIZE; ix++) {
       for (int iy = 0; iy < SIZE; iy++) {
         if (dots[x + ix][y + iy]) {
@@ -59,7 +102,7 @@ public class NodeDrawer {
     return true;
   }
 
-  void fill(int x, int y) {
+  private void fill(int x, int y) {
     for (int ix = 0; ix < SIZE; ix++) {
       for (int iy = 0; iy < SIZE; iy++) {
         if (dots[x + ix][y + iy]) {
@@ -70,19 +113,28 @@ public class NodeDrawer {
     }
   }
 
-  int[] findPos(Node n) {
+  private Pos findPos(Node n) {
+    Pos res = nodePos.get(n);
+    if (res != null) {
+      return res;
+    }
+
     for (int y = 0; y < MAX_Y - SIZE; y++) {
       for (int x = 0; x < MAX_X - SIZE; x++) {
-        if (freeY(x, y)) {
-          return new int[] {x, y};
+        if (isFree(x, y)) {
+          res = new Pos(x, y);
+          fill(x, y);
+          nodePos.put(n, res);
+          return res;
         }
       }
     }
+
     throw new IllegalStateException("No free room!");
+
   }
 
   // see https://stackoverflow.com/questions/4161369/html-color-codes-red-to-yellow-to-green
-
   private Color makeColor(int value) {
     // value must be between [0, 510]
     value = Math.min(Math.max(0, value), 510);
@@ -109,25 +161,23 @@ public class NodeDrawer {
   }
 
   private Color findColor(Node n) {
-    int val = getter.getVal(n);
+    int val = nodeStatus.getVal(n);
     double ratio = (val - min) / (max - min);
     return makeColor((int) (510 * ratio));
   }
 
   private BufferedImage draw(List<? extends Node> nodes) {
-    dots = new boolean[MAX_X][MAX_Y];
 
     BufferedImage bi = new BufferedImage(MAX_X, MAX_Y, BufferedImage.TYPE_INT_RGB);
     Graphics g = bi.getGraphics();
 
     for (Node n : nodes) {
       g.setColor(findColor(n));
-      int[] pos = findPos(n);
-      fill(pos[0], pos[1]);
-      g.fillRect(pos[0], pos[1], SIZE, SIZE);
-      if (getter.isSpecial(n)) {
+      Pos pos = findPos(n);
+      g.fillRect(pos.x, pos.y, SIZE, SIZE);
+      if (nodeStatus.isSpecial(n)) {
         g.setColor(Color.BLACK);
-        g.fillRect(pos[0] + 2, pos[1] + 2, 2, 2);
+        g.fillRect(pos.x + 2, pos.y + 2, 2, 2);
       }
     }
     return bi;

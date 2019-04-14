@@ -13,7 +13,7 @@ public class NetworkLatencyTest {
   private final AtomicInteger ai = new AtomicInteger(1);
   private final NodeBuilder nb = new NodeBuilder() {
     @Override
-    public int getX(Random rd) {
+    public int getX(int rdi) {
       return ai.getAndAdd(Node.MAX_X / 2);
     }
   };
@@ -57,12 +57,12 @@ public class NetworkLatencyTest {
 
     NodeBuilder nb = new NodeBuilder() {
       @Override
-      public int getX(Random rd) {
+      public int getX(int rdi) {
         return Node.MAX_X / 2;
       }
 
       @Override
-      public int getY(Random rd) {
+      public int getY(int rdi) {
         return Node.MAX_Y / 2;
       }
     };

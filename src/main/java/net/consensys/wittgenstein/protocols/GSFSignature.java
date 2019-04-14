@@ -589,10 +589,10 @@ public class GSFSignature implements Protocol {
   }
 
 
-  static class GFSGetter implements NodeDrawer.Getter {
+  static class GFSNodeStatus implements NodeDrawer.NodeStatus {
     final GSFSignatureParameters params;
 
-    GFSGetter(GSFSignatureParameters params) {
+    GFSNodeStatus(GSFSignatureParameters params) {
       this.params = params;
     }
 
@@ -642,7 +642,7 @@ public class GSFSignature implements Protocol {
     };
 
     p.init();
-    NodeDrawer nd = new NodeDrawer(new GFSGetter(params));
+    NodeDrawer nd = new NodeDrawer(new GFSNodeStatus(params));
     int i = 0;
     do {
       p.network.runMs(10);

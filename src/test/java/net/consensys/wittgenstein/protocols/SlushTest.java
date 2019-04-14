@@ -11,7 +11,7 @@ public class SlushTest {
 
   @Test
   public void testSimple() {
-    Slush p = new Slush(new Slush.SlushParameters(100, 5, 7, 4.0 / 7.0, nb, nl));
+    Slush p = new Slush(new Slush.SlushParameters(100, 7, 7, 4.0 / 7.0, nb, nl));
     p.init();
     p.network().run(10);
 

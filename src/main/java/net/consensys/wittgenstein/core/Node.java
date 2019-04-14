@@ -11,8 +11,8 @@ import java.util.Random;
 @SuppressWarnings({"WeakerAccess"})
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public class Node {
-  public final static int MAX_X = 1000;
-  public final static int MAX_Y = 1000;
+  public final static int MAX_X = 2000;
+  public final static int MAX_Y = 1112;
   public final static int MAX_DIST =
       (int) Math.sqrt((MAX_X / 2.0) * (MAX_X / 2.0) + (MAX_Y / 2.0) * (MAX_Y / 2.0));
   public final static String DEFAULT_CITY = "world";
@@ -211,8 +211,10 @@ public class Node {
     if (this.nodeId < 0) {
       throw new IllegalArgumentException("bad nodeId:" + nodeId);
     }
-    this.x = nb.getX(rd);
-    this.y = nb.getY(rd);
+    int rdNode = rd.nextInt();
+    this.cityName = nb.getCityName(rdNode);
+    this.x = nb.getX(rdNode);
+    this.y = nb.getY(rdNode);
     if (this.x <= 0 || this.x > MAX_X) {
       throw new IllegalArgumentException("bad x=" + x);
     }
@@ -221,7 +223,6 @@ public class Node {
     }
     this.byzantine = byzantine;
     this.hash256 = nb.getHash(nodeId);
-    this.cityName = nb.getCityName(rd);
 
     this.speedRatio = (double) getAspectValue(SpeedRatioAspect.class, nb.aspects, rd, 1.0);
     this.extraLatency = (int) getAspectValue(Integer.class, nb.aspects, rd, 0);
