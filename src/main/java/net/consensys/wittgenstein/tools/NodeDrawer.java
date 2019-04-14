@@ -16,7 +16,7 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class NodeDrawer {
-  private final static int SIZE = 5;
+  private final static int SIZE = 6;
   private final static int MAX_X = Node.MAX_X;
   private final static int MAX_Y = Node.MAX_Y;
 
@@ -146,7 +146,7 @@ public class NodeDrawer {
     boolean wasX = false;
     int distance = 0;
 
-    while (distance < 100) {
+    while (distance < 200) {
       for (int x = Math.max(1, n.x - deltaX); x < Math.min(MAX_X, n.x + deltaX); x += SIZE) {
         for (int y = Math.max(1, n.y - deltaY); y < Math.min(MAX_Y, n.y + deltaY); y += SIZE) {
           double d1 = (x - n.x) * SIZE;
