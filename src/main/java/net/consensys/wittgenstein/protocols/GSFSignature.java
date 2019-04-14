@@ -622,9 +622,9 @@ public class GSFSignature implements Protocol {
     int nodeCt = 32768 / 8;
 
     final Node.SpeedModel sm = new Node.ParetoSpeed(1, 0.2, 0.4, 3);
-    String nb = RegistryNodeBuilders.RANDOM_POSITION;
-    String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
-    NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
+    String nb = RegistryNodeBuilders.AWS_WITH_HALF_TOR;
+    //String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
+    String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
 
     int ts = (int) (.99 * nodeCt);
     GSFSignatureParameters params =
@@ -651,7 +651,9 @@ public class GSFSignature implements Protocol {
       p.network.runMs(freq);
 
       nd.drawNewState(p.network.time, TimeUnit.MILLISECONDS, p.network.liveNodes());
-      //  nd.writeLastToGif(new File("/tmp/img_" + i + ".gif"));
+      if (i % 100 == 0) {
+        nd.writeLastToGif(new File("/tmp/img_" + i + ".gif"));
+      }
       i++;
 
     } while (contIf.test(p));

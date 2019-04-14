@@ -16,7 +16,7 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class NodeDrawer {
-  private final static int SIZE = 7;
+  private final static int SIZE = 5;
   private final static int MAX_X = Node.MAX_X;
   private final static int MAX_Y = Node.MAX_Y;
 
@@ -144,14 +144,19 @@ public class NodeDrawer {
     int deltaX = 0;
     int deltaY = 0;
     boolean wasX = false;
-    int round = 0;
+    int distance = 0;
 
-    while (round++ < 10000) {
+    while (distance < 100) {
       for (int x = Math.max(1, n.x - deltaX); x < Math.min(MAX_X, n.x + deltaX); x += SIZE) {
         for (int y = Math.max(1, n.y - deltaY); y < Math.min(MAX_Y, n.y + deltaY); y += SIZE) {
-          res = tryAt(n, x, y);
-          if (res != null) {
-            return res;
+          double d1 = (x - n.x) * SIZE;
+          double d2 = (y - n.y) * SIZE;
+          double d = Math.sqrt(d1 * d1 + d2 * d2);
+          if (d <= distance * SIZE) {
+            res = tryAt(n, x, y);
+            if (res != null) {
+              return res;
+            }
           }
         }
       }
@@ -162,10 +167,11 @@ public class NodeDrawer {
         deltaX += SIZE;
         wasX = true;
       }
+
+      distance++;
     }
 
     throw new IllegalStateException("No free room for node " + n + ", x=" + n.x + ", y=" + n.y);
-
   }
 
   // see https://stackoverflow.com/questions/4161369/html-color-codes-red-to-yellow-to-green
