@@ -73,16 +73,9 @@ public class ProgressPerTime {
       do {
         p.network().runMs(statEachXms);
         liveNodes = p.network().allNodes.stream().filter(n -> !n.down).collect(Collectors.toList());
-        if(!liveNodes.isEmpty()){
-          s = statsGetter.get(liveNodes);
-          for (String field : statsGetter.fields()) {
-            long t = timeUnit.convert(p.network().time, TimeUnit.MILLISECONDS);
-            long y = timeUnit.convert(s.get(field), TimeUnit.MILLISECONDS);
-            rawResult.get(field).addLine(new Graph.ReportLine(t,y ));
-          }
-        }
-        else{
-          
+        s = statsGetter.get(liveNodes);
+        for (String field : statsGetter.fields()) {
+          rawResult.get(field).addLine(new Graph.ReportLine(p.network().time, s.get(field)));
         }
         if (p.network().time % 10000 == 0) {
           System.out.println("time goes by... time=" + (p.network().time / 1000) + ", stats=" + s);

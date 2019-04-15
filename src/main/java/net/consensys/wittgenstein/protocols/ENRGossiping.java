@@ -80,7 +80,7 @@ public class ENRGossiping implements Protocol {
       this.changingNodes = 10;
       this.maxPeers = 50;
       this.numberOfDifferentCapabilities = 15;
-      this.capPerNode = 3;
+      this.capPerNode = 5;
       this.nodeBuilderName = null;
       this.networkLatencyName = null;
     }
@@ -132,7 +132,7 @@ public class ENRGossiping implements Protocol {
     return caps;
   }
 
-  public Multimap<String, ETHNode> selectNodesByCap(List<ETHNode> nodes) {
+  private Multimap<String, ETHNode> selectNodesByCap(List<ETHNode> nodes) {
     Multimap<String, ETHNode> map = ArrayListMultimap.create();
     for (ETHNode n : nodes) {
       n.capabilities.forEach(cap -> map.put(cap, n));
@@ -166,12 +166,12 @@ public class ENRGossiping implements Protocol {
     }
     network.setPeers();
 
-        selectChangingNodes();
-        //A percentage of Nodes change their capabilities every X time as defined by the protocol parameters
-        for (ETHNode n : changedNodes) {
-          int start = network.rd.nextInt(params.timeToChange) + 1;
-          network.registerPeriodicTask(n::changeCap, start, params.timeToChange, n);
-        }
+    selectChangingNodes();
+    //A percentage of Nodes change their capabilities every X time as defined by the protocol parameters
+    for (ETHNode n : changedNodes) {
+      int start = network.rd.nextInt(params.timeToChange) + 1;
+      network.registerPeriodicTask(n::changeCap, start, params.timeToChange, n);
+    }
     Map<String, AtomicInteger> caps = new HashMap<>();
     for (ETHNode n : network.allNodes) {
       for (String s : n.capabilities) {
@@ -216,7 +216,7 @@ public class ENRGossiping implements Protocol {
   public class ETHNode extends P2PNode<ETHNode> {
     Set<String> capabilities;
     private int records = 0;
-    public int startTime;
+    int startTime;
 
     boolean isFullyConnected() {
       if (score(peers) < capabilities.size() * PEERS_PER_CAP)
@@ -229,7 +229,7 @@ public class ENRGossiping implements Protocol {
               (Collectors.toList()));
       for (String key : capKeys) {
         List<ETHNode> capSet = new ArrayList<>(sortedNodes.get(key));
-        if (isPartOfNetwork(capSet, key)) {
+        if (isPartOfNetwork(capSet)) {
           return false;
         }
       }
@@ -315,7 +315,7 @@ public class ENRGossiping implements Protocol {
     }
 
     //Method keeps searching nodes peer by capability and verifies that the total number of nodes connected is over a certain treshold
-    boolean isPartOfNetwork(List<ETHNode> nodesByCap, String cap) {
+    boolean isPartOfNetwork(List<ETHNode> nodesByCap) {
       int threshold = nodesByCap.size() / 2;
       Set<ETHNode> queue = new HashSet<>();
       Set<ETHNode> explored = new HashSet<>();
@@ -339,11 +339,11 @@ public class ENRGossiping implements Protocol {
         }
       }
 
-      if (explored.size() < threshold) {
-        System.out.println("Node with ID: " + this.nodeId + " is connected to "
-            + (explored.size() - 1) + " nodes & there are a total of " + nodesByCap.size()
-            + " in network of cap: " + cap);
-      }
+      //      if (explored.size() < threshold) {
+      //        System.out.println("Node with ID: " + this.nodeId + " is connected to "
+      //            + (explored.size() - 1) + " nodes & there are a total of " + nodesByCap.size()
+      //            + " in network of cap: " + cap);
+      //      }
       return explored.size() < threshold;
     }
 
@@ -451,19 +451,21 @@ public class ENRGossiping implements Protocol {
 
       @Override
       public StatsHelper.Stat get(List<? extends Node> liveNodes) {
-        if (network.time < 10 * 60 * 2) {
-          //return new StatsHelper.SimpleStats(0,0,0);
-        }
+
         List<Node> nodes =
             liveNodes.stream().filter(n -> n.nodeId > params.NODES && n.doneAt > 1).collect(
                 Collectors.toList());
-        StatsHelper.SimpleStats ss = StatsHelper.getStatsOn(nodes, n -> n.doneAt);
-        return ss;
+        if (nodes.isEmpty()) {
+          return new StatsHelper.SimpleStats(0, 0, 0);
+        }
+
+        return StatsHelper.getStatsOn(nodes, n -> n.doneAt);
       }
     };
 
-    ProgressPerTime ppp = new ProgressPerTime(this, "", "Average time (in min) to find capabilities",
-        sg, 1, null, 1000 * 60 * 30, TimeUnit.MINUTES);
+    ProgressPerTime ppp =
+        new ProgressPerTime(this, "", "Average time (in min) to find capabilities", sg, 1, null,
+            1000 * 60 * 30, TimeUnit.MINUTES);
 
     ppp.run(contIf);
 
