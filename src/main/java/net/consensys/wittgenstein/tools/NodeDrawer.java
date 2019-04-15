@@ -7,6 +7,7 @@ import javax.imageio.stream.FileImageOutputStream;
 import javax.imageio.stream.ImageOutputStream;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -15,11 +16,10 @@ import java.util.List;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-public class NodeDrawer {
+public class NodeDrawer implements Closeable {
   private final static int SIZE = 6;
   private final static int MAX_X = Node.MAX_X;
   private final static int MAX_Y = Node.MAX_Y;
-
 
   private static class Pos {
     final int x;
@@ -30,6 +30,15 @@ public class NodeDrawer {
       this.y = y;
     }
   }
+
+
+  /**
+   * The writer for the animated image. We write the image
+   *  frame by frame so we don't fill the memory.
+   */
+  private GifSequenceWriter writer;
+  private ImageOutputStream output;
+
 
 
   /**
@@ -47,10 +56,10 @@ public class NodeDrawer {
   private final NodeStatus nodeStatus;
   private final double min;
   private final double max;
-  private final List<BufferedImage> imgs = new ArrayList<>();
+  private BufferedImage lastImg;
   private final BufferedImage background;
 
-  public NodeDrawer(NodeStatus nodeStatus) {
+  public NodeDrawer(NodeStatus nodeStatus, File animatedDest, int frequency) {
     this.nodeStatus = nodeStatus;
     this.min = nodeStatus.getMin() - 1; // to avoid division by zero.
     this.max = nodeStatus.getMax();
@@ -63,6 +72,15 @@ public class NodeDrawer {
       background = loadWM();
     } catch (IOException e) {
       throw new IllegalStateException("Can't load background", e);
+    }
+
+    if (animatedDest != null) {
+      try {
+        output = new FileImageOutputStream(animatedDest);
+        writer = new GifSequenceWriter(output, background.getType(), frequency, true);
+      } catch (IOException e) {
+        throw new IllegalStateException("Can't write to destination", e);
+      }
     }
   }
 
@@ -228,22 +246,9 @@ public class NodeDrawer {
   }
 
   public void drawNewState(int time, TimeUnit tu, List<? extends Node> nodes) {
-    imgs.add(draw(time, tu, nodes));
-  }
-
-  public void writeAnimatedGif(int frequency, File dest) {
+    lastImg = draw(time, tu, nodes);
     try {
-      ImageOutputStream output = new FileImageOutputStream(dest);
-      GifSequenceWriter writer =
-          new GifSequenceWriter(output, imgs.get(0).getType(), frequency, true);
-
-      for (BufferedImage bi : imgs) {
-        writer.writeToSequence(bi);
-      }
-
-      writer.close();
-      output.close();
-
+      writer.writeToSequence(lastImg);
     } catch (IOException e) {
       throw new IllegalStateException(e);
     }
@@ -251,7 +256,7 @@ public class NodeDrawer {
 
   public void writeLastToGif(File gifFile) {
     try {
-      writeGif(imgs.get(imgs.size() - 1), gifFile);
+      writeGif(lastImg, gifFile);
     } catch (IOException e) {
       throw new IllegalStateException(e);
     }
@@ -264,5 +269,17 @@ public class NodeDrawer {
     imageWriter.setOutput(ios);
     imageWriter.write(bi);
   }
+
+  @Override public void close() {
+    if (writer != null) {
+      try {
+        writer.close();
+        output.close();
+      } catch (IOException e) {
+        throw new IllegalStateException(e);
+      }
+    }
+  }
+
 
 }

@@ -622,7 +622,7 @@ public class GSFSignature implements Protocol {
     int nodeCt = 32768 / 8;
 
     final Node.SpeedModel sm = new Node.ParetoSpeed(1, 0.2, 0.4, 3);
-    String nb = RegistryNodeBuilders.AWS_WITH_HALF_TOR;
+    String nb = RegistryNodeBuilders.AWS_WITH_1THIRD_TOR;
     //String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
     String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
 
@@ -644,9 +644,9 @@ public class GSFSignature implements Protocol {
     };
 
     p.init();
-    NodeDrawer nd = new NodeDrawer(new GFSNodeStatus(params));
+    int freq = 1;
+    NodeDrawer nd = new NodeDrawer(new GFSNodeStatus(params), new File("/tmp/handel_anim.gif"), Math.max(10, freq));
     int i = 0;
-    int freq = 5;
     do {
       p.network.runMs(freq);
 
@@ -657,7 +657,7 @@ public class GSFSignature implements Protocol {
       i++;
 
     } while (contIf.test(p));
-    nd.writeAnimatedGif(freq, new File("/tmp/handel_anim.gif"));
+    nd.close();
   }
 
 

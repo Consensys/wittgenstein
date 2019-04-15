@@ -43,6 +43,9 @@ public class GifSequenceWriter {
     // my method to create a writer
     gifWriter = getWriter();
     imageWriteParam = gifWriter.getDefaultWriteParam();
+    imageWriteParam.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+    imageWriteParam.setCompressionType("LZW");
+    imageWriteParam.setCompressionQuality(0.0f);
     ImageTypeSpecifier imageTypeSpecifier =
         ImageTypeSpecifier.createFromBufferedImageType(imageType);
 
