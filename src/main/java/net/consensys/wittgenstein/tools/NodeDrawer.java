@@ -33,8 +33,8 @@ public class NodeDrawer implements Closeable {
 
 
   /**
-   * The writer for the animated image. We write the image
-   *  frame by frame so we don't fill the memory.
+   * The writer for the animated image. We write the image frame by frame so we don't fill the
+   * memory.
    */
   private GifSequenceWriter writer;
   private ImageOutputStream output;
@@ -270,7 +270,8 @@ public class NodeDrawer implements Closeable {
     imageWriter.write(bi);
   }
 
-  @Override public void close() {
+  @Override
+  public void close() {
     if (writer != null) {
       try {
         writer.close();

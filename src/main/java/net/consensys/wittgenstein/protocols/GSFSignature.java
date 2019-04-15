@@ -645,7 +645,8 @@ public class GSFSignature implements Protocol {
 
     p.init();
     int freq = 1;
-    NodeDrawer nd = new NodeDrawer(new GFSNodeStatus(params), new File("/tmp/handel_anim.gif"), Math.max(10, freq));
+    NodeDrawer nd = new NodeDrawer(new GFSNodeStatus(params), new File("/tmp/handel_anim.gif"),
+        Math.max(10, freq));
     int i = 0;
     do {
       p.network.runMs(freq);
