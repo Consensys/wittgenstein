@@ -70,7 +70,8 @@ public class ProgressPerTime {
       StatsHelper.Stat s;
       do {
         p.network().runMs(statEachXms);
-        liveNodes = p.network().allNodes.stream().filter(n -> !n.down).collect(Collectors.toList());
+        liveNodes =
+            p.network().allNodes.stream().filter(n -> !n.isDown()).collect(Collectors.toList());
         s = statsGetter.get(liveNodes);
         for (String field : statsGetter.fields()) {
           rawResult.get(field).addLine(new Graph.ReportLine(p.network().time, s.get(field)));
@@ -92,7 +93,7 @@ public class ProgressPerTime {
       System.out.println("done at: " + StatsHelper.getStatsOn(liveNodes, Node::getDoneAt));
       System.out.println("Simulation execution time: " + ((endAt - startAt) / 1000) + "s");
       System.out.println("Number of nodes that are down: "
-          + p.network().allNodes.stream().filter(n -> n.down).count());
+          + p.network().allNodes.stream().filter(n -> n.isDown()).count());
       System.out.println("Total Number of peers " + p.network().allNodes.size());
     }
 

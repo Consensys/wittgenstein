@@ -16,10 +16,43 @@ import java.util.List;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Allows to draw the nodes on the worlds map. Generates an animated gif. This gif is not
+ * compressed, so you will want to compress it: ffmpeg -f gif -i handel_anim.gif handel.mp4
+ */
 public class NodeDrawer implements Closeable {
   private final static int SIZE = 6;
   private final static int MAX_X = Node.MAX_X;
   private final static int MAX_Y = Node.MAX_Y;
+
+
+  /**
+   * The interface to implement to plug-in the protocol's status:
+   */
+  public interface NodeStatus {
+
+    /**
+     * @return the value associated to this node
+     */
+    int getVal(Node n);
+
+    /**
+     * @return if the node is 'special'. This node will be marked with a dot;.
+     */
+    boolean isSpecial(Node n);
+
+    /**
+     * @return the maximum value that can be associated to a node. This value will be shown as
+     *         green.
+     */
+    int getMax();
+
+    /**
+     * @return the minimum value that can be associated to a node. This value will be shown as red.
+     */
+    int getMin();
+  }
+
 
   private static class Pos {
     final int x;
@@ -38,8 +71,6 @@ public class NodeDrawer implements Closeable {
    */
   private GifSequenceWriter writer;
   private ImageOutputStream output;
-
-
 
   /**
    * Keep tracks of the dots already used in the image, to be sure that the nodes are not
@@ -91,29 +122,7 @@ public class NodeDrawer implements Closeable {
     return bi;
   }
 
-  public interface NodeStatus {
 
-    /**
-     * @return the value associated to this node
-     */
-    int getVal(Node n);
-
-    /**
-     * @return the maximum value that can be associated to a node. This value will be shown as
-     *         green.
-     */
-    int getMax();
-
-    /**
-     * @return the minimum value that can be associated to a node. This value will be shown as red.
-     */
-    int getMin();
-
-    /**
-     * @return if the node is 'special'. This node will be marked with a dot;.
-     */
-    boolean isSpecial(Node n);
-  }
 
   private boolean isFree(int x, int y) {
     if (x < 1 || x >= MAX_X - SIZE) {
@@ -268,6 +277,8 @@ public class NodeDrawer implements Closeable {
     ImageOutputStream ios = ImageIO.createImageOutputStream(gifFile);
     imageWriter.setOutput(ios);
     imageWriter.write(bi);
+    imageWriter.dispose();
+    ios.close();
   }
 
   @Override
@@ -281,6 +292,4 @@ public class NodeDrawer implements Closeable {
       }
     }
   }
-
-
 }

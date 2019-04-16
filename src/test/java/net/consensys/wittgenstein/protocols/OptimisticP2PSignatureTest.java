@@ -22,7 +22,7 @@ public class OptimisticP2PSignatureTest {
     Assert.assertEquals(nCt, p.network().allNodes.size());
     for (Node nc : p.network().allNodes) {
       OptimisticP2PSignature.P2PSigNode n = (OptimisticP2PSignature.P2PSigNode) nc;
-      Assert.assertFalse(n.down);
+      Assert.assertFalse(n.isDown());
       Assert.assertTrue(n.doneAt > 0);
       Assert.assertTrue(n.done);
       Assert.assertTrue(n.verifiedSignatures.cardinality() > nCt / 2);

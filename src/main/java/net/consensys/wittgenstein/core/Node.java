@@ -37,7 +37,8 @@ public class Node {
 
   /**
    * Some nodes can be behind Tor, or for any reason may suffer and extra latency (both in & out)
-   * when they communicate. By default there is no such latency.
+   * when they communicate. By default there is no such latency. This extra latency is a fixed
+   * number of milliseconds.
    */
   public int extraLatency;
 
@@ -49,12 +50,6 @@ public class Node {
   public final boolean byzantine;
 
   /**
-   * A basic error scenario is a node down. When a node is down it cannot receive not send messages,
-   * but the other nodes don't know about this.
-   */
-  public boolean down;
-
-  /**
    * Some scenarios are interesting when the nodes are heterogeneous: Having some nodes lagging
    * behind in the network can be very troublesome for some protocols. A speed ratio of 1 (the
    * default) means this node is standard. It's possible to have faster or slower nodes. It's up to
@@ -62,21 +57,36 @@ public class Node {
    * used in the network layer itself: use the latency models if you want to act at the network
    * layer. A number greater then 1 represents a node slower than the standard.
    */
-  public double speedRatio;
+  public final double speedRatio;
 
-  protected long msgReceived = 0;
-  protected long msgSent = 0;
-  protected long bytesSent = 0;
-  protected long bytesReceived = 0;
-  public String cityName;
+  /**
+   * For some model latency we need to know in which town the node is.
+   */
+  public final String cityName;
 
-  @JsonSerialize(converter = ExternalConverter.class)
-  private External external = null;
+  /**
+   * A basic error scenario is a node down. When a node is down it cannot receive not send messages,
+   * but the other nodes don't know about this.
+   */
+  private boolean down;
 
   /**
    * The time when the protocol ended for this node 0 if it has not ended yet.
    */
   public long doneAt = 0;
+
+
+  /**
+   * Some internal statistics.
+   */
+  protected long msgReceived = 0;
+  protected long msgSent = 0;
+  protected long bytesSent = 0;
+  protected long bytesReceived = 0;
+
+  @JsonSerialize(converter = ExternalConverter.class)
+  private External external = null;
+
 
   public long getMsgReceived() {
     return msgReceived;
@@ -121,6 +131,10 @@ public class Node {
     down = true;
   }
 
+
+  public boolean isDown() {
+    return down;
+  }
 
   public void setExternal(External ext) {
     this.external = ext;

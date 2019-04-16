@@ -23,9 +23,9 @@ import java.io.IOException;
 import java.util.Iterator;
 
 public class GifSequenceWriter {
-  protected ImageWriter gifWriter;
-  protected ImageWriteParam imageWriteParam;
-  protected IIOMetadata imageMetaData;
+  private ImageWriter gifWriter;
+  private ImageWriteParam imageWriteParam;
+  private IIOMetadata imageMetaData;
 
   /**
    * Creates a new GifSequenceWriter
@@ -39,7 +39,7 @@ public class GifSequenceWriter {
    * @author Elliot Kroo (elliot[at]kroo[dot]net)
    */
   public GifSequenceWriter(ImageOutputStream outputStream, int imageType, int timeBetweenFramesMS,
-      boolean loopContinuously) throws IIOException, IOException {
+      boolean loopContinuously) throws IOException {
     // my method to create a writer
     gifWriter = getWriter();
     imageWriteParam = gifWriter.getDefaultWriteParam();
@@ -96,6 +96,7 @@ public class GifSequenceWriter {
    */
   public void close() throws IOException {
     gifWriter.endWriteSequence();
+    gifWriter.dispose();
   }
 
   /**

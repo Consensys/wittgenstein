@@ -286,7 +286,7 @@ public class Network<TN extends Node> {
 
     if (time == 0) {
       for (Node n : allNodes) {
-        if (!n.down) {
+        if (!n.isDown()) {
           n.start();
         }
       }
@@ -418,7 +418,7 @@ public class Network<TN extends Node> {
     assert !(m instanceof Task);
     fromNode.msgSent++;
     fromNode.bytesSent += m.size();
-    if (partitionId(fromNode) == partitionId(toNode) && !fromNode.down && !toNode.down) {
+    if (partitionId(fromNode) == partitionId(toNode) && !fromNode.isDown() && !toNode.isDown()) {
       int nt =
           networkLatency.getLatency(fromNode, toNode, getPseudoRandom(toNode.nodeId, randomSeed));
       if (nt < msgDiscardTime) {
@@ -566,7 +566,7 @@ public class Network<TN extends Node> {
   }
 
   public List<TN> liveNodes() {
-    return allNodes.stream().filter(n -> !n.down).collect(Collectors.toList());
+    return allNodes.stream().filter(n -> !n.isDown()).collect(Collectors.toList());
   }
 
   public Network<TN> setNetworkLatency(int[] distribProp, int[] distribVal) {

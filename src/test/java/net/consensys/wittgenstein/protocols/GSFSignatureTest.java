@@ -73,7 +73,7 @@ public class GSFSignatureTest {
     GSFSignature p = new GSFSignature(
         new GSFSignature.GSFSignatureParameters(32, 0.8, 3, 20, 10, 10, 0.1, nb, nl));
     p.init();
-    long dead = p.network.allNodes.stream().filter(n -> n.down).count();
+    long dead = p.network.allNodes.stream().filter(n -> n.isDown()).count();
     Assert.assertEquals(3, dead);
   }
 
@@ -111,7 +111,7 @@ public class GSFSignatureTest {
 
     Assert.assertEquals(64, p.network().allNodes.size());
     for (GSFSignature.GSFNode n : p.network.allNodes) {
-      if (n.down) {
+      if (n.isDown()) {
         Assert.assertEquals(1, n.verifiedSignatures.cardinality());
       } else {
         Assert.assertTrue(n.verifiedSignatures.cardinality() >= 32);

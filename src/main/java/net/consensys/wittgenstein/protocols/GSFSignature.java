@@ -567,15 +567,15 @@ public class GSFSignature implements Protocol {
     for (int setDown = 0; setDown < params.nodesDown;) {
       int down = network.rd.nextInt(params.nodeCount);
       Node n = network.allNodes.get(down);
-      if (!n.down && down != 1) {
+      if (!n.isDown() && down != 1) {
         // We keep the node 1 up to help on debugging
-        n.down = true;
+        n.stop();
         setDown++;
       }
     }
 
     for (GSFNode n : network.allNodes) {
-      if (!n.down) {
+      if (!n.isDown()) {
         n.initLevel();
         network.registerPeriodicTask(n::doCycle, 1, params.periodDurationMs, n);
         network.registerConditionalTask(n::checkSigs, 1, n.nodePairingTime, n,
@@ -636,7 +636,7 @@ public class GSFSignature implements Protocol {
         GSFNode gn = (GSFNode) n;
         // All up nodes must have reached the threshold, so if one live
         //  node has not reached it we continue
-        if (!n.down && gn.verifiedSignatures.cardinality() < p.params.threshold) {
+        if (!n.isDown() && gn.verifiedSignatures.cardinality() < p.params.threshold) {
           return true;
         }
       }
@@ -710,7 +710,7 @@ public class GSFSignature implements Protocol {
         GSFNode gn = (GSFNode) n;
         // All up nodes must have reached the threshold, so if one live
         //  node has not reached it we continue
-        if (!n.down && gn.verifiedSignatures.cardinality() < p.params.threshold) {
+        if (!n.isDown() && gn.verifiedSignatures.cardinality() < p.params.threshold) {
           return true;
         }
       }

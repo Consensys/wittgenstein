@@ -1,5 +1,7 @@
 package net.consensys.wittgenstein.protocols;
 
+import net.consensys.wittgenstein.core.Node;
+import net.consensys.wittgenstein.tools.NodeDrawer;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -13,7 +15,7 @@ public class PingPongTest {
 
     Assert.assertEquals(p.params.nodeCt, p.network().allNodes.size());
     for (PingPong.PingPongNode n : p.network().allNodes) {
-      Assert.assertFalse(n.down);
+      Assert.assertFalse(n.isDown());
       Assert.assertTrue(n.pong == 0 || n.pong == 1000);
     }
   }

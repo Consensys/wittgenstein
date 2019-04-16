@@ -44,7 +44,7 @@ public class EnvelopeStorageTest {
     Assert.assertEquals(m1, network.msgs.poll(1));
     Assert.assertNull(network.msgs.peek(1));
 
-    Envelope<Node> m3 = new Envelope.SingleDestEnvelope<>(dummy, n0, n1, 1, network.duration + 1);
+    Envelope<Node> m3 = new Envelope.SingleDestEnvelope<>(dummy, n0, n1, 1, Network.duration + 1);
     network.msgs.addMsg(m3);
     Assert.assertEquals(2, network.msgs.msgsBySlot.size());
 
