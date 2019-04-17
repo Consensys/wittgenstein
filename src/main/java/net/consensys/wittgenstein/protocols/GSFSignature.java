@@ -7,6 +7,8 @@ import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.server.WParameters;
+import net.consensys.wittgenstein.tools.NodeDrawer;
+import java.io.File;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
@@ -22,6 +24,7 @@ public class GSFSignature implements Protocol {
   GSFSignatureParameters params;
   final Network<GSFNode> network = new Network<>();
   NodeBuilder nb;
+
 
   public static class GSFSignatureParameters extends WParameters {
     /**
@@ -47,6 +50,8 @@ public class GSFSignature implements Protocol {
     final String nodeBuilderName;
     final String networkLatencyName;
 
+    // Used for json / http server
+    @SuppressWarnings("unused")
     public GSFSignatureParameters() {
       this.nodeCount = 32768 / 32;;
       this.threshold = (int) (nodeCount * (0.99));
@@ -86,18 +91,11 @@ public class GSFSignature implements Protocol {
     }
   }
 
-
-  public GSFSignature(GSFSignatureParameters params, NodeBuilder nb, NetworkLatency nl) {
-    this.params = params;
-    this.nb = nb;
-    this.network.setNetworkLatency(nl);
-  }
-
   public GSFSignature(GSFSignatureParameters params) {
     this.params = params;
-    this.nb = new NodeBuilder.NodeBuilderWithRandomPosition();
-    this.network.setNetworkLatency(new NetworkLatency.IC3NetworkLatency());
-
+    this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);
+    this.network
+        .setNetworkLatency(new RegistryNetworkLatencies().getByName(params.networkLatencyName));
   }
 
 
@@ -115,6 +113,7 @@ public class GSFSignature implements Protocol {
     final int level;
     final boolean levelFinished;
     final int size;
+    final int received;
 
     public SendSigs(BitSet sigs, GSFNode.SFLevel l) {
       this.sigs = (BitSet) sigs.clone();
@@ -122,6 +121,7 @@ public class GSFSignature implements Protocol {
       // Size = level + bit field + the signatures included + our own sig
       this.size = 1 + l.expectedSigs() / 8 + 96;
       this.levelFinished = l.verifiedSignatures.equals(l.waitedSigs);
+      this.received = l.verifiedSignatures.cardinality();
     }
 
     @Override
@@ -207,11 +207,13 @@ public class GSFSignature implements Protocol {
     public class SFLevel {
       final int level;
       @JsonSerialize(converter = ListNodeConverter.class)
-      final List<GSFNode> peers; // The peers when we have all signatures for this level.
+      final List<GSFNode> peers;
+      // The peers when we have all signatures for this level.
       final BitSet waitedSigs; // 1 for the signatures we should have at this level
       final BitSet verifiedSignatures = new BitSet(); // The signatures verified in this level
       final BitSet individualSignatures = new BitSet(); // The individual signatures received
       final BitSet indivVerifiedSig = new BitSet(); // The individual signatures verified
+      final Map<GSFNode, Integer> received = new HashMap<>();
 
       /**
        * We're going to contact all nodes, one after the other. That's our position in the peers'
@@ -300,14 +302,24 @@ public class GSFSignature implements Protocol {
       List<GSFNode> getRemainingPeers(int peersCt) {
         List<GSFNode> res = new ArrayList<>(peersCt);
 
+
+        int start = posInLevel;
         while (peersCt > 0 && remainingCalls > 0) {
           remainingCalls--;
 
           GSFNode p = peers.get(posInLevel++);
-          res.add(p);
-          peersCt--;
           if (posInLevel >= peers.size()) {
             posInLevel = 0;
+          }
+
+          Integer count = received.get(p);
+          if (count == null || true) {
+            res.add(p);
+            peersCt--;
+          } else {
+            if (posInLevel == start) {
+              remainingCalls = 0;
+            }
           }
         }
 
@@ -505,6 +517,10 @@ public class GSFSignature implements Protocol {
     void onNewSig(GSFNode from, SendSigs ssigs) {
       SFLevel l = levels.get(ssigs.level);
 
+      if (ssigs.levelFinished) {
+        l.received.put(from, 1);
+      }
+
       toVerify.add(ssigs);
 
       // We add the individual signature as a way to resist byzantine attacks
@@ -556,7 +572,7 @@ public class GSFSignature implements Protocol {
 
   @Override
   public GSFSignature copy() {
-    return new GSFSignature(params, nb.copy(), this.network.networkLatency);
+    return new GSFSignature(params);
   }
 
   public void init() {
@@ -568,15 +584,15 @@ public class GSFSignature implements Protocol {
     for (int setDown = 0; setDown < params.nodesDown;) {
       int down = network.rd.nextInt(params.nodeCount);
       Node n = network.allNodes.get(down);
-      if (!n.down && down != 1) {
+      if (!n.isDown() && down != 1) {
         // We keep the node 1 up to help on debugging
-        n.down = true;
+        n.stop();
         setDown++;
       }
     }
 
     for (GSFNode n : network.allNodes) {
-      if (!n.down) {
+      if (!n.isDown()) {
         n.initLevel();
         network.registerPeriodicTask(n::doCycle, 1, params.periodDurationMs, n);
         network.registerConditionalTask(n::checkSigs, 1, n.nodePairingTime, n,
@@ -590,24 +606,90 @@ public class GSFSignature implements Protocol {
     return network;
   }
 
-  public static void sigsPerTime() {
-    int nodeCt = 32768 / 32;
 
-    String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
+  static class GFSNodeStatus implements NodeDrawer.NodeStatus {
+    final GSFSignatureParameters params;
+
+    GFSNodeStatus(GSFSignatureParameters params) {
+      this.params = params;
+    }
+
+    @Override
+    public int getMax() {
+      return params.nodeCount;
+    }
+
+    @Override
+    public int getMin() {
+      return 1;
+    }
+
+    @Override
+    public int getVal(Node n) {
+      return ((GSFNode) n).verifiedSignatures.cardinality();
+    }
+
+    @Override
+    public boolean isSpecial(Node n) {
+      return n.extraLatency > 0;
+    }
+  }
+
+  public static void drawImgs() {
+    int nodeCt = 32768 / 8;
+
     final Node.SpeedModel sm = new Node.ParetoSpeed(1, 0.2, 0.4, 3);
-    String nb = RegistryNodeBuilders.AWS_SITE;
-    /*
-    nl = new NetworkLatency.NetworkLatencyByDistance();
-    nb =new Node.NodeBuilderWithRandomPosition(sm);
-    //nl = new NetworkLatency.NetworkNoLatency();
-       // nl = new NetworkLatency.IC3NetworkLatency();
-    
-    nl = new NetworkLatency.NetworkLatencyByCity(new CSVLatencyReader());
-    nb = new Node.NodeBuilderWithCity(new CSVLatencyReader().cities());
-    */
+    String nb = RegistryNodeBuilders.AWS_WITH_1THIRD_TOR;
+    //String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
+    String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
+
     int ts = (int) (.99 * nodeCt);
-    GSFSignature p =
-        new GSFSignature(new GSFSignatureParameters(nodeCt, ts, 3, 50, 10, 10, 0, nb, nl));
+    GSFSignatureParameters params =
+        new GSFSignatureParameters(nodeCt, ts, 4, 50, 20, 10, 0, nb, nl);
+    GSFSignature p = new GSFSignature(params);
+
+    Predicate<Protocol> contIf = p1 -> {
+      for (Node n : p1.network().allNodes) {
+        GSFNode gn = (GSFNode) n;
+        // All up nodes must have reached the threshold, so if one live
+        //  node has not reached it we continue
+        if (!n.isDown() && gn.verifiedSignatures.cardinality() < p.params.threshold) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    p.init();
+    int freq = 1;
+    NodeDrawer nd = new NodeDrawer(new GFSNodeStatus(params), new File("/tmp/handel_anim.gif"),
+        Math.max(10, freq));
+    int i = 0;
+    do {
+      p.network.runMs(freq);
+
+      nd.drawNewState(p.network.time, TimeUnit.MILLISECONDS, p.network.liveNodes());
+      if (i % 100 == 0) {
+        nd.writeLastToGif(new File("/tmp/img_" + i + ".gif"));
+      }
+      i++;
+
+    } while (contIf.test(p));
+    nd.close();
+  }
+
+
+  public static void sigsPerTime() {
+    int nodeCt = 32768 / 8;
+
+    final Node.SpeedModel sm = new Node.ParetoSpeed(1, 0.2, 0.4, 3);
+    String nb = RegistryNodeBuilders.AWS_WITH_1THIRD_TOR;
+    String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
+
+    int ts = (int) (.99 * nodeCt);
+    GSFSignatureParameters params =
+        new GSFSignatureParameters(nodeCt, ts, 4, 50, 20, 10, 0, nb, nl);
+    GSFSignature p = new GSFSignature(params);
 
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
       final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
@@ -646,7 +728,7 @@ public class GSFSignature implements Protocol {
         GSFNode gn = (GSFNode) n;
         // All up nodes must have reached the threshold, so if one live
         //  node has not reached it we continue
-        if (!n.down && gn.verifiedSignatures.cardinality() < p.params.threshold) {
+        if (!n.isDown() && gn.verifiedSignatures.cardinality() < p.params.threshold) {
           return true;
         }
       }
@@ -658,5 +740,6 @@ public class GSFSignature implements Protocol {
 
   public static void main(String... args) {
     sigsPerTime();
+    //drawImgs();
   }
 }

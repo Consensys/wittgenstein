@@ -29,6 +29,7 @@ public class FloodMessage<TN extends P2PNode<TN>> extends Message<TN> {
   }
 
   // for json
+  @SuppressWarnings("unused")
   public FloodMessage() {
     this(0, 0, 0);
   }

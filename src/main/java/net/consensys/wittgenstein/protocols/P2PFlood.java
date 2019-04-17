@@ -30,7 +30,9 @@ public class P2PFlood implements Protocol {
      */
     P2PFloodNode(NodeBuilder nb, boolean down) {
       super(network.rd, nb, down);
-      this.down = down;
+      if (down) {
+        stop();
+      }
     }
 
     @Override
@@ -140,7 +142,7 @@ public class P2PFlood implements Protocol {
     while (senders.size() < params.msgCount) {
       int nodeId = network.rd.nextInt(params.nodeCount);
       P2PFloodNode from = network.getNodeById(nodeId);
-      if (!from.down && senders.add(nodeId)) {
+      if (!from.isDown() && senders.add(nodeId)) {
         FloodMessage<P2PFloodNode> m =
             new FloodMessage<>(1, params.delayBeforeResent, params.delayBetweenSends);
         network.sendPeers(m, from);
@@ -169,7 +171,7 @@ public class P2PFlood implements Protocol {
       }
 
       for (Node n : p1.network().allNodes) {
-        if (!n.down && n.getDoneAt() == 0) {
+        if (!n.isDown() && n.getDoneAt() == 0) {
           return true;
         }
       }

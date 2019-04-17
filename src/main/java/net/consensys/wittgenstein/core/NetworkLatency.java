@@ -13,7 +13,7 @@ public abstract class NetworkLatency {
   /**
    * @param delta - a random number between 0 & 99. Used to randomize the result
    */
-  public abstract int getLatency(Node from, Node to, int delta);
+  protected abstract int getExtendedLatency(Node from, Node to, int delta);
 
   @Override
   public String toString() {
@@ -24,6 +24,15 @@ public abstract class NetworkLatency {
     if (delta < 0 || delta > 99) {
       throw new IllegalArgumentException("delta=" + delta);
     }
+  }
+
+  protected int getLatency(Node from, Node to, int delta) {
+    if (from == to) {
+      return 1;
+    }
+    int base = from.extraLatency + to.extraLatency;
+    base += getExtendedLatency(from, to, delta);
+    return Math.max(1, base);
   }
 
   /**
@@ -62,11 +71,10 @@ public abstract class NetworkLatency {
     }
 
     @Override
-    public int getLatency(Node from, Node to, int delta) {
+    public int getExtendedLatency(Node from, Node to, int delta) {
       checkDelta(delta);
       double raw = getFixedLatency(from.dist(to)) + getVariableLatency(delta);
-
-      return (int) Math.max(1, raw / 2);
+      return (int) (raw / 2);
     }
   }
 
@@ -76,7 +84,7 @@ public abstract class NetworkLatency {
    * https://www.cloudping.co : this web site gives the latest ping measured. Ping can vary a lot
    * other time. We include the variation from NetworkLatencyByDistance.
    * <p>
-   *
+   * <p>
    * Some data can be wrong sometimes. We set a minimum value of 1.
    *
    * @see NodeBuilder.NodeBuilderWithCity
@@ -131,7 +139,7 @@ public abstract class NetworkLatency {
       return Math.max(1, latencies[minReg][maxReg] / 2 + (int) var.getVariableLatency(delta));
     }
 
-    public int getLatency(Node from, Node to, int delta) {
+    public int getExtendedLatency(Node from, Node to, int delta) {
       Integer reg1 = regionPerCity.get(from.cityName);
       Integer reg2 = regionPerCity.get(to.cityName);
 
@@ -151,7 +159,7 @@ public abstract class NetworkLatency {
       this.latencyMatrix = csvLatencyReader.getLatencyMatrix();
     }
 
-    public int getLatency(Node from, Node to, int delta) {
+    public int getExtendedLatency(Node from, Node to, int delta) {
       if (from.nodeId == to.nodeId) {
         return 1;
       }
@@ -176,11 +184,31 @@ public abstract class NetworkLatency {
     }
   }
 
+
+  public static class NetworkFixedLatency extends NetworkLatency {
+    final int fixedLatency;
+
+    public NetworkFixedLatency(int fixedLatency) {
+      this.fixedLatency = fixedLatency;
+    }
+
+    public int getExtendedLatency(Node from, Node to, int delta) {
+      return fixedLatency;
+    }
+
+
+    public String toString() {
+      return "fixedLatency:" + fixedLatency;
+    }
+  }
+
+
   public static class NetworkNoLatency extends NetworkLatency {
-    public int getLatency(Node from, Node to, int delta) {
+    public int getExtendedLatency(Node from, Node to, int delta) {
       return 1;
     }
   }
+
 
   public static class MeasuredNetworkLatency extends NetworkLatency {
     final int[] longDistrib = new int[100];
@@ -218,7 +246,7 @@ public abstract class NetworkLatency {
     }
 
     @Override
-    public int getLatency(Node from, Node to, int delta) {
+    public int getExtendedLatency(Node from, Node to, int delta) {
       checkDelta(delta);
       return longDistrib[delta];
     }
@@ -280,7 +308,7 @@ public abstract class NetworkLatency {
         new NetworkLatency.MeasuredNetworkLatency(distribProp, distribVal);
 
     @Override
-    public int getLatency(Node from, Node to, int delta) {
+    public int getExtendedLatency(Node from, Node to, int delta) {
       return networkLatency.getLatency(from, to, delta);
     }
 
@@ -320,7 +348,7 @@ public abstract class NetworkLatency {
     protected static final int SW = 350;
 
     @Override
-    public int getLatency(Node from, Node to, int delta) {
+    public int getExtendedLatency(Node from, Node to, int delta) {
       double dist = from.dist(to);
       double surface = dist * dist * Math.PI;
       double totalSurface = Node.MAX_X * Node.MAX_Y;

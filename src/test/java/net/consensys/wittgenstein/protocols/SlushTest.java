@@ -6,12 +6,12 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class SlushTest {
-  final String nb = RegistryNodeBuilders.RANDOM_POSITION;
-  final String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
+  private final String nb = RegistryNodeBuilders.RANDOM_POSITION;
+  private final String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
 
   @Test
   public void testSimple() {
-    Slush p = new Slush(new Slush.SlushParameters(100, 5, 7, 4.0 / 7.0, nb, nl));
+    Slush p = new Slush(new Slush.SlushParameters(100, 7, 7, 4.0 / 7.0, nb, nl));
     p.init();
     p.network().run(10);
 

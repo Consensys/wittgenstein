@@ -5,13 +5,14 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import net.consensys.wittgenstein.core.json.ExternalConverter;
 import net.consensys.wittgenstein.core.utils.GeneralizedParetoDistribution;
 import net.consensys.wittgenstein.server.External;
+import java.util.List;
 import java.util.Random;
 
 @SuppressWarnings({"WeakerAccess"})
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public class Node {
-  public final static int MAX_X = 1000;
-  public final static int MAX_Y = 1000;
+  public final static int MAX_X = 2000;
+  public final static int MAX_Y = 1112;
   public final static int MAX_DIST =
       (int) Math.sqrt((MAX_X / 2.0) * (MAX_X / 2.0) + (MAX_Y / 2.0) * (MAX_Y / 2.0));
   public final static String DEFAULT_CITY = "world";
@@ -35,17 +36,18 @@ public class Node {
   public final int y;
 
   /**
+   * Some nodes can be behind Tor, or for any reason may suffer and extra latency (both in & out)
+   * when they communicate. By default there is no such latency. This extra latency is a fixed
+   * number of milliseconds.
+   */
+  public int extraLatency;
+
+  /**
    * A protocol implementation may want to implement some byzantine behavior for some nodes. This
    * boolean marks, for statistics only, that this node is a byzantine node. It's not use anywhere
    * else in the framework.
    */
   public final boolean byzantine;
-
-  /**
-   * A basic error scenario is a node down. When a node is down it cannot receive not send messages,
-   * but the other nodes don't know about this.
-   */
-  public boolean down;
 
   /**
    * Some scenarios are interesting when the nodes are heterogeneous: Having some nodes lagging
@@ -55,21 +57,36 @@ public class Node {
    * used in the network layer itself: use the latency models if you want to act at the network
    * layer. A number greater then 1 represents a node slower than the standard.
    */
-  public double speedRatio;
+  public final double speedRatio;
 
-  protected long msgReceived = 0;
-  protected long msgSent = 0;
-  protected long bytesSent = 0;
-  protected long bytesReceived = 0;
-  public String cityName;
+  /**
+   * For some model latency we need to know in which town the node is.
+   */
+  public final String cityName;
 
-  @JsonSerialize(converter = ExternalConverter.class)
-  private External external = null;
+  /**
+   * A basic error scenario is a node down. When a node is down it cannot receive not send messages,
+   * but the other nodes don't know about this.
+   */
+  private boolean down;
 
   /**
    * The time when the protocol ended for this node 0 if it has not ended yet.
    */
   public long doneAt = 0;
+
+
+  /**
+   * Some internal statistics.
+   */
+  protected long msgReceived = 0;
+  protected long msgSent = 0;
+  protected long bytesSent = 0;
+  protected long bytesReceived = 0;
+
+  @JsonSerialize(converter = ExternalConverter.class)
+  private External external = null;
+
 
   public long getMsgReceived() {
     return msgReceived;
@@ -115,12 +132,50 @@ public class Node {
   }
 
 
+  public boolean isDown() {
+    return down;
+  }
+
   public void setExternal(External ext) {
     this.external = ext;
   }
 
   public External getExternal() {
     return external;
+  }
+
+
+  public static class Aspect {
+    public Object getObjectValue(Random rd) {
+      return null;
+    }
+  }
+
+
+  public static class ExtraLatencyAspect extends Aspect {
+    final double ratio;
+
+    public ExtraLatencyAspect(double ratio) {
+      this.ratio = ratio;
+    }
+
+    public Object getObjectValue(Random rd) {
+      return rd.nextDouble() < ratio ? 500 : 0;
+    }
+  }
+
+
+  public static class SpeedRatioAspect extends Aspect {
+    final SpeedModel sm;
+
+    SpeedRatioAspect(SpeedModel sm) {
+      this.sm = sm;
+    }
+
+    @Override
+    public Object getObjectValue(Random rd) {
+      return sm.getSpeedRatio(rd);
+    }
   }
 
 
@@ -132,19 +187,6 @@ public class Node {
    */
   public interface SpeedModel {
     double getSpeedRatio(Random rd);
-  }
-
-
-  public static class ConstantSpeed implements SpeedModel {
-    @Override
-    public double getSpeedRatio(Random rd) {
-      return 1.0;
-    }
-
-    @Override
-    public String toString() {
-      return this.getClass().getSimpleName();
-    }
   }
 
 
@@ -168,14 +210,25 @@ public class Node {
     }
   }
 
+  private static Object getAspectValue(Class<?> aspectClass, List<Aspect> aspects, Random rd,
+      Object defVal) {
+    for (Aspect aspect : aspects) {
+      if (aspect.getClass().equals(aspectClass)) {
+        return aspect.getObjectValue(rd);
+      }
+    }
+    return defVal;
+  }
 
   public Node(Random rd, NodeBuilder nb, boolean byzantine) {
     this.nodeId = nb.allocateNodeId();
     if (this.nodeId < 0) {
       throw new IllegalArgumentException("bad nodeId:" + nodeId);
     }
-    this.x = nb.getX(rd);
-    this.y = nb.getY(rd);
+    int rdNode = rd.nextInt();
+    this.cityName = nb.getCityName(rdNode);
+    this.x = nb.getX(rdNode);
+    this.y = nb.getY(rdNode);
     if (this.x <= 0 || this.x > MAX_X) {
       throw new IllegalArgumentException("bad x=" + x);
     }
@@ -184,8 +237,9 @@ public class Node {
     }
     this.byzantine = byzantine;
     this.hash256 = nb.getHash(nodeId);
-    this.cityName = nb.getCityName(rd);
-    this.speedRatio = nb.getSpeedRatio(rd);
+
+    this.speedRatio = (double) getAspectValue(SpeedRatioAspect.class, nb.aspects, rd, 1.0);
+    this.extraLatency = (int) getAspectValue(ExtraLatencyAspect.class, nb.aspects, rd, 0);
   }
 
   public Node(Random rd, NodeBuilder nb) {

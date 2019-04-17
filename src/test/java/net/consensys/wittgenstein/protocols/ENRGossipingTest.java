@@ -31,7 +31,7 @@ public class ENRGossipingTest {
       ENRGossiping.ETHNode n2 = p2.network().getNodeById(n1.nodeId);
       Assert.assertNotNull(n2);
       Assert.assertEquals(n1.doneAt, n2.doneAt);
-      Assert.assertEquals(n1.down, n2.down);
+      Assert.assertEquals(n1.isDown(), n2.isDown());
       Assert.assertEquals(n1.getMsgReceived(-1).size(), n2.getMsgReceived(-1).size());
       Assert.assertEquals(n1.x, n2.x);
       Assert.assertEquals(n1.y, n2.y);

@@ -25,6 +25,7 @@ public class PeriodicTask<TN extends Node> extends Task<TN> {
   }
 
   // For json
+  @SuppressWarnings("unused")
   public PeriodicTask() {
     super(null);
     period = -1;
@@ -38,6 +39,8 @@ public class PeriodicTask<TN extends Node> extends Task<TN> {
 
   @Override
   public void action(Network<TN> network, TN from, TN to) {
+    assert r != null;
+    assert continuationCondition != null;
     r.run();
     if (continuationCondition.check()) {
       network.sendArriveAt(this, network.time + period, sender, sender);

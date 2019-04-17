@@ -270,7 +270,7 @@ public class CasperIMDTest {
         CasperIMD.CasperNode n2 = p2.network().getNodeById(n1.nodeId);
         Assert.assertNotNull(n2);
         Assert.assertEquals(n1.doneAt, n2.doneAt);
-        Assert.assertEquals(n1.down, n2.down);
+        Assert.assertEquals(n1.isDown(), n2.isDown());
         Assert.assertEquals(n1.head.proposalTime, n2.head.proposalTime);
         Assert.assertEquals(n1.attestationsByHead.size(), n2.attestationsByHead.size());
         Assert.assertEquals(n1.getMsgReceived(), n2.getMsgReceived());

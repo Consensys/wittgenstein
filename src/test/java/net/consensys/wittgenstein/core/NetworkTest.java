@@ -346,7 +346,7 @@ public class NetworkTest {
     AtomicInteger ai = new AtomicInteger(0);
     NodeBuilder nb = new NodeBuilder() {
       @Override
-      protected int getX(Random rd) {
+      protected int getX(int rdi) {
         return ai.addAndGet(Node.MAX_X / 10);
       }
     };

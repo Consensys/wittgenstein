@@ -153,7 +153,7 @@ public class ENRGossiping implements Protocol {
     network.addNode(n);
     while (n.peers.size() < params.totalPeers) {
       int peerId = network.rd.nextInt(network.allNodes.size());
-      if (!network.getNodeById(peerId).down)
+      if (!network.getNodeById(peerId).isDown())
         network.createLink(n, network.getNodeById(peerId));
     }
     n.start();
@@ -250,7 +250,7 @@ public class ENRGossiping implements Protocol {
     }
 
     boolean canConnect(ETHNode p) {
-      return !p.down && p.peers.size() < params.maxPeers;
+      return !p.isDown() && p.peers.size() < params.maxPeers;
     }
 
     ETHNode(Random rd, NodeBuilder nb, Set<String> capabilities) {
@@ -429,7 +429,7 @@ public class ENRGossiping implements Protocol {
     }
 
     void exitNetwork() {
-      long live = network.allNodes.stream().filter(n -> !n.down).count();
+      long live = network.allNodes.stream().filter(n -> !n.isDown()).count();
       if (live <= params.totalPeers) {
         throw new IllegalStateException("We don't have enough peers left, live=" + live
             + ", params.totalPeers=" + params.totalPeers);
