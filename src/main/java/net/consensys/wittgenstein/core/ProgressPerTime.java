@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -22,10 +23,11 @@ public class ProgressPerTime {
   private final int roundCount;
   private final OnSingleRunEnd endCallback;
   private final int statEachXms;
+  private final TimeUnit timeUnit;
 
   public ProgressPerTime(Protocol template, String configDesc, String yAxisDesc,
       StatsHelper.StatsGetter statsGetter, int roundCount, OnSingleRunEnd endCallback,
-      int statEachXms) {
+      int statEachXms, TimeUnit timeUnit) {
     if (roundCount <= 0) {
       throw new IllegalArgumentException(
           "roundCount must be greater than 0. roundCount=" + roundCount);
@@ -38,6 +40,7 @@ public class ProgressPerTime {
     this.roundCount = roundCount;
     this.endCallback = endCallback;
     this.statEachXms = statEachXms;
+    this.timeUnit = timeUnit == null ? TimeUnit.MILLISECONDS : timeUnit;
   }
 
   public interface OnSingleRunEnd {
@@ -62,7 +65,6 @@ public class ProgressPerTime {
       Protocol p = protocol.copy();
       p.network().rd.setSeed(r);
       p.init();
-
       System.out.println("round=" + r + ", " + p + " " + configDesc);
 
       Map<String, Graph.Series> rawResult = new HashMap<>();
@@ -124,7 +126,8 @@ public class ProgressPerTime {
     }
 
     protocol.init();
-    Graph graph = new Graph(protocol + " " + configDesc, "time in ms", yAxisDesc);
+    Graph graph = new Graph(protocol + " " + configDesc,
+        "time in " + timeUnit.toString().toLowerCase(), yAxisDesc);
 
     for (String field : statsGetter.fields()) {
       Graph.StatSeries s = Graph.statSeries(field, rawResults.get(field));

@@ -720,7 +720,8 @@ public class GSFSignature implements Protocol {
       System.out.println("min/avg/max queueSize=" + ss.min + "/" + ss.avg + "/" + ss.max);
     };
 
-    ProgressPerTime ppt = new ProgressPerTime(p, "", "number of signatures", sg, 10, cb, 10);
+    ProgressPerTime ppt =
+        new ProgressPerTime(p, "", "number of signatures", sg, 1, cb, 10, TimeUnit.MILLISECONDS);
 
     Predicate<Protocol> contIf = p1 -> {
       for (Node n : p1.network().allNodes) {

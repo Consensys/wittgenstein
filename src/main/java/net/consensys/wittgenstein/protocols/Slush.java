@@ -5,6 +5,7 @@ import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.server.WParameters;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
 @SuppressWarnings("WeakerAccess")
@@ -228,8 +229,8 @@ public class Slush implements Protocol {
         return StatsHelper.getStatsOn(liveNodes, n -> colors[((SlushNode) n).myColor]);
       }
     };
-    ProgressPerTime ppt =
-        new ProgressPerTime(this, desc, "Number of y-Colored Nodes", stats, 10, null, 10);
+    ProgressPerTime ppt = new ProgressPerTime(this, desc, "Number of y-Colored Nodes", stats, 10,
+        null, 10, TimeUnit.MILLISECONDS);
 
     Predicate<Protocol> contIf = p1 -> {
       int[] colors;
