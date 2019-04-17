@@ -113,6 +113,7 @@ public class GSFSignature implements Protocol {
     final int level;
     final boolean levelFinished;
     final int size;
+    final int received;
 
     public SendSigs(BitSet sigs, GSFNode.SFLevel l) {
       this.sigs = (BitSet) sigs.clone();
@@ -120,6 +121,7 @@ public class GSFSignature implements Protocol {
       // Size = level + bit field + the signatures included + our own sig
       this.size = 1 + l.expectedSigs() / 8 + 96;
       this.levelFinished = l.verifiedSignatures.equals(l.waitedSigs);
+      this.received = l.verifiedSignatures.cardinality();
     }
 
     @Override
@@ -211,6 +213,7 @@ public class GSFSignature implements Protocol {
       final BitSet verifiedSignatures = new BitSet(); // The signatures verified in this level
       final BitSet individualSignatures = new BitSet(); // The individual signatures received
       final BitSet indivVerifiedSig = new BitSet(); // The individual signatures verified
+      final Map<GSFNode, Integer> received = new HashMap<>();
 
       /**
        * We're going to contact all nodes, one after the other. That's our position in the peers'
@@ -299,14 +302,24 @@ public class GSFSignature implements Protocol {
       List<GSFNode> getRemainingPeers(int peersCt) {
         List<GSFNode> res = new ArrayList<>(peersCt);
 
+
+        int start = posInLevel;
         while (peersCt > 0 && remainingCalls > 0) {
           remainingCalls--;
 
           GSFNode p = peers.get(posInLevel++);
-          res.add(p);
-          peersCt--;
           if (posInLevel >= peers.size()) {
             posInLevel = 0;
+          }
+
+          Integer count = received.get(p);
+          if (count == null || true) {
+            res.add(p);
+            peersCt--;
+          } else {
+            if (posInLevel == start) {
+              remainingCalls = 0;
+            }
           }
         }
 
@@ -503,6 +516,10 @@ public class GSFSignature implements Protocol {
      */
     void onNewSig(GSFNode from, SendSigs ssigs) {
       SFLevel l = levels.get(ssigs.level);
+
+      if (ssigs.levelFinished) {
+        l.received.put(from, 1);
+      }
 
       toVerify.add(ssigs);
 
@@ -703,7 +720,7 @@ public class GSFSignature implements Protocol {
       System.out.println("min/avg/max queueSize=" + ss.min + "/" + ss.avg + "/" + ss.max);
     };
 
-    ProgressPerTime ppt = new ProgressPerTime(p, "", "number of signatures", sg, 1, cb, 10);
+    ProgressPerTime ppt = new ProgressPerTime(p, "", "number of signatures", sg, 10, cb, 10);
 
     Predicate<Protocol> contIf = p1 -> {
       for (Node n : p1.network().allNodes) {
@@ -721,6 +738,7 @@ public class GSFSignature implements Protocol {
   }
 
   public static void main(String... args) {
-    drawImgs();
+    sigsPerTime();
+    //drawImgs();
   }
 }

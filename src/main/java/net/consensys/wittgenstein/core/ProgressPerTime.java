@@ -51,6 +51,13 @@ public class ProgressPerTime {
       rawResults.put(field, new ArrayList<>());
     }
 
+
+    long bytesSentSum = 0;
+    long bytesRcvSum = 0;
+    long msgSentSum = 0;
+    long msgRcvSum = 0;
+    long doneAtSum = 0;
+
     for (int r = 0; r < roundCount; r++) {
       Protocol p = protocol.copy();
       p.network().rd.setSeed(r);
@@ -85,16 +92,35 @@ public class ProgressPerTime {
       if (endCallback != null) {
         endCallback.end(p);
       }
-      System.out.println("bytes sent: " + StatsHelper.getStatsOn(liveNodes, Node::getBytesSent));
-      System.out
-          .println("bytes rcvd: " + StatsHelper.getStatsOn(liveNodes, Node::getBytesReceived));
-      System.out.println("msg sent: " + StatsHelper.getStatsOn(liveNodes, Node::getMsgSent));
-      System.out.println("msg rcvd: " + StatsHelper.getStatsOn(liveNodes, Node::getMsgReceived));
-      System.out.println("done at: " + StatsHelper.getStatsOn(liveNodes, Node::getDoneAt));
+      StatsHelper.SimpleStats bytesSent = StatsHelper.getStatsOn(liveNodes, Node::getBytesSent);
+      StatsHelper.SimpleStats bytesRcv = StatsHelper.getStatsOn(liveNodes, Node::getBytesReceived);
+      StatsHelper.SimpleStats msgSent = StatsHelper.getStatsOn(liveNodes, Node::getMsgSent);
+      StatsHelper.SimpleStats msgRcv = StatsHelper.getStatsOn(liveNodes, Node::getMsgReceived);
+      StatsHelper.SimpleStats doneAt = StatsHelper.getStatsOn(liveNodes, Node::getDoneAt);
+      System.out.println("bytes sent: " + bytesSent);
+      System.out.println("bytes rcvd: " + bytesRcv);
+      System.out.println("msg sent: " + msgSent);
+      System.out.println("msg rcvd: " + msgRcv);
+      System.out.println("done at: " + doneAt);
       System.out.println("Simulation execution time: " + ((endAt - startAt) / 1000) + "s");
       System.out.println("Number of nodes that are down: "
-          + p.network().allNodes.stream().filter(n -> n.isDown()).count());
+          + p.network().allNodes.stream().filter(Node::isDown).count());
       System.out.println("Total Number of peers " + p.network().allNodes.size());
+
+      bytesSentSum += bytesSent.avg;
+      bytesRcvSum += bytesRcv.avg;
+      msgSentSum += msgSent.avg;
+      msgRcvSum += msgRcv.avg;
+      doneAtSum += doneAt.avg;
+    }
+
+    if (roundCount > 1) {
+      System.out.println("\nAverage on the " + roundCount + " rounds");
+      System.out.println("bytes sent: " + (bytesSentSum / roundCount));
+      System.out.println("bytes rcvd: " + (bytesRcvSum / roundCount));
+      System.out.println("msg sent: " + (msgSentSum / roundCount));
+      System.out.println("msg rcvd: " + (msgRcvSum / roundCount));
+      System.out.println("done at: " + (doneAtSum / roundCount));
     }
 
     protocol.init();
