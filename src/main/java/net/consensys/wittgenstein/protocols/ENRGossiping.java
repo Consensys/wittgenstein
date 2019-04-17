@@ -132,7 +132,7 @@ public class ENRGossiping implements Protocol {
     return caps;
   }
 
-  private Multimap<String, ETHNode> selectNodesByCap(List<ETHNode> nodes) {
+   Multimap<String, ETHNode> selectNodesByCap(List<ETHNode> nodes) {
     Multimap<String, ETHNode> map = ArrayListMultimap.create();
     for (ETHNode n : nodes) {
       n.capabilities.forEach(cap -> map.put(cap, n));
@@ -223,7 +223,7 @@ public class ENRGossiping implements Protocol {
         return false;
 
       Multimap<String, ETHNode> sortedNodes = selectNodesByCap(
-          network.allNodes.stream().filter(e -> !e.down).collect(Collectors.toList()));// generates table for a multimap with all the capabilities and nodes
+          network.allNodes.stream().filter(e -> !e.isDown()).collect(Collectors.toList()));// generates table for a multimap with all the capabilities and nodes
       List<String> capKeys =
           sortedNodes.keySet().stream().filter(this.capabilities::contains).collect(
               (Collectors.toList()));
