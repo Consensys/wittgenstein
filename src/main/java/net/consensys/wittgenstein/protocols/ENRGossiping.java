@@ -132,7 +132,7 @@ public class ENRGossiping implements Protocol {
     return caps;
   }
 
-   Multimap<String, ETHNode> selectNodesByCap(List<ETHNode> nodes) {
+  Multimap<String, ETHNode> selectNodesByCap(List<ETHNode> nodes) {
     Multimap<String, ETHNode> map = ArrayListMultimap.create();
     for (ETHNode n : nodes) {
       n.capabilities.forEach(cap -> map.put(cap, n));
