@@ -318,6 +318,9 @@ public class Network<TN extends Node> {
    * will arrive at a time depending on the network latency.
    */
   public void send(Message<? extends TN> m, TN fromNode, List<TN> dests) {
+    if (dests == null || dests.isEmpty()) {
+      return;
+    }
     send(m, time + 1, fromNode, dests);
   }
 

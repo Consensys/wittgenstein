@@ -680,15 +680,16 @@ public class GSFSignature implements Protocol {
 
 
   public static void sigsPerTime() {
-    int nodeCt = 32768 / 8;
+    int nodeCt = 32768 / 16;
 
     final Node.SpeedModel sm = new Node.ParetoSpeed(1, 0.2, 0.4, 3);
-    String nb = RegistryNodeBuilders.AWS_WITH_1THIRD_TOR;
+    String nb = RegistryNodeBuilders.AWS_SITE;
     String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
 
-    int ts = (int) (.99 * nodeCt);
+    int ts = (int) (.75 * nodeCt);
+    int dead = (int) (.20 * nodeCt);
     GSFSignatureParameters params =
-        new GSFSignatureParameters(nodeCt, ts, 4, 50, 20, 10, 0, nb, nl);
+        new GSFSignatureParameters(nodeCt, ts, 4, 50, 20, 10, dead, nb, nl);
     GSFSignature p = new GSFSignature(params);
 
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
