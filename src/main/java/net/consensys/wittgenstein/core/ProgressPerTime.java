@@ -106,9 +106,6 @@ public class ProgressPerTime {
       System.out.println("msg rcvd: " + msgRcv);
       System.out.println("done at: " + doneAt);
       System.out.println("Simulation execution time: " + ((endAt - startAt) / 1000) + "s");
-      System.out.println("Number of nodes that are down: "
-          + p.network().allNodes.stream().filter(Node::isDown).count());
-      System.out.println("Total Number of peers " + p.network().allNodes.size());
 
       bytesSentSum += bytesSent.avg;
       bytesRcvSum += bytesRcv.avg;

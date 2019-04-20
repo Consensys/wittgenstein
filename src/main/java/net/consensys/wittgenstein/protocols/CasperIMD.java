@@ -88,9 +88,9 @@ public class CasperIMD implements Protocol {
   public CasperIMD(CasperParemeters params) {
     this.params = params;
     this.network = new BlockChainNetwork<>();
-    this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);
+    this.nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
     this.network
-        .setNetworkLatency(new RegistryNetworkLatencies().getByName(params.networkLatencyName));
+        .setNetworkLatency(RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
     this.network.addObserver(new CasperNode(false, genesis) {});
 
   }

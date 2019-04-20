@@ -77,7 +77,7 @@ public class Dfinity implements Protocol {
 
   public Dfinity(DfinityParameters params) {
     this.params = params;
-    this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);
+    this.nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
     this.network.addObserver(new DfinityNode(network.rd, params.genesis) {});
   }
 

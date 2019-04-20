@@ -33,8 +33,8 @@ public class Paxos implements Protocol {
   public Paxos(PaxosParameters params) {
     this.params = params;
     this.majority = params.acceptorCount / 2 + 1;
-    this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilder);
-    this.network.setNetworkLatency(new RegistryNetworkLatencies().getByName(params.latency));
+    this.nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilder);
+    this.network.setNetworkLatency(RegistryNetworkLatencies.singleton.getByName(params.latency));
   }
 
   /**

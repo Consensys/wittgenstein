@@ -93,9 +93,9 @@ public class GSFSignature implements Protocol {
 
   public GSFSignature(GSFSignatureParameters params) {
     this.params = params;
-    this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);
+    this.nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
     this.network
-        .setNetworkLatency(new RegistryNetworkLatencies().getByName(params.networkLatencyName));
+        .setNetworkLatency(RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
   }
 
 
@@ -680,10 +680,9 @@ public class GSFSignature implements Protocol {
 
 
   public static void sigsPerTime() {
-    int nodeCt = 32768 / 8;
+    int nodeCt = 32768 / 16;
 
-    final Node.SpeedModel sm = new Node.ParetoSpeed(1, 0.2, 0.4, 3);
-    String nb = RegistryNodeBuilders.AWS_SITE;
+    String nb = RegistryNodeBuilders.name(true, false, 0);
     String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
 
     int ts = (int) (.75 * nodeCt);
@@ -710,8 +709,7 @@ public class GSFSignature implements Protocol {
     ProgressPerTime.OnSingleRunEnd cb = p12 -> {
       StatsHelper.SimpleStats ss =
           StatsHelper.getStatsOn(p12.network().liveNodes(), n -> (int) ((GSFNode) n).speedRatio);
-      System.out
-          .println("min/avg/max speedRatio (" + sm + ")=" + ss.min + "/" + ss.avg + "/" + ss.max);
+      System.out.println("min/avg/max speedRatio=" + ss.min + "/" + ss.avg + "/" + ss.max);
 
       ss = StatsHelper.getStatsOn(p12.network().liveNodes(), n -> ((GSFNode) n).sigChecked);
       System.out.println("min/avg/max sigChecked=" + ss.min + "/" + ss.avg + "/" + ss.max);

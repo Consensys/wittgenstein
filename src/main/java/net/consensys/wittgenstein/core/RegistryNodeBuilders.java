@@ -15,7 +15,17 @@ public class RegistryNodeBuilders {
   public static final String AWS_WITH_HALF_TOR = "aws_with_half_tor";
   public static final String ALL_CITIES = "all_cities_constant_speed";
 
-  public RegistryNodeBuilders() {
+
+  public static RegistryNodeBuilders singleton = new RegistryNodeBuilders();
+
+  public static String name(boolean aws, boolean speedConstant, double tor) {
+    String site = aws ? "AWS" : "RANDOM";
+    String speed = speedConstant ? "CONSTANT" : "GAUSSIAN";
+
+    return (site + "_speed=" + speed + "_tor=" + (speed + "000").substring(0, 4)).toUpperCase();
+  }
+
+  private RegistryNodeBuilders() {
     CSVLatencyReader lr = new CSVLatencyReader();
     registry.put(RANDOM_POSITION, new NodeBuilder.NodeBuilderWithRandomPosition());
     registry.put(AWS_SITE,
@@ -27,11 +37,29 @@ public class RegistryNodeBuilders {
     nb.aspects.add(new Node.ExtraLatencyAspect(.33));
     registry.put(AWS_WITH_1THIRD_TOR, nb);
 
-
     nb = new NodeBuilder.NodeBuilderWithCity(NetworkLatency.AwsRegionNetworkLatency.cities());
     nb.aspects.add(new Node.ExtraLatencyAspect(.5));
     registry.put(AWS_WITH_HALF_TOR, nb);
 
+    for (boolean aws : new Boolean[] {true, false}) {
+      for (boolean speedConstant : new Boolean[] {true, false}) {
+        for (double tor : new Double[] {0.0, .33, .5, .6}) {
+          if (aws) {
+            nb = new NodeBuilder.NodeBuilderWithCity(
+                NetworkLatency.AwsRegionNetworkLatency.cities());
+          } else {
+            nb = new NodeBuilder.NodeBuilderWithRandomPosition();
+          }
+          if (!speedConstant) {
+            nb.aspects.add(new Node.SpeedRatioAspect(new Node.GaussianSpeed()));
+          }
+          if (tor > 0.001) {
+            nb.aspects.add(new Node.ExtraLatencyAspect(tor));
+          }
+          registry.put(name(aws, speedConstant, tor), nb);
+        }
+      }
+    }
   }
 
   public NodeBuilder getByName(String name) {

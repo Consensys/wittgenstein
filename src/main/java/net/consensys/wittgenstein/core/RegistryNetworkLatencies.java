@@ -4,6 +4,11 @@ import java.lang.reflect.Constructor;
 
 public class RegistryNetworkLatencies {
 
+  public static RegistryNetworkLatencies singleton = new RegistryNetworkLatencies();
+
+
+  private RegistryNetworkLatencies() {}
+
   public NetworkLatency getByName(String name) {
     if (name == null) {
       name = "NetworkLatencyByDistance";

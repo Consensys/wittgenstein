@@ -121,9 +121,9 @@ public class SanFerminSignature implements Protocol {
   public SanFerminSignature(SanFerminSignatureParameters params) {
     this.params = params;
     this.network = new Network<>();
-    this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);
+    this.nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
     this.network
-        .setNetworkLatency(new RegistryNetworkLatencies().getByName(params.networkLatencyName));
+        .setNetworkLatency(RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
     this.allNodes = new ArrayList<>(params.nodeCount);
     for (int i = 0; i < params.nodeCount; i++) {
       final SanFerminNode n = new SanFerminNode(this.nb);

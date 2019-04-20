@@ -7,6 +7,7 @@ import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.server.WParameters;
+import org.apache.tomcat.jni.Registry;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
@@ -93,7 +94,7 @@ public class Handel implements Protocol {
   public Handel(HandelParameters params) {
     this.params = params;
     this.network
-        .setNetworkLatency(new RegistryNetworkLatencies().getByName(params.networkLatencyName));
+        .setNetworkLatency(RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
   }
 
 
@@ -523,7 +524,7 @@ public class Handel implements Protocol {
   }
 
   public void init() {
-    NodeBuilder nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);
+    NodeBuilder nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
 
     for (int i = 0; i < params.nodeCount; i++) {
       final HNode n = new HNode(nb);
@@ -592,8 +593,7 @@ public class Handel implements Protocol {
   public static void sigsPerTime() {
     int nodeCt = 32768 / 16;
 
-    final Node.SpeedModel sm = new Node.ParetoSpeed(1, 0.2, 0.4, 3);
-    String nb = RegistryNodeBuilders.AWS_SITE;
+    String nb = RegistryNodeBuilders.name(true, false, 0);
     String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
 
     int ts = (int) (.75 * nodeCt);
@@ -618,8 +618,7 @@ public class Handel implements Protocol {
     ProgressPerTime.OnSingleRunEnd cb = p12 -> {
       StatsHelper.SimpleStats ss =
           StatsHelper.getStatsOn(p12.network().liveNodes(), n -> (int) ((HNode) n).speedRatio);
-      System.out
-          .println("min/avg/max speedRatio (" + sm + ")=" + ss.min + "/" + ss.avg + "/" + ss.max);
+      System.out.println("min/avg/max speedRatio=" + ss.min + "/" + ss.avg + "/" + ss.max);
 
       ss = StatsHelper.getStatsOn(p12.network().liveNodes(), n -> ((HNode) n).sigChecked);
       System.out.println("min/avg/max sigChecked=" + ss.min + "/" + ss.avg + "/" + ss.max);

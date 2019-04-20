@@ -136,9 +136,9 @@ public class P2PSignature implements Protocol {
   public P2PSignature(P2PSignatureParameters params) {
     this.params = params;
     this.network = new P2PNetwork<>(params.connectionCount, false);
-    this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);
+    this.nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
     this.network
-        .setNetworkLatency(new RegistryNetworkLatencies().getByName(params.networkLatencyName));
+        .setNetworkLatency(RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
   }
 
   static class State extends Message<P2PSigNode> {

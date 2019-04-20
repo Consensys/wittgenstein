@@ -182,7 +182,7 @@ public class Node {
   /**
    * The SpeedModel allows model slow vs. fast nodes. By default, all the node have the same speed
    * ration (1.0), but it's possible to configure a network with slow (speed ratio > 1.0) or fast
-   * (speed ratio < 1.0) nodes. It's up to the protocol to use this when it modelize its internal
+   * (speed ratio < 1.0) nodes. It's up to the protocol to use this when it modelizes its internal
    * calculations.
    */
   public interface SpeedModel {
@@ -207,6 +207,20 @@ public class Node {
     @Override
     public String toString() {
       return "GeneralizedParetoDistributionSpeed, max=" + max + ", " + gpd;
+    }
+  }
+
+
+  public static class GaussianSpeed implements SpeedModel {
+
+    @Override
+    public double getSpeedRatio(Random rd) {
+      return Math.max(0.001, 3 * rd.nextGaussian() + 1);
+    }
+
+    @Override
+    public String toString() {
+      return "GaussianSpeed";
     }
   }
 
@@ -240,6 +254,10 @@ public class Node {
 
     this.speedRatio = (double) getAspectValue(SpeedRatioAspect.class, nb.aspects, rd, 1.0);
     this.extraLatency = (int) getAspectValue(ExtraLatencyAspect.class, nb.aspects, rd, 0);
+
+    if (speedRatio <= 0) {
+      throw new IllegalArgumentException("speedRatio=" + speedRatio);
+    }
   }
 
   public Node(Random rd, NodeBuilder nb) {

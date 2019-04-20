@@ -113,9 +113,9 @@ public class P2PFlood implements Protocol {
   public P2PFlood(P2PFloodParameters params) {
     this.params = params;
     this.network = new P2PNetwork<>(params.peersCount, true);
-    this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);
+    this.nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
     this.network
-        .setNetworkLatency(new RegistryNetworkLatencies().getByName(params.networkLatencyName));
+        .setNetworkLatency(RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
   }
 
   @Override

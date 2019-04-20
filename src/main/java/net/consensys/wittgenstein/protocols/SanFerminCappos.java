@@ -112,11 +112,9 @@ public class SanFerminCappos implements Protocol {
   public SanFerminCappos(SanFerminParameters params) {
     this.params = params;
     this.network = new Network<>();
-    this.nb = new RegistryNodeBuilders().getByName(params.nodeBuilderName);
+    this.nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
     this.network
-        .setNetworkLatency(new RegistryNetworkLatencies().getByName(params.networkLatencyName));
-
-
+        .setNetworkLatency(RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
   }
 
 
