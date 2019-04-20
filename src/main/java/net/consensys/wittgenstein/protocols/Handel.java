@@ -7,7 +7,8 @@ import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.server.WParameters;
-import org.apache.tomcat.jni.Registry;
+import net.consensys.wittgenstein.tools.NodeDrawer;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
@@ -590,8 +591,53 @@ public class Handel implements Protocol {
     return network;
   }
 
-  public static void sigsPerTime() {
-    int nodeCt = 32768 / 16;
+
+  static class HNodeStatus implements NodeDrawer.NodeStatus {
+    final HandelParameters params;
+
+    HNodeStatus(HandelParameters params) {
+      this.params = params;
+    }
+
+    @Override
+    public int getMax() {
+      return params.nodeCount;
+    }
+
+    @Override
+    public int getMin() {
+      return 1;
+    }
+
+    @Override
+    public int getVal(Node n) {
+      return ((HNode) n).totalSigSize();
+    }
+
+    @Override
+    public boolean isSpecial(Node n) {
+      return n.extraLatency > 0;
+    }
+  }
+
+  public static Predicate<Protocol> newContIf(Handel p) {
+    Predicate<Protocol> contIf = p1 -> {
+      for (Node n : p1.network().allNodes) {
+        HNode gn = (HNode) n;
+        // All up nodes must have reached the threshold, so if one live
+        //  node has not reached it we continue
+        if (!n.isDown() && gn.totalSigSize() < p.params.threshold) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    return contIf;
+  }
+
+  public static Handel newHandel() {
+    int nodeCt = 32768 / 8;
 
     String nb = RegistryNodeBuilders.name(true, false, 0);
     String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
@@ -599,7 +645,36 @@ public class Handel implements Protocol {
     int ts = (int) (.75 * nodeCt);
     int dead = (int) (.20 * nodeCt);
     HandelParameters params = new HandelParameters(nodeCt, ts, 4, 50, 20, 10, dead, nb, nl);
-    Handel p = new Handel(params);
+    return new Handel(params);
+  }
+
+
+  public static void drawImgs() {
+    Handel p = newHandel();
+    Predicate<Protocol> contIf = newContIf(p);
+
+    p.init();
+    int freq = 10;
+    NodeDrawer nd = new NodeDrawer(new HNodeStatus(p.params), new File("/tmp/handel_anim.gif"),
+        Math.max(10, freq));
+    int i = 0;
+    do {
+      p.network.runMs(freq);
+
+      nd.drawNewState(p.network.time, TimeUnit.MILLISECONDS, p.network.liveNodes());
+      if (i % 100 == 0) {
+        nd.writeLastToGif(new File("/tmp/img_" + i + ".gif"));
+      }
+      i++;
+
+    } while (contIf.test(p));
+    nd.close();
+  }
+
+  public static void sigsPerTime() {
+    Handel p = newHandel();
+    Predicate<Protocol> contIf = newContIf(p);
+
 
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
       final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
@@ -631,22 +706,10 @@ public class Handel implements Protocol {
     ProgressPerTime ppt =
         new ProgressPerTime(p, "", "number of signatures", sg, 1, cb, 10, TimeUnit.MILLISECONDS);
 
-    Predicate<Protocol> contIf = p1 -> {
-      for (Node n : p1.network().allNodes) {
-        HNode gn = (HNode) n;
-        // All up nodes must have reached the threshold, so if one live
-        //  node has not reached it we continue
-        if (!n.isDown() && gn.totalSigSize() < p.params.threshold) {
-          return true;
-        }
-      }
-      return false;
-    };
-
     ppt.run(contIf);
   }
 
   public static void main(String... args) {
-    sigsPerTime();
+    drawImgs();
   }
 }

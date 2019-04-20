@@ -22,7 +22,7 @@ public class RegistryNodeBuilders {
     String site = aws ? "AWS" : "RANDOM";
     String speed = speedConstant ? "CONSTANT" : "GAUSSIAN";
 
-    return (site + "_speed=" + speed + "_tor=" + (speed + "000").substring(0, 4)).toUpperCase();
+    return (site + "_speed=" + speed + "_tor=" + (tor + "000").substring(0, 4)).toUpperCase();
   }
 
   private RegistryNodeBuilders() {
