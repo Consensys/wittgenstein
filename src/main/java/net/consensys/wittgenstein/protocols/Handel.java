@@ -6,9 +6,11 @@ import net.consensys.wittgenstein.core.json.ListNodeConverter;
 import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
-import net.consensys.wittgenstein.core.utils.Utils;
 import net.consensys.wittgenstein.server.WParameters;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
@@ -17,8 +19,6 @@ public class Handel implements Protocol {
   private final HandelParameters params;
   private final Network<HNode> network = new Network<>();
 
-  private HNode[][][] receptions;
-  private int[][] receptionRanks;
 
   @SuppressWarnings("WeakerAccess")
   public static class HandelParameters extends WParameters {
@@ -48,7 +48,7 @@ public class Handel implements Protocol {
     // Used for json / http server
     @SuppressWarnings("unused")
     public HandelParameters() {
-      this.nodeCount = 32768 / 1024;;
+      this.nodeCount = 32768 / 1024;
       this.threshold = (int) (nodeCount * (0.99));
       this.pairingTime = 3;
       this.timeoutPerLevelMs = 50;
@@ -66,6 +66,10 @@ public class Handel implements Protocol {
           || (nodesDown + threshold > nodeCount)) {
         throw new IllegalArgumentException("nodeCount=" + nodeCount + ", threshold=" + threshold);
       }
+      if (Integer.bitCount(nodeCount) != 1) {
+        throw new IllegalArgumentException("We support only power of two nodes in this simulation");
+      }
+
       this.nodeCount = nodeCount;
       this.threshold = threshold;
       this.pairingTime = pairingTime;
@@ -113,8 +117,8 @@ public class Handel implements Protocol {
       this.level = l.level;
       this.size = 1 + l.expectedSigs() / 8 + 96; // Size = level + bit field + the signatures included + our own sig
       this.levelFinished = l.incomingComplete();
-      if (sigs.isEmpty() || sigs.cardinality() > l.waitedSigs.cardinality()) {
-        throw new IllegalStateException("bad level");
+      if (sigs.isEmpty() || sigs.cardinality() > l.size) {
+        throw new IllegalStateException("bad level: " + l.level);
       }
     }
 
@@ -133,6 +137,8 @@ public class Handel implements Protocol {
   public class HNode extends Node {
     final List<HLevel> levels = new ArrayList<>();
     final int nodePairingTime = (int) (params.pairingTime * speedRatio);
+    final int[] receptionRanks = new int[params.nodeCount];
+
 
     boolean done = false;
     int sigChecked = 0;
@@ -175,6 +181,15 @@ public class Handel implements Protocol {
       return last.totalOutgoing.cardinality() + last.totalIncoming.cardinality();
     }
 
+    public int level(HNode dest) {
+      for (int i = levels.size() - 1; i >= 0; i--) {
+        if (levels.get(i).waitedSigs.get(dest.nodeId)) {
+          return i;
+        }
+      }
+      throw new IllegalStateException();
+    }
+
     /**
      * At a given level, we send the signatures received from the previous level and we expect the
      * equivalent from our peers of this level.<br/>
@@ -186,23 +201,30 @@ public class Handel implements Protocol {
      */
     public class HLevel {
       final int level;
+      final int size;
+
       @JsonSerialize(converter = ListNodeConverter.class)
-      final List<HNode> peers = new ArrayList<>();
+      final List<HNode> peers = new ArrayList<>(); // peers, sorted in emission order
 
       // The peers when we have all signatures for this level.
-      final BitSet waitedSigs; // 1 for the signatures we should have at this level
+      final BitSet waitedSigs = new BitSet(); // 1 for the signatures we should have at this level
 
-      final BitSet lastAggVerified = new BitSet(); // The aggregate signatures verified in this level
-      final BitSet totalIncoming = new BitSet(); // The merge of the individual & the last agg verified
-      final BitSet verifiedIndSignatures = new BitSet(); // The individual signatures verified in this level
+      final BitSet lastAggVerified = new BitSet();
+      // The aggregate signatures verified in this level
+      final BitSet totalIncoming = new BitSet();
+      // The merge of the individual & the last agg verified
+      final BitSet verifiedIndSignatures = new BitSet();
+      // The individual signatures verified in this level
 
       final ArrayList<SigToVerify> toVerifyAgg = new ArrayList<>();
       final BitSet toVerifyInd = new BitSet(); // The individual signatures received
 
       public BitSet finishedPeers = new BitSet();
+      // The list of peers who told us they had finished this level.
 
       final BitSet totalOutgoing = new BitSet(); // The signatures we're sending for this level
-      public boolean outgoingFinished = false; // all our peers are complete
+      public boolean outgoingFinished = false;
+      // all our peers are complete: no need to send anything for this level
 
       /**
        * We're going to contact all nodes, one after the other. That's our position in the peers'
@@ -217,26 +239,26 @@ public class Handel implements Protocol {
        */
       HLevel() {
         level = 0;
+        size = 0;
         outgoingFinished = true;
-        waitedSigs = new BitSet();
-        waitedSigs.set(nodeId);
         lastAggVerified.set(nodeId);
-        totalIncoming.set(nodeId);
         verifiedIndSignatures.set(nodeId);
+        totalIncoming.set(nodeId);
       }
 
       /**
        * Build a level on top of the previous one.
        */
       HLevel(HLevel previousLevel, BitSet allPreviousNodes) {
-        this.level = previousLevel.level + 1;
+        level = previousLevel.level + 1;
 
         // Signatures needed to finish the current level are:
         //  sigs of the previous level + peers of the previous level.
         //  If we have all this we have finished this level
-        waitedSigs = allSigsAtLevel(this.level);
+        waitedSigs.or(allSigsAtLevel(this.level));
         waitedSigs.andNot(allPreviousNodes);
         totalOutgoing.set(nodeId);
+        size = waitedSigs.cardinality();
       }
 
       /**
@@ -244,7 +266,7 @@ public class Handel implements Protocol {
        * signatures we're going to send.
        */
       int expectedSigs() {
-        return waitedSigs.cardinality();
+        return size;
       }
 
       /**
@@ -255,7 +277,7 @@ public class Handel implements Protocol {
           return false;
         }
 
-        if (network.time >= (level) * params.timeoutPerLevelMs) {
+        if (network.time >= (level - 1) * params.timeoutPerLevelMs) {
           return true;
         }
 
@@ -302,17 +324,14 @@ public class Handel implements Protocol {
         return res;
       }
 
-      void buildEmissionList() {
+      void buildEmissionList(ArrayList<HNode>[][][] emissions) {
         assert peers.isEmpty();
-        for (int pi = 0; pi < waitedSigs.cardinality(); pi++) {
-          for (int ni = 0; ni < params.nodeCount; ni++) {
-            if (receptions[ni][level][pi] == HNode.this) { // This node 'ni' puts us at rank 'pi'
-              HNode dest = network.getNodeById(ni);
-              assert waitedSigs.get(dest.nodeId);
-              peers.add(dest);
-              assert receptionRanks[nodeId][dest.nodeId] == 0;
-              receptionRanks[nodeId][dest.nodeId] = pi;
+        for (ArrayList<HNode> ranks : emissions[nodeId][level]) {
+          if (ranks != null && !ranks.isEmpty()) {
+            if (ranks.size() > 1) {
+              Collections.shuffle(ranks, network.rd);
             }
+            peers.addAll(ranks);
           }
         }
       }
@@ -322,7 +341,7 @@ public class Handel implements Protocol {
       }
 
       public boolean outgoingComplete() {
-        return totalOutgoing.cardinality() == waitedSigs.cardinality();
+        return totalOutgoing.cardinality() == size;
       }
 
 
@@ -384,45 +403,44 @@ public class Handel implements Protocol {
      * If the state has changed we send a message to all. If we're done, we update all our peers: it
      * will be our last message.
      */
-    void updateVerifiedSignatures(SigToVerify sigs) {
-      HLevel sfl = levels.get(sigs.level);
+    void updateVerifiedSignatures(SigToVerify vs) {
+      HLevel vsl = levels.get(vs.level);
 
-      sfl.toVerifyInd.set(sigs.from, false);
-      sfl.toVerifyAgg.remove(sigs);
+      vsl.toVerifyInd.set(vs.from, false);
+      vsl.toVerifyAgg.remove(vs);
 
-      sfl.verifiedIndSignatures.set(sigs.from);
+      vsl.verifiedIndSignatures.set(vs.from);
 
       boolean improved = false;
-      if (!sfl.totalIncoming.get(sigs.from)) {
-        sfl.totalIncoming.or(sfl.verifiedIndSignatures);
+      if (!vsl.totalIncoming.get(vs.from)) {
+        vsl.totalIncoming.set(vs.from);
         improved = true;
       }
 
-      BitSet all = (BitSet) sigs.sig.clone();
-      all.or(sfl.verifiedIndSignatures);
-      if (all.cardinality() > sfl.verifiedIndSignatures.cardinality()) {
+      BitSet all = (BitSet) vs.sig.clone();
+      all.or(vsl.verifiedIndSignatures);
+      if (all.cardinality() > vsl.verifiedIndSignatures.cardinality()) {
         improved = true;
 
-        if (sfl.lastAggVerified.intersects(sigs.sig)) {
-          sfl.lastAggVerified.clear();
+        if (vsl.lastAggVerified.intersects(vs.sig)) {
+          vsl.lastAggVerified.clear();
         }
-        sfl.lastAggVerified.or(sigs.sig);
+        vsl.lastAggVerified.or(vs.sig);
 
-        sfl.totalIncoming.clear();
-        sfl.totalIncoming.or(sfl.lastAggVerified);
-        sfl.totalIncoming.or(sfl.verifiedIndSignatures);
-
+        vsl.totalIncoming.clear();
+        vsl.totalIncoming.or(vsl.lastAggVerified);
+        vsl.totalIncoming.or(vsl.verifiedIndSignatures);
       }
 
       if (!improved) {
         return;
       }
 
-      boolean justCompleted = sfl.incomingComplete();
+      boolean justCompleted = vsl.incomingComplete();
 
       BitSet cur = new BitSet();
       for (HLevel l : levels) {
-        if (l.level > sfl.level) {
+        if (l.level > vsl.level) {
           l.totalOutgoing.clear();
           l.totalOutgoing.or(cur);
           if (justCompleted && params.acceleratedCallsCount > 0 && !l.outgoingFinished
@@ -460,8 +478,7 @@ public class Handel implements Protocol {
         l.toVerifyInd.set(from.nodeId);
       }
 
-      l.toVerifyAgg
-          .add(new SigToVerify(from.nodeId, l.level, receptionRanks[nodeId][from.nodeId], cs));
+      l.toVerifyAgg.add(new SigToVerify(from.nodeId, l.level, receptionRanks[from.nodeId], cs));
     }
 
     void checkSigs() {
@@ -485,6 +502,7 @@ public class Handel implements Protocol {
     }
   }
 
+
   static class SigToVerify {
     final int from;
     final int level;
@@ -498,19 +516,6 @@ public class Handel implements Protocol {
       this.sig = sig;
     }
   }
-
-
-  private HNode[] randomSubset(BitSet nodes) {
-    HNode[] res = new HNode[nodes.cardinality()];
-    int target = 0;
-    for (int pos, cur = nodes.nextSetBit(0); cur >= 0; pos = cur + 1, cur = nodes.nextSetBit(pos)) {
-      res[target++] = network.getNodeById(cur);
-    }
-
-    Utils.shuffle(res, network.rd);
-    return res;
-  }
-
 
   @Override
   public Handel copy() {
@@ -544,18 +549,37 @@ public class Handel implements Protocol {
       }
     }
 
+    List<HNode> an = new ArrayList<>(network.allNodes);
     int nLevel = MoreMath.log2(params.nodeCount);
-    receptions = new HNode[params.nodeCount][nLevel + 1][0];
-    receptionRanks = new int[params.nodeCount][params.nodeCount];
+
+    @SuppressWarnings("unchecked")
+    ArrayList<HNode>[][][] emissions =
+        new ArrayList[params.nodeCount][nLevel + 1][params.nodeCount];
+
     for (HNode n : network.allNodes) {
-      for (HNode.HLevel l : n.levels) {
-        receptions[n.nodeId][l.level] = randomSubset(l.waitedSigs);
+      Collections.shuffle(an, network.rd);
+      int[] pos = new int[nLevel + 1];
+      for (HNode sentBy : an) {
+        if (sentBy != n) {
+          int dl = n.level(sentBy);
+          n.receptionRanks[sentBy.nodeId] = pos[dl];
+          if (!sentBy.isDown()) {
+            // No need to build the emission list of the dead nodes
+            if (emissions[sentBy.nodeId][dl][pos[dl]] == null) {
+              emissions[sentBy.nodeId][dl][pos[dl]] = new ArrayList<>();
+            }
+            emissions[sentBy.nodeId][dl][pos[dl]].add(n);
+          }
+          pos[dl]++;
+        }
       }
     }
 
     for (HNode n : network.allNodes) {
-      for (HNode.HLevel l : n.levels) {
-        l.buildEmissionList();
+      if (!n.isDown()) {
+        for (HNode.HLevel l : n.levels) {
+          l.buildEmissionList(emissions);
+        }
       }
     }
   }
@@ -564,49 +588,6 @@ public class Handel implements Protocol {
   public Network<HNode> network() {
     return network;
   }
-
-  /*
-  round=0, GSFSignature, nodes=2048, threshold=1536, pairing=4ms, level timeout=50ms, period=20ms, acceleratedCallsCount=10, dead nodes=409, network=AwsRegionNetworkLatency
-  min/avg/max speedRatio (GeneralizedParetoDistributionSpeed, max=3.0, ξ=1.0, μ=0.2, σ=0.4)=1/1/1
-  min/avg/max sigChecked=111/134/152
-  min/avg/max queueSize=0/6/20
-  bytes sent: min: 22016, max:25455, avg:23582
-  bytes rcvd: min: 12612, max:21185, avg:16778
-  msg sent: min: 176, max:211, avg:192
-  msg rcvd: min: 108, max:174, avg:138
-  done at: min: 577, max:892, avg:702
-  Simulation execution time: 2s
-  Number of nodes that are down: 409
-  Total Number of peers 2048
-  
-  round=0, Handel, nodes=2048, threshold=1536, pairing=4ms, level timeout=50ms, period=20ms, acceleratedCallsCount=10, dead nodes=0, network=AwsRegionNetworkLatency
-  min/avg/max speedRatio (GeneralizedParetoDistributionSpeed, max=3.0, ξ=1.0, μ=0.2, σ=0.4)=1/1/1
-  min/avg/max sigChecked=17/21/28
-  min/avg/max queueSize=0/0/0
-  bytes sent: min: 25047, max:35659, avg:31932
-  bytes rcvd: min: 19419, max:31700, avg:25352
-  msg sent: min: 210, max:300, avg:266
-  msg rcvd: min: 177, max:278, avg:220
-  done at: min: 287, max:394, avg:318
-  Simulation execution time: 2s
-  Number of nodes that are down: 0
-  Total Number of peers 2048
-  
-  
-  round=0, Handel, nodes=2048, threshold=1536, pairing=4ms, level timeout=50ms, period=20ms, acceleratedCallsCount=10, dead nodes=409, network=AwsRegionNetworkLatency
-  min/avg/max speedRatio (GeneralizedParetoDistributionSpeed, max=3.0, ξ=1.0, μ=0.2, σ=0.4)=1/1/1
-  min/avg/max sigChecked=33/49/71
-  min/avg/max queueSize=0/0/0
-  bytes sent: min: 28357, max:36806, avg:32442
-  bytes rcvd: min: 15625, max:29556, avg:21122
-  msg sent: min: 246, max:333, avg:288
-  msg rcvd: min: 133, max:270, avg:187
-  done at: min: 588, max:860, avg:695
-  Simulation execution time: 2s
-  Number of nodes that are down: 409
-  Total Number of peers 2048
-  
-   */
 
   public static void sigsPerTime() {
     int nodeCt = 32768 / 16;

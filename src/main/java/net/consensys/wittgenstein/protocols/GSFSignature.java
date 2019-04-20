@@ -680,7 +680,7 @@ public class GSFSignature implements Protocol {
 
 
   public static void sigsPerTime() {
-    int nodeCt = 32768 / 16;
+    int nodeCt = 32768 / 8;
 
     final Node.SpeedModel sm = new Node.ParetoSpeed(1, 0.2, 0.4, 3);
     String nb = RegistryNodeBuilders.AWS_SITE;

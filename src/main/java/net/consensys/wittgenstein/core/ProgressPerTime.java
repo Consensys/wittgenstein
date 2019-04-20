@@ -62,6 +62,8 @@ public class ProgressPerTime {
     long doneAtSum = 0;
 
     for (int r = 0; r < roundCount; r++) {
+      long startAt = System.currentTimeMillis();
+
       Protocol p = protocol.copy();
       p.network().rd.setSeed(r);
       p.init();
@@ -75,7 +77,6 @@ public class ProgressPerTime {
       }
 
       List<? extends Node> liveNodes;
-      long startAt = System.currentTimeMillis();
       StatsHelper.Stat s;
       do {
         p.network().runMs(statEachXms);
