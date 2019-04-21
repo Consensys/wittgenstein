@@ -53,7 +53,7 @@ public class GSFSignature implements Protocol {
     // Used for json / http server
     @SuppressWarnings("unused")
     public GSFSignatureParameters() {
-      this.nodeCount = 32768 / 32;;
+      this.nodeCount = 32768 / 32;
       this.threshold = (int) (nodeCount * (0.99));
       this.pairingTime = 3;
       this.timeoutPerLevelMs = 50;
@@ -102,10 +102,10 @@ public class GSFSignature implements Protocol {
   @Override
   public String toString() {
     return "GSFSignature, " + "nodes=" + params.nodeCount + ", threshold=" + params.threshold
-        + ", pairing=" + params.pairingTime + "ms, level timeout=" + params.timeoutPerLevelMs
+        + ", pairing=" + params.pairingTime + "ms, level waitTime=" + params.timeoutPerLevelMs
         + "ms, period=" + params.periodDurationMs + "ms, acceleratedCallsCount="
-        + params.acceleratedCallsCount + ", dead nodes=" + params.nodesDown + ", network="
-        + network.networkLatency.getClass().getSimpleName();
+        + params.acceleratedCallsCount + ", dead nodes=" + params.nodesDown + ", builder="
+        + params.nodeBuilderName;
   }
 
   static class SendSigs extends Message<GSFNode> {
@@ -134,7 +134,6 @@ public class GSFSignature implements Protocol {
       to.onNewSig(from, this);
     }
   }
-
 
   public class GSFNode extends Node {
     final ArrayList<SendSigs> toVerify = new ArrayList<>();
@@ -607,13 +606,7 @@ public class GSFSignature implements Protocol {
   }
 
 
-  static class GFSNodeStatus implements NodeDrawer.NodeStatus {
-    final GSFSignatureParameters params;
-
-    GFSNodeStatus(GSFSignatureParameters params) {
-      this.params = params;
-    }
-
+  class GFSNodeStatus implements NodeDrawer.NodeStatus {
     @Override
     public int getMax() {
       return params.nodeCount;
@@ -635,35 +628,42 @@ public class GSFSignature implements Protocol {
     }
   }
 
-  public static void drawImgs() {
-    int nodeCt = 32768 / 8;
-
-    final Node.SpeedModel sm = new Node.ParetoSpeed(1, 0.2, 0.4, 3);
-    String nb = RegistryNodeBuilders.AWS_WITH_1THIRD_TOR;
-    //String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
-    String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
-
-    int ts = (int) (.99 * nodeCt);
-    GSFSignatureParameters params =
-        new GSFSignatureParameters(nodeCt, ts, 4, 50, 20, 10, 0, nb, nl);
-    GSFSignature p = new GSFSignature(params);
-
-    Predicate<Protocol> contIf = p1 -> {
-      for (Node n : p1.network().allNodes) {
-        GSFNode gn = (GSFNode) n;
+  private static Predicate<Protocol> newConfIf() {
+    return p1 -> {
+      GSFSignature p = (GSFSignature) p1;
+      for (GSFNode n : p.network().allNodes) {
         // All up nodes must have reached the threshold, so if one live
         //  node has not reached it we continue
-        if (!n.isDown() && gn.verifiedSignatures.cardinality() < p.params.threshold) {
+        if (!n.isDown() && n.verifiedSignatures.cardinality() < p.params.threshold) {
           return true;
         }
       }
       return false;
     };
+  }
+
+  private static GSFSignature newGSF() {
+    int nodeCt = 32768 / 8;
+    double deadR = 0;
+    double tsR = .99;
+
+    String nb = RegistryNodeBuilders.name(true, true, 0);
+    String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
+
+    int ts = (int) (tsR * nodeCt);
+    int dead = (int) (deadR * nodeCt);
+    GSFSignatureParameters params =
+        new GSFSignatureParameters(nodeCt, ts, 4, 50, 20, 10, dead, nb, nl);
+    return new GSFSignature(params);
+  }
+
+  public static void drawImgs() {
+    GSFSignature p = newGSF();
+    Predicate<Protocol> contIf = newConfIf();
 
     p.init();
-    int freq = 1;
-    NodeDrawer nd = new NodeDrawer(new GFSNodeStatus(params), new File("/tmp/handel_anim.gif"),
-        Math.max(10, freq));
+    int freq = 10;
+    NodeDrawer nd = new NodeDrawer(p.new GFSNodeStatus(), new File("/tmp/handel_anim.gif"), freq);
     int i = 0;
     do {
       p.network.runMs(freq);
@@ -680,16 +680,7 @@ public class GSFSignature implements Protocol {
 
 
   public static void sigsPerTime() {
-    int nodeCt = 32768 / 16;
-
-    String nb = RegistryNodeBuilders.name(true, false, 0);
-    String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
-
-    int ts = (int) (.75 * nodeCt);
-    int dead = (int) (.20 * nodeCt);
-    GSFSignatureParameters params =
-        new GSFSignatureParameters(nodeCt, ts, 4, 50, 20, 10, dead, nb, nl);
-    GSFSignature p = new GSFSignature(params);
+    GSFSignature p = newGSF();
 
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
       final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
@@ -722,18 +713,7 @@ public class GSFSignature implements Protocol {
     ProgressPerTime ppt =
         new ProgressPerTime(p, "", "number of signatures", sg, 1, cb, 10, TimeUnit.MILLISECONDS);
 
-    Predicate<Protocol> contIf = p1 -> {
-      for (Node n : p1.network().allNodes) {
-        GSFNode gn = (GSFNode) n;
-        // All up nodes must have reached the threshold, so if one live
-        //  node has not reached it we continue
-        if (!n.isDown() && gn.verifiedSignatures.cardinality() < p.params.threshold) {
-          return true;
-        }
-      }
-      return false;
-    };
-
+    Predicate<Protocol> contIf = newConfIf();
     ppt.run(contIf);
   }
 

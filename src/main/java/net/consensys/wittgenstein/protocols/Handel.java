@@ -102,10 +102,10 @@ public class Handel implements Protocol {
   @Override
   public String toString() {
     return "Handel, " + "nodes=" + params.nodeCount + ", threshold=" + params.threshold
-        + ", pairing=" + params.pairingTime + "ms, level timeout=" + params.timeoutPerLevelMs
+        + ", pairing=" + params.pairingTime + "ms, level waitTime=" + params.timeoutPerLevelMs
         + "ms, period=" + params.periodDurationMs + "ms, acceleratedCallsCount="
-        + params.acceleratedCallsCount + ", dead nodes=" + params.nodesDown + ", network="
-        + network.networkLatency.getClass().getSimpleName();
+        + params.acceleratedCallsCount + ", dead nodes=" + params.nodesDown + ", builder="
+        + params.nodeBuilderName;
   }
 
   static class SendSigs extends Message<HNode> {
@@ -592,13 +592,7 @@ public class Handel implements Protocol {
   }
 
 
-  static class HNodeStatus implements NodeDrawer.NodeStatus {
-    final HandelParameters params;
-
-    HNodeStatus(HandelParameters params) {
-      this.params = params;
-    }
-
+  class HNodeStatus implements NodeDrawer.NodeStatus {
     @Override
     public int getMax() {
       return params.nodeCount;
@@ -620,26 +614,24 @@ public class Handel implements Protocol {
     }
   }
 
-  public static Predicate<Protocol> newContIf(Handel p) {
-    Predicate<Protocol> contIf = p1 -> {
-      for (Node n : p1.network().allNodes) {
-        HNode gn = (HNode) n;
+  public static Predicate<Protocol> newContIf() {
+    return pp -> {
+      Handel p = (Handel) pp;
+      for (HNode n : p.network().allNodes) {
         // All up nodes must have reached the threshold, so if one live
         //  node has not reached it we continue
-        if (!n.isDown() && gn.totalSigSize() < p.params.threshold) {
+        if (!n.isDown() && n.totalSigSize() < p.params.threshold) {
           return true;
         }
       }
       return false;
     };
-
-    return contIf;
   }
 
   public static Handel newHandel() {
     int nodeCt = 32768 / 8;
 
-    String nb = RegistryNodeBuilders.name(true, false, 0);
+    String nb = RegistryNodeBuilders.name(true, false, .33);
     String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
 
     int ts = (int) (.75 * nodeCt);
@@ -651,12 +643,12 @@ public class Handel implements Protocol {
 
   public static void drawImgs() {
     Handel p = newHandel();
-    Predicate<Protocol> contIf = newContIf(p);
+    Predicate<Protocol> contIf = newContIf();
 
     p.init();
     int freq = 10;
-    NodeDrawer nd = new NodeDrawer(new HNodeStatus(p.params), new File("/tmp/handel_anim.gif"),
-        Math.max(10, freq));
+    NodeDrawer nd =
+        new NodeDrawer(p.new HNodeStatus(), new File("/tmp/handel_anim.gif"), Math.max(10, freq));
     int i = 0;
     do {
       p.network.runMs(freq);
@@ -673,7 +665,7 @@ public class Handel implements Protocol {
 
   public static void sigsPerTime() {
     Handel p = newHandel();
-    Predicate<Protocol> contIf = newContIf(p);
+    Predicate<Protocol> contIf = newContIf();
 
 
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
@@ -710,6 +702,30 @@ public class Handel implements Protocol {
   }
 
   public static void main(String... args) {
-    drawImgs();
+    sigsPerTime();
   }
 }
+/*
+
+round=0, Handel, nodes=4096, threshold=3072, pairing=4ms, level timeout=50ms, period=20ms, acceleratedCallsCount=10, dead nodes=819, network=AwsRegionNetworkLatency
+min/avg/max speedRatio=0/1/12
+min/avg/max sigChecked=69/113/211
+min/avg/max queueSize=0/0/0
+bytes sent: min: 225775, max:285125, avg:268597
+bytes rcvd: min: 148532, max:253922, avg:183172
+msg sent: min: 1477, max:2088, avg:1917
+msg rcvd: min: 1020, max:2121, avg:1290
+done at: min: 1149, max:3733, avg:1579
+
+
+round=0, GSFSignature, nodes=2048, threshold=1536, pairing=4ms, level timeout=50ms, period=20ms, acceleratedCallsCount=10, dead nodes=409, network=AwsRegionNetworkLatency
+min/avg/max speedRatio=0/1/12
+min/avg/max sigChecked=38/253/443
+min/avg/max queueSize=0/48/187
+bytes sent: min: 69645, max:82378, avg:75316
+bytes rcvd: min: 28824, max:61887, avg:46298
+msg sent: min: 522, max:651, avg:579
+msg rcvd: min: 240, max:472, avg:361
+done at: min: 1089, max:2004, avg:1394
+
+ */

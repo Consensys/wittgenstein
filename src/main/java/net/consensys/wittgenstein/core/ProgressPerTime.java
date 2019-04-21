@@ -54,7 +54,6 @@ public class ProgressPerTime {
       rawResults.put(field, new ArrayList<>());
     }
 
-
     long bytesSentSum = 0;
     long bytesRcvSum = 0;
     long msgSentSum = 0;
