@@ -606,7 +606,13 @@ public class GSFSignature implements Protocol {
   }
 
 
-  class GFSNodeStatus implements NodeDrawer.NodeStatus {
+  static class GFSNodeStatus implements NodeDrawer.NodeStatus {
+    final GSFSignatureParameters params;
+
+    GFSNodeStatus(GSFSignatureParameters params) {
+      this.params = params;
+    }
+
     @Override
     public int getMax() {
       return params.nodeCount;
@@ -642,12 +648,13 @@ public class GSFSignature implements Protocol {
     };
   }
 
-  private static GSFSignature newGSF() {
+  private static GSFSignature newProtocol() {
     int nodeCt = 32768 / 8;
     double deadR = 0;
     double tsR = .99;
+    double tor = 0.33;
 
-    String nb = RegistryNodeBuilders.name(true, true, 0);
+    String nb = RegistryNodeBuilders.name(true, true, tor);
     String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
 
     int ts = (int) (tsR * nodeCt);
@@ -658,29 +665,30 @@ public class GSFSignature implements Protocol {
   }
 
   public static void drawImgs() {
-    GSFSignature p = newGSF();
+    GSFSignature p = newProtocol();
     Predicate<Protocol> contIf = newConfIf();
 
     p.init();
     int freq = 10;
-    NodeDrawer nd = new NodeDrawer(p.new GFSNodeStatus(), new File("/tmp/handel_anim.gif"), freq);
-    int i = 0;
-    do {
-      p.network.runMs(freq);
+    try (NodeDrawer nd =
+        new NodeDrawer(new GFSNodeStatus(p.params), new File("/tmp/handel_anim.gif"), freq)) {
+      int i = 0;
+      do {
+        p.network.runMs(freq);
 
-      nd.drawNewState(p.network.time, TimeUnit.MILLISECONDS, p.network.liveNodes());
-      if (i % 100 == 0) {
-        nd.writeLastToGif(new File("/tmp/img_" + i + ".gif"));
-      }
-      i++;
+        nd.drawNewState(p.network.time, TimeUnit.MILLISECONDS, p.network.liveNodes());
+        if (i % 100 == 0) {
+          nd.writeLastToGif(new File("/tmp/img_" + i + ".gif"));
+        }
+        i++;
 
-    } while (contIf.test(p));
-    nd.close();
+      } while (contIf.test(p));
+    }
   }
 
 
   public static void sigsPerTime() {
-    GSFSignature p = newGSF();
+    GSFSignature p = newProtocol();
 
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
       final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();

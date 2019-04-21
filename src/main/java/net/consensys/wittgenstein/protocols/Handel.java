@@ -169,12 +169,7 @@ public class Handel implements Protocol {
     }
 
     boolean hasSigToVerify() {
-      for (HLevel l : levels) {
-        if (l.hasSigToVerify()) {
-          return true;
-        }
-      }
-      return false;
+      return sigQueueSize != 0;
     }
 
 
@@ -192,15 +187,6 @@ public class Handel implements Protocol {
       throw new IllegalStateException();
     }
 
-    /**
-     * At a given level, we send the signatures received from the previous level and we expect the
-     * equivalent from our peers of this level.<br/>
-     * If nodeId == 0<br/>
-     * l0: 0 => send to 1 <br/>
-     * l1: 0 1 => send to 2 3 <br/>
-     * l2: 0 1 2 3 => send to 4 5 6 7 <br/>
-     * l3: 0 1 2 3 4 5 6 7 => send to 8 9 10 11 12 13 14 15 <br/>
-     */
     public class HLevel {
       final int level;
       final int size;
@@ -366,19 +352,21 @@ public class Handel implements Protocol {
               best = stv;
             }
           } else {
+
             removed = true;
           }
         }
         if (removed) {
+          int oldSize = toVerifyAgg.size();
           toVerifyAgg.clear();
           toVerifyAgg.addAll(curatedList);
+          int newSize = toVerifyAgg.size();
+          sigQueueSize -= oldSize;
+          sigQueueSize += newSize;
+
         }
 
         return best;
-      }
-
-      public boolean hasSigToVerify() {
-        return !toVerifyAgg.isEmpty() || !toVerifyInd.isEmpty();
       }
     }
 
@@ -480,6 +468,7 @@ public class Handel implements Protocol {
         l.toVerifyInd.set(from.nodeId);
       }
 
+      sigQueueSize++;
       l.toVerifyAgg.add(new SigToVerify(from.nodeId, l.level, receptionRanks[from.nodeId], cs));
     }
 
@@ -628,45 +617,46 @@ public class Handel implements Protocol {
     };
   }
 
-  public static Handel newHandel() {
+  public static Handel newProtocol() {
     int nodeCt = 32768 / 8;
+    double deadR = 0;
+    double tsR = .99;
+    double tor = 0.33;
 
-    String nb = RegistryNodeBuilders.name(true, false, .33);
+    String nb = RegistryNodeBuilders.name(true, true, tor);
     String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
 
-    int ts = (int) (.75 * nodeCt);
-    int dead = (int) (.20 * nodeCt);
+    int ts = (int) (tsR * nodeCt);
+    int dead = (int) (deadR * nodeCt);
     HandelParameters params = new HandelParameters(nodeCt, ts, 4, 50, 20, 10, dead, nb, nl);
     return new Handel(params);
   }
 
-
   public static void drawImgs() {
-    Handel p = newHandel();
+    Handel p = newProtocol();
     Predicate<Protocol> contIf = newContIf();
 
     p.init();
     int freq = 10;
-    NodeDrawer nd =
-        new NodeDrawer(p.new HNodeStatus(), new File("/tmp/handel_anim.gif"), Math.max(10, freq));
-    int i = 0;
-    do {
-      p.network.runMs(freq);
+    try (NodeDrawer nd =
+        new NodeDrawer(p.new HNodeStatus(), new File("/tmp/handel_anim.gif"), freq)) {
+      int i = 0;
+      do {
+        p.network.runMs(freq);
 
-      nd.drawNewState(p.network.time, TimeUnit.MILLISECONDS, p.network.liveNodes());
-      if (i % 100 == 0) {
-        nd.writeLastToGif(new File("/tmp/img_" + i + ".gif"));
-      }
-      i++;
+        nd.drawNewState(p.network.time, TimeUnit.MILLISECONDS, p.network.liveNodes());
+        if (i % 100 == 0) {
+          nd.writeLastToGif(new File("/tmp/img_" + i + ".gif"));
+        }
+        i++;
 
-    } while (contIf.test(p));
-    nd.close();
+      } while (contIf.test(p));
+    }
   }
 
   public static void sigsPerTime() {
-    Handel p = newHandel();
+    Handel p = newProtocol();
     Predicate<Protocol> contIf = newContIf();
-
 
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
       final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
@@ -705,27 +695,3 @@ public class Handel implements Protocol {
     sigsPerTime();
   }
 }
-/*
-
-round=0, Handel, nodes=4096, threshold=3072, pairing=4ms, level timeout=50ms, period=20ms, acceleratedCallsCount=10, dead nodes=819, network=AwsRegionNetworkLatency
-min/avg/max speedRatio=0/1/12
-min/avg/max sigChecked=69/113/211
-min/avg/max queueSize=0/0/0
-bytes sent: min: 225775, max:285125, avg:268597
-bytes rcvd: min: 148532, max:253922, avg:183172
-msg sent: min: 1477, max:2088, avg:1917
-msg rcvd: min: 1020, max:2121, avg:1290
-done at: min: 1149, max:3733, avg:1579
-
-
-round=0, GSFSignature, nodes=2048, threshold=1536, pairing=4ms, level timeout=50ms, period=20ms, acceleratedCallsCount=10, dead nodes=409, network=AwsRegionNetworkLatency
-min/avg/max speedRatio=0/1/12
-min/avg/max sigChecked=38/253/443
-min/avg/max queueSize=0/48/187
-bytes sent: min: 69645, max:82378, avg:75316
-bytes rcvd: min: 28824, max:61887, avg:46298
-msg sent: min: 522, max:651, avg:579
-msg rcvd: min: 240, max:472, avg:361
-done at: min: 1089, max:2004, avg:1394
-
- */
