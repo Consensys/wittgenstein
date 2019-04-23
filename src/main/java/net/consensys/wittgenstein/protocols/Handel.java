@@ -148,7 +148,7 @@ public class Handel implements Protocol {
 
     private SendSigs(HNode from, HNode to) {
       this.level = to.level(from);
-      this.sigs = (BitSet) to.levels.get(level).waitedSigs.clone();
+      this.sigs = to.levels.get(level).waitedSigs;
       this.levelFinished = false;
       this.size = 1;
       this.badSig = true;
@@ -162,12 +162,12 @@ public class Handel implements Protocol {
 
     @Override
     public void action(Network<HNode> network, HNode from, HNode to) {
-      to.onNewSig(from, this);
-
       if (!to.suicidalAttackDone) {
-        fillWithFalseSigs(network, from);
+        fillWithFalseSigs(network, to);
         to.suicidalAttackDone = true;
       }
+
+      to.onNewSig(from, this);
     }
 
     public void fillWithFalseSigs(Network<HNode> network, HNode honest) {
