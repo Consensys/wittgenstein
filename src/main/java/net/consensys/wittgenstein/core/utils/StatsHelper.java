@@ -2,6 +2,7 @@ package net.consensys.wittgenstein.core.utils;
 
 
 import net.consensys.wittgenstein.core.Node;
+import org.springframework.web.bind.annotation.GetMapping;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,6 +13,13 @@ public class StatsHelper {
 
   public interface Get {
     long get(Node n);
+  }
+
+  public static class GetDoneAt implements Get {
+    @Override
+    public long get(Node n) {
+      return n.doneAt;
+    }
   }
 
   public interface Stat extends Cloneable {
@@ -113,7 +121,6 @@ public class StatsHelper {
     public Stat createFromValue(Map<String, AtomicLong> vals) {
       return new SimpleStats(vals.get("min").get(), vals.get("max").get(), vals.get("avg").get());
     }
-
   }
 
   public static SimpleStats getStatsOn(List<? extends Node> nodes, Get get) {
@@ -132,6 +139,14 @@ public class StatsHelper {
     return new SimpleStats(min, max, (tot / nodes.size()));
   }
 
+  public static SimpleStats getDoneAt(List<? extends Node> nodes) {
+    return getStatsOn(nodes, n -> n.doneAt);
+  }
+
+  public static SimpleStats getMsgReceived(List<? extends Node> nodes) {
+    return getStatsOn(nodes, Node::getMsgReceived);
+  }
+
   public interface StatsGetter {
     List<String> fields();
 
@@ -145,5 +160,20 @@ public class StatsHelper {
       return fields;
     }
   }
+
+  public static class DoneAtStatGetter extends SimpleStatsGetter {
+    @Override
+    public Stat get(List<? extends Node> liveNodes) {
+      return getDoneAt(liveNodes);
+    }
+  }
+
+  public static class MsgReceivedStatGetter extends SimpleStatsGetter {
+    @Override
+    public Stat get(List<? extends Node> liveNodes) {
+      return getMsgReceived(liveNodes);
+    }
+  }
+
 
 }

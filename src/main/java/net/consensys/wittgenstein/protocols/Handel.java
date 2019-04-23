@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 @SuppressWarnings("WeakerAccess")
 public class Handel implements Protocol {
@@ -39,7 +40,7 @@ public class Handel implements Protocol {
      */
     final int pairingTime;
 
-    final int timeoutPerLevelMs;
+    final int levelWaitTime;
     final int periodDurationMs;
     final int acceleratedCallsCount;
 
@@ -47,23 +48,37 @@ public class Handel implements Protocol {
     final String nodeBuilderName;
     final String networkLatencyName;
 
+    /**
+     * Allows to test what happens when all the nodes are not starting at the same time. If the
+     * value is different than 0, all the nodes are starting at a time uniformly distributed between
+     * zero and 'desynchronizedStart'
+     */
+    final int desynchronizedStart;
+
+    /**
+     * A Byzantine scenario where all nodes starts
+     */
+    final boolean byzantineSuicide;
+
     // Used for json / http server
     @SuppressWarnings("unused")
     public HandelParameters() {
       this.nodeCount = 32768 / 1024;
       this.threshold = (int) (nodeCount * (0.99));
       this.pairingTime = 3;
-      this.timeoutPerLevelMs = 50;
+      this.levelWaitTime = 50;
       this.periodDurationMs = 10;
       this.acceleratedCallsCount = 10;
       this.nodesDown = 0;
       this.nodeBuilderName = null;
       this.networkLatencyName = null;
+      this.desynchronizedStart = 0;
+      this.byzantineSuicide = false;
     }
 
-    public HandelParameters(int nodeCount, int threshold, int pairingTime, int timeoutPerLevelMs,
+    public HandelParameters(int nodeCount, int threshold, int pairingTime, int levelWaitTime,
         int periodDurationMs, int acceleratedCallsCount, int nodesDown, String nodeBuilderName,
-        String networkLatencyName) {
+        String networkLatencyName, int desynchronizedStart, boolean byzantineSuicide) {
       if (nodesDown >= nodeCount || nodesDown < 0 || threshold > nodeCount
           || (nodesDown + threshold > nodeCount)) {
         throw new IllegalArgumentException("nodeCount=" + nodeCount + ", threshold=" + threshold);
@@ -75,21 +90,16 @@ public class Handel implements Protocol {
       this.nodeCount = nodeCount;
       this.threshold = threshold;
       this.pairingTime = pairingTime;
-      this.timeoutPerLevelMs = timeoutPerLevelMs;
+      this.levelWaitTime = levelWaitTime;
       this.periodDurationMs = periodDurationMs;
       this.acceleratedCallsCount = acceleratedCallsCount;
       this.nodesDown = nodesDown;
       this.nodeBuilderName = nodeBuilderName;
       this.networkLatencyName = networkLatencyName;
+      this.desynchronizedStart = desynchronizedStart;
+      this.byzantineSuicide = byzantineSuicide;
     }
 
-    public HandelParameters(int nodeCount, double ratioThreshold, int pairingTime,
-        int timeoutPerLevelMs, int periodDurationMs, int acceleratedCallsCount,
-        double ratioNodesDown, String nodeBuilderName, String networkLatencyName) {
-      this(nodeCount, (int) (ratioThreshold * nodeCount), pairingTime, timeoutPerLevelMs,
-          periodDurationMs, acceleratedCallsCount, (int) (ratioNodesDown * nodeCount),
-          nodeBuilderName, networkLatencyName);
-    }
   }
 
   public Handel(HandelParameters params) {
@@ -102,7 +112,7 @@ public class Handel implements Protocol {
   @Override
   public String toString() {
     return "Handel, " + "nodes=" + params.nodeCount + ", threshold=" + params.threshold
-        + ", pairing=" + params.pairingTime + "ms, level waitTime=" + params.timeoutPerLevelMs
+        + ", pairing=" + params.pairingTime + "ms, levelWaitTime=" + params.levelWaitTime
         + "ms, period=" + params.periodDurationMs + "ms, acceleratedCallsCount="
         + params.acceleratedCallsCount + ", dead nodes=" + params.nodesDown + ", builder="
         + params.nodeBuilderName;
@@ -113,16 +123,27 @@ public class Handel implements Protocol {
     final BitSet sigs;
     final boolean levelFinished;
     final int size;
+    final boolean badSig;
 
     public SendSigs(BitSet sigs, HNode.HLevel l) {
       this.sigs = (BitSet) sigs.clone();
       this.level = l.level;
       this.size = 1 + l.expectedSigs() / 8 + 96; // Size = level + bit field + the signatures included + our own sig
       this.levelFinished = l.incomingComplete();
+      this.badSig = false;
       if (sigs.isEmpty() || sigs.cardinality() > l.size) {
         throw new IllegalStateException("bad level: " + l.level);
       }
     }
+
+    private SendSigs(HNode from, HNode to) {
+      this.level = to.level(from);
+      this.sigs = (BitSet) to.levels.get(level).waitedSigs.clone();
+      this.levelFinished = false;
+      this.size = 1;
+      this.badSig = true;
+    }
+
 
     @Override
     public int size() {
@@ -137,17 +158,19 @@ public class Handel implements Protocol {
 
 
   public class HNode extends Node {
+    final int startAt;
     final List<HLevel> levels = new ArrayList<>();
-    final int nodePairingTime = (int) (params.pairingTime * speedRatio);
+    final int nodePairingTime = (int) (Math.max(1, params.pairingTime * speedRatio));
     final int[] receptionRanks = new int[params.nodeCount];
-
+    final BitSet blacklist = new BitSet();
 
     boolean done = false;
     int sigChecked = 0;
     int sigQueueSize = 0;
 
-    HNode(NodeBuilder nb) {
+    HNode(int startAt, NodeBuilder nb) {
       super(network.rd, nb);
+      this.startAt = startAt;
     }
 
     public void initLevel() {
@@ -171,7 +194,6 @@ public class Handel implements Protocol {
     boolean hasSigToVerify() {
       return sigQueueSize != 0;
     }
-
 
     int totalSigSize() {
       HLevel last = levels.get(levels.size() - 1);
@@ -265,7 +287,7 @@ public class Handel implements Protocol {
           return false;
         }
 
-        if (network.time >= (level - 1) * params.timeoutPerLevelMs) {
+        if (network.time >= (level - 1) * params.levelWaitTime) {
           return true;
         }
 
@@ -299,7 +321,7 @@ public class Handel implements Protocol {
             posInLevel = 0;
           }
 
-          if (!finishedPeers.get(p.nodeId)) {
+          if (!finishedPeers.get(p.nodeId) && !blacklist.get(p.nodeId)) {
             res.add(p);
             peersCt--;
           } else {
@@ -346,13 +368,12 @@ public class Handel implements Protocol {
         boolean removed = false;
         for (SigToVerify stv : toVerifyAgg) {
           int s = sizeIfIncluded(stv);
-          if (s > curSize) {
+          if (!blacklist.get(stv.from) && s > curSize) {
             curatedList.add(stv);
             if (best == null || stv.rank < best.rank) {
               best = stv;
             }
           } else {
-
             removed = true;
           }
         }
@@ -363,7 +384,6 @@ public class Handel implements Protocol {
           int newSize = toVerifyAgg.size();
           sigQueueSize -= oldSize;
           sigQueueSize += newSize;
-
         }
 
         return best;
@@ -394,6 +414,12 @@ public class Handel implements Protocol {
      * will be our last message.
      */
     void updateVerifiedSignatures(SigToVerify vs) {
+      if (vs.badSig) {
+        blacklist.set(vs.from);
+        return;
+      }
+
+
       HLevel vsl = levels.get(vs.level);
 
       vsl.toVerifyInd.set(vs.from, false);
@@ -452,6 +478,12 @@ public class Handel implements Protocol {
      * Nothing much to do when we receive a sig set: we just add it to our toVerify list.
      */
     void onNewSig(HNode from, SendSigs ssigs) {
+      if (network.time > 0 && (network.time < startAt || blacklist.get(from.nodeId))) {
+        // For some byzantine scenarios we fill the queues at the beginning of
+        //  the protocol, so we skip the tests when network.time==0
+        return;
+      }
+
       HLevel l = levels.get(ssigs.level);
 
       BitSet cs = (BitSet) ssigs.sigs.clone();
@@ -469,7 +501,8 @@ public class Handel implements Protocol {
       }
 
       sigQueueSize++;
-      l.toVerifyAgg.add(new SigToVerify(from.nodeId, l.level, receptionRanks[from.nodeId], cs));
+      l.toVerifyAgg.add(
+          new SigToVerify(from.nodeId, l.level, receptionRanks[from.nodeId], cs, ssigs.badSig));
     }
 
     void checkSigs() {
@@ -493,18 +526,19 @@ public class Handel implements Protocol {
     }
   }
 
-
   static class SigToVerify {
     final int from;
     final int level;
     final int rank;
     final BitSet sig;
+    final boolean badSig;
 
-    SigToVerify(int from, int level, int rank, BitSet sig) {
+    SigToVerify(int from, int level, int rank, BitSet sig, boolean badSig) {
       this.from = from;
       this.level = level;
       this.rank = rank;
       this.sig = sig;
+      this.badSig = badSig;
     }
   }
 
@@ -513,11 +547,25 @@ public class Handel implements Protocol {
     return new Handel(params);
   }
 
+  public void fillWithFalseSigs() {
+    List<HNode> lives = network.liveNodes();
+    List<HNode> byz = network.allNodes.stream().filter(Node::isDown).collect(Collectors.toList());
+
+    for (HNode n : lives) {
+      for (HNode b : byz) {
+        SendSigs ss = new SendSigs(b, n);
+        n.onNewSig(b, ss);
+      }
+    }
+  }
+
   public void init() {
     NodeBuilder nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
 
     for (int i = 0; i < params.nodeCount; i++) {
-      final HNode n = new HNode(nb);
+      int startAt =
+          params.desynchronizedStart == 0 ? 0 : network.rd.nextInt(params.desynchronizedStart);
+      final HNode n = new HNode(startAt, nb);
       network.addNode(n);
     }
 
@@ -534,9 +582,9 @@ public class Handel implements Protocol {
     for (HNode n : network.allNodes) {
       n.initLevel();
       if (!n.isDown()) {
-        network.registerPeriodicTask(n::dissemination, 1, params.periodDurationMs, n);
-        network.registerConditionalTask(n::checkSigs, 1, n.nodePairingTime, n, n::hasSigToVerify,
-            () -> !n.done);
+        network.registerPeriodicTask(n::dissemination, n.startAt + 1, params.periodDurationMs, n);
+        network.registerConditionalTask(n::checkSigs, n.startAt + 1, n.nodePairingTime, n,
+            n::hasSigToVerify, () -> !n.done);
       }
     }
 
@@ -573,6 +621,10 @@ public class Handel implements Protocol {
         }
       }
     }
+
+    if (params.byzantineSuicide) {
+      fillWithFalseSigs();
+    }
   }
 
   @Override
@@ -603,9 +655,8 @@ public class Handel implements Protocol {
     }
   }
 
-  public static Predicate<Protocol> newContIf() {
-    return pp -> {
-      Handel p = (Handel) pp;
+  public static Predicate<Handel> newContIf() {
+    return p -> {
       for (HNode n : p.network().allNodes) {
         // All up nodes must have reached the threshold, so if one live
         //  node has not reached it we continue
@@ -619,22 +670,22 @@ public class Handel implements Protocol {
 
   public static Handel newProtocol() {
     int nodeCt = 32768 / 8;
-    double deadR = 0;
-    double tsR = .99;
-    double tor = 0.33;
+    double deadR = 0.10;
+    double tsR = .85;
 
-    String nb = RegistryNodeBuilders.name(true, true, tor);
+    String nb = RegistryNodeBuilders.name(true, false, 0.33);
     String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
 
     int ts = (int) (tsR * nodeCt);
     int dead = (int) (deadR * nodeCt);
-    HandelParameters params = new HandelParameters(nodeCt, ts, 4, 50, 20, 10, dead, nb, nl);
+    HandelParameters params =
+        new HandelParameters(nodeCt, ts, 4, 50, 20, 10, dead, nb, nl, 0, false);
     return new Handel(params);
   }
 
   public static void drawImgs() {
     Handel p = newProtocol();
-    Predicate<Protocol> contIf = newContIf();
+    Predicate<Handel> contIf = newContIf();
 
     p.init();
     int freq = 10;
@@ -656,7 +707,7 @@ public class Handel implements Protocol {
 
   public static void sigsPerTime() {
     Handel p = newProtocol();
-    Predicate<Protocol> contIf = newContIf();
+    Predicate<Handel> contIf = newContIf();
 
     StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
       final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();

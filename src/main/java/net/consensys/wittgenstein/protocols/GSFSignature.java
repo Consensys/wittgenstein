@@ -110,13 +110,15 @@ public class GSFSignature implements Protocol {
 
   static class SendSigs extends Message<GSFNode> {
     final BitSet sigs;
+    final GSFNode from;
     final int level;
     final boolean levelFinished;
     final int size;
     final int received;
 
-    public SendSigs(BitSet sigs, GSFNode.SFLevel l) {
+    public SendSigs(GSFNode from, BitSet sigs, GSFNode.SFLevel l) {
       this.sigs = (BitSet) sigs.clone();
+      this.from = from;
       this.level = l.level;
       // Size = level + bit field + the signatures included + our own sig
       this.size = 1 + l.expectedSigs() / 8 + 96;
@@ -139,7 +141,7 @@ public class GSFSignature implements Protocol {
     final ArrayList<SendSigs> toVerify = new ArrayList<>();
     final List<SFLevel> levels = new ArrayList<>();
     final BitSet verifiedSignatures = new BitSet(params.nodeCount);
-    final int nodePairingTime = (int) (params.pairingTime * speedRatio);
+    final int nodePairingTime = (int) (Math.max(1, params.pairingTime * speedRatio));
 
     boolean done = false;
     int sigChecked = 0;
@@ -293,7 +295,7 @@ public class GSFSignature implements Protocol {
 
         List<GSFNode> dest = getRemainingPeers(1);
         if (!dest.isEmpty()) {
-          SendSigs ss = new SendSigs(toSend, this);
+          SendSigs ss = new SendSigs(GSFNode.this, toSend, this);
           network.send(ss, GSFNode.this, dest.get(0));
         }
       }
@@ -361,11 +363,11 @@ public class GSFSignature implements Protocol {
      * If the state has changed we send a message to all. If we're done, we update all our peers: it
      * will be our last message.
      */
-    void updateVerifiedSignatures(int level, BitSet sigs) {
+    void updateVerifiedSignatures(GSFNode from, int level, BitSet sigs) {
       SFLevel sfl = levels.get(level);
 
       if (sigs.cardinality() == 1) {
-        sfl.indivVerifiedSig.or(sigs);
+        sfl.indivVerifiedSig.set(from.nodeId);
       }
       sigs.or(sfl.indivVerifiedSig);
 
@@ -422,7 +424,7 @@ public class GSFSignature implements Protocol {
           BitSet bestToSend = getLastFinishedLevel();
           while (include(bestToSend, sfl.waitedSigs) && sfl.level < levels.size() - 1) {
             sfl = levels.get(sfl.level + 1);
-            SendSigs sendSigs = new SendSigs(bestToSend, sfl);
+            SendSigs sendSigs = new SendSigs(GSFNode.this, bestToSend, sfl);
             List<GSFNode> peers = sfl.getRemainingPeers(params.acceleratedCallsCount);
             if (!peers.isEmpty()) {
               network.send(sendSigs, this, peers);
@@ -526,11 +528,11 @@ public class GSFSignature implements Protocol {
       if (!l.individualSignatures.get(from.nodeId)) {
         BitSet indiv = new BitSet();
         indiv.set(from.nodeId);
-        SendSigs si = new SendSigs(indiv, l);
+        SendSigs si = new SendSigs(from, indiv, l);
         toVerify.add(si);
         l.individualSignatures.set(from.nodeId);
       }
-
+      sigQueueSize = toVerify.size();
     }
 
     public void checkSigs() {
@@ -552,9 +554,10 @@ public class GSFSignature implements Protocol {
       if (best != null) {
         toVerify.remove(best);
         sigChecked++;
-        sigQueueSize += toVerify.size();
+        sigQueueSize = toVerify.size();
         final SendSigs tBest = best;
-        network.registerTask(() -> GSFNode.this.updateVerifiedSignatures(tBest.level, tBest.sigs),
+        network.registerTask(
+            () -> GSFNode.this.updateVerifiedSignatures(tBest.from, tBest.level, tBest.sigs),
             network.time + nodePairingTime, GSFNode.this);
       }
     }
@@ -650,11 +653,10 @@ public class GSFSignature implements Protocol {
 
   private static GSFSignature newProtocol() {
     int nodeCt = 32768 / 8;
-    double deadR = 0;
-    double tsR = .99;
-    double tor = 0.33;
+    double deadR = 0.10;
+    double tsR = .85;
 
-    String nb = RegistryNodeBuilders.name(true, true, tor);
+    String nb = RegistryNodeBuilders.name(true, false, 0.33);
     String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
 
     int ts = (int) (tsR * nodeCt);

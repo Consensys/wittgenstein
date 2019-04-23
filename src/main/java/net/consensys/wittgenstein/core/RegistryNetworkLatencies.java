@@ -7,7 +7,7 @@ public class RegistryNetworkLatencies {
   public static RegistryNetworkLatencies singleton = new RegistryNetworkLatencies();
 
 
-  private RegistryNetworkLatencies() {}
+  public RegistryNetworkLatencies() {}
 
   public NetworkLatency getByName(String name) {
     if (name == null) {

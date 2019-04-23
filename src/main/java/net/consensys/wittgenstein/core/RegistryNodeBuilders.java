@@ -25,6 +25,10 @@ public class RegistryNodeBuilders {
     return (site + "_speed=" + speed + "_tor=" + (tor + "000").substring(0, 4)).toUpperCase();
   }
 
+  public static Double[] tor() {
+    return new Double[] {0.0, 0.10, 0.20, .33, .5, .6, .8};
+  }
+
   private RegistryNodeBuilders() {
     CSVLatencyReader lr = new CSVLatencyReader();
     registry.put(RANDOM_POSITION, new NodeBuilder.NodeBuilderWithRandomPosition());
@@ -43,7 +47,7 @@ public class RegistryNodeBuilders {
 
     for (boolean aws : new Boolean[] {true, false}) {
       for (boolean speedConstant : new Boolean[] {true, false}) {
-        for (double tor : new Double[] {0.0, .33, .5, .6}) {
+        for (double tor : tor()) {
           if (aws) {
             nb = new NodeBuilder.NodeBuilderWithCity(
                 NetworkLatency.AwsRegionNetworkLatency.cities());

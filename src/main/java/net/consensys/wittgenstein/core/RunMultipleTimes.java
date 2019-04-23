@@ -60,7 +60,7 @@ public class RunMultipleTimes<TP extends Protocol> {
 
       for (StatsHelper.StatsGetter sg : statsGetters) {
         List<StatsHelper.Stat> res = allStats.computeIfAbsent(sg, (k) -> new ArrayList<>());
-        StatsHelper.Stat s = sg.get(c.network().allNodes);
+        StatsHelper.Stat s = sg.get(c.network().liveNodes());
         res.add(s);
       }
     }

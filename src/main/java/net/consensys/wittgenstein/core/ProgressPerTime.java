@@ -47,7 +47,7 @@ public class ProgressPerTime {
     void end(Protocol p);
   }
 
-  public void run(Predicate<Protocol> contIf) {
+  public void run(Predicate<? extends Protocol> contIf) {
 
     Map<String, ArrayList<Graph.Series>> rawResults = new HashMap<>();
     for (String field : statsGetter.fields()) {
@@ -88,7 +88,7 @@ public class ProgressPerTime {
         if (p.network().time % 10000 == 0) {
           System.out.println("time goes by... time=" + (p.network().time / 1000) + ", stats=" + s);
         }
-      } while (contIf.test(p));
+      } while (((Predicate) contIf).test(p));
       long endAt = System.currentTimeMillis();
 
       if (endCallback != null) {
@@ -138,6 +138,7 @@ public class ProgressPerTime {
       graph.save(new File("graph.png"));
     } catch (IOException e) {
       System.err.println("Can't generate the graph: " + e.getMessage());
+      throw new IllegalStateException(e);
     }
   }
 }
