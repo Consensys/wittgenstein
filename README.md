@@ -26,7 +26,7 @@ gradle clean shadowJar
 ## How to run it
 Once built:
 ```
-java -Xms6000m -Xmx12048m -classpath build/libs/wittgenstein-all.jar net.consensys.wittgenstein.protocol.GSFSignature
+java -Xms6000m -Xmx12048m -classpath build/libs/wittgenstein-all.jar net.consensys.wittgenstein.protocols.GSFSignature
 ```
 
 This command is typically for a 16GB machine. The memory is very important when you want to simulate tens of thousands of nodes. If you have less memory, use lower values for -Xms and -Xmx, and run the simulations with less nodes.
