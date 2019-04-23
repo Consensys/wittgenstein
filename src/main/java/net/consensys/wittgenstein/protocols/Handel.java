@@ -100,6 +100,16 @@ public class Handel implements Protocol {
       this.byzantineSuicide = byzantineSuicide;
     }
 
+    @Override
+    public String toString() {
+      return "HandelParameters{" + "nodeCount=" + nodeCount + ", threshold=" + threshold
+          + ", pairingTime=" + pairingTime + ", levelWaitTime=" + levelWaitTime
+          + ", periodDurationMs=" + periodDurationMs + ", acceleratedCallsCount="
+          + acceleratedCallsCount + ", nodesDown=" + nodesDown + ", nodeBuilderName='"
+          + nodeBuilderName + '\'' + ", networkLatencyName='" + networkLatencyName + '\''
+          + ", desynchronizedStart=" + desynchronizedStart + ", byzantineSuicide="
+          + byzantineSuicide + '}';
+    }
   }
 
   public Handel(HandelParameters params) {
@@ -156,6 +166,7 @@ public class Handel implements Protocol {
 
       if (!to.suicidalAttackDone) {
         fillWithFalseSigs(network, from);
+        to.suicidalAttackDone = true;
       }
     }
 
