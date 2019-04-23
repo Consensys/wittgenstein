@@ -153,6 +153,18 @@ public class Handel implements Protocol {
     @Override
     public void action(Network<HNode> network, HNode from, HNode to) {
       to.onNewSig(from, this);
+
+      if (!to.suicidalAttackDone) {
+        fillWithFalseSigs(network, from);
+      }
+    }
+
+    public void fillWithFalseSigs(Network<HNode> network, HNode honest) {
+      List<HNode> byz = network.allNodes.stream().filter(Node::isDown).collect(Collectors.toList());
+      for (HNode b : byz) {
+        SendSigs ss = new SendSigs(b, honest);
+        honest.onNewSig(b, ss);
+      }
     }
   }
 
@@ -163,6 +175,7 @@ public class Handel implements Protocol {
     final int nodePairingTime = (int) (Math.max(1, params.pairingTime * speedRatio));
     final int[] receptionRanks = new int[params.nodeCount];
     final BitSet blacklist = new BitSet();
+    boolean suicidalAttackDone;
 
     boolean done = false;
     int sigChecked = 0;
@@ -171,6 +184,7 @@ public class Handel implements Protocol {
     HNode(int startAt, NodeBuilder nb) {
       super(network.rd, nb);
       this.startAt = startAt;
+      this.suicidalAttackDone = !params.byzantineSuicide;
     }
 
     public void initLevel() {
@@ -419,7 +433,6 @@ public class Handel implements Protocol {
         return;
       }
 
-
       HLevel vsl = levels.get(vs.level);
 
       vsl.toVerifyInd.set(vs.from, false);
@@ -478,9 +491,7 @@ public class Handel implements Protocol {
      * Nothing much to do when we receive a sig set: we just add it to our toVerify list.
      */
     void onNewSig(HNode from, SendSigs ssigs) {
-      if (network.time > 0 && (network.time < startAt || blacklist.get(from.nodeId))) {
-        // For some byzantine scenarios we fill the queues at the beginning of
-        //  the protocol, so we skip the tests when network.time==0
+      if (network.time < startAt || blacklist.get(from.nodeId)) {
         return;
       }
 
@@ -547,17 +558,6 @@ public class Handel implements Protocol {
     return new Handel(params);
   }
 
-  public void fillWithFalseSigs() {
-    List<HNode> lives = network.liveNodes();
-    List<HNode> byz = network.allNodes.stream().filter(Node::isDown).collect(Collectors.toList());
-
-    for (HNode n : lives) {
-      for (HNode b : byz) {
-        SendSigs ss = new SendSigs(b, n);
-        n.onNewSig(b, ss);
-      }
-    }
-  }
 
   public void init() {
     NodeBuilder nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
@@ -620,10 +620,6 @@ public class Handel implements Protocol {
           l.buildEmissionList(emissions);
         }
       }
-    }
-
-    if (params.byzantineSuicide) {
-      fillWithFalseSigs();
     }
   }
 

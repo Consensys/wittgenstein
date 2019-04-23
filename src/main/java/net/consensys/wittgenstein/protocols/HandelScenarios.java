@@ -96,22 +96,23 @@ public class HandelScenarios {
     System.out.println("\nByzantine nodes are filling honest node's queues with bad signatures");
 
     for (int n = 128; n <= 4096; n *= 2) {
-      Handel.HandelParameters params = defaultParams(n, null, null, null, true);
-      BasicStats bs = run(5, params);
-      System.out.println(n + " nodes, usual byzantines: " + bs);
+      //  Handel.HandelParameters params = defaultParams(n, null, null, null, true);
+      //  BasicStats bs = run(5, params);
+      // System.out.println(n + " nodes, usual byzantines: " + bs);
     }
 
+    int n = 1024;
     for (double dr : new Double[] {0.0, .10, .20, .30, .40, .50}) {
-      Handel.HandelParameters params = defaultParams(2048, dr, null, null, true);
+      Handel.HandelParameters params = defaultParams(n, dr, null, null, true);
       BasicStats bs = run(5, params);
-      System.out.println(dr + " byzantines: " + bs);
+      System.out.println(n + " nodes, " + dr + " byzantines: " + bs);
     }
   }
 
   public static void main(String... args) {
     HandelScenarios scenario = new HandelScenarios();
     scenario.log();
-    scenario.byzantineSuicide();
-    // scenario.tor();
+    // scenario.byzantineSuicide();
+    scenario.tor();
   }
 }
