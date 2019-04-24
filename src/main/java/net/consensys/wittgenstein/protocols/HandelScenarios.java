@@ -189,7 +189,7 @@ public class HandelScenarios {
 
   private void byzantineWithVariableWindow() {
     System.out.println("\nSEvaluation with priority list of different size;");
-    int n = 2048;
+    int n = 128;
     Handel.WindowParameters windowParam = new Handel.WindowParameters();
     windowParam.type = Handel.WindowParameters.VARIABLE;
 
@@ -257,7 +257,7 @@ public class HandelScenarios {
                   cong = "exponential";
                 }
                 System.out.println("WindowEvaluation: initial=" + init + ",min=" + min + ",max="
-                    + max + "cong=" + cong + ",deadRatio=" + dr + " => " + bs);
+                    + max + ",cong=" + cong + ",deadRatio=" + dr + ",suicide=" + byz[0] + ",hidden=" + byz[1] + " => " + bs);
               }
             }
           }
@@ -271,7 +271,8 @@ public class HandelScenarios {
     HandelScenarios scenario = new HandelScenarios();
     //scenario.log();
 
-    scenario.byzantineWindowEvaluation();
+    //scenario.byzantineWindowEvaluation();
+    scenario.byzantineWithVariableWindow();
     //scenario.hiddenByzantine();
     // scenario.tor();
   }
