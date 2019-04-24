@@ -52,7 +52,8 @@ public class HandelScenarios {
 
     return new Handel.HandelParameters(nodes, (int) (nodes * treshold), 4, 50, 20, 10,
         (int) (nodes * deadRatio), RegistryNodeBuilders.name(true, false, tor),
-        NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName(), desynchronizedStart,  byzantineSuicide, hiddenByzantine);
+        NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName(), desynchronizedStart,
+        byzantineSuicide, hiddenByzantine);
   }
 
   private BasicStats run(int rounds, Handel.HandelParameters params) {
@@ -161,18 +162,18 @@ public class HandelScenarios {
     Handel.WindowParameters windowParam = new Handel.WindowParameters();
     windowParam.type = Handel.WindowParameters.FIXED;
 
-    double[] deadRatios = new double[]{0, 0.25, 0.50};
+    double[] deadRatios = new double[] {0, 0.25, 0.50};
     for (Boolean[] byzs : new Boolean[][] {new Boolean[] {false, false},
-            new Boolean[] {true, false}, new Boolean[] {false, true}}) {
-      for (int w : new int[]{20, 40, 80, 160}) {
+        new Boolean[] {true, false}, new Boolean[] {false, true}}) {
+      for (int w : new int[] {20, 40, 80, 160}) {
         for (double dr : deadRatios) {
           Handel.HandelParameters params = defaultParams(n, dr, null, null, byzs[0], byzs[1]);
           params.window = windowParam;
           BasicStats bs = run(3, params);
           System.out.println("WindowEvaluation: Window: " + w + ", DeadRatio: " + dr
-                + " suicideBiz=" + byzs[0] + ", hiddenByz=" + byzs[1] + " => " + bs);
+              + " suicideBiz=" + byzs[0] + ", hiddenByz=" + byzs[1] + " => " + bs);
+        }
       }
-    }
 
       System.out.println("\nSEvaluation with using ranking in the list *only*");
       for (double dr : deadRatios) {
@@ -197,20 +198,22 @@ public class HandelScenarios {
       public int min;
       public int max;
       public Handel.WindowSizeCongestion congestion;
-      public boundedCongestion(int min,int max, Handel.WindowSizeCongestion c) {
+
+      public boundedCongestion(int min, int max, Handel.WindowSizeCongestion c) {
         this.min = min;
         this.max = max;
         this.congestion = c;
       }
+
       public int newSize(int previous, boolean correct) {
-         int next = this.congestion.newSize(previous,correct);
-         if (next > max) {
-           return max;
-         }
-         if (next < min) {
-           return min;
-         }
-         return next;
+        int next = this.congestion.newSize(previous, correct);
+        if (next > max) {
+          return max;
+        }
+        if (next < min) {
+          return min;
+        }
+        return next;
       }
     }
     Handel.WindowSizeCongestion linear = (previous, correct) -> {
@@ -232,31 +235,34 @@ public class HandelScenarios {
 
 
     double[] deadRatios = new double[] {0.50};
-    int []minimum = new int[] {1,5};
-    int []maximum = new int[] {20,40,80};
-    int []initials = new int[] {1,5,20};
-    Handel.WindowSizeCongestion[] congestions = new Handel.WindowSizeCongestion[]{linear,exponential};
-    Boolean[][] byzs = new Boolean[][] {new Boolean[] {false, false}, new Boolean[] {true, false}, new Boolean[] {false, true}};
+    int[] minimum = new int[] {1, 5};
+    int[] maximum = new int[] {20, 40, 80};
+    int[] initials = new int[] {1, 5, 20};
+    Handel.WindowSizeCongestion[] congestions =
+        new Handel.WindowSizeCongestion[] {linear, exponential};
+    Boolean[][] byzs = new Boolean[][] {new Boolean[] {false, false}, new Boolean[] {true, false},
+        new Boolean[] {false, true}};
     for (int init : initials) {
-    for (int min : minimum) {
-      for (int max : maximum) {
-        for (double dr : deadRatios) {
-          for (Handel.WindowSizeCongestion c : congestions) {
-            for (Boolean[] byz : byzs) {
-              Handel.HandelParameters params = defaultParams(n, dr, null, null,byz[0],byz[1]);
-              windowParam.congestion = new boundedCongestion(min, max, c);
-              params.window = windowParam;
-              BasicStats bs = run(3, params);
-              String cong = "linear";
-              if (c == exponential) {
-                cong = "exponential";
+      for (int min : minimum) {
+        for (int max : maximum) {
+          for (double dr : deadRatios) {
+            for (Handel.WindowSizeCongestion c : congestions) {
+              for (Boolean[] byz : byzs) {
+                Handel.HandelParameters params = defaultParams(n, dr, null, null, byz[0], byz[1]);
+                windowParam.congestion = new boundedCongestion(min, max, c);
+                params.window = windowParam;
+                BasicStats bs = run(3, params);
+                String cong = "linear";
+                if (c == exponential) {
+                  cong = "exponential";
+                }
+                System.out.println("WindowEvaluation: initial=" + init + ",min=" + min + ",max="
+                    + max + "cong=" + cong + ",deadRatio=" + dr + " => " + bs);
               }
-              System.out.println("WindowEvaluation: initial=" + init + ",min=" + min + ",max=" + max + "cong=" + cong + ",deadRatio=" + dr + " => " + bs);
             }
           }
         }
       }
-    }
     }
   }
 

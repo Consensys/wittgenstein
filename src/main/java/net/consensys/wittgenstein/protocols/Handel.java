@@ -123,8 +123,7 @@ public class Handel implements Protocol {
           + acceleratedCallsCount + ", nodesDown=" + nodesDown + ", nodeBuilderName='"
           + nodeBuilderName + '\'' + ", networkLatencyName='" + networkLatencyName + '\''
           + ", desynchronizedStart=" + desynchronizedStart + ", byzantineSuicide="
-          + byzantineSuicide + ", hiddenByzantine=" + hiddenByzantine
-          + '}';
+          + byzantineSuicide + ", hiddenByzantine=" + hiddenByzantine + '}';
     }
   }
 
@@ -465,18 +464,20 @@ public class Handel implements Protocol {
 
       public SigToVerify bestToVerifyWithWindow() {
         WindowParameters window = Handel.this.params.window;
-        switch(window.type) {
+        switch (window.type) {
           case WindowParameters.FIXED:
             return bestToVerifyWithWindowFIXED();
           case WindowParameters.VARIABLE:
-          return bestToVerifyWithWindowVARIABLE();
+            return bestToVerifyWithWindowVARIABLE();
         }
         return null;
       }
 
       /**
-       * This method uses a window that has a variable size depending on whether the node has received invalid
-       * contributions or not. Within the window, it evaluates with a scoring function. Outside it evaluates with the rank.
+       * This method uses a window that has a variable size depending on whether the node has
+       * received invalid contributions or not. Within the window, it evaluates with a scoring
+       * function. Outside it evaluates with the rank.
+       * 
        * @return
        */
       public SigToVerify bestToVerifyWithWindowVARIABLE() {
@@ -512,8 +513,9 @@ public class Handel implements Protocol {
       }
 
       /**
-       * This method uses a simple fixed window of given length in the window paramters. Within the window, it evaluates
-       * randomly.
+       * This method uses a simple fixed window of given length in the window paramters. Within the
+       * window, it evaluates randomly.
+       * 
        * @return
        */
       public SigToVerify bestToVerifyWithWindowFIXED() {
