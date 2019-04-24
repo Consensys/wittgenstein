@@ -48,12 +48,11 @@ public class HandelScenarios {
     byzantineSuicide = byzantineSuicide != null ? byzantineSuicide : false;
 
     double treshold = (1.0 - (deadRatio + 0.01));
-    int priorityWindow = 0;
 
     return new Handel.HandelParameters(nodes, (int) (nodes * treshold), 4, 50, 20, 10,
         (int) (nodes * deadRatio), RegistryNodeBuilders.name(true, false, tor),
         NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName(), desynchronizedStart,
-        byzantineSuicide, priorityWindow);
+        byzantineSuicide);
   }
 
   private BasicStats run(int rounds, Handel.HandelParameters params) {
@@ -131,11 +130,14 @@ public class HandelScenarios {
   private void byzantineWindowEvaluation() {
     System.out.println("\nSEvaluation with priority list of different size;");
     int n = 2048;
+    Handel.WindowParameters windowParam = new Handel.WindowParameters();
+    windowParam.type = Handel.WindowParameters.FIXED;
     double[] deadRatios = new double[] {0.25, 0.50};
     for (int w : new int[] {20, 40, 80, 160}) {
       for (double dr : deadRatios) {
         Handel.HandelParameters params = defaultParams(n, dr, null, null, true);
-        params.priorityWindow = w;
+        windowParam.size = w;
+        params.window = windowParam;
         BasicStats bs = run(3, params);
         System.out.println("WindowEvaluation: Window: " + w + ", DeadRatio: " + dr + " => " + bs);
       }
@@ -147,6 +149,85 @@ public class HandelScenarios {
       System.out.println("ByzantineSuicide: DeadRation: " + dr + " => " + bs);
     }
   }
+
+
+  private void byzantineWithVariableWindow() {
+    System.out.println("\nSEvaluation with priority list of different size;");
+    int n = 2048;
+    Handel.WindowParameters windowParam = new Handel.WindowParameters();
+    windowParam.type = Handel.WindowParameters.VARIABLE;
+
+    // bounds the new size returned by the congestion algorithms
+    class boundedCongestion implements Handel.WindowSizeCongestion {
+      public int min;
+      public int max;
+      public Handel.WindowSizeCongestion congestion;
+      public boundedCongestion(int min,int max, Handel.WindowSizeCongestion c) {
+        this.min = min;
+        this.max = max;
+        this.congestion = c;
+      }
+      public int newSize(int previous, boolean correct) {
+         int next = this.congestion.newSize(previous,correct);
+         if (next > max) {
+           return max;
+         }
+         if (next < min) {
+           return min;
+         }
+         return next;
+      }
+    }
+    Handel.WindowSizeCongestion linear = (previous, correct) -> {
+      if (correct) {
+        return previous + 1;
+      } else {
+        return previous - 1;
+      }
+    };
+    // exponential back-off with linear increase as in ~TCP
+    Handel.WindowSizeCongestion exponential = (previous, correct) -> {
+      if (correct) {
+        return previous + 1;
+      } else {
+        return previous / 2;
+      }
+    };
+
+
+
+    double[] deadRatios = new double[] {0.50};
+    int []minimum = new int[] {1,5};
+    int []maximum = new int[] {20,40,80};
+    int []initials = new int[] {1,5,20};
+    Handel.WindowSizeCongestion[] congestions = new Handel.WindowSizeCongestion[]{linear,exponential};
+    for (int init : initials) {
+    for (int min : minimum) {
+      for (int max : maximum) {
+        for (double dr : deadRatios) {
+          for (Handel.WindowSizeCongestion c : congestions) {
+            Handel.HandelParameters params = defaultParams(n, dr, null, null, true);
+            windowParam.congestion = new boundedCongestion(min, max, c);
+            params.window = windowParam;
+            BasicStats bs = run(3, params);
+            String cong = "linear";
+            if (c == exponential) {
+              cong = "exponential";
+            }
+            System.out.println("WindowEvaluation: initial=" + init + ",min=" + min + ",max=" + max + "cong=" + cong + ",deadRatio=" + dr + " => " + bs);
+          }
+        }
+      }
+    }
+    }
+    System.out.println("\nSEvaluation with using ranking in the list *only*");
+    for (double dr : deadRatios) {
+      Handel.HandelParameters params = defaultParams(n, dr, null, null, true);
+      BasicStats bs = run(3, params);
+      System.out.println("ByzantineSuicide: DeadRation: " + dr + " => " + bs);
+    }
+  }
+
 
   public static void main(String... args) {
     HandelScenarios scenario = new HandelScenarios();

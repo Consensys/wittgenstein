@@ -59,9 +59,9 @@ public class Handel implements Protocol {
     final boolean byzantineSuicide;
 
     /**
-     * A window size that gives signatures to verify a higher priority if they are in the window
+     * parameters related to the window-ing technique - null if not set
      */
-    int priorityWindow;
+    public WindowParameters window;
 
     // Used for json / http server
     @SuppressWarnings("unused")
@@ -77,13 +77,11 @@ public class Handel implements Protocol {
       this.networkLatencyName = null;
       this.desynchronizedStart = 0;
       this.byzantineSuicide = false;
-      this.priorityWindow = 0;
     }
 
     public HandelParameters(int nodeCount, int threshold, int pairingTime, int levelWaitTime,
         int periodDurationMs, int acceleratedCallsCount, int nodesDown, String nodeBuilderName,
-        String networkLatencyName, int desynchronizedStart, boolean byzantineSuicide,
-        int priorityWindow) {
+        String networkLatencyName, int desynchronizedStart, boolean byzantineSuicide) {
 
       if (nodesDown >= nodeCount || nodesDown < 0 || threshold > nodeCount
           || (nodesDown + threshold > nodeCount)) {
@@ -104,7 +102,6 @@ public class Handel implements Protocol {
       this.networkLatencyName = networkLatencyName;
       this.desynchronizedStart = desynchronizedStart;
       this.byzantineSuicide = byzantineSuicide;
-      this.priorityWindow = priorityWindow;
     }
 
     @Override
@@ -118,6 +115,23 @@ public class Handel implements Protocol {
           + byzantineSuicide + '}';
     }
   }
+
+  @FunctionalInterface
+  public interface WindowSizeCongestion {
+    int newSize(int currentSize, boolean correctVerification);
+  }
+
+  static class WindowParameters {
+    public final static String FIXED = "FIXED";
+    public final static String VARIABLE = "VARIABLE";
+    public String type;
+    // for fixed type
+    public int size;
+    // for variable type
+    public int initial;
+    public WindowSizeCongestion congestion;
+  }
+
 
   public Handel(HandelParameters params) {
     this.params = params;
@@ -274,6 +288,11 @@ public class Handel implements Protocol {
        */
       int posInLevel = 0;
 
+      /**
+       * Window-related fields
+       */
+      int currWindowSize = 0;
+
 
       /**
        * Build a level 0 object. At level 0 need (and have) only our own signature. We have only one
@@ -394,7 +413,7 @@ public class Handel implements Protocol {
       }
 
       public SigToVerify bestToVerify() {
-        if (Handel.this.params.priorityWindow > 0) {
+        if (Handel.this.params.window != null) {
           return bestToVerifyWithWindow();
         }
         List<SigToVerify> curatedList = new ArrayList<>();
@@ -427,9 +446,62 @@ public class Handel implements Protocol {
       }
 
       public SigToVerify bestToVerifyWithWindow() {
+        WindowParameters window = Handel.this.params.window;
+        switch(window.type) {
+          case WindowParameters.FIXED:
+            return bestToVerifyWithWindowFIXED();
+          case WindowParameters.VARIABLE:
+          return bestToVerifyWithWindowVARIABLE();
+        }
+        return null;
+      }
+
+      /**
+       * This method uses a window that has a variable size depending on whether the node has received invalid
+       * contributions or not. Within the window, it evaluates with a scoring function. Outside it evaluates with the rank.
+       * @return
+       */
+      public SigToVerify bestToVerifyWithWindowVARIABLE() {
+        WindowParameters params = Handel.this.params.window;
+        if (this.currWindowSize == 0) {
+          this.currWindowSize = params.initial;
+        }
+        WindowSizeCongestion congestion = params.congestion;
         List<SigToVerify> lowPriority = new ArrayList<>();
         List<SigToVerify> highPriority = new ArrayList<>();
-        int window = Handel.this.params.priorityWindow;
+        int curSignatureSize = totalIncoming.cardinality();
+        SigToVerify best = null;
+
+        boolean removed = false;
+        for (SigToVerify stv : toVerifyAgg) {
+          int s = sizeIfIncluded(stv);
+          if (!blacklist.get(stv.from) && s > curSignatureSize) {
+            // only add signatures that can result in a better aggregate signature
+            // select the high priority one from the low priority one
+            if (stv.rank <= window) {
+              highPriority.add(stv);
+            } else {
+              lowPriority.add(stv);
+              if (best == null || best.rank > stv.rank) {
+                best = stv;
+              }
+            }
+          } else {
+            removed = true;
+          }
+        }
+        return null;
+      }
+
+      /**
+       * This method uses a simple fixed window of given length in the window paramters. Within the window, it evaluates
+       * randomly.
+       * @return
+       */
+      public SigToVerify bestToVerifyWithWindowFIXED() {
+        List<SigToVerify> lowPriority = new ArrayList<>();
+        List<SigToVerify> highPriority = new ArrayList<>();
+        int window = Handel.this.params.window.size;
         SigToVerify best = null;
 
         int curSize = totalIncoming.cardinality();
@@ -749,7 +821,7 @@ public class Handel implements Protocol {
     int ts = (int) (tsR * nodeCt);
     int dead = (int) (deadR * nodeCt);
     HandelParameters params =
-        new HandelParameters(nodeCt, ts, 4, 50, 20, 10, dead, nb, nl, 0, false, 0);
+        new HandelParameters(nodeCt, ts, 4, 50, 20, 10, dead, nb, nl, 0, false);
     return new Handel(params);
   }
 
