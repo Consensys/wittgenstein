@@ -6,7 +6,7 @@ import net.consensys.wittgenstein.core.json.ListNodeConverter;
 import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
-import net.consensys.wittgenstein.core.utils.Utils;
+import net.consensys.wittgenstein.core.utils.BitSetUtils;
 import net.consensys.wittgenstein.server.WParameters;
 import net.consensys.wittgenstein.tools.NodeDrawer;
 import java.io.File;
@@ -21,7 +21,6 @@ public class Handel implements Protocol {
   private final Network<HNode> network = new Network<>();
 
 
-  @SuppressWarnings("WeakerAccess")
   public static class HandelParameters extends WParameters {
     /**
      * The number of nodes in the network
@@ -520,7 +519,7 @@ public class Handel implements Protocol {
       }
 
       HLevel vsl = levels.get(vs.level);
-      if (!Utils.include(vsl.waitedSigs, vs.sig)) {
+      if (!BitSetUtils.include(vsl.waitedSigs, vs.sig)) {
         throw new IllegalStateException("bad signature received");
       }
 
@@ -587,7 +586,7 @@ public class Handel implements Protocol {
 
       HLevel l = levels.get(ssigs.level);
 
-      if (!Utils.include(l.waitedSigs, ssigs.sigs)) {
+      if (!BitSetUtils.include(l.waitedSigs, ssigs.sigs)) {
         throw new IllegalStateException("bad signatures received");
       }
 
