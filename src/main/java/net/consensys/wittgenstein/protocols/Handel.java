@@ -115,14 +115,11 @@ public class Handel implements Protocol {
 
     @Override
     public String toString() {
-      return "HandelParameters{" + "nodeCount=" + nodeCount + ", threshold=" + threshold
-          + ", pairingTime=" + pairingTime + ", levelWaitTime=" + levelWaitTime
-          + ", periodDurationMs=" + periodDurationMs + ", acceleratedCallsCount="
-          + acceleratedCallsCount + ", nodesDown=" + nodesDown + ", nodeBuilderName='"
-          + nodeBuilderName + '\'' + ", networkLatencyName='" + networkLatencyName + '\''
-          + ", desynchronizedStart=" + desynchronizedStart + ", byzantineSuicide="
-          + byzantineSuicide + ", hiddenByzantine=" + hiddenByzantine + ", priorityWindow="
-          + priorityWindow + '}';
+      return "Handel{" + "nodes=" + nodeCount + " (down=" + nodesDown + "), threshold=" + threshold
+          + ", pairing=" + pairingTime + "ms, levelStart=" + levelWaitTime + "ms, period="
+          + periodDurationMs + "ms, fastSync=" + acceleratedCallsCount + ", env='" + nodeBuilderName
+          + ", startTime=" + desynchronizedStart + ", byzSuicide=" + byzantineSuicide
+          + ", byzHidden=" + hiddenByzantine + ", priorityWindow=" + priorityWindow + '}';
     }
   }
 

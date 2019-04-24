@@ -4,6 +4,9 @@ import net.consensys.wittgenstein.core.NetworkLatency;
 import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 import net.consensys.wittgenstein.core.RunMultipleTimes;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
+import net.consensys.wittgenstein.tools.Graph;
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 public class HandelScenarios {
@@ -68,15 +71,38 @@ public class HandelScenarios {
         res.get(1).get("min"), res.get(1).get("avg"), res.get(1).get("max"));
   }
 
-  private void log() {
+  private void log() throws IOException {
     System.out.println("\nBehavior when the number of nodes increases - " + defaultParams());
     System.out.println(" We expect log performances and polylog number of messages.");
+
+    Graph.Series tA = new Graph.Series("average time");
+    Graph.Series tM = new Graph.Series("maximum time");
+    Graph.Series mA = new Graph.Series("average number of messages");
+    Graph.Series mM = new Graph.Series("maximum number of messages");
 
     for (int n = 128; n <= 4096; n *= 2) {
       Handel.HandelParameters params = defaultParams(n, null, null, null, null, null);
       BasicStats bs = run(5, params);
       System.out.println(n + " nodes: " + bs);
+
+      tA.addLine(new Graph.ReportLine(n, bs.doneAtAvg));
+      tM.addLine(new Graph.ReportLine(n, bs.doneAtMax));
+      mA.addLine(new Graph.ReportLine(n, bs.msgRcvAvg));
+      mM.addLine(new Graph.ReportLine(n, bs.msgRcvMax));
     }
+
+    Graph graph = new Graph("time vs. number of nodes" + defaultParams().toString(),
+        "number of nodes", "time in milliseconds");
+
+    graph.addSerie(tA);
+    graph.addSerie(tM);
+    graph.save(new File("handel_log_time.png"));
+
+    graph = new Graph("messages vs. number of nodes" + defaultParams().toString(),
+        "number of nodes", "number of messages");
+    graph.addSerie(mA);
+    graph.addSerie(mM);
+    graph.save(new File("handel_log_msg.png"));
   }
 
   private void tor() {
@@ -183,11 +209,11 @@ public class HandelScenarios {
     }
   }
 
-  public static void main(String... args) {
+  public static void main(String... args) throws IOException {
     HandelScenarios scenario = new HandelScenarios();
-    //scenario.log();
+    scenario.log();
 
-    scenario.byzantineWindowEvaluation();
+    //scenario.byzantineWindowEvaluation();
     //scenario.hiddenByzantine();
     // scenario.tor();
   }
