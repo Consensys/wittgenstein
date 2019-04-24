@@ -43,11 +43,12 @@ public class HandelScenarios {
     byzantineSuicide = byzantineSuicide != null ? byzantineSuicide : false;
 
     double treshold = (1.0 - (deadRatio + 0.01));
+    int priorityWindow = 0;
 
     return new Handel.HandelParameters(nodes, (int) (nodes * treshold), 4, 50, 20, 10,
         (int) (nodes * deadRatio), RegistryNodeBuilders.name(true, false, tor),
         NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName(), desynchronizedStart,
-        byzantineSuicide);
+        byzantineSuicide, priorityWindow);
   }
 
   private BasicStats run(int rounds, Handel.HandelParameters params) {
@@ -104,14 +105,35 @@ public class HandelScenarios {
     for (double dr : new Double[] {0.0, .10, .20, .30, .40, .50}) {
       Handel.HandelParameters params = defaultParams(2048, dr, null, null, true);
       BasicStats bs = run(5, params);
-      System.out.println(dr + " byzantines: " + bs);
+      System.out.println("ByzantineSuicide: DeadRation: " + dr + " => " + bs);
+    }
+  }
+
+  private void byzantineWindowEvaluation() {
+    System.out.println("\nSEvaluation with priority list of different size;");
+    int n = 2048;
+    double[] deadRatios = new double[]{0.25,0.50};
+    for (int w : new int[] {20,40,80,160}) {
+      for (double dr: deadRatios) {
+        Handel.HandelParameters params = defaultParams(n, dr, null, null, true);
+        params.priorityWindow = w;
+        BasicStats bs = run(3, params);
+        System.out.println("WindowEvaluation: Window: " + w + ", DeadRatio: " + dr + " => " + bs);
+      }
+    }
+    System.out.println("\nSEvaluation with using ranking in the list *only*");
+    for (double dr : deadRatios) {
+      Handel.HandelParameters params = defaultParams(n, dr, null, null, true);
+      BasicStats bs = run(3, params);
+      System.out.println("ByzantineSuicide: DeadRation: " + dr + " => " + bs);
     }
   }
 
   public static void main(String... args) {
     HandelScenarios scenario = new HandelScenarios();
-    scenario.log();
-    scenario.byzantineSuicide();
+    //scenario.log();
+    scenario.byzantineWindowEvaluation();
+    //scenario.byzantineSuicide();
     // scenario.tor();
   }
 }

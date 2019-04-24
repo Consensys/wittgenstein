@@ -9,11 +9,9 @@ import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.server.WParameters;
 import net.consensys.wittgenstein.tools.NodeDrawer;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -60,6 +58,11 @@ public class Handel implements Protocol {
      */
     final boolean byzantineSuicide;
 
+    /**
+     * A window size that gives signatures to verify a higher priority if they are in the window
+     */
+    int priorityWindow;
+
     // Used for json / http server
     @SuppressWarnings("unused")
     public HandelParameters() {
@@ -74,11 +77,13 @@ public class Handel implements Protocol {
       this.networkLatencyName = null;
       this.desynchronizedStart = 0;
       this.byzantineSuicide = false;
+      this.priorityWindow = 0;
     }
 
     public HandelParameters(int nodeCount, int threshold, int pairingTime, int levelWaitTime,
-        int periodDurationMs, int acceleratedCallsCount, int nodesDown, String nodeBuilderName,
-        String networkLatencyName, int desynchronizedStart, boolean byzantineSuicide) {
+                            int periodDurationMs, int acceleratedCallsCount, int nodesDown, String nodeBuilderName,
+                            String networkLatencyName, int desynchronizedStart, boolean byzantineSuicide, int priorityWindow) {
+
       if (nodesDown >= nodeCount || nodesDown < 0 || threshold > nodeCount
           || (nodesDown + threshold > nodeCount)) {
         throw new IllegalArgumentException("nodeCount=" + nodeCount + ", threshold=" + threshold);
@@ -98,6 +103,7 @@ public class Handel implements Protocol {
       this.networkLatencyName = networkLatencyName;
       this.desynchronizedStart = desynchronizedStart;
       this.byzantineSuicide = byzantineSuicide;
+      this.priorityWindow = priorityWindow;
     }
 
   }
@@ -362,6 +368,9 @@ public class Handel implements Protocol {
       }
 
       public SigToVerify bestToVerify() {
+        if (Handel.this.params.priorityWindow > 0) {
+          return bestToVerifyWithWindow();
+        }
         List<SigToVerify> curatedList = new ArrayList<>();
         int curSize = totalIncoming.cardinality();
         SigToVerify best = null;
@@ -369,8 +378,10 @@ public class Handel implements Protocol {
         for (SigToVerify stv : toVerifyAgg) {
           int s = sizeIfIncluded(stv);
           if (!blacklist.get(stv.from) && s > curSize) {
+            // only add signatures that can result in a better aggregate signature
             curatedList.add(stv);
             if (best == null || stv.rank < best.rank) {
+              // take the signature with the highest rank in the reception list
               best = stv;
             }
           } else {
@@ -388,7 +399,58 @@ public class Handel implements Protocol {
 
         return best;
       }
+
+      public SigToVerify bestToVerifyWithWindow() {
+        List<SigToVerify> lowPriority = new ArrayList<>();
+        List<SigToVerify> highPriority = new ArrayList<>();
+        int window = Handel.this.params.priorityWindow;
+        SigToVerify best = null;
+
+        int curSize = totalIncoming.cardinality();
+        boolean removed = false;
+
+
+        for (SigToVerify stv : toVerifyAgg) {
+          int s = sizeIfIncluded(stv);
+          if (!blacklist.get(stv.from) && s > curSize) {
+            // only add signatures that can result in a better aggregate signature
+            // select the high priority one from the low priority one
+            if (stv.rank <= window) {
+              highPriority.add(stv);
+            } else {
+              lowPriority.add(stv);
+              if (best == null || best.rank > stv.rank) {
+                best = stv;
+              }
+            }
+          } else {
+            removed = true;
+          }
+        }
+        if (removed) {
+          int oldSize = toVerifyAgg.size();
+          toVerifyAgg.clear();
+          toVerifyAgg.addAll(highPriority);
+          toVerifyAgg.addAll(lowPriority);
+          int newSize = toVerifyAgg.size();
+          sigQueueSize -= oldSize;
+          sigQueueSize += newSize;
+        }
+        // take highest priority signatures randomly
+        if (highPriority.size() > 0) {
+          int idx = network.rd.nextInt(highPriority.size());
+          return highPriority.get(idx);
+        }
+        if (lowPriority.size() > 0) {
+          // take the lowest rank from the rest of the stream
+          return best;
+        }
+
+        return null;
+      }
     }
+
+
 
     /**
      * @return all the signatures you should have when this round is finished.
@@ -679,7 +741,7 @@ public class Handel implements Protocol {
     int ts = (int) (tsR * nodeCt);
     int dead = (int) (deadR * nodeCt);
     HandelParameters params =
-        new HandelParameters(nodeCt, ts, 4, 50, 20, 10, dead, nb, nl, 0, false);
+        new HandelParameters(nodeCt, ts, 4, 50, 20, 10, dead, nb, nl, 0, false, 0);
     return new Handel(params);
   }
 
