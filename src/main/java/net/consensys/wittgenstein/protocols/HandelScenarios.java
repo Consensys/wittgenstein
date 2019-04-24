@@ -257,7 +257,8 @@ public class HandelScenarios {
                   cong = "exponential";
                 }
                 System.out.println("WindowEvaluation: initial=" + init + ",min=" + min + ",max="
-                    + max + ",cong=" + cong + ",deadRatio=" + dr + ",suicide=" + byz[0] + ",hidden=" + byz[1] + " => " + bs);
+                    + max + ",cong=" + cong + ",deadRatio=" + dr + ",suicide=" + byz[0] + ",hidden="
+                    + byz[1] + " => " + bs);
               }
             }
           }

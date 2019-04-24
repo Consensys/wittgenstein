@@ -504,7 +504,7 @@ public class Handel implements Protocol {
             // select the high priority one from the low priority on
             curatedList.add(stv);
             if (stv.rank <= window) {
-              int score = evaluateSig(this,stv.sig);
+              int score = evaluateSig(this, stv.sig);
               if (score > bestScoreInside) {
                 bestScoreInside = score;
                 bestInside = stv;
@@ -521,12 +521,12 @@ public class Handel implements Protocol {
 
         if (removed > 0) {
           toVerifyAgg.addAll(curatedList);
-            int oldSize = toVerifyAgg.size();
-            toVerifyAgg.clear();
-            toVerifyAgg.addAll(curatedList);
-            int newSize = toVerifyAgg.size();
-            sigQueueSize -= oldSize;
-            sigQueueSize += newSize;
+          int oldSize = toVerifyAgg.size();
+          toVerifyAgg.clear();
+          toVerifyAgg.addAll(curatedList);
+          int newSize = toVerifyAgg.size();
+          sigQueueSize -= oldSize;
+          sigQueueSize += newSize;
         }
 
 
@@ -539,7 +539,7 @@ public class Handel implements Protocol {
           return null;
         }
 
-        this.currWindowSize = congestion.newSize(this.currWindowSize,toVerify.badSig);
+        this.currWindowSize = congestion.newSize(this.currWindowSize, toVerify.badSig);
         return toVerify;
       }
 
