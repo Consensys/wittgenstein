@@ -5,9 +5,12 @@ import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 import net.consensys.wittgenstein.core.RunMultipleTimes;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.tools.Graph;
+import net.consensys.wittgenstein.tools.NodeDrawer;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 
 public class HandelScenarios {
 
@@ -104,6 +107,21 @@ public class HandelScenarios {
     graph.addSerie(mM);
     graph.save(new File("handel_log_msg.png"));
   }
+
+
+  private void runOnce(Handel.HandelParameters params, String fileName) {
+    Handel p = new Handel(params);
+    Predicate<Handel> contIf = Handel.newContIf();
+    p.init();
+    try (NodeDrawer nd = new NodeDrawer(p.new HNodeStatus(), new File(fileName), 10)) {
+      do {
+        p.network().runMs(10);
+        nd.drawNewState(p.network().time, TimeUnit.MILLISECONDS, p.network().liveNodes());
+      } while (contIf.test(p));
+    }
+    System.out.println(fileName + " written - ffmpeg -f gif -i " + fileName + " handel.mp4");
+  }
+
 
   private void tor() {
     int n = 2048;
@@ -209,9 +227,20 @@ public class HandelScenarios {
     }
   }
 
+  void genAnim() {
+    int n = 4096;
+    //runOnce(defaultParams(n, null, null, 200, null, null), "unsync.gif");
+    runOnce(defaultParams(n, null, .33, 0, null, null), "tor.gif");
+
+  }
+
   public static void main(String... args) throws IOException {
     HandelScenarios scenario = new HandelScenarios();
-    scenario.log();
+
+
+    scenario.genAnim();
+
+    // scenario.log();
 
     //scenario.byzantineWindowEvaluation();
     //scenario.hiddenByzantine();
