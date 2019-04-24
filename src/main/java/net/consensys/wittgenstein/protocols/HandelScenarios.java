@@ -169,16 +169,16 @@ public class HandelScenarios {
           Handel.HandelParameters params = defaultParams(n, dr, null, null, byzs[0], byzs[1]);
           params.priorityWindow = w;
           BasicStats bs = run(3, params);
-          System.out.println("WindowEvaluation: Window: " + w + ", DeadRatio: " + dr + " hiddenByz="
-              + byzs[0] + "/" + byzs[0] + " => " + bs);
+          System.out.println("WindowEvaluation: Window: " + w + ", DeadRatio: " + dr + " suicideBiz="
+              + byzs[0] + ", hiddenByz=" + byzs[1] + " => " + bs);
         }
       }
       System.out.println("\nSEvaluation with using ranking in the list *only*");
       for (double dr : deadRatios) {
         Handel.HandelParameters params = defaultParams(n, dr, null, null, byzs[0], byzs[1]);
         BasicStats bs = run(3, params);
-        System.out.println("ByzantineSuicide: DeadRatio: " + dr + " hiddenByz=" + byzs[0] + "/"
-            + byzs[0] + " => " + bs);
+        System.out.println("ByzantineSuicide: DeadRatio: " + dr + " suicideBiz=" + byzs[0] + "hiddenByz="
+            + byzs[1] + " => " + bs);
       }
     }
   }
