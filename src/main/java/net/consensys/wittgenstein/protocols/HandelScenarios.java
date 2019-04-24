@@ -131,9 +131,9 @@ public class HandelScenarios {
   private void byzantineWindowEvaluation() {
     System.out.println("\nSEvaluation with priority list of different size;");
     int n = 2048;
-    double[] deadRatios = new double[]{0.25,0.50};
-    for (int w : new int[] {20,40,80,160}) {
-      for (double dr: deadRatios) {
+    double[] deadRatios = new double[] {0.25, 0.50};
+    for (int w : new int[] {20, 40, 80, 160}) {
+      for (double dr : deadRatios) {
         Handel.HandelParameters params = defaultParams(n, dr, null, null, true);
         params.priorityWindow = w;
         BasicStats bs = run(3, params);

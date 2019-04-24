@@ -81,8 +81,9 @@ public class Handel implements Protocol {
     }
 
     public HandelParameters(int nodeCount, int threshold, int pairingTime, int levelWaitTime,
-                            int periodDurationMs, int acceleratedCallsCount, int nodesDown, String nodeBuilderName,
-                            String networkLatencyName, int desynchronizedStart, boolean byzantineSuicide, int priorityWindow) {
+        int periodDurationMs, int acceleratedCallsCount, int nodesDown, String nodeBuilderName,
+        String networkLatencyName, int desynchronizedStart, boolean byzantineSuicide,
+        int priorityWindow) {
 
       if (nodesDown >= nodeCount || nodesDown < 0 || threshold > nodeCount
           || (nodesDown + threshold > nodeCount)) {
