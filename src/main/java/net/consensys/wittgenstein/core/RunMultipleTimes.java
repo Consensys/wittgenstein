@@ -51,8 +51,8 @@ public class RunMultipleTimes<TP extends Protocol> {
           throw new IllegalStateException("Failed execution of " + c + " for random seed of " + i
               + ", time=" + c.network().time, t);
         }
-      } while (maxTime == 0
-          || c.network().time < maxTime && (!didSomething || contIf == null || contIf.test(c)));
+      } while ((maxTime == 0 || c.network().time < maxTime)
+          && (!didSomething || (contIf != null && contIf.test(c))));
 
       if (finalCheck != null && !finalCheck.test(c)) {
         throw new IllegalStateException("Failed execution of " + c + " for random seed of " + i);
@@ -66,7 +66,6 @@ public class RunMultipleTimes<TP extends Protocol> {
     }
 
     List<StatsHelper.Stat> res = new ArrayList<>();
-
     for (StatsHelper.StatsGetter sg : statsGetters) {
       List<StatsHelper.Stat> stats = allStats.get(sg);
       StatsHelper.Stat s = StatsHelper.avg(stats);
