@@ -35,8 +35,13 @@ public class HandelScenarios {
     }
   }
 
-  private Handel.HandelParameters defaultParams(int nodes, Double deadRatio, Double tor,
+  private Handel.HandelParameters defaultParams() {
+    return defaultParams(null, null, null, null, null);
+  }
+
+  private Handel.HandelParameters defaultParams(Integer nodes, Double deadRatio, Double tor,
       Integer desynchronizedStart, Boolean byzantineSuicide) {
+    nodes = nodes != null ? nodes : 2048;
     deadRatio = deadRatio != null ? deadRatio : 0.10;
     tor = tor != null ? tor : 0;
     desynchronizedStart = desynchronizedStart != null ? desynchronizedStart : 0;
@@ -63,7 +68,7 @@ public class HandelScenarios {
   }
 
   private void log() {
-    System.out.println("\nBehavior when the number of nodes increases.");
+    System.out.println("\nBehavior when the number of nodes increases - " + defaultParams());
     System.out.println(" We expect log performances and polylog number of messages.");
 
     for (int n = 128; n <= 4096; n *= 2) {
@@ -74,7 +79,9 @@ public class HandelScenarios {
   }
 
   private void tor() {
-    System.out.println("\nImpact of the ratio of nodes behind tor.");
+    int n = 2048;
+    System.out.println(
+        "\nImpact of the ratio of nodes behind tor - " + defaultParams(n, null, null, null, null));
 
     for (double tor : RegistryNodeBuilders.tor()) {
       Handel.HandelParameters params = defaultParams(2048, null, tor, null, null);
@@ -84,7 +91,7 @@ public class HandelScenarios {
   }
 
   private void noSyncStart() {
-    System.out.println("\nImpact of nodes not starting at the same time");
+    System.out.println("\nImpact of nodes not starting at the same time - " + defaultParams());
 
     for (int s : new int[] {0, 50, 100, 200, 400, 800}) {
       Handel.HandelParameters params = defaultParams(2048, null, 0.0, s, null);
@@ -94,18 +101,30 @@ public class HandelScenarios {
   }
 
   private void byzantineSuicide() {
-    System.out.println("\nByzantine nodes are filling honest node's queues with bad signatures");
+    int n = 2048;
 
-    for (int n = 128; n <= 4096; n *= 2) {
-      Handel.HandelParameters params = defaultParams(n, null, null, null, true);
+    System.out.println("\nByzantine nodes are filling honest node's queues with bad signatures - "
+        + defaultParams(n, null, null, null, true));
+
+
+    for (int ni = 128; ni <= 2048; ni *= 2) {
+      Handel.HandelParameters params = defaultParams(ni, null, null, null, true);
       BasicStats bs = run(5, params);
-      System.out.println(n + " nodes, usual byzantines: " + bs);
+      System.out.println(ni + " nodes, " + params.nodesDown + " byzantines: " + bs);
     }
 
     for (double dr : new Double[] {0.0, .10, .20, .30, .40, .50}) {
-      Handel.HandelParameters params = defaultParams(2048, dr, null, null, true);
-      BasicStats bs = run(5, params);
-      System.out.println("ByzantineSuicide: DeadRation: " + dr + " => " + bs);
+      Handel.HandelParameters params;
+
+      if (dr > 0) {
+        params = defaultParams(n, dr, null, null, false);
+        BasicStats bs = run(2, params);
+        System.out.println(n + " nodes, " + dr + " fail-silent: " + bs);
+      }
+
+      params = defaultParams(n, dr, null, null, true);
+      BasicStats bs = run(2, params);
+      System.out.println(n + " nodes, " + dr + " byzantines: " + bs);
     }
   }
 
@@ -132,6 +151,7 @@ public class HandelScenarios {
   public static void main(String... args) {
     HandelScenarios scenario = new HandelScenarios();
     //scenario.log();
+
     scenario.byzantineWindowEvaluation();
     //scenario.byzantineSuicide();
     // scenario.tor();
