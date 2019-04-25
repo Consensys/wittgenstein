@@ -204,8 +204,7 @@ public class HandelScenarios {
   private void byzantineWindowEvaluation() {
     System.out.println("\nSEvaluation with priority list of different size;");
     int n = 1024;
-    Handel.WindowParameters windowParam = new Handel.WindowParameters();
-    windowParam.type = Handel.WindowParameters.FIXED;
+
 
     double[] deadRatios = new double[] {0, 0.25, 0.50};
     for (Boolean[] byzs : new Boolean[][] {new Boolean[] {false, false},
@@ -213,6 +212,7 @@ public class HandelScenarios {
       for (int w : new int[] {20, 40, 80, 160}) {
         for (double dr : deadRatios) {
           Handel.HandelParameters params = defaultParams(n, dr, null, null, byzs[0], byzs[1]);
+          Handel.WindowParameters windowParam = new Handel.WindowParameters(w,false); // no moving window
           params.window = windowParam;
           BasicStats bs = run(3, params);
           System.out.println("WindowEvaluation: Window: " + w + ", DeadRatio: " + dr
@@ -234,16 +234,15 @@ public class HandelScenarios {
 
 
   private void byzantineWithVariableWindow() {
-    int n = 512;
+    int n = 1024;
     System.out.println("\nSEvaluation with priority list of variable size; with n=" + n);
 
-    Handel.WindowParameters windowParam = new Handel.WindowParameters();
-    windowParam.type = Handel.WindowParameters.VARIABLE;
+
 
 
     double[] deadRatios = new double[] {0.50};
     int[] minimum = new int[] {1};
-    int[] maximum = new int[] {20, 80};
+    int[] maximum = new int[] {40, 80};
     int[] initials = new int[] {20};
     boolean[] movings = new boolean[] {false, true};
     Handel.CongestionWindow[] congestions = new Handel.CongestionWindow[] {
@@ -260,11 +259,7 @@ public class HandelScenarios {
               for (double dr : deadRatios) {
                 for (Boolean[] byz : byzs) {
                   Handel.HandelParameters params = defaultParams(n, dr, null, null, byz[0], byz[1]);
-                  windowParam.congestion = c;
-                  windowParam.moving = moving;
-                  windowParam.initial = init;
-                  windowParam.minimum = min;
-                  windowParam.maximum = max;
+                  Handel.WindowParameters windowParam = new Handel.WindowParameters(init,min,max,c,moving);
                   params.window = windowParam;
                   BasicStats bs = run(3, params);
 

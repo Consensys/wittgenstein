@@ -136,17 +136,48 @@ public class Handel implements Protocol {
   static class WindowParameters {
     public final static String FIXED = "FIXED";
     public final static String VARIABLE = "VARIABLE";
-    public String type;
+    public final String type;
     // for fixed type
-    public int size;
+    public final int size;
     // for variable type
-    public int initial; // initial window size
-    public int minimum; // minimum window size at all times
-    public int maximum; // maximum window size at all times
+    public final int initial; // initial window size
+    public final int minimum; // minimum window size at all times
+    public final int maximum; // maximum window size at all times
     // what type "congestion" algorithm do we want to us
-    public CongestionWindow congestion;
-    public boolean moving; // is it a moving window or not -> moving sets the beginning of the window to the lowest-rank unverified signature
+    public final CongestionWindow congestion;
+    public final boolean moving; // is it a moving window or not -> moving sets the beginning of the window to the lowest-rank unverified signature
 
+    /**
+     * WindowParameters for FIXED window
+     * @param size
+     * @param moving
+     */
+    public WindowParameters(int size, boolean moving) {
+      this(FIXED,size,0,0,0,null,moving);
+    }
+
+    /**
+     * WindowParameters for VARIABLE window
+     * @param initial
+     * @param minimum
+     * @param maximum
+     * @param congestion
+     * @param moving
+     */
+    public WindowParameters(int initial, int minimum, int maximum, CongestionWindow congestion, boolean moving) {
+      this(VARIABLE,0,initial,minimum,maximum,congestion,moving);
+    }
+
+    private WindowParameters(String type, int size, int initial, int minimum, int maximum, CongestionWindow congestion, boolean moving)
+    {
+      this.initial = initial;
+      this.minimum = minimum;
+      this.maximum = maximum;
+      this.congestion = congestion;
+      this.moving = moving;
+      this.type = type;
+      this.size = size;
+    }
     public int newSize(int currentWindowSize, boolean correct) {
       int updatedSize = congestion.newSize(currentWindowSize, correct);
       if (updatedSize > maximum) {
@@ -159,7 +190,7 @@ public class Handel implements Protocol {
   }
 
   static class CongestionLinear implements CongestionWindow {
-    public int delta; // window is increased/decreased by delta
+    public final int delta; // window is increased/decreased by delta
 
     public CongestionLinear(int delta) {
       this.delta = delta;
@@ -180,8 +211,8 @@ public class Handel implements Protocol {
   }
 
   static class CongestionExp implements CongestionWindow {
-    public double increaseFactor;
-    public double decreaseFactor;
+    public final double increaseFactor;
+    public final double decreaseFactor;
 
     public CongestionExp(double increaseFactor, double decreaseFactor) {
       this.increaseFactor = increaseFactor;
