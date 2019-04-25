@@ -124,11 +124,12 @@ public class Handel implements Protocol {
           + nodeBuilderName + '\'' + ", networkLatencyName='" + networkLatencyName + '\''
           + ", desynchronizedStart=" + desynchronizedStart + ", byzantineSuicide="
           + byzantineSuicide + ", hiddenByzantine=" + hiddenByzantine + '}';
+
     }
   }
 
   @FunctionalInterface
-  public interface WindowSizeCongestion {
+  public interface CongestionWindow {
     int newSize(int currentSize, boolean correctVerification);
   }
 
@@ -139,8 +140,69 @@ public class Handel implements Protocol {
     // for fixed type
     public int size;
     // for variable type
-    public int initial;
-    public WindowSizeCongestion congestion;
+    public int initial; // initial window size
+    public int minimum; // minimum window size at all times
+    public int maximum; // maximum window size at all times
+    // what type "congestion" algorithm do we want to us
+    public CongestionWindow congestion;
+
+    public int newSize(int currentWindowSize, boolean correct) {
+      int updatedSize = congestion.newSize(currentWindowSize,correct);
+      if (updatedSize > maximum) {
+        return maximum;
+      } else if (updatedSize < minimum) {
+        return minimum;
+      }
+      return updatedSize;
+    }
+  }
+
+  static class CongestionLinear implements CongestionWindow {
+    public int delta; // window is increased/decreased by delta
+
+    public CongestionLinear(int delta) {
+      this.delta = delta;
+    }
+
+    public int newSize(int curr, boolean correct) {
+      if (correct) {
+        return curr + delta;
+      } else {
+        return curr - delta;
+      }
+    }
+
+    @Override
+    public String toString() {
+      return "Linear{" +
+              "delta=" + delta +
+              '}';
+    }
+  }
+
+  static class CongestionExp implements CongestionWindow {
+    public double increaseFactor;
+    public double decreaseFactor;
+    public CongestionExp(double increaseFactor, double decreaseFactor) {
+      this.increaseFactor = increaseFactor;
+      this.decreaseFactor = decreaseFactor;
+    }
+
+    public int newSize(int curr, boolean correct) {
+      if (correct) {
+        return (int) ((double) curr * increaseFactor);
+      } else {
+        return (int) ((double) curr * decreaseFactor);
+      }
+    }
+
+    @Override
+    public String toString() {
+      return "CExp{" +
+              "increase=" + increaseFactor +
+              ", decrease=" + decreaseFactor +
+              '}';
+    }
   }
 
 
@@ -488,7 +550,6 @@ public class Handel implements Protocol {
           this.currWindowSize = params.initial;
         }
 
-        WindowSizeCongestion congestion = params.congestion;
         int curSignatureSize = totalIncoming.cardinality();
         SigToVerify bestOutside = null; // best signature outside the window - rank based decision
         SigToVerify bestInside = null; // best signature inside the window - ranking
@@ -539,7 +600,7 @@ public class Handel implements Protocol {
           return null;
         }
 
-        this.currWindowSize = congestion.newSize(this.currWindowSize, toVerify.badSig);
+        this.currWindowSize = params.newSize(this.currWindowSize, toVerify.badSig);
         return toVerify;
       }
 

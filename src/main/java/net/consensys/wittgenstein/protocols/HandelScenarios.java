@@ -4,7 +4,13 @@ import net.consensys.wittgenstein.core.NetworkLatency;
 import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 import net.consensys.wittgenstein.core.RunMultipleTimes;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
+import net.consensys.wittgenstein.tools.Graph;
+import net.consensys.wittgenstein.tools.NodeDrawer;
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 
 public class HandelScenarios {
 
@@ -67,16 +73,54 @@ public class HandelScenarios {
         res.get(1).get("min"), res.get(1).get("avg"), res.get(1).get("max"));
   }
 
-  private void log() {
+  private void log() throws IOException {
     System.out.println("\nBehavior when the number of nodes increases - " + defaultParams());
     System.out.println(" We expect log performances and polylog number of messages.");
+
+    Graph.Series tA = new Graph.Series("average time");
+    Graph.Series tM = new Graph.Series("maximum time");
+    Graph.Series mA = new Graph.Series("average number of messages");
+    Graph.Series mM = new Graph.Series("maximum number of messages");
 
     for (int n = 128; n <= 4096; n *= 2) {
       Handel.HandelParameters params = defaultParams(n, null, null, null, null, null);
       BasicStats bs = run(5, params);
       System.out.println(n + " nodes: " + bs);
+
+      tA.addLine(new Graph.ReportLine(n, bs.doneAtAvg));
+      tM.addLine(new Graph.ReportLine(n, bs.doneAtMax));
+      mA.addLine(new Graph.ReportLine(n, bs.msgRcvAvg));
+      mM.addLine(new Graph.ReportLine(n, bs.msgRcvMax));
     }
+
+    Graph graph = new Graph("time vs. number of nodes" + defaultParams().toString(),
+        "number of nodes", "time in milliseconds");
+
+    graph.addSerie(tA);
+    graph.addSerie(tM);
+    graph.save(new File("handel_log_time.png"));
+
+    graph = new Graph("messages vs. number of nodes" + defaultParams().toString(),
+        "number of nodes", "number of messages");
+    graph.addSerie(mA);
+    graph.addSerie(mM);
+    graph.save(new File("handel_log_msg.png"));
   }
+
+
+  private void runOnce(Handel.HandelParameters params, String fileName) {
+    Handel p = new Handel(params);
+    Predicate<Handel> contIf = Handel.newContIf();
+    p.init();
+    try (NodeDrawer nd = new NodeDrawer(p.new HNodeStatus(), new File(fileName), 10)) {
+      do {
+        p.network().runMs(10);
+        nd.drawNewState(p.network().time, TimeUnit.MILLISECONDS, p.network().liveNodes());
+      } while (contIf.test(p));
+    }
+    System.out.println(fileName + " written - ffmpeg -f gif -i " + fileName + " handel.mp4");
+  }
+
 
   private void tor() {
     int n = 2048;
@@ -187,93 +231,74 @@ public class HandelScenarios {
   }
 
 
+
   private void byzantineWithVariableWindow() {
-    System.out.println("\nSEvaluation with priority list of different size;");
-    int n = 128;
+    System.out.println("\nSEvaluation with priority list of variable size;");
+    int n = ;
     Handel.WindowParameters windowParam = new Handel.WindowParameters();
     windowParam.type = Handel.WindowParameters.VARIABLE;
 
-    // bounds the new size returned by the congestion algorithms
-    class boundedCongestion implements Handel.WindowSizeCongestion {
-      public int min;
-      public int max;
-      public Handel.WindowSizeCongestion congestion;
-
-      public boundedCongestion(int min, int max, Handel.WindowSizeCongestion c) {
-        this.min = min;
-        this.max = max;
-        this.congestion = c;
-      }
-
-      public int newSize(int previous, boolean correct) {
-        int next = this.congestion.newSize(previous, correct);
-        if (next > max) {
-          return max;
-        }
-        if (next < min) {
-          return min;
-        }
-        return next;
-      }
-    }
-    Handel.WindowSizeCongestion linear = (previous, correct) -> {
-      if (correct) {
-        return previous + 1;
-      } else {
-        return previous - 1;
-      }
-    };
-    // exponential back-off with linear increase as in ~TCP
-    Handel.WindowSizeCongestion exponential = (previous, correct) -> {
-      if (correct) {
-        return previous + 1;
-      } else {
-        return previous / 2;
-      }
-    };
-
-
 
     double[] deadRatios = new double[] {0.50};
-    int[] minimum = new int[] {1, 5};
-    int[] maximum = new int[] {20, 40, 80};
+    int[] minimum = new int[] {1};
+    int[] maximum = new int[] {20,80};
     int[] initials = new int[] {1, 5, 20};
-    Handel.WindowSizeCongestion[] congestions =
-        new Handel.WindowSizeCongestion[] {linear, exponential};
-    Boolean[][] byzs = new Boolean[][] {new Boolean[] {false, false}, new Boolean[] {true, false},
-        new Boolean[] {false, true}};
+    Handel.CongestionWindow[] congestions =
+        new Handel.CongestionWindow[] {
+                new Handel.CongestionLinear(1),
+                new Handel.CongestionLinear(10),
+                new Handel.CongestionExp(1.1,2),
+                new Handel.CongestionExp(2,2),
+        };
+    Boolean[][] byzs = new Boolean[][] {
+            new Boolean[] {false, false},
+            new Boolean[] {true, false},
+            new Boolean[] {false, true}
+        };
+
     for (int init : initials) {
       for (int min : minimum) {
         for (int max : maximum) {
-          for (double dr : deadRatios) {
-            for (Handel.WindowSizeCongestion c : congestions) {
+          for (Handel.CongestionWindow c : congestions) {
+            for (double dr : deadRatios) {
               for (Boolean[] byz : byzs) {
                 Handel.HandelParameters params = defaultParams(n, dr, null, null, byz[0], byz[1]);
-                windowParam.congestion = new boundedCongestion(min, max, c);
+                windowParam.congestion = c;
                 params.window = windowParam;
                 BasicStats bs = run(3, params);
-                String cong = "linear";
-                if (c == exponential) {
-                  cong = "exponential";
-                }
+
                 System.out.println("WindowEvaluation: initial=" + init + ",min=" + min + ",max="
-                    + max + ",cong=" + cong + ",deadRatio=" + dr + ",suicide=" + byz[0] + ",hidden="
+                    + max + ",cong=" + c + ",deadRatio=" + dr + ",suicide=" + byz[0] + ",hidden="
                     + byz[1] + " => " + bs);
               }
             }
+
           }
         }
       }
     }
   }
 
+  void genAnim() {
+    int n = 4096;
+    //runOnce(defaultParams(n, null, null, 200, null, null), "unsync.gif");
+    runOnce(defaultParams(n, null, .33, 0, null, null), "tor.gif");
 
-  public static void main(String... args) {
+  }
+
+  public static void main(String... args) throws IOException {
+
     HandelScenarios scenario = new HandelScenarios();
-    //scenario.log();
 
     //scenario.byzantineWindowEvaluation();
     scenario.byzantineWithVariableWindow();
+
+    //scenario.genAnim();
+
+    // scenario.log();
+
+    //scenario.byzantineWindowEvaluation();
+
     //scenario.hiddenByzantine();
     // scenario.tor();
   }
