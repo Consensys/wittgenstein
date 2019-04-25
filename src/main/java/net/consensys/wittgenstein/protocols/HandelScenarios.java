@@ -3,6 +3,7 @@ package net.consensys.wittgenstein.protocols;
 import net.consensys.wittgenstein.core.NetworkLatency;
 import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 import net.consensys.wittgenstein.core.RunMultipleTimes;
+import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.tools.Graph;
 import net.consensys.wittgenstein.tools.NodeDrawer;
@@ -234,11 +235,28 @@ public class HandelScenarios {
 
   }
 
+  void delayedStartImpact(int n, int waitTime, int period) {
+    int mF = 0;
+    int mS = 0;
+
+    for (int time = 0; time <= 1000; time += period) {
+
+      for (int l = 1; l <= MoreMath.log2(n); l++) {
+        mF++;
+        if (time >= (l - 1) * waitTime) {
+          mS++;
+        }
+      }
+    }
+    System.out.println("Sent w/o waitTime: " + mF + ", w/ waitTime:" + mS + ", saved= " + (mF - mS)
+        + " - " + ((mF - mS) / (0.0 + mS)));
+  }
+
   public static void main(String... args) throws IOException {
     HandelScenarios scenario = new HandelScenarios();
 
 
-    scenario.genAnim();
+    scenario.delayedStartImpact(4096, 50, 20);
 
     // scenario.log();
 
