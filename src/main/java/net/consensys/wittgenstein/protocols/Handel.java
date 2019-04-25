@@ -365,7 +365,6 @@ public class Handel implements Protocol {
        * Window-related fields
        */
       int currWindowSize = 0; // what's the size of the window currently
-      int windowIndex = 0; // what's the minimum index of the window
 
 
       /**
@@ -487,6 +486,9 @@ public class Handel implements Protocol {
       }
 
       public SigToVerify bestToVerify() {
+        if (toVerifyAgg.size() == 0) {
+          return null;
+        }
         if (Handel.this.params.window != null) {
           return bestToVerifyWithWindow();
         }
@@ -543,17 +545,24 @@ public class Handel implements Protocol {
        * @return
        */
       public SigToVerify bestToVerifyWithWindowVARIABLE() {
+
         WindowParameters params = Handel.this.params.window;
         if (this.currWindowSize == 0) {
           this.currWindowSize = params.initial;
         }
 
+        int windowIndex = 0;
+        int windowSize = this.currWindowSize;
+        if (params.moving) {
+          // we set the window index to the rank of the first unverified signature
+          windowIndex =
+              toVerifyAgg.stream().min(Comparator.comparingInt(SigToVerify::getRank)).get().rank;
+        }
         int curSignatureSize = totalIncoming.cardinality();
         SigToVerify bestOutside = null; // best signature outside the window - rank based decision
         SigToVerify bestInside = null; // best signature inside the window - ranking
         int bestScoreInside = 0; // score associated to the best sig. inside the window
 
-        int window = this.currWindowSize;
         int removed = 0;
         List<SigToVerify> curatedList = new ArrayList<>();
         for (SigToVerify stv : toVerifyAgg) {
@@ -562,7 +571,8 @@ public class Handel implements Protocol {
             // only add signatures that can result in a better aggregate signature
             // select the high priority one from the low priority on
             curatedList.add(stv);
-            if (stv.rank <= window) {
+            if (stv.rank <= windowIndex + windowSize) {
+
               int score = evaluateSig(this, stv.sig);
               if (score > bestScoreInside) {
                 bestScoreInside = score;
@@ -949,6 +959,11 @@ public class Handel implements Protocol {
   static class SigToVerify {
     final int from;
     final int level;
+
+    public int getRank() {
+      return rank;
+    }
+
     final int rank;
     final BitSet sig;
     final boolean badSig;

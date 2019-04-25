@@ -245,29 +245,36 @@ public class HandelScenarios {
     int[] minimum = new int[] {1};
     int[] maximum = new int[] {20, 80};
     int[] initials = new int[] {20};
+    boolean[] movings = new boolean[] {false, true};
     Handel.CongestionWindow[] congestions = new Handel.CongestionWindow[] {
         new Handel.CongestionLinear(1), new Handel.CongestionLinear(10),
         new Handel.CongestionExp(1.1, 2), new Handel.CongestionExp(2, 2),};
+
     Boolean[][] byzs = new Boolean[][] {new Boolean[] {false, false}, new Boolean[] {true, false},
         new Boolean[] {false, true}};
+    for (boolean moving : movings) {
+      for (int init : initials) {
+        for (int min : minimum) {
+          for (int max : maximum) {
+            for (Handel.CongestionWindow c : congestions) {
+              for (double dr : deadRatios) {
+                for (Boolean[] byz : byzs) {
+                  Handel.HandelParameters params = defaultParams(n, dr, null, null, byz[0], byz[1]);
+                  windowParam.congestion = c;
+                  windowParam.moving = moving;
+                  windowParam.initial = init;
+                  windowParam.minimum = min;
+                  windowParam.maximum = max;
+                  params.window = windowParam;
+                  BasicStats bs = run(3, params);
 
-    for (int init : initials) {
-      for (int min : minimum) {
-        for (int max : maximum) {
-          for (Handel.CongestionWindow c : congestions) {
-            for (double dr : deadRatios) {
-              for (Boolean[] byz : byzs) {
-                Handel.HandelParameters params = defaultParams(n, dr, null, null, byz[0], byz[1]);
-                windowParam.congestion = c;
-                params.window = windowParam;
-                BasicStats bs = run(3, params);
-
-                System.out.println("WindowEvaluation: initial=" + init + ",min=" + min + ",max="
-                    + max + ",cong=" + c + ",deadRatio=" + dr + ",suicide=" + byz[0] + ",hidden="
-                    + byz[1] + " => " + bs);
+                  System.out.println("WindowEvaluation: initial=" + init + ",min=" + min + ",max="
+                      + max + ",cong=" + c + ",movingWindow=" + moving + ", deadRatio=" + dr
+                      + ",suicide=" + byz[0] + ",hidden=" + byz[1] + " => " + bs);
+                }
               }
-            }
 
+            }
           }
         }
       }
