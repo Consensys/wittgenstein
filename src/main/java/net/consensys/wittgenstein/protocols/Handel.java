@@ -749,6 +749,10 @@ public class Handel implements Protocol {
     void updateVerifiedSignatures(SigToVerify vs) {
       if (vs.badSig) {
         blacklist.set(vs.from);
+
+        if (params.hiddenByzantine) {
+          throw new IllegalStateException("We should not have invalid signatures in this scenario");
+        }
         return;
       }
 
