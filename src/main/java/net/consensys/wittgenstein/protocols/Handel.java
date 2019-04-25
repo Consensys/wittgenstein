@@ -149,27 +149,30 @@ public class Handel implements Protocol {
 
     /**
      * WindowParameters for FIXED window
+     * 
      * @param size
      * @param moving
      */
     public WindowParameters(int size, boolean moving) {
-      this(FIXED,size,0,0,0,null,moving);
+      this(FIXED, size, 0, 0, 0, null, moving);
     }
 
     /**
      * WindowParameters for VARIABLE window
+     * 
      * @param initial
      * @param minimum
      * @param maximum
      * @param congestion
      * @param moving
      */
-    public WindowParameters(int initial, int minimum, int maximum, CongestionWindow congestion, boolean moving) {
-      this(VARIABLE,0,initial,minimum,maximum,congestion,moving);
+    public WindowParameters(int initial, int minimum, int maximum, CongestionWindow congestion,
+        boolean moving) {
+      this(VARIABLE, 0, initial, minimum, maximum, congestion, moving);
     }
 
-    private WindowParameters(String type, int size, int initial, int minimum, int maximum, CongestionWindow congestion, boolean moving)
-    {
+    private WindowParameters(String type, int size, int initial, int minimum, int maximum,
+        CongestionWindow congestion, boolean moving) {
       this.initial = initial;
       this.minimum = minimum;
       this.maximum = maximum;
@@ -178,6 +181,7 @@ public class Handel implements Protocol {
       this.type = type;
       this.size = size;
     }
+
     public int newSize(int currentWindowSize, boolean correct) {
       int updatedSize = congestion.newSize(currentWindowSize, correct);
       if (updatedSize > maximum) {
@@ -221,9 +225,9 @@ public class Handel implements Protocol {
 
     public int newSize(int curr, boolean correct) {
       if (correct) {
-        return (int) ((double) curr * increaseFactor);
+        return curr + (int) Math.ceil((double) curr * increaseFactor);
       } else {
-        return (int) ((double) curr * decreaseFactor);
+        return curr - (int) Math.ceil((double) curr * decreaseFactor);
       }
     }
 
@@ -576,8 +580,8 @@ public class Handel implements Protocol {
        * @return
        */
       public SigToVerify bestToVerifyWithWindowVARIABLE() {
-
-        WindowParameters params = Handel.this.params.window;
+        HandelParameters global = Handel.this.params;
+        WindowParameters params = global.window;
         if (this.currWindowSize == 0) {
           this.currWindowSize = params.initial;
         }
@@ -639,7 +643,7 @@ public class Handel implements Protocol {
           return null;
         }
 
-        this.currWindowSize = params.newSize(this.currWindowSize, toVerify.badSig);
+        this.currWindowSize = params.newSize(this.currWindowSize, !toVerify.badSig);
         return toVerify;
       }
 

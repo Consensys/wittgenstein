@@ -212,7 +212,7 @@ public class HandelScenarios {
       for (int w : new int[] {20, 40, 80, 160}) {
         for (double dr : deadRatios) {
           Handel.HandelParameters params = defaultParams(n, dr, null, null, byzs[0], byzs[1]);
-          Handel.WindowParameters windowParam = new Handel.WindowParameters(w,false); // no moving window
+          Handel.WindowParameters windowParam = new Handel.WindowParameters(w, false); // no moving window
           params.window = windowParam;
           BasicStats bs = run(3, params);
           System.out.println("WindowEvaluation: Window: " + w + ", DeadRatio: " + dr
@@ -239,7 +239,6 @@ public class HandelScenarios {
 
 
 
-
     double[] deadRatios = new double[] {0.50};
     int[] minimum = new int[] {1};
     int[] maximum = new int[] {40, 80};
@@ -259,7 +258,8 @@ public class HandelScenarios {
               for (double dr : deadRatios) {
                 for (Boolean[] byz : byzs) {
                   Handel.HandelParameters params = defaultParams(n, dr, null, null, byz[0], byz[1]);
-                  Handel.WindowParameters windowParam = new Handel.WindowParameters(init,min,max,c,moving);
+                  Handel.WindowParameters windowParam =
+                      new Handel.WindowParameters(init, min, max, c, moving);
                   params.window = windowParam;
                   BasicStats bs = run(3, params);
 
