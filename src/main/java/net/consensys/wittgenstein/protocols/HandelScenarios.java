@@ -234,7 +234,7 @@ public class HandelScenarios {
 
   private void byzantineWithVariableWindow() {
     System.out.println("\nSEvaluation with priority list of variable size;");
-    int n = ;
+    int n = 512;
     Handel.WindowParameters windowParam = new Handel.WindowParameters();
     windowParam.type = Handel.WindowParameters.VARIABLE;
 
