@@ -155,9 +155,11 @@ public abstract class NetworkLatency {
   public static class NetworkLatencyByCity extends NetworkLatency {
     private final Map<String, Map<String, Float>> latencyMatrix;
 
-    public NetworkLatencyByCity(CSVLatencyReader csvLatencyReader) {
+    public NetworkLatencyByCity() {
+      CSVLatencyReader csvLatencyReader = new CSVLatencyReader();
       this.latencyMatrix = csvLatencyReader.getLatencyMatrix();
     }
+
 
     public int getExtendedLatency(Node from, Node to, int delta) {
       if (from.nodeId == to.nodeId) {

@@ -656,8 +656,8 @@ public class GSFSignature implements Protocol {
     double deadR = 0.10;
     double tsR = .85;
 
-    String nb = RegistryNodeBuilders.name(true, false, 0.33);
-    String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
+    String nb = RegistryNodeBuilders.ALL_CITIES;//RegistryNodeBuilders.name(true, false, 0.33);
+    String nl = NetworkLatency.NetworkLatencyByCity.class.getSimpleName();//AwsRegionNetworkLatency.class.getSimpleName();
 
     int ts = (int) (tsR * nodeCt);
     int dead = (int) (deadR * nodeCt);
@@ -676,6 +676,7 @@ public class GSFSignature implements Protocol {
         new NodeDrawer(new GFSNodeStatus(p.params), new File("/tmp/handel_anim.gif"), freq)) {
       int i = 0;
       do {
+        System.out.println("Drawing simulation step " + i);
         p.network.runMs(freq);
 
         nd.drawNewState(p.network.time, TimeUnit.MILLISECONDS, p.network.liveNodes());
@@ -728,7 +729,7 @@ public class GSFSignature implements Protocol {
   }
 
   public static void main(String... args) {
-    sigsPerTime();
-    //drawImgs();
+    //sigsPerTime();
+    drawImgs();
   }
 }
