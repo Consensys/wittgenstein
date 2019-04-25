@@ -241,20 +241,13 @@ public class HandelScenarios {
 
     double[] deadRatios = new double[] {0.50};
     int[] minimum = new int[] {1};
-    int[] maximum = new int[] {20,80};
+    int[] maximum = new int[] {20, 80};
     int[] initials = new int[] {1, 5, 20};
-    Handel.CongestionWindow[] congestions =
-        new Handel.CongestionWindow[] {
-                new Handel.CongestionLinear(1),
-                new Handel.CongestionLinear(10),
-                new Handel.CongestionExp(1.1,2),
-                new Handel.CongestionExp(2,2),
-        };
-    Boolean[][] byzs = new Boolean[][] {
-            new Boolean[] {false, false},
-            new Boolean[] {true, false},
-            new Boolean[] {false, true}
-        };
+    Handel.CongestionWindow[] congestions = new Handel.CongestionWindow[] {
+        new Handel.CongestionLinear(1), new Handel.CongestionLinear(10),
+        new Handel.CongestionExp(1.1, 2), new Handel.CongestionExp(2, 2),};
+    Boolean[][] byzs = new Boolean[][] {new Boolean[] {false, false}, new Boolean[] {true, false},
+        new Boolean[] {false, true}};
 
     for (int init : initials) {
       for (int min : minimum) {
