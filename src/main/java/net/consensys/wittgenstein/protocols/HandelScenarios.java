@@ -56,12 +56,11 @@ public class HandelScenarios {
     byzantineSuicide = byzantineSuicide != null ? byzantineSuicide : false;
 
     double treshold = (1.0 - (deadRatio + 0.01));
-    int priorityWindow = 0;
 
     return new Handel.HandelParameters(nodes, (int) (nodes * treshold), 4, 50, 20, 10,
         (int) (nodes * deadRatio), RegistryNodeBuilders.name(true, false, tor),
         NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName(), desynchronizedStart,
-        byzantineSuicide, hiddenByzantine, priorityWindow);
+        byzantineSuicide, hiddenByzantine);
   }
 
   private BasicStats run(int rounds, Handel.HandelParameters params) {
@@ -205,25 +204,71 @@ public class HandelScenarios {
   private void byzantineWindowEvaluation() {
     System.out.println("\nSEvaluation with priority list of different size;");
     int n = 1024;
-    double[] deadRatios = new double[] {0, 0.25, 0.50};
+    Handel.WindowParameters windowParam = new Handel.WindowParameters();
+    windowParam.type = Handel.WindowParameters.FIXED;
 
+    double[] deadRatios = new double[] {0, 0.25, 0.50};
     for (Boolean[] byzs : new Boolean[][] {new Boolean[] {false, false},
         new Boolean[] {true, false}, new Boolean[] {false, true}}) {
       for (int w : new int[] {20, 40, 80, 160}) {
         for (double dr : deadRatios) {
           Handel.HandelParameters params = defaultParams(n, dr, null, null, byzs[0], byzs[1]);
-          params.priorityWindow = w;
+          params.window = windowParam;
           BasicStats bs = run(3, params);
           System.out.println("WindowEvaluation: Window: " + w + ", DeadRatio: " + dr
               + " suicideBiz=" + byzs[0] + ", hiddenByz=" + byzs[1] + " => " + bs);
         }
       }
+
       System.out.println("\nSEvaluation with using ranking in the list *only*");
       for (double dr : deadRatios) {
         Handel.HandelParameters params = defaultParams(n, dr, null, null, byzs[0], byzs[1]);
+
         BasicStats bs = run(3, params);
         System.out.println("ByzantineSuicide: DeadRatio: " + dr + " suicideBiz=" + byzs[0]
             + ", hiddenByz=" + byzs[1] + " => " + bs);
+      }
+    }
+  }
+
+
+
+  private void byzantineWithVariableWindow() {
+    System.out.println("\nSEvaluation with priority list of variable size;");
+    int n = 512;
+    Handel.WindowParameters windowParam = new Handel.WindowParameters();
+    windowParam.type = Handel.WindowParameters.VARIABLE;
+
+
+    double[] deadRatios = new double[] {0.50};
+    int[] minimum = new int[] {1};
+    int[] maximum = new int[] {20, 80};
+    int[] initials = new int[] {1, 5, 20};
+    Handel.CongestionWindow[] congestions = new Handel.CongestionWindow[] {
+        new Handel.CongestionLinear(1), new Handel.CongestionLinear(10),
+        new Handel.CongestionExp(1.1, 2), new Handel.CongestionExp(2, 2),};
+    Boolean[][] byzs = new Boolean[][] {new Boolean[] {false, false}, new Boolean[] {true, false},
+        new Boolean[] {false, true}};
+
+    for (int init : initials) {
+      for (int min : minimum) {
+        for (int max : maximum) {
+          for (Handel.CongestionWindow c : congestions) {
+            for (double dr : deadRatios) {
+              for (Boolean[] byz : byzs) {
+                Handel.HandelParameters params = defaultParams(n, dr, null, null, byz[0], byz[1]);
+                windowParam.congestion = c;
+                params.window = windowParam;
+                BasicStats bs = run(3, params);
+
+                System.out.println("WindowEvaluation: initial=" + init + ",min=" + min + ",max="
+                    + max + ",cong=" + c + ",deadRatio=" + dr + ",suicide=" + byz[0] + ",hidden="
+                    + byz[1] + " => " + bs);
+              }
+            }
+
+          }
+        }
       }
     }
   }
@@ -253,14 +298,20 @@ public class HandelScenarios {
   }
 
   public static void main(String... args) throws IOException {
+
     HandelScenarios scenario = new HandelScenarios();
 
+    //scenario.byzantineWindowEvaluation();
+    scenario.byzantineWithVariableWindow();
 
-    scenario.delayedStartImpact(4096, 50, 20);
+
+    //scenario.delayedStartImpact(4096, 50, 20);
+
 
     // scenario.log();
 
     //scenario.byzantineWindowEvaluation();
+
     //scenario.hiddenByzantine();
     // scenario.tor();
   }

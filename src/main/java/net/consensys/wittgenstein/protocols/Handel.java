@@ -59,9 +59,9 @@ public class Handel implements Protocol {
     final boolean hiddenByzantine;
 
     /**
-     * A window size that gives signatures to verify a higher priority if they are in the window
+     * parameters related to the window-ing technique - null if not set
      */
-    int priorityWindow;
+    public WindowParameters window;
 
     // Used for json / http server
     @SuppressWarnings("unused")
@@ -77,14 +77,16 @@ public class Handel implements Protocol {
       this.networkLatencyName = null;
       this.desynchronizedStart = 0;
       this.byzantineSuicide = false;
+
       this.hiddenByzantine = false;
-      this.priorityWindow = 0;
+
     }
 
     public HandelParameters(int nodeCount, int threshold, int pairingTime, int levelWaitTime,
         int periodDurationMs, int acceleratedCallsCount, int nodesDown, String nodeBuilderName,
         String networkLatencyName, int desynchronizedStart, boolean byzantineSuicide,
-        boolean hiddenByzantine, int priorityWindow) {
+        boolean hiddenByzantine) {
+
 
       if (nodesDown >= nodeCount || nodesDown < 0 || threshold > nodeCount
           || (nodesDown + threshold > nodeCount)) {
@@ -110,18 +112,95 @@ public class Handel implements Protocol {
       this.desynchronizedStart = desynchronizedStart;
       this.byzantineSuicide = byzantineSuicide;
       this.hiddenByzantine = hiddenByzantine;
-      this.priorityWindow = priorityWindow;
+
     }
 
     @Override
     public String toString() {
-      return "Handel{" + "nodes=" + nodeCount + " (down=" + nodesDown + "), threshold=" + threshold
-          + ", pairing=" + pairingTime + "ms, levelStart=" + levelWaitTime + "ms, period="
-          + periodDurationMs + "ms, fastSync=" + acceleratedCallsCount + ", env='" + nodeBuilderName
-          + ", startTime=" + desynchronizedStart + ", byzSuicide=" + byzantineSuicide
-          + ", byzHidden=" + hiddenByzantine + ", priorityWindow=" + priorityWindow + '}';
+      return "HandelParameters{" + "nodeCount=" + nodeCount + ", threshold=" + threshold
+          + ", pairingTime=" + pairingTime + ", levelWaitTime=" + levelWaitTime
+          + ", periodDurationMs=" + periodDurationMs + ", acceleratedCallsCount="
+          + acceleratedCallsCount + ", nodesDown=" + nodesDown + ", nodeBuilderName='"
+          + nodeBuilderName + '\'' + ", networkLatencyName='" + networkLatencyName + '\''
+          + ", desynchronizedStart=" + desynchronizedStart + ", byzantineSuicide="
+          + byzantineSuicide + ", hiddenByzantine=" + hiddenByzantine + '}';
+
     }
   }
+
+  @FunctionalInterface
+  public interface CongestionWindow {
+    int newSize(int currentSize, boolean correctVerification);
+  }
+
+  static class WindowParameters {
+    public final static String FIXED = "FIXED";
+    public final static String VARIABLE = "VARIABLE";
+    public String type;
+    // for fixed type
+    public int size;
+    // for variable type
+    public int initial; // initial window size
+    public int minimum; // minimum window size at all times
+    public int maximum; // maximum window size at all times
+    // what type "congestion" algorithm do we want to us
+    public CongestionWindow congestion;
+
+    public int newSize(int currentWindowSize, boolean correct) {
+      int updatedSize = congestion.newSize(currentWindowSize, correct);
+      if (updatedSize > maximum) {
+        return maximum;
+      } else if (updatedSize < minimum) {
+        return minimum;
+      }
+      return updatedSize;
+    }
+  }
+
+  static class CongestionLinear implements CongestionWindow {
+    public int delta; // window is increased/decreased by delta
+
+    public CongestionLinear(int delta) {
+      this.delta = delta;
+    }
+
+    public int newSize(int curr, boolean correct) {
+      if (correct) {
+        return curr + delta;
+      } else {
+        return curr - delta;
+      }
+    }
+
+    @Override
+    public String toString() {
+      return "Linear{" + "delta=" + delta + '}';
+    }
+  }
+
+  static class CongestionExp implements CongestionWindow {
+    public double increaseFactor;
+    public double decreaseFactor;
+
+    public CongestionExp(double increaseFactor, double decreaseFactor) {
+      this.increaseFactor = increaseFactor;
+      this.decreaseFactor = decreaseFactor;
+    }
+
+    public int newSize(int curr, boolean correct) {
+      if (correct) {
+        return (int) ((double) curr * increaseFactor);
+      } else {
+        return (int) ((double) curr * decreaseFactor);
+      }
+    }
+
+    @Override
+    public String toString() {
+      return "CExp{" + "increase=" + increaseFactor + ", decrease=" + decreaseFactor + '}';
+    }
+  }
+
 
   public Handel(HandelParameters params) {
     this.params = params;
@@ -265,7 +344,7 @@ public class Handel implements Protocol {
       final BitSet verifiedIndSignatures = new BitSet();
       // The individual signatures verified in this level
 
-      final ArrayList<SigToVerify> toVerifyAgg = new ArrayList<>();
+      final List<SigToVerify> toVerifyAgg = new ArrayList<>();
       final BitSet toVerifyInd = new BitSet(); // The individual signatures received
 
       public BitSet finishedPeers = new BitSet();
@@ -280,6 +359,11 @@ public class Handel implements Protocol {
        * list.
        */
       int posInLevel = 0;
+
+      /**
+       * Window-related fields
+       */
+      int currWindowSize = 0;
 
 
       /**
@@ -401,7 +485,7 @@ public class Handel implements Protocol {
       }
 
       public SigToVerify bestToVerify() {
-        if (Handel.this.params.priorityWindow > 0) {
+        if (Handel.this.params.window != null) {
           return bestToVerifyWithWindow();
         }
         List<SigToVerify> curatedList = new ArrayList<>();
@@ -437,9 +521,95 @@ public class Handel implements Protocol {
       }
 
       public SigToVerify bestToVerifyWithWindow() {
+        WindowParameters window = Handel.this.params.window;
+        switch (window.type) {
+          case WindowParameters.FIXED:
+            return bestToVerifyWithWindowFIXED();
+          case WindowParameters.VARIABLE:
+            return bestToVerifyWithWindowVARIABLE();
+        }
+        return null;
+      }
+
+
+
+      /**
+       * This method uses a window that has a variable size depending on whether the node has
+       * received invalid contributions or not. Within the window, it evaluates with a scoring
+       * function. Outside it evaluates with the rank.
+       * 
+       * @return
+       */
+      public SigToVerify bestToVerifyWithWindowVARIABLE() {
+        WindowParameters params = Handel.this.params.window;
+        if (this.currWindowSize == 0) {
+          this.currWindowSize = params.initial;
+        }
+
+        int curSignatureSize = totalIncoming.cardinality();
+        SigToVerify bestOutside = null; // best signature outside the window - rank based decision
+        SigToVerify bestInside = null; // best signature inside the window - ranking
+        int bestScoreInside = 0; // score associated to the best sig. inside the window
+
+        int window = 0;
+        int removed = 0;
+        List<SigToVerify> curatedList = new ArrayList<>();
+        for (SigToVerify stv : toVerifyAgg) {
+          int s = sizeIfIncluded(stv);
+          if (!blacklist.get(stv.from) && s > curSignatureSize) {
+            // only add signatures that can result in a better aggregate signature
+            // select the high priority one from the low priority on
+            curatedList.add(stv);
+            if (stv.rank <= window) {
+              int score = evaluateSig(this, stv.sig);
+              if (score > bestScoreInside) {
+                bestScoreInside = score;
+                bestInside = stv;
+              }
+            } else {
+              if (bestOutside == null || bestOutside.rank > stv.rank) {
+                bestOutside = stv;
+              }
+            }
+          } else {
+            removed++;
+          }
+        }
+
+        if (removed > 0) {
+          toVerifyAgg.addAll(curatedList);
+          int oldSize = toVerifyAgg.size();
+          toVerifyAgg.clear();
+          toVerifyAgg.addAll(curatedList);
+          int newSize = toVerifyAgg.size();
+          sigQueueSize -= oldSize;
+          sigQueueSize += newSize;
+        }
+
+
+        SigToVerify toVerify = null;
+        if (bestInside != null) {
+          toVerify = bestInside;
+        } else if (bestOutside != null) {
+          toVerify = bestOutside;
+        } else {
+          return null;
+        }
+
+        this.currWindowSize = params.newSize(this.currWindowSize, toVerify.badSig);
+        return toVerify;
+      }
+
+      /**
+       * This method uses a simple fixed window of given length in the window paramters. Within the
+       * window, it evaluates randomly.
+       * 
+       * @return
+       */
+      public SigToVerify bestToVerifyWithWindowFIXED() {
         List<SigToVerify> lowPriority = new ArrayList<>();
         List<SigToVerify> highPriority = new ArrayList<>();
-        int window = Handel.this.params.priorityWindow;
+        int window = Handel.this.params.window.size;
         SigToVerify best = null;
 
         int curSize = totalIncoming.cardinality();
@@ -484,6 +654,61 @@ public class Handel implements Protocol {
 
         return null;
       }
+    }
+
+    /**
+     * Evaluate the interest to verify a signature by setting a score The higher the score the more
+     * interesting the signature is. 0 means the signature is not interesting and can be discarded.
+     */
+    private int evaluateSig(HLevel l, BitSet sig) {
+      int newTotal = 0; // The number of signatures in our new best
+      int addedSigs = 0; // The number of sigs we add with our new best compared to the existing one. Can be negative
+      int combineCt = 0; // The number of sigs in our new best that come from combining it with individual sigs
+
+      if (l.lastAggVerified.cardinality() >= l.expectedSigs()) {
+        return 0;
+      }
+
+      BitSet withIndiv = (BitSet) l.verifiedIndSignatures.clone();
+      withIndiv.or(sig);
+
+      if (l.lastAggVerified.cardinality() == 0) {
+        // the best is the new multi-sig combined with the ind. sigs
+        newTotal = sig.cardinality();
+        addedSigs = newTotal;
+        combineCt = 0;
+      } else {
+        if (sig.intersects(l.lastAggVerified)) {
+          // We can't merge, it's a replace
+          newTotal = withIndiv.cardinality();
+          addedSigs = newTotal - l.lastAggVerified.cardinality();
+          combineCt = newTotal;
+        } else {
+          // We can merge our current best and the new ms. We also add individual
+          //  signatures that we previously verified
+          withIndiv.or(l.lastAggVerified);
+          newTotal = withIndiv.cardinality();
+          addedSigs = newTotal - l.lastAggVerified.cardinality();
+          combineCt = newTotal;
+        }
+      }
+
+      if (addedSigs <= 0) {
+        if (sig.cardinality() == 1 && !sig.intersects(l.verifiedIndSignatures)) {
+          return 1;
+        }
+        return 0;
+      }
+
+      if (newTotal == l.expectedSigs()) {
+        // This completes a level! That's the best options for us. We give
+        //  a greater value to the first levels/
+        return 1000000 - l.level * 10;
+      }
+
+      // It adds value, but does not complete a level. We
+      //  favorize the older level but take into account the number of sigs we receive as well.
+      return 100000 - l.level * 100 + addedSigs;
     }
 
     /**
@@ -855,7 +1080,8 @@ public class Handel implements Protocol {
     int ts = (int) (tsR * nodeCt);
     int dead = (int) (deadR * nodeCt);
     HandelParameters params =
-        new HandelParameters(nodeCt, ts, 4, 50, 20, 10, dead, nb, nl, 0, false, false, 0);
+        new HandelParameters(nodeCt, ts, 4, 50, 20, 10, dead, nb, nl, 0, false, false);
+
     return new Handel(params);
   }
 
