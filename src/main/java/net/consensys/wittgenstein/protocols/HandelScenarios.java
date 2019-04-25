@@ -234,8 +234,9 @@ public class HandelScenarios {
 
 
   private void byzantineWithVariableWindow() {
-    System.out.println("\nSEvaluation with priority list of variable size;");
     int n = 512;
+    System.out.println("\nSEvaluation with priority list of variable size; with n=" + n);
+
     Handel.WindowParameters windowParam = new Handel.WindowParameters();
     windowParam.type = Handel.WindowParameters.VARIABLE;
 
@@ -243,7 +244,7 @@ public class HandelScenarios {
     double[] deadRatios = new double[] {0.50};
     int[] minimum = new int[] {1};
     int[] maximum = new int[] {20, 80};
-    int[] initials = new int[] {1, 5, 20};
+    int[] initials = new int[] {20};
     Handel.CongestionWindow[] congestions = new Handel.CongestionWindow[] {
         new Handel.CongestionLinear(1), new Handel.CongestionLinear(10),
         new Handel.CongestionExp(1.1, 2), new Handel.CongestionExp(2, 2),};

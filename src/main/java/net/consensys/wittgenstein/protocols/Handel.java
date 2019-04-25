@@ -145,6 +145,7 @@ public class Handel implements Protocol {
     public int maximum; // maximum window size at all times
     // what type "congestion" algorithm do we want to us
     public CongestionWindow congestion;
+    public boolean moving; // is it a moving window or not -> moving sets the beginning of the window to the lowest-rank unverified signature
 
     public int newSize(int currentWindowSize, boolean correct) {
       int updatedSize = congestion.newSize(currentWindowSize, correct);
@@ -363,7 +364,8 @@ public class Handel implements Protocol {
       /**
        * Window-related fields
        */
-      int currWindowSize = 0;
+      int currWindowSize = 0; // what's the size of the window currently
+      int windowIndex = 0; // what's the minimum index of the window
 
 
       /**
@@ -551,7 +553,7 @@ public class Handel implements Protocol {
         SigToVerify bestInside = null; // best signature inside the window - ranking
         int bestScoreInside = 0; // score associated to the best sig. inside the window
 
-        int window = 0;
+        int window = this.currWindowSize;
         int removed = 0;
         List<SigToVerify> curatedList = new ArrayList<>();
         for (SigToVerify stv : toVerifyAgg) {
