@@ -147,7 +147,7 @@ public class Handel implements Protocol {
     public CongestionWindow congestion;
 
     public int newSize(int currentWindowSize, boolean correct) {
-      int updatedSize = congestion.newSize(currentWindowSize,correct);
+      int updatedSize = congestion.newSize(currentWindowSize, correct);
       if (updatedSize > maximum) {
         return maximum;
       } else if (updatedSize < minimum) {
@@ -174,15 +174,14 @@ public class Handel implements Protocol {
 
     @Override
     public String toString() {
-      return "Linear{" +
-              "delta=" + delta +
-              '}';
+      return "Linear{" + "delta=" + delta + '}';
     }
   }
 
   static class CongestionExp implements CongestionWindow {
     public double increaseFactor;
     public double decreaseFactor;
+
     public CongestionExp(double increaseFactor, double decreaseFactor) {
       this.increaseFactor = increaseFactor;
       this.decreaseFactor = decreaseFactor;
@@ -198,10 +197,7 @@ public class Handel implements Protocol {
 
     @Override
     public String toString() {
-      return "CExp{" +
-              "increase=" + increaseFactor +
-              ", decrease=" + decreaseFactor +
-              '}';
+      return "CExp{" + "increase=" + increaseFactor + ", decrease=" + decreaseFactor + '}';
     }
   }
 
