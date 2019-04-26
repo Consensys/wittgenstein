@@ -53,11 +53,11 @@ public class CityGeoInfoAllCities implements CityGeoInfo {
   }
 
   private int convertToMercerX(double longitude) {
-    int posX=(int) ((longitude + 180) * (mapWidth / 360));
-    if (posX < mapWidth/2){
-      posX = posX-45;
-    }else{
-      posX = posX-70;
+    int posX = (int) ((longitude + 180) * (mapWidth / 360));
+    if (posX < mapWidth / 2) {
+      posX = posX - 45;
+    } else {
+      posX = posX - 70;
     }
     return posX;
   }
@@ -65,9 +65,9 @@ public class CityGeoInfoAllCities implements CityGeoInfo {
   private int convertToMercerY(float latitude) {
     double latRad = latitude * Math.PI / 180;
     double mercN = Math.log(Math.tan((Math.PI / 4) + (latRad / 2)));
-    int posY = (int)Math.round((mapHeight / 2) - (latitude*mapHeight /180));
-    if (posY < 0.2 *mapHeight){
-      posY = posY-35;
+    int posY = (int) Math.round((mapHeight / 2) - (latitude * mapHeight / 180));
+    if (posY < 0.2 * mapHeight) {
+      posY = posY - 35;
     }
     return posY;
   }
