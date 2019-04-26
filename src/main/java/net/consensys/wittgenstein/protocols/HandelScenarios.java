@@ -37,7 +37,7 @@ public class HandelScenarios {
 
     @Override
     public String toString() {
-      return "doneAtMin=" + doneAtMin + ", doneAtAvg=" + doneAtAvg + ", doneAtMax=" + doneAtMax
+      return ", doneAtAvg=" + doneAtAvg + " | doneAtMin=" + doneAtMin + ", doneAtMax=" + doneAtMax
           + ", msgRcvMin=" + msgRcvMin + ", msgRcvAvg=" + msgRcvAvg + ", msgRcvMax=" + msgRcvMax;
     }
   }
@@ -231,12 +231,50 @@ public class HandelScenarios {
     }
   }
 
+  private void byzantineWithVariableWindow2() {
+    int n = 2048;
+    System.out.println("\nSEvaluation with priority list of variable size; with n=" + n);
+
+
+    double[] deadRatios = new double[] {0.50};
+    int[] minimum = new int[] {1};
+    int[] maximum = new int[] {40};
+    int[] initials = new int[] {1};
+    boolean[] movings = new boolean[] {false, true};
+    Handel.CongestionWindow[] congestions = new Handel.CongestionWindow[] {
+        new Handel.CongestionLinear(1), new Handel.CongestionLinear(10)};
+
+    Boolean[][] byzs = new Boolean[][] {new Boolean[] {false, true}};
+    for (boolean moving : movings) {
+      for (int init : initials) {
+        for (int min : minimum) {
+          for (int max : maximum) {
+            for (Handel.CongestionWindow c : congestions) {
+              for (double dr : deadRatios) {
+                for (Boolean[] byz : byzs) {
+                  Handel.HandelParameters params = defaultParams(n, dr, null, null, byz[0], byz[1]);
+                  Handel.WindowParameters windowParam =
+                      new Handel.WindowParameters(init, min, max, c, moving);
+                  params.window = windowParam;
+                  BasicStats bs = run(1, params);
+
+                  System.out.println("WindowEvaluation: initial=" + init + ",min=" + min + ",max="
+                      + max + ",cong=" + c + ",movingWindow=" + moving + ", deadRatio=" + dr
+                      + ",suicide=" + byz[0] + ",hidden=" + byz[1] + " => " + bs);
+                }
+              }
+
+            }
+          }
+        }
+      }
+    }
+  }
 
 
   private void byzantineWithVariableWindow() {
-    int n = 1024;
+    int n = 512;
     System.out.println("\nSEvaluation with priority list of variable size; with n=" + n);
-
 
 
     double[] deadRatios = new double[] {0.50};
@@ -261,7 +299,7 @@ public class HandelScenarios {
                   Handel.WindowParameters windowParam =
                       new Handel.WindowParameters(init, min, max, c, moving);
                   params.window = windowParam;
-                  BasicStats bs = run(3, params);
+                  BasicStats bs = run(2, params);
 
                   System.out.println("WindowEvaluation: initial=" + init + ",min=" + min + ",max="
                       + max + ",cong=" + c + ",movingWindow=" + moving + ", deadRatio=" + dr
@@ -280,7 +318,6 @@ public class HandelScenarios {
     int n = 4096;
     //runOnce(defaultParams(n, null, null, 200, null, null), "unsync.gif");
     runOnce(defaultParams(n, null, .33, 0, null, null), "tor.gif");
-
   }
 
   void delayedStartImpact(int n, int waitTime, int period) {
@@ -305,7 +342,7 @@ public class HandelScenarios {
     HandelScenarios scenario = new HandelScenarios();
 
     //scenario.byzantineWindowEvaluation();
-    scenario.byzantineWithVariableWindow();
+    scenario.byzantineWithVariableWindow2();
 
 
     //scenario.delayedStartImpact(4096, 50, 20);
