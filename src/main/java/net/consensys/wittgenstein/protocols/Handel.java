@@ -128,6 +128,7 @@ public class Handel implements Protocol {
 
   public interface CongestionWindow {
     int newSize(int currentSize, boolean correctVerification);
+
     String name();
   }
 
@@ -161,8 +162,8 @@ public class Handel implements Protocol {
       this(VARIABLE, 0, false, initial, minimum, maximum, congestion, moving);
     }
 
-    private WindowParameters(String type, int size, boolean useScore, int initial, int minimum, int maximum,
-                             CongestionWindow congestion, boolean moving) {
+    private WindowParameters(String type, int size, boolean useScore, int initial, int minimum,
+        int maximum, CongestionWindow congestion, boolean moving) {
       this.useScore = useScore;
       this.initial = initial;
       this.minimum = minimum;
@@ -603,7 +604,7 @@ public class Handel implements Protocol {
                 bestInside = stv;
               }
             } else {
-              if (bestOutside == null ||  stv.rank < bestOutside.rank ) {
+              if (bestOutside == null || stv.rank < bestOutside.rank) {
                 bestOutside = stv;
               }
             }
