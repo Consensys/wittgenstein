@@ -125,9 +125,10 @@ public class Handel implements Protocol {
     }
   }
 
-  @FunctionalInterface
+
   public interface CongestionWindow {
     int newSize(int currentSize, boolean correctVerification);
+    String name();
   }
 
   static class WindowParameters {
@@ -173,6 +174,9 @@ public class Handel implements Protocol {
     }
 
     public int newSize(int currentWindowSize, boolean correct) {
+      if (this.type == FIXED) {
+        return currentWindowSize;
+      }
       int updatedSize = congestion.newSize(currentWindowSize, correct);
       if (updatedSize > maximum) {
         return maximum;
@@ -202,6 +206,10 @@ public class Handel implements Protocol {
     public String toString() {
       return "Linear{" + "delta=" + delta + "}\t";
     }
+
+    public String name() {
+      return "var-linear";
+    }
   }
 
   static class CongestionExp implements CongestionWindow {
@@ -226,6 +234,10 @@ public class Handel implements Protocol {
     @Override
     public String toString() {
       return "CExp{" + "inc=" + increaseFactor + ",dec=" + decreaseFactor + '}';
+    }
+
+    public String name() {
+      return "var-exp";
     }
   }
 
@@ -665,7 +677,7 @@ public class Handel implements Protocol {
           replaceToVerifyAgg(all);
         }
 
-        // take highest priority signatures randomly
+        // take highest priority signatures
         if (highPriority.size() > 0) {
           int idx = network.rd.nextInt(highPriority.size());
           return highPriority.get(idx);
