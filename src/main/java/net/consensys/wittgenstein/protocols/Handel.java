@@ -301,6 +301,12 @@ public class Handel implements Protocol {
     final int[] receptionRanks = new int[params.nodeCount];
     final BitSet blacklist = new BitSet();
 
+    /**
+     * Window-related fields
+     */
+    int currWindowSize = params.window == null ? 0 : params.window.initial; // what's the size of the window currently
+
+
     boolean suicidalAttackDone;
     final HiddenByzantine hiddenByzantine;
 
@@ -383,11 +389,6 @@ public class Handel implements Protocol {
        * list.
        */
       int posInLevel = 0;
-
-      /**
-       * Window-related fields
-       */
-      int currWindowSize = params.window == null ? 0 : params.window.initial; // what's the size of the window currently
 
       /**
        * Build a level 0 object. At level 0 need (and have) only our own signature. We have only one
@@ -557,7 +558,7 @@ public class Handel implements Protocol {
       public SigToVerify bestToVerifyWithWindowVARIABLE() {
         HandelParameters global = Handel.this.params;
         WindowParameters params = global.window;
-        if (this.currWindowSize < 1) {
+        if (currWindowSize < 1) {
           throw new IllegalStateException();
         }
 
@@ -580,7 +581,7 @@ public class Handel implements Protocol {
             // only add signatures that can result in a better aggregate signature
             // select the high priority one from the low priority on
             curatedList.add(stv);
-            if (stv.rank <= windowIndex + this.currWindowSize) {
+            if (stv.rank <= windowIndex + currWindowSize) {
 
               int score = evaluateSig(this, stv.sig);
               if (score > bestScoreInside) {
@@ -876,9 +877,9 @@ public class Handel implements Protocol {
 
       if (params.window != null) {
         HLevel l = levels.get(best.level);
-        l.currWindowSize = params.window.newSize(l.currWindowSize, !best.badSig);
+        currWindowSize = params.window.newSize(currWindowSize, !best.badSig);
 
-        //receptionRanks[best.from] += l.peers.size();
+        receptionRanks[best.from] += l.peers.size();
         if (receptionRanks[best.from] < 0) {
           receptionRanks[best.from] = Integer.MAX_VALUE;
         }
