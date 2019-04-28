@@ -125,9 +125,11 @@ public class Handel implements Protocol {
     }
   }
 
-  @FunctionalInterface
+
   public interface CongestionWindow {
     int newSize(int currentSize, boolean correctVerification);
+
+    String name();
   }
 
   static class WindowParameters {
@@ -136,6 +138,7 @@ public class Handel implements Protocol {
     public final String type;
     // for fixed type
     public final int size;
+    public final boolean useScore;
     // for variable type
     public final int initial; // initial window size
     public final int minimum; // minimum window size at all times
@@ -147,8 +150,8 @@ public class Handel implements Protocol {
     /**
      * WindowParameters for FIXED window
      */
-    public WindowParameters(int size, boolean moving) {
-      this(FIXED, size, 0, 0, 0, null, moving);
+    public WindowParameters(int size, boolean moving, boolean useScore) {
+      this(FIXED, size, useScore, 0, 0, 0, null, moving);
     }
 
     /**
@@ -156,11 +159,12 @@ public class Handel implements Protocol {
      */
     public WindowParameters(int initial, int minimum, int maximum, CongestionWindow congestion,
         boolean moving) {
-      this(VARIABLE, 0, initial, minimum, maximum, congestion, moving);
+      this(VARIABLE, 0, false, initial, minimum, maximum, congestion, moving);
     }
 
-    private WindowParameters(String type, int size, int initial, int minimum, int maximum,
-        CongestionWindow congestion, boolean moving) {
+    private WindowParameters(String type, int size, boolean useScore, int initial, int minimum,
+        int maximum, CongestionWindow congestion, boolean moving) {
+      this.useScore = useScore;
       this.initial = initial;
       this.minimum = minimum;
       this.maximum = maximum;
@@ -171,6 +175,9 @@ public class Handel implements Protocol {
     }
 
     public int newSize(int currentWindowSize, boolean correct) {
+      if (this.type == FIXED) {
+        return currentWindowSize;
+      }
       int updatedSize = congestion.newSize(currentWindowSize, correct);
       if (updatedSize > maximum) {
         return maximum;
@@ -198,7 +205,11 @@ public class Handel implements Protocol {
 
     @Override
     public String toString() {
-      return "Linear{" + "delta=" + delta + '}';
+      return "Linear{" + "delta=" + delta + "}\t";
+    }
+
+    public String name() {
+      return "var-linear";
     }
   }
 
@@ -213,15 +224,21 @@ public class Handel implements Protocol {
 
     public int newSize(int curr, boolean correct) {
       if (correct) {
-        return curr + (int) Math.ceil((double) curr * increaseFactor);
+        // ceil -> rapidly increasing size
+        return (int) Math.ceil((double) curr * increaseFactor);
       } else {
-        return curr - (int) Math.ceil((double) curr * decreaseFactor);
+        // floor -> rapidly decreasing size
+        return (int) Math.floor((double) curr / decreaseFactor);
       }
     }
 
     @Override
     public String toString() {
-      return "CExp{" + "increase=" + increaseFactor + ", decrease=" + decreaseFactor + '}';
+      return "CExp{" + "inc=" + increaseFactor + ",dec=" + decreaseFactor + '}';
+    }
+
+    public String name() {
+      return "var-exp";
     }
   }
 
@@ -589,7 +606,7 @@ public class Handel implements Protocol {
                 bestInside = stv;
               }
             } else {
-              if (bestOutside == null || bestOutside.rank > stv.rank) {
+              if (bestOutside == null || stv.rank < bestOutside.rank) {
                 bestOutside = stv;
               }
             }
@@ -663,7 +680,7 @@ public class Handel implements Protocol {
           replaceToVerifyAgg(all);
         }
 
-        // take highest priority signatures randomly
+        // take highest priority signatures
         if (highPriority.size() > 0) {
           int idx = network.rd.nextInt(highPriority.size());
           return highPriority.get(idx);

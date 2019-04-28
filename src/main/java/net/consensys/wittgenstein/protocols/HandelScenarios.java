@@ -5,13 +5,18 @@ import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 import net.consensys.wittgenstein.core.RunMultipleTimes;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
+import net.consensys.wittgenstein.tools.CSVFormatter;
 import net.consensys.wittgenstein.tools.Graph;
 import net.consensys.wittgenstein.tools.NodeDrawer;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
+import static java.util.Map.entry;
 
 public class HandelScenarios {
 
@@ -202,31 +207,35 @@ public class HandelScenarios {
   }
 
   private void byzantineWindowEvaluation() {
-    System.out.println("\nSEvaluation with priority list of different size;");
-    int n = 1024;
+    int n = 2048;
+    System.out.println("\nSEvaluation with FIXED window size, n;" + n);
 
 
-    double[] deadRatios = new double[] {0, 0.25, 0.50};
-    for (Boolean[] byzs : new Boolean[][] {new Boolean[] {false, false},
-        new Boolean[] {true, false}, new Boolean[] {false, true}}) {
-      for (int w : new int[] {20, 40, 80, 160}) {
-        for (double dr : deadRatios) {
-          Handel.HandelParameters params = defaultParams(n, dr, null, null, byzs[0], byzs[1]);
-          Handel.WindowParameters windowParam = new Handel.WindowParameters(w, false); // no moving window
-          params.window = windowParam;
-          BasicStats bs = run(3, params);
-          System.out.println("WindowEvaluation: Window: " + w + ", DeadRatio: " + dr
-              + " suicideBiz=" + byzs[0] + ", hiddenByz=" + byzs[1] + " => " + bs);
+    double[] deadRatios = new double[] {0.50};
+    //Boolean[][] byzs = new Boolean[][] {new Boolean[] {false, false},
+    //    new Boolean[] {true, false}, new Boolean[] {false, true}};
+    Boolean[][] byzs = new Boolean[][] {new Boolean[] {true, false}};
+    Boolean[] scorings = new Boolean[] {true, false};
+    for (Boolean[] byz : byzs) {
+      for (Boolean score : scorings) {
+        for (int w : new int[] {40, 80, 160}) {
+          for (double dr : deadRatios) {
+            Handel.HandelParameters params = defaultParams(n, dr, null, null, byz[0], byz[1]);
+            Handel.WindowParameters windowParam = new Handel.WindowParameters(w, false, score); // no moving window
+            params.window = windowParam;
+            BasicStats bs = run(3, params);
+            System.out.println("WindowEvaluation: Window: " + w + ", DeadRatio: " + dr
+                + " suicideBiz=" + byz[0] + ", hiddenByz=" + byz[1] + " => " + bs);
+          }
         }
       }
 
       System.out.println("\nSEvaluation with using ranking in the list *only*");
       for (double dr : deadRatios) {
-        Handel.HandelParameters params = defaultParams(n, dr, null, null, byzs[0], byzs[1]);
-
+        Handel.HandelParameters params = defaultParams(n, dr, null, null, byz[0], byz[1]);
         BasicStats bs = run(3, params);
-        System.out.println("ByzantineSuicide: DeadRatio: " + dr + " suicideBiz=" + byzs[0]
-            + ", hiddenByz=" + byzs[1] + " => " + bs);
+        System.out.println("ByzantineSuicide: DeadRatio: " + dr + " suicideBiz=" + byz[0]
+            + ", hiddenByz=" + byz[1] + " => " + bs);
       }
     }
   }
@@ -278,27 +287,30 @@ public class HandelScenarios {
 
 
   private void byzantineWithVariableWindow() {
-    int n = 512;
+    int n = 2048;
     System.out.println("\nSEvaluation with priority list of variable size; with n=" + n);
 
 
-    double[] deadRatios = new double[] {0.50};
+    double[] deadRatios = new double[] {0, 0.50};
     int[] minimum = new int[] {1};
-    int[] maximum = new int[] {40, 80};
-    int[] initials = new int[] {20};
-    boolean[] movings = new boolean[] {false, true};
-    Handel.CongestionWindow[] congestions = new Handel.CongestionWindow[] {
-        new Handel.CongestionLinear(1), new Handel.CongestionLinear(10),
-        new Handel.CongestionExp(1.1, 2), new Handel.CongestionExp(2, 2),};
+    int[] maximum = new int[] {64};
+    int[] initials = new int[] {10};
+    //boolean[] movings = new boolean[] {false, true};
+    boolean[] movings = new boolean[] {false};
 
-    Boolean[][] byzs = new Boolean[][] {new Boolean[] {false, false}, new Boolean[] {true, false},
-        new Boolean[] {false, true}};
-    for (boolean moving : movings) {
-      for (int init : initials) {
-        for (int min : minimum) {
-          for (int max : maximum) {
-            for (Handel.CongestionWindow c : congestions) {
-              for (double dr : deadRatios) {
+    Handel.CongestionWindow[] congestions =
+        new Handel.CongestionWindow[] {new Handel.CongestionLinear(1), //new Handel.CongestionLinear(10),
+            new Handel.CongestionExp(1.5, 2), //new Handel.CongestionExp(2, 2),};
+        };
+    //Boolean[][] byzs = new Boolean[][] {new Boolean[] {false, false}, new Boolean[] {true, false},
+    //   new Boolean[] {false, true}};
+    Boolean[][] byzs = new Boolean[][] {new Boolean[] {true, false}};
+    for (int init : initials) {
+      for (int min : minimum) {
+        for (int max : maximum) {
+          for (Handel.CongestionWindow c : congestions) {
+            for (double dr : deadRatios) {
+              for (boolean moving : movings) {
                 for (Boolean[] byz : byzs) {
                   Handel.HandelParameters params = defaultParams(n, dr, null, null, byz[0], byz[1]);
                   Handel.WindowParameters windowParam =
@@ -306,9 +318,9 @@ public class HandelScenarios {
                   params.window = windowParam;
                   BasicStats bs = run(2, params);
 
-                  System.out.println("WindowEvaluation: initial=" + init + ",min=" + min + ",max="
-                      + max + ",cong=" + c + ",movingWindow=" + moving + ", deadRatio=" + dr
-                      + ",suicide=" + byz[0] + ",hidden=" + byz[1] + " => " + bs);
+                  System.out.println("initial=" + init + ",min=" + min + ",max=" + max + ",cong="
+                      + c + ",movingWindow=" + moving + ", deadRatio=" + dr + ",suicide=" + byz[0]
+                      + ",hidden=" + byz[1] + "\t=>\t " + bs);
                 }
               }
 
@@ -317,6 +329,115 @@ public class HandelScenarios {
         }
       }
     }
+  }
+
+  private void fullComparison() {
+    int n = 128;
+    int nbRounds = 2;
+    double[] deadRatios = new double[] {0, 0.50};
+    double[] tors = new double[] {0.20};
+    Boolean[][] byzs = new Boolean[][] {new Boolean[] {false, false}, new Boolean[] {true, false},
+        new Boolean[] {false, true}};
+
+    // fixed-length window
+    int[] windows = new int[] {20, 80};
+    boolean[] useScore = new boolean[] {true, false};
+
+    // variable-length window
+    int[] minimums = new int[] {1};
+    int[] maximums = new int[] {80};
+    int[] initials = new int[] {10};
+    boolean[] movings = new boolean[] {false};
+    Handel.CongestionWindow[] congestions =
+        new Handel.CongestionWindow[] {new Handel.CongestionLinear(1), //new Handel.CongestionLinear(10),
+            new Handel.CongestionExp(1.5, 2), //new Handel.CongestionExp(2, 2),};
+        };
+
+    CSVFormatter formatter = new CSVFormatter(Arrays.asList("n", "technique", "tor", "deadRatio",
+        "suicide", "hidden", "window", "useScore", // constant length window
+        "minimum", "maximum", "initials", "moving", "linear", "exp_inc", "exp_dec", // variable-length window
+        "doneMin", "doneAvg", "doneMax")); // general stats
+
+    Handel.HandelParameters params = null;
+    BasicStats bs;
+
+    for (double tor : tors) {
+      for (double dr : deadRatios) {
+        for (Boolean[] byz : byzs) {
+          // 1. naive run
+          params = defaultParams(n, null, tor, 0, byz[0], byz[1]);
+          bs = run(nbRounds, params);
+          formatter.Add(Map.ofEntries(entry("n", n), entry("tor", tor), entry("deadRatio", dr),
+              entry("suicide", byz[0]), entry("hidden", byz[1]), entry("technique", "ranking"),
+              entry("doneMin", bs.doneAtMin), entry("doneAvg", bs.doneAtAvg),
+              entry("doneMax", bs.doneAtMax)));
+        }
+      }
+    }
+
+    // 2. fixed window
+    for (double tor : tors) {
+      for (double dr : deadRatios) {
+        for (Boolean[] byz : byzs) {
+          for (int window : windows) {
+            for (boolean score : useScore) {
+              params = defaultParams(n, null, tor, 0, byz[0], byz[1]);
+              Handel.WindowParameters windowParam =
+                  new Handel.WindowParameters(window, false, score); // no moving window
+              params.window = windowParam;
+              bs = run(nbRounds, params);
+              formatter.Add(Map.ofEntries(entry("n", n), entry("tor", tor), entry("deadRatio", dr),
+                  entry("suicide", byz[0]), entry("hidden", byz[1]), entry("technique", "fixed"),
+                  entry("window", window), entry("useScore", score), entry("doneMin", bs.doneAtMin),
+                  entry("doneAvg", bs.doneAtAvg), entry("doneMax", bs.doneAtMax)));
+            }
+          }
+        }
+      }
+    }
+
+    // 3. variable window
+    for (Handel.CongestionWindow c : congestions) {
+      for (double tor : tors) {
+        for (double dr : deadRatios) {
+          for (Boolean[] byz : byzs) {
+            for (int minimum : minimums) {
+              for (int maximum : maximums) {
+                for (int initial : initials) {
+                  for (boolean moving : movings) {
+                    Handel.WindowParameters windowParam =
+                        new Handel.WindowParameters(initial, minimum, maximum, c, moving);
+                    params.window = windowParam;
+                    bs = run(nbRounds, params);
+                    Map<String, Object> row = new HashMap<>();
+                    Map<String, Object> staticEntries =
+                        Map.ofEntries(entry("n", n), entry("tor", tor), entry("deadRatio", dr),
+                            entry("suicide", byz[0]), entry("hidden", byz[1]),
+                            entry("technique", c.name()), entry("minimum", minimum),
+                            entry("maximum", maximum), entry("initial", initial),
+                            entry("moving", moving), entry("doneMin", bs.doneAtMin),
+                            entry("doneAvg", bs.doneAtAvg), entry("doneMax", bs.doneAtMax));
+
+                    row.putAll(staticEntries);
+                    if (c instanceof Handel.CongestionLinear) {
+                      row.put("linear", ((Handel.CongestionLinear) c).delta);
+                    } else {
+                      Handel.CongestionExp exp = (Handel.CongestionExp) c;
+                      row.putAll(Map.ofEntries(entry("exp_inc", exp.increaseFactor),
+                          entry("exp_dec", exp.decreaseFactor)));
+                    }
+                    formatter.Add(row);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    System.out.println(formatter.toString());
+
   }
 
   void genAnim() {
@@ -343,16 +464,12 @@ public class HandelScenarios {
   }
 
   public static void main(String... args) throws IOException {
-
     HandelScenarios scenario = new HandelScenarios();
-
     //scenario.byzantineWindowEvaluation();
-    scenario.byzantineWithVariableWindow2();
+    //scenario.byzantineWithVariableWindow2();
 
-
+    scenario.fullComparison();
     //scenario.delayedStartImpact(4096, 50, 20);
-
-
     // scenario.log();
 
     //scenario.byzantineWindowEvaluation();
