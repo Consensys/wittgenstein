@@ -6,7 +6,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-// Add more tests
+// add more tests
 public class DfinityTest {
   private String nb = RegistryNodeBuilders.RANDOM_POSITION;
   private String nl = NetworkLatency.NetworkNoLatency.class.getSimpleName();

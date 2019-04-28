@@ -1,9 +1,6 @@
 package net.consensys.wittgenstein.tools;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 
@@ -26,20 +23,14 @@ public class CSVFormatter {
   }
 
   /**
-   * Add each values to its corresponding value to the CSV. It corresponds to a new row in the CSV
+   * add each values to its corresponding value to the CSV. It corresponds to a new row in the CSV
    * output. Empty fields will be filled out by empty value when printing the CSV.
-   * 
-   * @param vals
    */
-  public void Add(Map<String, Object> vals) {
+  public void add(Map<String, Object> vals) {
     for (String field : fields) {
-      List<Object> l = (List<Object>) this.values.getOrDefault(field, new ArrayList<Object>());
+      List<Object> l = this.values.getOrDefault(field, new ArrayList<>());
       Object value = vals.get(field);
-      if (value == null) {
-        l.add(new emptyObject());
-      } else {
-        l.add(value);
-      }
+      l.add(Objects.requireNonNullElseGet(value, emptyObject::new));
       this.values.put(field, l);
     }
     this.nbRows++;
@@ -48,7 +39,7 @@ public class CSVFormatter {
   @Override
   public String toString() {
     String headers = Headers() + "\n";
-    String rows = "";
+    StringBuilder rows = new StringBuilder();
     for (int i = 0; i < nbRows; i++) {
       List<Object> rowValues = new ArrayList<>();
       for (String field : fields) {
@@ -56,13 +47,12 @@ public class CSVFormatter {
         rowValues.add(value);
       }
       String line = rowValues.stream().map(Object::toString).collect(Collectors.joining(","));
-      rows += line + "\n";
+      rows.append(line).append('\n');
     }
     return headers + rows;
   }
 
-
-  public String Headers() {
-    return fields.stream().collect(Collectors.joining(","));
+  private String Headers() {
+    return String.join(",", fields);
   }
 }

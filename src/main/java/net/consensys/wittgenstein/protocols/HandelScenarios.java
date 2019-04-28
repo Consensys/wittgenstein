@@ -367,7 +367,7 @@ public class HandelScenarios {
           // 1. naive run
           params = defaultParams(n, null, tor, 0, byz[0], byz[1]);
           bs = run(nbRounds, params);
-          formatter.Add(Map.ofEntries(entry("n", n), entry("tor", tor), entry("deadRatio", dr),
+          formatter.add(Map.ofEntries(entry("n", n), entry("tor", tor), entry("deadRatio", dr),
               entry("suicide", byz[0]), entry("hidden", byz[1]), entry("technique", "ranking"),
               entry("doneMin", bs.doneAtMin), entry("doneAvg", bs.doneAtAvg),
               entry("doneMax", bs.doneAtMax)));
@@ -386,7 +386,7 @@ public class HandelScenarios {
                   new Handel.WindowParameters(window, false, score); // no moving window
               params.window = windowParam;
               bs = run(nbRounds, params);
-              formatter.Add(Map.ofEntries(entry("n", n), entry("tor", tor), entry("deadRatio", dr),
+              formatter.add(Map.ofEntries(entry("n", n), entry("tor", tor), entry("deadRatio", dr),
                   entry("suicide", byz[0]), entry("hidden", byz[1]), entry("technique", "fixed"),
                   entry("window", window), entry("useScore", score), entry("doneMin", bs.doneAtMin),
                   entry("doneAvg", bs.doneAtAvg), entry("doneMax", bs.doneAtMax)));
@@ -426,7 +426,7 @@ public class HandelScenarios {
                       row.putAll(Map.ofEntries(entry("exp_inc", exp.increaseFactor),
                           entry("exp_dec", exp.decreaseFactor)));
                     }
-                    formatter.Add(row);
+                    formatter.add(row);
                   }
                 }
               }
