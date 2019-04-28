@@ -41,8 +41,8 @@ public class CityGeoInfoAllCities implements CityGeoInfo {
         String cityName = csvRecord.get(0).replace(' ', '+').toLowerCase();
         float latitude = Float.valueOf(csvRecord.get(1));
         float longitude = Float.valueOf(csvRecord.get(2));
-        int mercX = convertToMercerX(longitude);
-        int mercY = convertToMercerY(latitude);
+        int mercX = convertToMercatorX(longitude);
+        int mercY = convertToMercatorY(latitude);
 
         citiesPosition.put(cityName, new int[] {mercX, mercY});
       }
@@ -52,7 +52,7 @@ public class CityGeoInfoAllCities implements CityGeoInfo {
     return citiesPosition;
   }
 
-  private int convertToMercerX(double longitude) {
+  private int convertToMercatorX(double longitude) {
     int posX = (int) ((longitude + 180) * (mapWidth / 360));
     if (posX < mapWidth / 2) {
       posX = posX - 45;
@@ -62,7 +62,7 @@ public class CityGeoInfoAllCities implements CityGeoInfo {
     return posX;
   }
 
-  private int convertToMercerY(float latitude) {
+  private int convertToMercatorY(float latitude) {
     double latRad = latitude * Math.PI / 180;
     double mercN = Math.log(Math.tan((Math.PI / 4) + (latRad / 2)));
     int posY = (int) Math.round((mapHeight / 2) - (latitude * mapHeight / 180));
