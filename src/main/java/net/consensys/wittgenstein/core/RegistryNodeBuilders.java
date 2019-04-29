@@ -1,6 +1,11 @@
 package net.consensys.wittgenstein.core;
 
+import net.consensys.wittgenstein.core.geoinfo.CityGeoInfo;
+import net.consensys.wittgenstein.core.geoinfo.CityGeoInfoAWS;
+import net.consensys.wittgenstein.core.geoinfo.CityGeoInfoAllCities;
 import net.consensys.wittgenstein.tools.CSVLatencyReader;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -14,6 +19,7 @@ public class RegistryNodeBuilders {
   public static final String AWS_WITH_1THIRD_TOR = "aws_with_1third_tor";
   public static final String AWS_WITH_HALF_TOR = "aws_with_half_tor";
   public static final String ALL_CITIES = "all_cities_constant_speed";
+
 
 
   public static RegistryNodeBuilders singleton = new RegistryNodeBuilders();
@@ -31,17 +37,22 @@ public class RegistryNodeBuilders {
 
   private RegistryNodeBuilders() {
     CSVLatencyReader lr = new CSVLatencyReader();
-    registry.put(RANDOM_POSITION, new NodeBuilder.NodeBuilderWithRandomPosition());
-    registry.put(AWS_SITE,
-        new NodeBuilder.NodeBuilderWithCity(NetworkLatency.AwsRegionNetworkLatency.cities()));
-    registry.put(ALL_CITIES, new NodeBuilder.NodeBuilderWithCity(lr.cities()));
+    CityGeoInfo cityGeoInfoAWS = new CityGeoInfoAWS();
+    CityGeoInfo cityGeoInfoAllCities = new CityGeoInfoAllCities();
 
-    NodeBuilder nb =
-        new NodeBuilder.NodeBuilderWithCity(NetworkLatency.AwsRegionNetworkLatency.cities());
+    registry.put(RANDOM_POSITION, new NodeBuilder.NodeBuilderWithRandomPosition());
+    registry.put(AWS_SITE, new NodeBuilder.NodeBuilderWithCity(
+        NetworkLatency.AwsRegionNetworkLatency.cities(), cityGeoInfoAWS));
+    registry.put(ALL_CITIES,
+        new NodeBuilder.NodeBuilderWithCity(lr.cities(), cityGeoInfoAllCities));
+
+    NodeBuilder nb = new NodeBuilder.NodeBuilderWithCity(
+        NetworkLatency.AwsRegionNetworkLatency.cities(), cityGeoInfoAWS);
     nb.aspects.add(new Node.ExtraLatencyAspect(.33));
     registry.put(AWS_WITH_1THIRD_TOR, nb);
 
-    nb = new NodeBuilder.NodeBuilderWithCity(NetworkLatency.AwsRegionNetworkLatency.cities());
+    nb = new NodeBuilder.NodeBuilderWithCity(NetworkLatency.AwsRegionNetworkLatency.cities(),
+        cityGeoInfoAWS);
     nb.aspects.add(new Node.ExtraLatencyAspect(.5));
     registry.put(AWS_WITH_HALF_TOR, nb);
 
@@ -50,7 +61,7 @@ public class RegistryNodeBuilders {
         for (double tor : tor()) {
           if (aws) {
             nb = new NodeBuilder.NodeBuilderWithCity(
-                NetworkLatency.AwsRegionNetworkLatency.cities());
+                NetworkLatency.AwsRegionNetworkLatency.cities(), new CityGeoInfoAWS());
           } else {
             nb = new NodeBuilder.NodeBuilderWithRandomPosition();
           }
