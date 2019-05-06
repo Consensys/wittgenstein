@@ -12,7 +12,7 @@ public class HandelTest {
   @Test
   public void testCopy() {
     Handel p1 =
-        new Handel(new Handel.HandelParameters(64, 60, 6, 10, 5, 10, 2, nb, nl, 100, false, false));
+        new Handel(new Handel.HandelParameters(64, 60, 6, 10, 5, 10, 2, nb, nl, 100, false, false, ""));
     Handel p2 = p1.copy();
     p1.init();
     p2.init();

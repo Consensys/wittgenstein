@@ -63,9 +63,15 @@ public class Handel implements Protocol {
      */
     public WindowParameters window;
 
+    final String bestLevelFunction;
+    final static String BESTLEVEL_RANDOM = "RANDOM";
+    final static String BESTLEVEL_SCORE = "SCORE";
+
+
     // Used for json / http server
     @SuppressWarnings("unused")
     public HandelParameters() {
+      this.bestLevelFunction = BESTLEVEL_RANDOM;
       this.nodeCount = 32768 / 1024;
       this.threshold = (int) (nodeCount * (0.99));
       this.pairingTime = 3;
@@ -81,9 +87,10 @@ public class Handel implements Protocol {
     }
 
     public HandelParameters(int nodeCount, int threshold, int pairingTime, int levelWaitTime,
-        int periodDurationMs, int acceleratedCallsCount, int nodesDown, String nodeBuilderName,
-        String networkLatencyName, int desynchronizedStart, boolean byzantineSuicide,
-        boolean hiddenByzantine) {
+                            int periodDurationMs, int acceleratedCallsCount, int nodesDown, String nodeBuilderName,
+                            String networkLatencyName, int desynchronizedStart, boolean byzantineSuicide,
+                            boolean hiddenByzantine, String bestLevelFunction) {
+      this.bestLevelFunction = bestLevelFunction == "" ? bestLevelFunction : BESTLEVEL_RANDOM;
 
 
       if (nodesDown >= nodeCount || nodesDown < 0 || threshold > nodeCount
@@ -438,7 +445,7 @@ public class Handel implements Protocol {
        * That's the number of signatures we have if we have all of them. It's also the number of
        * signatures we're going to send.
        */
-      int expectedSigs() {
+      public int expectedSigs() {
         return size;
       }
 
@@ -871,6 +878,24 @@ public class Handel implements Protocol {
           new SigToVerify(from.nodeId, l.level, receptionRanks[from.nodeId], cs, ssigs.badSig));
     }
 
+    SigToVerify chooseBestFromLevels(List<SigToVerify> bestByLevels) {
+      switch (Handel.this.params.bestLevelFunction) {
+        case HandelParameters.BESTLEVEL_RANDOM:
+          return bestByLevels.get(network.rd.nextInt(bestByLevels.size()));
+        case HandelParameters.BESTLEVEL_SCORE:
+          int maxScore = 0;
+          SigToVerify maxSig = null;
+          for(SigToVerify s: bestByLevels) {
+            int score = evaluateSig(this.levels.get(s.level),s.sig);
+            if (score > maxScore) {
+              maxScore = score;
+              maxSig = s;
+            }
+          }
+          return maxSig;
+      }
+      return null;
+    }
     void checkSigs() {
       ArrayList<SigToVerify> byLevels = new ArrayList<>();
 
@@ -885,14 +910,19 @@ public class Handel implements Protocol {
         return;
       }
 
-      SigToVerify best = byLevels.get(network.rd.nextInt(byLevels.size()));
+     SigToVerify best = chooseBestFromLevels(byLevels);
+      if (best == null) {
+        throw new IllegalStateException("This should never happen");
+      }
+
       if (hiddenByzantine != null && best.level == levels.size() - 1) {
         best = hiddenByzantine.attack(this, best);
       }
 
       if (params.window != null) {
         HLevel l = levels.get(best.level);
-        l.currWindowSize = params.window.newSize(l.currWindowSize, !best.badSig);
+        int newSize = params.window.newSize(l.currWindowSize, !best.badSig);
+        l.currWindowSize = newSize > l.size ? l.size : newSize;
 
         //receptionRanks[best.from] += l.peers.size();
         if (receptionRanks[best.from] < 0) {
@@ -1134,7 +1164,7 @@ public class Handel implements Protocol {
     int ts = (int) (tsR * nodeCt);
     int dead = (int) (deadR * nodeCt);
     HandelParameters params =
-        new HandelParameters(nodeCt, ts, 4, 50, 20, 10, dead, nb, nl, 0, false, false);
+        new HandelParameters(nodeCt, ts, 4, 50, 20, 10, dead, nb, nl, 0, false, false, "");
 
     return new Handel(params);
   }
