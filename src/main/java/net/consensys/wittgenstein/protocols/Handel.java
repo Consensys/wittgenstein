@@ -87,9 +87,9 @@ public class Handel implements Protocol {
     }
 
     public HandelParameters(int nodeCount, int threshold, int pairingTime, int levelWaitTime,
-                            int periodDurationMs, int acceleratedCallsCount, int nodesDown, String nodeBuilderName,
-                            String networkLatencyName, int desynchronizedStart, boolean byzantineSuicide,
-                            boolean hiddenByzantine, String bestLevelFunction) {
+        int periodDurationMs, int acceleratedCallsCount, int nodesDown, String nodeBuilderName,
+        String networkLatencyName, int desynchronizedStart, boolean byzantineSuicide,
+        boolean hiddenByzantine, String bestLevelFunction) {
       this.bestLevelFunction = bestLevelFunction == "" ? bestLevelFunction : BESTLEVEL_RANDOM;
 
 
@@ -887,8 +887,8 @@ public class Handel implements Protocol {
         case HandelParameters.BESTLEVEL_SCORE:
           int maxScore = 0;
           SigToVerify maxSig = null;
-          for(SigToVerify s: bestByLevels) {
-            int score = evaluateSig(this.levels.get(s.level),s.sig);
+          for (SigToVerify s : bestByLevels) {
+            int score = evaluateSig(this.levels.get(s.level), s.sig);
             if (score > maxScore) {
               maxScore = score;
               maxSig = s;
@@ -898,6 +898,7 @@ public class Handel implements Protocol {
       }
       return null;
     }
+
     void checkSigs() {
       ArrayList<SigToVerify> byLevels = new ArrayList<>();
 
@@ -912,7 +913,7 @@ public class Handel implements Protocol {
         return;
       }
 
-     SigToVerify best = chooseBestFromLevels(byLevels);
+      SigToVerify best = chooseBestFromLevels(byLevels);
       if (best == null) {
         throw new IllegalStateException("This should never happen");
       }
