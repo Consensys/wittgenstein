@@ -42,8 +42,8 @@ public class HandelScenarios {
 
     @Override
     public String toString() {
-      return ", doneAtAvg=" + doneAtAvg + " | doneAtMin=" + doneAtMin + ", doneAtMax=" + doneAtMax
-          + ", msgRcvMin=" + msgRcvMin + ", msgRcvAvg=" + msgRcvAvg + ", msgRcvMax=" + msgRcvMax;
+      return "; doneAtAvg=" + doneAtAvg + "; doneAtMin=" + doneAtMin + "; doneAtMax=" + doneAtMax
+          + "; msgRcvMin=" + msgRcvMin + "; msgRcvAvg=" + msgRcvAvg + "; msgRcvMax=" + msgRcvMax;
     }
   }
 
@@ -62,7 +62,7 @@ public class HandelScenarios {
 
     double treshold = (1.0 - (deadRatio + 0.01));
 
-    return new Handel.HandelParameters(nodes, (int) (nodes * treshold), 4, 50, 20, 10,
+    return new Handel.HandelParameters(nodes, (int) (nodes * treshold), 4, 10, 10, 10,
         (int) (nodes * deadRatio), RegistryNodeBuilders.name(true, false, tor),
         NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName(), desynchronizedStart,
         byzantineSuicide, hiddenByzantine, bestLevelFunction);
@@ -242,35 +242,41 @@ public class HandelScenarios {
   }
 
   private void byzantineWithVariableWindow2() {
-    int n = 2048;
+    int n = 4096;
     System.out.println("\nSEvaluation with priority list of variable size; with n=" + n);
 
 
-    double[] deadRatios = new double[] {0.50};
-    int[] minimum = new int[] {1};
-    int[] maximum = new int[] {40};
-    int[] initials = new int[] {1};
-    boolean[] movings = new boolean[] {false, true};
-    Handel.CongestionWindow[] congestions = new Handel.CongestionWindow[] {
-        new Handel.CongestionLinear(1), new Handel.CongestionLinear(10)};
 
-    Boolean[][] byzs = new Boolean[][] {new Boolean[] {false, true}};
-    for (boolean moving : movings) {
-      for (int init : initials) {
-        for (int min : minimum) {
-          for (int max : maximum) {
-            for (Handel.CongestionWindow c : congestions) {
-              for (double dr : deadRatios) {
-                for (Boolean[] byz : byzs) {
-                  Handel.HandelParameters params = defaultParams(n, dr, null, null, byz[0], byz[1],"");
+    double[] deadRatios = new double[] {0.01, 0.10, 0.20, 0.5};
+    int[] minimum = new int[] {4096};
+    int[] maximum = new int[] {4096};
+    int[] initials = new int[] {4096};
+    boolean[] movings = new boolean[] {false};
+    Handel.CongestionWindow[] congestions =
+        new Handel.CongestionWindow[] {new Handel.CongestionExp(2, 4)};
+
+    Boolean[][] byzs = new Boolean[][] {new Boolean[] {false, false}, new Boolean[] {false, true},
+        new Boolean[] {true, false}};
+    for (Boolean[] byz : byzs) {
+      for (double dr : deadRatios) {
+        for (boolean moving : movings) {
+          for (int init : initials) {
+            for (int min : minimum) {
+              for (int max : maximum) {
+                for (Handel.CongestionWindow c : congestions) {
+                  Handel.HandelParameters params = defaultParams(n, dr, 0.20, null, byz[0], byz[1],"");
                   Handel.WindowParameters windowParam =
                       new Handel.WindowParameters(init, min, max, c, moving);
                   params.window = windowParam;
-                  BasicStats bs = run(1, params);
+                  BasicStats bs = run(5, params);
+
+                  String attack = ", att=no";
+                  attack = params.byzantineSuicide ? ", att=suicide" : attack;
+                  attack = params.hiddenByzantine ? ", att=hidden" : attack;
 
                   System.out.println("WindowEvaluation: initial=" + init + ",min=" + min + ",max="
                       + max + ",cong=" + c + ",movingWindow=" + moving + ", deadRatio=" + dr
-                      + ",suicide=" + byz[0] + ",hidden=" + byz[1] + " => " + bs);
+                      + attack + "   " + bs);
                 }
               }
 
@@ -328,7 +334,7 @@ public class HandelScenarios {
   }
 
   private void fullComparison() {
-    int n = 2048;
+    int n = 64;
     int nbRounds = 2;
     double[] deadRatios = new double[] {0, 0.50};
     double[] tors = new double[] {0.20};
@@ -362,16 +368,18 @@ public class HandelScenarios {
     for (double tor : tors) {
       for (double dr : deadRatios) {
         for (Boolean[] byz : byzs) {
+
           for (String byLevels : chooseLevels) {
             // 1. naive run
             params = defaultParams(n, null, tor, 0, byz[0], byz[1], byLevels);
             bs = run(nbRounds, params);
-            formatter.Add(Map.ofEntries(entry("n", n), entry("tor", tor), entry("deadRatio", dr),
+            formatter.add(Map.ofEntries(entry("n", n), entry("tor", tor), entry("deadRatio", dr),
                     entry("byLevels",byLevels),
                     entry("suicide", byz[0]), entry("hidden", byz[1]), entry("technique", "ranking"),
                     entry("doneMin", bs.doneAtMin), entry("doneAvg", bs.doneAtAvg),
                     entry("doneMax", bs.doneAtMax)));
           }
+
         }
       }
     }
@@ -382,6 +390,7 @@ public class HandelScenarios {
     for (double tor : tors) {
       for (double dr : deadRatios) {
         for (Boolean[] byz : byzs) {
+
           for (String byLevels : chooseLevels) {
             for (int window : windows) {
               for (boolean score : useScore) {
@@ -391,7 +400,7 @@ public class HandelScenarios {
                         new Handel.WindowParameters(window, false, score); // no moving window
                 params.window = windowParam;
                 bs = run(nbRounds, params);
-                formatter.Add(Map.ofEntries(entry("n", n), entry("tor", tor), entry("deadRatio", dr),
+                formatter.add(Map.ofEntries(entry("n", n), entry("tor", tor), entry("deadRatio", dr),
                         entry("byLevels",byLevels),
                         entry("suicide", byz[0]), entry("hidden", byz[1]), entry("technique", "fixed"),
                         entry("window", window), entry("useScore", score), entry("doneMin", bs.doneAtMin),
@@ -438,8 +447,9 @@ public class HandelScenarios {
                         row.putAll(Map.ofEntries(entry("exp_inc", exp.increaseFactor),
                                 entry("exp_dec", exp.decreaseFactor)));
                       }
-                      formatter.Add(row);
+                      formatter.add(row);
                     }
+
                   }
                 }
               }

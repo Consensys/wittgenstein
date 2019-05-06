@@ -3,7 +3,6 @@ package net.consensys.wittgenstein.tools;
 import org.junit.Assert;
 import org.junit.Test;
 import java.util.*;
-import static org.junit.Assert.*;
 
 public class CSVFormatterTest {
 
@@ -24,8 +23,8 @@ public class CSVFormatterTest {
     String expectedOutput = multilineString("f1,f2,f3,res", "v11,v12,,420", ",v22,,666");
 
     CSVFormatter formatter = new CSVFormatter(fields);
-    formatter.Add(row1);
-    formatter.Add(row2);
+    formatter.add(row1);
+    formatter.add(row2);
 
     Assert.assertEquals(expectedOutput, formatter.toString());
   }
