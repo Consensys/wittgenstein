@@ -90,7 +90,7 @@ public class Handel implements Protocol {
         int periodDurationMs, int acceleratedCallsCount, int nodesDown, String nodeBuilderName,
         String networkLatencyName, int desynchronizedStart, boolean byzantineSuicide,
         boolean hiddenByzantine, String bestLevelFunction) {
-      this.bestLevelFunction = bestLevelFunction == "" ? bestLevelFunction : BESTLEVEL_RANDOM;
+      this.bestLevelFunction = bestLevelFunction != "" ? bestLevelFunction : BESTLEVEL_RANDOM;
 
 
       if (nodesDown >= nodeCount || nodesDown < 0 || threshold > nodeCount
