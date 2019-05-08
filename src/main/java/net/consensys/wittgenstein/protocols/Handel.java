@@ -1091,7 +1091,7 @@ public class Handel implements Protocol {
       for (HNode n : nodes) {
         for (HNode.HLevel l : n.levels) {
           List<HNode> expected = l.expectedNodes();
-          Collections.shuffle(expected);
+          Collections.shuffle(expected,network.rd);
           // put back the rank *for the level* in the global list
           for (int i = 0; i < expected.size(); i++) {
             n.receptionRanks[expected.get(i).nodeId] = i;
