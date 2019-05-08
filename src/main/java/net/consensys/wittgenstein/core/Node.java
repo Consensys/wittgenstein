@@ -266,7 +266,7 @@ public class Node {
 
 
   /**
-   * @return the rank with this node, considering a round map.
+   * @return the distance with this node, considering a round map.
    */
   int dist(Node n) {
     int dx = Math.min(Math.abs(x - n.x), MAX_X - Math.abs(x - n.x));

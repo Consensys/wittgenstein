@@ -329,11 +329,9 @@ public class Handel implements Protocol {
     final List<HLevel> levels = new ArrayList<>();
     final int nodePairingTime = (int) (Math.max(1, params.pairingTime * speedRatio));
     // reception ranks at this level. The indices represent the node ids and the value represent
-    // rank *inside* the level. { 4 -> 0, 5 -> 3, 6 -> 2, 7 -> 1 }
+    // rank *inside* the level.
     final int[] receptionRanks = new int[params.nodeCount];
 
-
-    //public List<Integer> ranks;
     final BitSet blacklist = new BitSet();
 
     /**
@@ -1080,6 +1078,7 @@ public class Handel implements Protocol {
   @FunctionalInterface
   public interface Shuffler {
     /**
+     * rank returns the rank of the sender at the given level with respect to the receiver.
      */
     int rank(int level, HNode receiver, HNode sender);
   }
