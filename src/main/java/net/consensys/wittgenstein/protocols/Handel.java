@@ -12,6 +12,7 @@ import net.consensys.wittgenstein.tools.NodeDrawer;
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -57,6 +58,10 @@ public class Handel implements Protocol {
      */
     final boolean byzantineSuicide;
     final boolean hiddenByzantine;
+
+    public String shuffle = SHUFFLE_SQUARE;
+    final static String SHUFFLE_SQUARE = "SQUARE";
+    final static String SHUFFLE_XOR = "XOR";
 
     /**
      * parameters related to the window-ing technique - null if not set
@@ -319,10 +324,16 @@ public class Handel implements Protocol {
 
 
   public class HNode extends Node {
+
     final int startAt;
     final List<HLevel> levels = new ArrayList<>();
     final int nodePairingTime = (int) (Math.max(1, params.pairingTime * speedRatio));
+    // reception ranks at this level. The indices represent the node ids and the value represent
+    // rank *inside* the level. { 4 -> 0, 5 -> 3, 6 -> 2, 7 -> 1 }
     final int[] receptionRanks = new int[params.nodeCount];
+
+
+    //public List<Integer> ranks;
     final BitSet blacklist = new BitSet();
 
     /**
@@ -343,6 +354,12 @@ public class Handel implements Protocol {
       this.startAt = startAt;
       this.suicidalAttackDone = !params.byzantineSuicide;
       this.hiddenByzantine = params.hiddenByzantine ? new HiddenByzantine() : null;
+    }
+
+    @Override
+    public String toString() {
+      String s = "HNode{" + nodeId + "}";
+      return s;
     }
 
     public void initLevel() {
@@ -381,6 +398,8 @@ public class Handel implements Protocol {
       throw new IllegalStateException();
     }
 
+
+
     public class HLevel {
       final int level;
       final int size;
@@ -408,6 +427,7 @@ public class Handel implements Protocol {
       public boolean outgoingFinished = false;
       // all our peers are complete: no need to send anything for this level
 
+
       /**
        * We're going to contact all nodes, one after the other. That's our position in the peers'
        * list.
@@ -420,7 +440,7 @@ public class Handel implements Protocol {
        */
       HLevel() {
         level = 0;
-        size = 0;
+        size = 1;
         outgoingFinished = true;
         lastAggVerified.set(nodeId);
         verifiedIndSignatures.set(nodeId);
@@ -442,12 +462,23 @@ public class Handel implements Protocol {
         size = waitedSigs.cardinality();
       }
 
+
       /**
        * That's the number of signatures we have if we have all of them. It's also the number of
        * signatures we're going to send.
        */
       public int expectedSigs() {
         return size;
+      }
+
+      public List<HNode> expectedNodes() {
+        List<HNode> expected = new ArrayList<>(size);
+
+        for (int pos, cur = waitedSigs.nextSetBit(0); cur >= 0; pos = cur + 1, cur =
+            waitedSigs.nextSetBit(pos)) {
+          expected.add(network.getNodeById(cur));
+        }
+        return expected;
       }
 
       /**
@@ -505,9 +536,9 @@ public class Handel implements Protocol {
         return res;
       }
 
-      void buildEmissionList(ArrayList<HNode>[][][] emissions) {
+      void buildEmissionList(List<HNode>[][][] emissions) {
         assert peers.isEmpty();
-        for (ArrayList<HNode> ranks : emissions[nodeId][level]) {
+        for (List<HNode> ranks : emissions[nodeId][level]) {
           if (ranks != null && !ranks.isEmpty()) {
             if (ranks.size() > 1) {
               Collections.shuffle(ranks, network.rd);
@@ -928,10 +959,8 @@ public class Handel implements Protocol {
         int newSize = params.window.newSize(currWindowSize, !best.badSig);
         currWindowSize = newSize > l.size ? l.size : newSize;
 
-        receptionRanks[best.from] += l.peers.size();
-        if (receptionRanks[best.from] < 0) {
-          receptionRanks[best.from] = Integer.MAX_VALUE;
-        }
+        // simply put it at the end of the ranking
+        receptionRanks[best.from] = l.peers.size();
       }
       sigChecked++;
 
@@ -1048,6 +1077,53 @@ public class Handel implements Protocol {
     }
   }
 
+  @FunctionalInterface
+  public interface Shuffler {
+    /**
+     */
+    int rank(int level, HNode receiver, HNode sender);
+  }
+
+  public class ShufflingSquare implements Shuffler {
+
+    List<HNode> nodes;
+
+    public ShufflingSquare(List<HNode> nodes) {
+      for (HNode n : nodes) {
+        for (HNode.HLevel l : n.levels) {
+          List<HNode> expected = l.expectedNodes();
+          Collections.shuffle(expected);
+          // put back the rank *for the level* in the global list
+          for (int i = 0; i < expected.size(); i++) {
+            n.receptionRanks[expected.get(i).nodeId] = i;
+          }
+        }
+      }
+      this.nodes = nodes;
+    }
+
+    @Override
+    public int rank(int level, HNode receiver, HNode sender) {
+      return receiver.receptionRanks[sender.nodeId];
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      for (HNode n : nodes) {
+        sb.append("reception ranks of node " + n.nodeId + " => \n");
+        for (HNode.HLevel l : n.levels) {
+          sb.append("\tlvl" + l.level + " -> ");
+          for (HNode expected : l.expectedNodes()) {
+            sb.append(expected.nodeId + ":" + n.receptionRanks[expected.nodeId] + " - ");
+          }
+          sb.append("\n");
+        }
+      }
+      return sb.toString();
+    }
+  }
+
   @Override
   public Handel copy() {
     return new Handel(params);
@@ -1086,37 +1162,61 @@ public class Handel implements Protocol {
     List<HNode> an = new ArrayList<>(network.allNodes);
     int nLevel = MoreMath.log2(params.nodeCount);
 
-    @SuppressWarnings("unchecked")
-    ArrayList<HNode>[][][] emissions =
-        new ArrayList[params.nodeCount][nLevel + 1][params.nodeCount];
+    Shuffler xorer = (level, receiver, sender) -> {
+      return receiver.nodeId ^ sender.nodeId;
+    };
 
-    for (HNode n : network.allNodes) {
-      Collections.shuffle(an, network.rd);
-      int[] pos = new int[nLevel + 1];
-      for (HNode sentBy : an) {
-        if (sentBy != n) {
-          int dl = n.level(sentBy);
-          n.receptionRanks[sentBy.nodeId] = pos[dl];
-          if (!sentBy.isDown()) {
-            // No need to build the emission list of the dead nodes
-            if (emissions[sentBy.nodeId][dl][pos[dl]] == null) {
-              emissions[sentBy.nodeId][dl][pos[dl]] = new ArrayList<>();
-            }
-            emissions[sentBy.nodeId][dl][pos[dl]].add(n);
-          }
-          pos[dl]++;
+    // global shuffling of the list
+    Collections.shuffle(an, network.rd);
+    Shuffler s = new ShufflingSquare(an);
+    List<HNode>[][][] emissionList = new List[params.nodeCount][nLevel + 1][params.nodeCount];
+
+    for (HNode receiver : an) { // for each node
+      for (HNode sender : an) { // we look the rank of the other nodes
+        if (receiver == sender) {
+          continue;
         }
+        int level = receiver.level(sender);
+        // rank is the rank *in* the level.
+        int rank = s.rank(level, receiver, sender);
+        List<HNode> levelList = emissionList[sender.nodeId][level][rank];
+        if (levelList == null) {
+          levelList = new ArrayList<>();
+        }
+        levelList.add(receiver);
+        emissionList[sender.nodeId][level][rank] = levelList;
       }
     }
+
+    //debugEmissionList(an,emissionList);
 
     for (HNode n : network.allNodes) {
       if (!n.isDown()) {
         for (HNode.HLevel l : n.levels) {
-          l.buildEmissionList(emissions);
+          l.buildEmissionList(emissionList);
         }
       }
     }
   }
+
+  private static void debugEmissionList(List<HNode> an, List<HNode>[][][] emissionList) {
+    for (HNode n : an) {
+      System.out.println("node " + n.nodeId + ":");
+      for (HNode.HLevel l : n.levels) {
+        System.out.println("\t level " + l.level + " (size=" + l.size + ") :");
+        for (int i = 0; i < l.size; i++) {
+          List<HNode> list = emissionList[n.nodeId][l.level][i];
+          if (list == null) {
+            System.out.println("\t\tposition " + i + " => null");
+          } else {
+            System.out.println("\t\tposition " + i + " => " + list);
+          }
+
+        }
+      }
+    }
+  }
+
 
   @Override
   public Network<HNode> network() {

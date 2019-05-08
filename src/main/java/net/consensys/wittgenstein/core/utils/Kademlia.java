@@ -5,7 +5,7 @@ import java.util.Arrays;
 public class Kademlia {
 
   /**
-   * Calculates the XOR distance between two values. Taken from pantheon code.
+   * Calculates the XOR rank between two values. Taken from pantheon code.
    */
   public static int distance(byte[] v1b, byte[] v2b) {
     assert (v1b.length == v2b.length);
@@ -35,7 +35,7 @@ public class Kademlia {
    * http://www.scs.stanford.edu/~dm/home/papers/kpos.pdf
    *
    * For each 0 =< i < 160, every node keeps a list of (IP address; UDP port; Node ID)
-   *  triples for nodes of distance between 2^i and 2^(i+1) from itself. We call these
+   *  triples for nodes of rank between 2^i and 2^(i+1) from itself. We call these
    *  lists k-buckets.
    *
    * When a Kademlia node receives any message (request or reply) from another node, it updates

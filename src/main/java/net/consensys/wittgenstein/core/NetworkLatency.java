@@ -37,7 +37,7 @@ public abstract class NetworkLatency {
 
   /**
    * @see <a href="https://pdfs.semanticscholar.org/ff13/5d221678e6b542391c831e87fca56e830a73.pdf"/>
-   *      Latency vs. distance: y = 0.022x + 4.862
+   *      Latency vs. rank: y = 0.022x + 4.862
    *      </p>
    *      It's a roundtrip, so we have to divide by two to get a single packet time.
    * @see <a href="https://www.jstage.jst.go.jp/article/ipsjjip/22/3/22_435/_pdf"/> variance with
@@ -47,7 +47,7 @@ public abstract class NetworkLatency {
    *      - location μ [ms] = −0,3 - scale σ [ms] = 0.35 - shape ξ [-] = 1.4
    *      "The constant delays ts and tp has been subtracted"
    *      "A single model isapplicable to all considered lengths of packets." It's for an ADSLv2+
-   *      system, so they don't take into account the distance. Again it's a roundtrip time.
+   *      system, so they don't take into account the rank. Again it's a roundtrip time.
    *      <p>
    */
   public static class NetworkLatencyByDistance extends NetworkLatency {
