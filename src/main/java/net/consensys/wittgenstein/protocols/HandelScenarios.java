@@ -131,12 +131,13 @@ public class HandelScenarios {
 
 
   private void tor() {
-    int n = 2048;
+    int n = 8;
     System.out.println("\nImpact of the ratio of nodes behind tor - "
         + defaultParams(n, null, null, null, null, null, ""));
 
+
     for (double tor : RegistryNodeBuilders.tor()) {
-      Handel.HandelParameters params = defaultParams(2048, null, tor, null, null, null, "");
+      Handel.HandelParameters params = defaultParams(n, null, tor, null, null, null, "");
       BasicStats bs = run(5, params);
       System.out.println(tor + " tor: " + bs);
     }
@@ -337,7 +338,7 @@ public class HandelScenarios {
   }
 
   private void fullComparison() {
-    int n = 64;
+    int n = 4;
     int nbRounds = 2;
     double[] deadRatios = new double[] {0, 0.50};
     double[] tors = new double[] {0.20};
@@ -465,6 +466,27 @@ public class HandelScenarios {
 
   }
 
+  void shuffleTimeTest() {
+    int n = 1024;
+    int nbRounds = 5;
+    Handel.HandelParameters params = defaultParams(n, null, 0.0, null, null, null, "");
+    String[] shuffle =
+        new String[] {Handel.HandelParameters.SHUFFLE_SQUARE, Handel.HandelParameters.SHUFFLE_XOR};
+    //new String[] {Handel.HandelParameters.SHUFFLE_XOR};
+    //new String[] {Handel.HandelParameters.SHUFFLE_SQUARE};
+    // if we remove this, the shuffle square is faster
+    //params.window = new Handel.WindowParameters(10, true, true);
+    for (String s : shuffle) {
+      params.shuffle = s;
+      long startTime = System.nanoTime();
+      BasicStats bs = run(nbRounds, params);
+      long endTime = System.nanoTime();
+      System.out.println(s + " delay: " + bs);
+      System.out.println("With shuffling " + s + " -> " + (endTime - startTime) / 1000000);
+    }
+
+  }
+
   void genAnim() {
     int n = 4096;
     //runOnce(defaultParams(n, null, null, 200, null, null), "unsync.gif");
@@ -493,7 +515,8 @@ public class HandelScenarios {
     //scenario.byzantineWindowEvaluation();
     //scenario.byzantineWithVariableWindow2();
 
-    scenario.fullComparison();
+    //scenario.fullComparison();
+    scenario.shuffleTimeTest();
     //scenario.delayedStartImpact(4096, 50, 20);
     // scenario.log();
 
