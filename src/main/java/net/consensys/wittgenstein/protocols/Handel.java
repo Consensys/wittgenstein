@@ -1189,6 +1189,11 @@ public class Handel implements Protocol {
         if (receiver == sender) {
           continue;
         }
+
+        if (sender.isDown()) {
+          continue;
+        }
+
         int level = receiver.level(sender);
         int rank = s.rank(receiver, sender);
         List<HNode> levelList = emissionList[sender.nodeId][level][rank];
