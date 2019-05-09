@@ -88,6 +88,7 @@ public class Handel implements Protocol {
       this.desynchronizedStart = 0;
       this.byzantineSuicide = false;
       this.hiddenByzantine = false;
+      this.shuffle = SHUFFLE_XOR;
     }
 
     public HandelParameters(int nodeCount, int threshold, int pairingTime, int levelWaitTime,
@@ -121,6 +122,7 @@ public class Handel implements Protocol {
       this.desynchronizedStart = desynchronizedStart;
       this.byzantineSuicide = byzantineSuicide;
       this.hiddenByzantine = hiddenByzantine;
+      this.shuffle = SHUFFLE_XOR;
     }
 
     @Override
@@ -957,7 +959,10 @@ public class Handel implements Protocol {
         currWindowSize = newSize > l.size ? l.size : newSize;
 
         // simply put it at the end of the ranking
-        receptionRanks[best.from] = l.peers.size();
+        receptionRanks[best.from] += l.peers.size();
+        if (receptionRanks[best.from] < 0) {
+          receptionRanks[best.from] = Integer.MAX_VALUE;
+        }
       }
       sigChecked++;
 

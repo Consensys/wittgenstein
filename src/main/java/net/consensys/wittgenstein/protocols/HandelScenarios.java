@@ -468,14 +468,14 @@ public class HandelScenarios {
 
   void shuffleTimeTest() {
     int n = 1024;
-    int nbRounds = 1;
+    int nbRounds = 5;
     Handel.HandelParameters params = defaultParams(n, null, 0.0, null, null, null, "");
     String[] shuffle =
         new String[] {Handel.HandelParameters.SHUFFLE_SQUARE, Handel.HandelParameters.SHUFFLE_XOR};
     //new String[] {Handel.HandelParameters.SHUFFLE_XOR};
     //new String[] {Handel.HandelParameters.SHUFFLE_SQUARE};
     // if we remove this, the shuffle square is faster
-    params.window = new Handel.WindowParameters(10, true, true);
+    //params.window = new Handel.WindowParameters(10, true, true);
     for (String s : shuffle) {
       params.shuffle = s;
       long startTime = System.nanoTime();
