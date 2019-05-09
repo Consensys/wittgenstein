@@ -14,7 +14,6 @@ import static net.consensys.wittgenstein.core.Node.MAX_X;
 import static net.consensys.wittgenstein.core.Node.MAX_Y;
 
 public class CityGeoInfoAllCities implements CityGeoInfo {
-
   private final Map<String, int[]> citiesPosition;
   private final double mapWidth;
   private final double mapHeight;
@@ -75,7 +74,6 @@ public class CityGeoInfoAllCities implements CityGeoInfo {
 
   // main method for  testing
   public static void main(String[] args) {
-    final Path DATA_PATH = Paths.get("resources/cities.csv");
     CityGeoInfo geoInfo = new CityGeoInfoAllCities();
     int[] p = geoInfo.citiesPosition().get("Colorado+Springs");
     System.out.println("London " + p[0] + ", " + p[1]);

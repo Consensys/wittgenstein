@@ -185,13 +185,13 @@ public class HandelScenarios {
   }
 
   private void hiddenByzantine() {
-    int n = 1024;
+    int n = 4096;
 
     System.out.println("\nByzantine nodes are creating nearly useless signatures"
         + defaultParams(n, null, null, null, true, null, ""));
 
 
-    for (int ni = 128; ni <= n; ni *= 2) {
+    for (int ni = 128; ni < n; ni *= 2) {
       Handel.HandelParameters params = defaultParams(ni, null, null, null, false, true, "");
       BasicStats bs = run(2, params);
       System.out.println(ni + " nodes, " + params.nodesDown + " byzantines: " + bs);
@@ -514,17 +514,6 @@ public class HandelScenarios {
 
   public static void main(String... args) throws IOException {
     HandelScenarios scenario = new HandelScenarios();
-    //scenario.byzantineWindowEvaluation();
-    //scenario.byzantineWithVariableWindow2();
-
-    //scenario.fullComparison();
-    scenario.shuffleTimeTest();
-    //scenario.delayedStartImpact(4096, 50, 20);
-    // scenario.log();
-
-    //scenario.byzantineWindowEvaluation();
-
-    //scenario.hiddenByzantine();
-    // scenario.tor();
+    scenario.hiddenByzantine();
   }
 }

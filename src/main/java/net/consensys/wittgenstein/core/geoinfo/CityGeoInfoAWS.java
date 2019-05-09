@@ -14,7 +14,7 @@ public class CityGeoInfoAWS implements CityGeoInfo {
     citiesPosition.put("virginia", new int[] {513, 316});
     citiesPosition.put("mumbai", new int[] {1344, 426});
     citiesPosition.put("seoul", new int[] {1641, 312});
-    citiesPosition.put("singapour", new int[] {1507, 532});
+    citiesPosition.put("singapore", new int[] {1507, 532});
     citiesPosition.put("sydney", new int[] {1773, 777});
     citiesPosition.put("tokyo", new int[] {1708, 316});
     citiesPosition.put("canada central", new int[] {422, 256});
@@ -24,6 +24,6 @@ public class CityGeoInfoAWS implements CityGeoInfo {
   }
 
   public Map<String, int[]> citiesPosition() {
-    return new HashMap(citiesPosition);
+    return new HashMap<>(citiesPosition);
   }
 }

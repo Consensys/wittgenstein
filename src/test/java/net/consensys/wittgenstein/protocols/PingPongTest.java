@@ -1,7 +1,5 @@
 package net.consensys.wittgenstein.protocols;
 
-import net.consensys.wittgenstein.core.Node;
-import net.consensys.wittgenstein.tools.NodeDrawer;
 import org.junit.Assert;
 import org.junit.Test;
 

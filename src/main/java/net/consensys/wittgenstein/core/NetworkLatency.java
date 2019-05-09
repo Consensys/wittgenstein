@@ -98,7 +98,7 @@ public abstract class NetworkLatency {
       regionPerCity.put("Virginia", 1);
       regionPerCity.put("Mumbai", 2);
       regionPerCity.put("Seoul", 3);
-      regionPerCity.put("Singapour", 4);
+      regionPerCity.put("Singapore", 4);
       regionPerCity.put("Sydney", 5);
       regionPerCity.put("Tokyo", 6);
       regionPerCity.put("Canada central", 7);
@@ -121,7 +121,7 @@ public abstract class NetworkLatency {
             new int[] {0, 0, 182, 181, 232, 195, 167, 13, 88, 80, 75,}, // Virginia
             new int[] {0, 0, 0, 152, 62, 223, 123, 194, 111, 122, 113}, // Mumbai
             new int[] {0, 0, 0, 0, 97, 133, 35, 184, 259, 254, 264}, // Seoul
-            new int[] {0, 0, 0, 0, 0, 169, 69, 218, 162, 174, 171}, // Singapour
+            new int[] {0, 0, 0, 0, 0, 169, 69, 218, 162, 174, 171}, // Singapore
             new int[] {0, 0, 0, 0, 0, 0, 105, 210, 282, 269, 271}, // Sydney
             new int[] {0, 0, 0, 0, 0, 0, 0, 156, 235, 222, 234}, // Tokyo
             new int[] {0, 0, 0, 0, 0, 0, 0, 0, 101, 78, 87,}, // Canada central

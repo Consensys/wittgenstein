@@ -4,8 +4,6 @@ import net.consensys.wittgenstein.core.geoinfo.CityGeoInfo;
 import net.consensys.wittgenstein.core.geoinfo.CityGeoInfoAWS;
 import net.consensys.wittgenstein.core.geoinfo.CityGeoInfoAllCities;
 import net.consensys.wittgenstein.tools.CSVLatencyReader;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 

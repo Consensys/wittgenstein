@@ -2,7 +2,6 @@ package net.consensys.wittgenstein.core.utils;
 
 
 import net.consensys.wittgenstein.core.Node;
-import org.springframework.web.bind.annotation.GetMapping;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
