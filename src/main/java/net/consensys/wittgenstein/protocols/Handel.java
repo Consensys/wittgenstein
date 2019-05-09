@@ -58,7 +58,7 @@ public class Handel implements Protocol {
     final boolean byzantineSuicide;
     final boolean hiddenByzantine;
 
-    public String shuffle = SHUFFLE_SQUARE;
+    public String shuffle;
     final static String SHUFFLE_SQUARE = "SQUARE";
     final static String SHUFFLE_XOR = "XOR";
 
@@ -95,8 +95,9 @@ public class Handel implements Protocol {
         int periodDurationMs, int acceleratedCallsCount, int nodesDown, String nodeBuilderName,
         String networkLatencyName, int desynchronizedStart, boolean byzantineSuicide,
         boolean hiddenByzantine, String bestLevelFunction) {
-      this.bestLevelFunction = bestLevelFunction != "" ? bestLevelFunction : BESTLEVEL_RANDOM;
-
+      this.bestLevelFunction =
+          bestLevelFunction != null && !"".equals(bestLevelFunction) ? bestLevelFunction
+              : BESTLEVEL_RANDOM;
 
       if (nodesDown >= nodeCount || nodesDown < 0 || threshold > nodeCount
           || (nodesDown + threshold > nodeCount)) {
@@ -188,7 +189,7 @@ public class Handel implements Protocol {
     }
 
     public int newSize(int currentWindowSize, boolean correct) {
-      if (this.type == FIXED) {
+      if (this.type.equals(FIXED)) {
         return currentWindowSize;
       }
       int updatedSize = congestion.newSize(currentWindowSize, correct);
@@ -397,8 +398,6 @@ public class Handel implements Protocol {
       throw new IllegalStateException();
     }
 
-
-
     public class HLevel {
       final int level;
       final int size;
@@ -537,6 +536,9 @@ public class Handel implements Protocol {
 
       void buildEmissionList(List<HNode>[][][] emissions) {
         assert peers.isEmpty();
+        if (emissions[nodeId][level] == null) {
+          return;
+        }
         for (List<HNode> ranks : emissions[nodeId][level]) {
           if (ranks != null && !ranks.isEmpty()) {
             if (ranks.size() > 1) {
@@ -1115,11 +1117,12 @@ public class Handel implements Protocol {
     public String toString() {
       StringBuilder sb = new StringBuilder();
       for (HNode n : nodes) {
-        sb.append("reception ranks of node " + n.nodeId + " => \n");
+        sb.append("reception ranks of node ").append(n.nodeId).append(" => \n");
         for (HNode.HLevel l : n.levels) {
-          sb.append("\tlvl" + l.level + " -> ");
+          sb.append("\tlvl").append(l.level).append(" -> ");
           for (HNode expected : l.expectedNodes()) {
-            sb.append(expected.nodeId + ":" + n.receptionRanks[expected.nodeId] + " - ");
+            sb.append(expected.nodeId).append(":").append(n.receptionRanks[expected.nodeId]).append(
+                " - ");
           }
           sb.append("\n");
         }
@@ -1134,6 +1137,7 @@ public class Handel implements Protocol {
   }
 
 
+  @SuppressWarnings("unchecked")
   public void init() {
     NodeBuilder nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
 
@@ -1170,38 +1174,54 @@ public class Handel implements Protocol {
     switch (params.shuffle) {
       case HandelParameters.SHUFFLE_SQUARE:
         s = new ShufflingSquare(an);
-        //System.out.println(s);
         break;
       case HandelParameters.SHUFFLE_XOR:
         s = (receiver, sender) -> receiver.nodeId ^ sender.nodeId;
         break;
       default:
-        throw new IllegalStateException("unknown shuffler");
+        throw new IllegalStateException("unknown shuffler: " + params.shuffle);
     }
 
-    // global shuffling of the list
-    Collections.shuffle(an, network.rd);
-    // System.out.println(an);
-    List<HNode>[][][] emissionList = new List[params.nodeCount][nLevel + 1][params.nodeCount];
+
+    List<HNode>[][][] emissionList = new List[params.nodeCount][nLevel + 1][];
 
     for (HNode receiver : an) {
+      BitSet rankCheck = new BitSet();
       for (HNode sender : an) {
-        if (receiver == sender) {
-          continue;
-        }
-
-        if (sender.isDown()) {
+        if (receiver == sender || sender.isDown()) {
           continue;
         }
 
         int level = receiver.level(sender);
+
+        if (emissionList[sender.nodeId][level] == null) {
+          if (params.shuffle.equals(HandelParameters.SHUFFLE_XOR)) {
+            emissionList[sender.nodeId][level] = new List[receiver.levels.get(level).size];
+          } else {
+            emissionList[sender.nodeId][level] = new List[params.nodeCount];
+          }
+        }
+
         int rank = s.rank(receiver, sender);
+        if (params.shuffle.equals(HandelParameters.SHUFFLE_XOR)) {
+          if (rankCheck.get(rank)) {
+            throw new IllegalStateException("same rank at " + rank);
+          }
+          rankCheck.set(rank);
+
+
+          rank -= receiver.levels.get(level).size;
+          if (rank < 0) {
+            throw new IllegalStateException("rank=" + rank);
+          }
+          receiver.receptionRanks[sender.nodeId] = rank;
+        }
         List<HNode> levelList = emissionList[sender.nodeId][level][rank];
         if (levelList == null) {
           levelList = new ArrayList<>();
+          emissionList[sender.nodeId][level][rank] = levelList;
         }
         levelList.add(receiver);
-        emissionList[sender.nodeId][level][rank] = levelList;
       }
     }
 
@@ -1224,9 +1244,7 @@ public class Handel implements Protocol {
         System.out.println("\t level " + level + " (size=" + size + ") :");
         for (int n2 = 0; n2 < emissionList.length; n2++) {
           List<HNode> list = emissionList[n][level][n2];
-          if (list == null) {
-            continue;
-          } else {
+          if (list != null) {
             System.out.println("\t\tposition-rank " + n2 + " => " + list);
           }
         }
@@ -1272,84 +1290,5 @@ public class Handel implements Protocol {
       }
       return false;
     };
-  }
-
-  public static Handel newProtocol() {
-    int nodeCt = 32768 / 8;
-    double deadR = 0.10;
-    double tsR = .85;
-
-    String nb = RegistryNodeBuilders.name(true, false, 0.33);
-    String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
-
-    int ts = (int) (tsR * nodeCt);
-    int dead = (int) (deadR * nodeCt);
-    HandelParameters params =
-        new HandelParameters(nodeCt, ts, 4, 50, 20, 10, dead, nb, nl, 0, false, false, "");
-
-    return new Handel(params);
-  }
-
-  public static void drawImgs() {
-    Handel p = newProtocol();
-    Predicate<Handel> contIf = newContIf();
-
-    p.init();
-    int freq = 10;
-    try (NodeDrawer nd =
-        new NodeDrawer(p.new HNodeStatus(), new File("/tmp/handel_anim.gif"), freq)) {
-      int i = 0;
-      do {
-        p.network.runMs(freq);
-
-        nd.drawNewState(p.network.time, TimeUnit.MILLISECONDS, p.network.liveNodes());
-        if (i % 100 == 0) {
-          nd.writeLastToGif(new File("/tmp/img_" + i + ".gif"));
-        }
-        i++;
-
-      } while (contIf.test(p));
-    }
-  }
-
-  public static void sigsPerTime() {
-    Handel p = newProtocol();
-    Predicate<Handel> contIf = newContIf();
-
-    StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
-      final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
-
-      @Override
-      public List<String> fields() {
-        return fields;
-      }
-
-      @Override
-      public StatsHelper.Stat get(List<? extends Node> liveNodes) {
-        return StatsHelper.getStatsOn(liveNodes, n -> ((HNode) n).totalSigSize());
-      }
-    };
-
-    ProgressPerTime.OnSingleRunEnd cb = p12 -> {
-      StatsHelper.SimpleStats ss =
-          StatsHelper.getStatsOn(p12.network().liveNodes(), n -> (int) ((HNode) n).speedRatio);
-      System.out.println("min/avg/max speedRatio=" + ss.min + "/" + ss.avg + "/" + ss.max);
-
-      ss = StatsHelper.getStatsOn(p12.network().liveNodes(), n -> ((HNode) n).sigChecked);
-      System.out.println("min/avg/max sigChecked=" + ss.min + "/" + ss.avg + "/" + ss.max);
-
-      ss = StatsHelper.getStatsOn(p12.network().liveNodes(),
-          n -> ((HNode) n).sigQueueSize / ((HNode) n).sigChecked);
-      System.out.println("min/avg/max queueSize=" + ss.min + "/" + ss.avg + "/" + ss.max);
-    };
-
-    ProgressPerTime ppt =
-        new ProgressPerTime(p, "", "number of signatures", sg, 1, cb, 10, TimeUnit.MILLISECONDS);
-
-    ppt.run(contIf);
-  }
-
-  public static void main(String... args) {
-    sigsPerTime();
   }
 }

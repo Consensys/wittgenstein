@@ -48,7 +48,7 @@ public class HandelScenarios {
   }
 
   private Handel.HandelParameters defaultParams() {
-    return defaultParams(null, null, null, null, null, null, "");
+    return defaultParams(null, null, null, null, null, null, null);
   }
 
   private Handel.HandelParameters defaultParams(Integer nodes, Double deadRatio, Double tor,
@@ -63,10 +63,13 @@ public class HandelScenarios {
 
     double treshold = (1.0 - (deadRatio + 0.01));
 
-    return new Handel.HandelParameters(nodes, (int) (nodes * treshold), 4, 10, 10, 10,
-        (int) (nodes * deadRatio), RegistryNodeBuilders.name(true, false, tor),
+    Handel.HandelParameters p = new Handel.HandelParameters(nodes, (int) (nodes * treshold), 4, 10,
+        10, 10, (int) (nodes * deadRatio), RegistryNodeBuilders.name(true, false, tor),
         NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName(), desynchronizedStart,
         byzantineSuicide, hiddenByzantine, bestLevelFunction);
+
+    p.window = new Handel.WindowParameters(1, 16, 128, new Handel.CongestionExp(2, 4), true);
+    return p;
   }
 
 
@@ -154,7 +157,7 @@ public class HandelScenarios {
   }
 
   private void byzantineSuicide() {
-    int n = 2048;
+    int n = 512;
 
     System.out.println("\nByzantine nodes are filling honest node's queues with bad signatures - "
         + defaultParams(n, null, null, null, true, null, ""));
@@ -484,7 +487,6 @@ public class HandelScenarios {
       System.out.println(s + " delay: " + bs);
       System.out.println("With shuffling " + s + " -> " + (endTime - startTime) / 1000000);
     }
-
   }
 
   void genAnim() {
