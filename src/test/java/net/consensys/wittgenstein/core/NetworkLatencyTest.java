@@ -1,8 +1,8 @@
 package net.consensys.wittgenstein.core;
 
-import net.consensys.wittgenstein.core.geoinfo.CityGeoInfo;
-import net.consensys.wittgenstein.core.geoinfo.CityGeoInfoAWS;
-import net.consensys.wittgenstein.core.geoinfo.CityGeoInfoAllCities;
+import net.consensys.wittgenstein.core.geoinfo.Geo;
+import net.consensys.wittgenstein.core.geoinfo.GeoAWS;
+import net.consensys.wittgenstein.core.geoinfo.GeoAllCities;
 import net.consensys.wittgenstein.tools.CSVLatencyReader;
 import org.junit.Assert;
 import org.junit.Test;
@@ -32,7 +32,7 @@ public class NetworkLatencyTest {
   @Test
   public void testAwsLatency() {
     NetworkLatency nl = new NetworkLatency.AwsRegionNetworkLatency();
-    CityGeoInfo geoInfo = new CityGeoInfoAWS();
+    Geo geoInfo = new GeoAWS();
     Random rd = new Random();
 
     for (String r1 : NetworkLatency.AwsRegionNetworkLatency.cities()) {
@@ -81,7 +81,7 @@ public class NetworkLatencyTest {
     CSVLatencyReader lr = new CSVLatencyReader();
     Assert.assertTrue(lr.cities().size() > 0);
 
-    NodeBuilder nb = new NodeBuilder.NodeBuilderWithCity(lr.cities(), new CityGeoInfoAllCities());
+    NodeBuilder nb = new NodeBuilder.NodeBuilderWithCity(lr.cities(), new GeoAllCities());
     NetworkLatency nl = new NetworkLatency.NetworkLatencyByCity();
 
     Random rd = new Random();
@@ -104,6 +104,7 @@ public class NetworkLatencyTest {
       }
     }
   }
+
 
   @Test
   public void testEstimateLatency() {

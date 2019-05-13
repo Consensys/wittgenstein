@@ -1,6 +1,7 @@
 package net.consensys.wittgenstein.core;
 
-import net.consensys.wittgenstein.core.geoinfo.CityGeoInfo;
+import net.consensys.wittgenstein.core.geoinfo.CityInfo;
+import net.consensys.wittgenstein.core.geoinfo.Geo;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -10,6 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 import static net.consensys.wittgenstein.core.Node.MAX_X;
 import static net.consensys.wittgenstein.core.Node.MAX_Y;
+import java.util.stream.Collectors;
 
 @SuppressWarnings("WeakerAccess")
 public class NodeBuilder implements Cloneable {
@@ -88,23 +90,48 @@ public class NodeBuilder implements Cloneable {
 
 
   public static class NodeBuilderWithCity extends NodeBuilder {
-    final Map<String, int[]> citiesPosition;
     final List<String> cities;
+    final Map<String, CityInfo> citiesInfo;
 
-    public NodeBuilderWithCity(List<String> cities, CityGeoInfo geoInfo) {
-      this.cities = cities;
-      citiesPosition = geoInfo.citiesPosition();
+    public NodeBuilderWithCity(List<String> cities, Geo geoInfo) {
+      this.cities = cities.stream().map(x -> x.toUpperCase()).collect(Collectors.toList());
+
+      citiesInfo = geoInfo
+          .citiesPosition()
+          .entrySet()
+          .stream()
+          .filter(x -> this.cities.contains(x.getKey().toUpperCase()))
+          .collect(Collectors.toMap(x -> x.getKey(), x -> x.getValue()));
     }
 
     @Override
     protected String getCityName(int rdInt) {
-      return cities.get(Math.abs(rdInt) % cities.size());
+      return getRandomCityInfo(rdInt);
+    }
+
+    public Map<String, CityInfo> getCitiesInfo() {
+      return this.citiesInfo;
     }
 
     int[] getPos(int rdInt) {
       String city = getCityName(rdInt);
-      int[] pos = citiesPosition.get(city.toLowerCase());
-      return Objects.requireNonNullElseGet(pos, () -> new int[] {1, 1});
+      CityInfo cityInfo = citiesInfo.get(city);
+      return Objects.requireNonNullElseGet(new int[] {cityInfo.mercX, cityInfo.mercY},
+          () -> new int[] {1, 1});
+    }
+
+    //Weighted Random Selection algorithm
+    private String getRandomCityInfo(int rdInt) {
+      int size = cities.size();
+      int rand = Math.abs(rdInt) % size;
+      float p = (float) rand / size;
+
+      for (Map.Entry<String, CityInfo> cityInfo : citiesInfo.entrySet()) {
+        if (p <= cityInfo.getValue().cumulativeProbability) {
+          return cityInfo.getKey();
+        }
+      }
+      return null;
     }
 
     protected int getX(int rdInt) {
