@@ -10,10 +10,7 @@ import net.consensys.wittgenstein.tools.Graph;
 import net.consensys.wittgenstein.tools.NodeDrawer;
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import static java.util.Map.entry;
@@ -66,7 +63,7 @@ public class HandelScenarios {
     Handel.HandelParameters p = new Handel.HandelParameters(nodes, (int) (nodes * treshold), 4, 10,
         10, 10, (int) (nodes * deadRatio), RegistryNodeBuilders.name(true, false, tor),
         NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName(), desynchronizedStart,
-        byzantineSuicide, hiddenByzantine, bestLevelFunction);
+        byzantineSuicide, hiddenByzantine, bestLevelFunction, null);
 
     p.window = new Handel.WindowParameters(1, 16, 128, new Handel.CongestionExp(2, 4), true);
     return p;
@@ -181,6 +178,46 @@ public class HandelScenarios {
       params = defaultParams(n, dr, null, null, true, null, "");
       BasicStats bs = run(2, params);
       System.out.println(n + " nodes, " + dr + " byzantines: " + bs);
+    }
+  }
+
+  private static List<BitSet> allCombine(int total, int set) {
+    List<BitSet> res = new ArrayList<>();
+    allCombine(res, new BitSet(), total, 0, set);
+
+    return res;
+  }
+
+  private static void allCombine(List<BitSet> res, BitSet cur, int total, int pos, int remaining) {
+    if (remaining == 0) {
+      res.add(cur);
+      return;
+    }
+    if (remaining > total - pos) {
+      return;
+    }
+
+    BitSet n1 = (BitSet) cur.clone();
+    n1.set(pos);
+    allCombine(res, n1, total, pos + 1, remaining - 1);
+    allCombine(res, cur, total, pos + 1, remaining);
+  }
+
+  private void allBadNodePos() {
+    int n = 16;
+
+    List<BitSet> ac = allCombine(16, 7);
+    System.out.println("\nallBadNodePos: " + ac.size());
+
+    for (BitSet bads : ac) {
+      Handel.HandelParameters params =
+          new Handel.HandelParameters(n, 9, 4, 10, 20, 10, 7, RegistryNodeBuilders.RANDOM_POSITION,
+              NetworkLatency.NetworkNoLatency.class.getSimpleName(), 0, false, false, null, bads);
+
+      params.window = new Handel.WindowParameters(1, 16, 128, new Handel.CongestionExp(2, 4), true);
+
+      BasicStats bs = run(500, params);
+      System.out.println(n + " nodes, " + bads + " byzantines: " + bs);
     }
   }
 
@@ -514,6 +551,6 @@ public class HandelScenarios {
 
   public static void main(String... args) throws IOException {
     HandelScenarios scenario = new HandelScenarios();
-    scenario.hiddenByzantine();
+    scenario.allBadNodePos();
   }
 }

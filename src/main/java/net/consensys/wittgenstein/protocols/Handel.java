@@ -39,6 +39,8 @@ public class Handel implements Protocol {
     final int acceleratedCallsCount;
 
     final int nodesDown;
+    final BitSet badNodes;
+
     final String nodeBuilderName;
     final String networkLatencyName;
 
@@ -86,12 +88,13 @@ public class Handel implements Protocol {
       this.byzantineSuicide = false;
       this.hiddenByzantine = false;
       this.shuffle = SHUFFLE_XOR;
+      this.badNodes = null;
     }
 
     public HandelParameters(int nodeCount, int threshold, int pairingTime, int levelWaitTime,
         int periodDurationMs, int acceleratedCallsCount, int nodesDown, String nodeBuilderName,
         String networkLatencyName, int desynchronizedStart, boolean byzantineSuicide,
-        boolean hiddenByzantine, String bestLevelFunction) {
+        boolean hiddenByzantine, String bestLevelFunction, BitSet badNodes) {
       this.bestLevelFunction =
           bestLevelFunction != null && !"".equals(bestLevelFunction) ? bestLevelFunction
               : BESTLEVEL_RANDOM;
@@ -121,6 +124,7 @@ public class Handel implements Protocol {
       this.byzantineSuicide = byzantineSuicide;
       this.hiddenByzantine = hiddenByzantine;
       this.shuffle = SHUFFLE_XOR;
+      this.badNodes = badNodes;
     }
 
     @Override
@@ -1133,26 +1137,35 @@ public class Handel implements Protocol {
     return new Handel(params);
   }
 
+  private static BitSet chooseBadNodes(Random rd, int nodeCount, int nodesDown) {
+    BitSet badNodes = new BitSet();
+    for (int setDown = 0; setDown < nodesDown;) {
+      int down = rd.nextInt(nodeCount);
+      if (down != 1 && !badNodes.get(down)) {
+        // We keep the node 1 up to help on debugging
+        badNodes.set(down);
+        setDown++;
+      }
+    }
+
+    return badNodes;
+  }
 
   @SuppressWarnings("unchecked")
   public void init() {
     NodeBuilder nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
 
+    BitSet badNodes = params.badNodes != null ? params.badNodes
+        : chooseBadNodes(network.rd, params.nodeCount, params.nodesDown);
+
     for (int i = 0; i < params.nodeCount; i++) {
       int startAt =
           params.desynchronizedStart == 0 ? 0 : network.rd.nextInt(params.desynchronizedStart);
       final HNode n = new HNode(startAt, nb);
-      network.addNode(n);
-    }
-
-    for (int setDown = 0; setDown < params.nodesDown;) {
-      int down = network.rd.nextInt(params.nodeCount);
-      Node n = network.allNodes.get(down);
-      if (!n.isDown() && down != 1) {
-        // We keep the node 1 up to help on debugging
+      if (badNodes.get(i)) {
         n.stop();
-        setDown++;
       }
+      network.addNode(n);
     }
 
     for (HNode n : network.allNodes) {
