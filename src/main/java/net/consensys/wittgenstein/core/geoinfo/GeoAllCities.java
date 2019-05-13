@@ -13,42 +13,44 @@ import java.util.Map;
 import static net.consensys.wittgenstein.core.Node.MAX_X;
 import static net.consensys.wittgenstein.core.Node.MAX_Y;
 
-public class CityGeoInfoAllCities implements CityGeoInfo {
-  private final Map<String, int[]> citiesPosition;
+public class GeoAllCities extends Geo {
+  private final Map<String, CityInfo> citiesPosition;
   private final double mapWidth;
   private final double mapHeight;
   private final static Path CITY_PATH = Paths.get("resources/cities.csv");
 
 
-  public CityGeoInfoAllCities() {
+  public GeoAllCities() {
     this.mapWidth = MAX_X;
     this.mapHeight = MAX_Y;
     this.citiesPosition = readCityInfo(CITY_PATH);
   }
 
-  public Map<String, int[]> citiesPosition() {
+  public Map<String, CityInfo> citiesPosition() {
     return new HashMap<>(citiesPosition);
   }
 
-  private Map<String, int[]> readCityInfo(Path path) {
-    Map<String, int[]> citiesPosition = new HashMap<>();
+  private Map<String, CityInfo> readCityInfo(Path path) {
+    Map<String, int[]> cities = new HashMap<>();
 
+    int totalPopulation = 0;
     try (Reader reader = Files.newBufferedReader(path);
         CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withHeader())) {
 
       for (CSVRecord csvRecord : csvParser) {
-        String cityName = csvRecord.get(0).replace(' ', '+').toLowerCase();
+        String cityName = csvRecord.get(0).replace(' ', '+');
         float latitude = Float.valueOf(csvRecord.get(1));
         float longitude = Float.valueOf(csvRecord.get(2));
         int mercX = convertToMercatorX(longitude);
         int mercY = convertToMercatorY(latitude);
-
-        citiesPosition.put(cityName, new int[] {mercX, mercY});
+        int population = Integer.valueOf(csvRecord.get(3));
+        totalPopulation += population;
+        cities.put(cityName, new int[] {mercX, mercY, population});
       }
     } catch (IOException e) {
       throw new IllegalStateException(e);
     }
-    return citiesPosition;
+    return cityInfoMap(cities, totalPopulation);
   }
 
   private int convertToMercatorX(double longitude) {
@@ -74,8 +76,9 @@ public class CityGeoInfoAllCities implements CityGeoInfo {
 
   // main method for  testing
   public static void main(String[] args) {
-    CityGeoInfo geoInfo = new CityGeoInfoAllCities();
-    int[] p = geoInfo.citiesPosition().get("Colorado+Springs");
-    System.out.println("London " + p[0] + ", " + p[1]);
+    Geo geoInfo = new GeoAllCities();
+    CityInfo p = geoInfo.citiesPosition().get("New+York");
+
+    System.out.println("ny " + p.mercX + ", " + p.mercY + " " + p.cumulativeProbability);
   }
 }

@@ -143,6 +143,7 @@ public abstract class NetworkLatency {
       Integer reg1 = regionPerCity.get(from.cityName);
       Integer reg2 = regionPerCity.get(to.cityName);
 
+
       if (reg1 == null || reg2 == null) {
         throw new IllegalArgumentException(from + " or " + to + " not in our aws cities list");
       }
