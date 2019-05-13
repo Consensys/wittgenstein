@@ -1,7 +1,6 @@
 package net.consensys.wittgenstein.core.geoinfo;
 
 public class CityInfo {
-
   public final int mercX;
   public final int mercY;
   public final float cumulativeProbability;

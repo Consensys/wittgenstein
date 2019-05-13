@@ -4,8 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class GeoAWS extends Geo {
-
-  Map<String, int[]> cities = new HashMap<>();
+  private Map<String, int[]> cities = new HashMap<>();
 
   public GeoAWS() {
     // We have only the positions for the cities

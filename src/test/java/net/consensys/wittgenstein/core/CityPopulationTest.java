@@ -12,7 +12,7 @@ import java.util.*;
 class GeoTest extends Geo {
   private final Map<String, CityInfo> citiesInfo;
 
-  public GeoTest(Map<String, int[]> map, int totalPopulation) {
+  GeoTest(Map<String, int[]> map, int totalPopulation) {
     citiesInfo = cityInfoMap(map, totalPopulation);
   }
 
@@ -31,9 +31,11 @@ public class CityPopulationTest {
     NodeBuilder.NodeBuilderWithCity nb =
         new NodeBuilder.NodeBuilderWithCity(lr.cities(), new GeoAllCities());
 
-    for (Map.Entry<String, CityInfo> citiyInfo : nb.getCitiesInfo().entrySet()) {
-      Assert.assertTrue("wrong cumulative probability for " + citiyInfo.getKey(),
-          citiyInfo.getValue().cumulativeProbability < 1.0f);
+    for (Map.Entry<String, CityInfo> cityInfo : nb.getCitiesInfo().entrySet()) {
+      Assert.assertTrue(
+          "wrong cumulative probability for " + cityInfo.getKey() + ":"
+              + cityInfo.getValue().cumulativeProbability,
+          cityInfo.getValue().cumulativeProbability < 1.00001f);
     }
   }
 
@@ -59,8 +61,8 @@ public class CityPopulationTest {
         bigCityCount++;
       }
     }
-    Assert.assertTrue("Bigger cities should be selected more often than smaller",
-        bigCityCount == 6);
+    Assert.assertEquals("Bigger cities should be selected more often than smaller", 6,
+        bigCityCount);
   }
 }
 
