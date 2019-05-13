@@ -125,7 +125,7 @@ public class NodeBuilder implements Cloneable {
       int size = cities.size();
       int rand = Math.abs(rdInt) % size;
       float p = (float) rand / size;
-
+      
       for (Map.Entry<String, CityInfo> cityInfo : citiesInfo.entrySet()) {
         if (p <= cityInfo.getValue().cumulativeProbability) {
           return cityInfo.getKey();
