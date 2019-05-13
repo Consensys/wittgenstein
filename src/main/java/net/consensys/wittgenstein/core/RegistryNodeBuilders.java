@@ -7,27 +7,25 @@ import net.consensys.wittgenstein.tools.CSVLatencyReader;
 import java.util.HashMap;
 import java.util.Map;
 
-@SuppressWarnings("WeakerAccess")
+
 public class RegistryNodeBuilders {
   private Map<String, NodeBuilder> registry = new HashMap<>();
 
-  public static final String RANDOM_POSITION =
-      NodeBuilder.NodeBuilderWithRandomPosition.class.getSimpleName() + "_constant_speed";
-  public static final String AWS_SITE = "aws_sites_constant_speed";
-  public static final String AWS_WITH_1THIRD_TOR = "aws_with_1third_tor";
-  public static final String AWS_WITH_HALF_TOR = "aws_with_half_tor";
-  public static final String ALL_CITIES = "all_cities_constant_speed";
-
+  public enum Location {
+    AWS,
+    CITIES,
+    RANDOM
+  }
 
 
   public static RegistryNodeBuilders singleton = new RegistryNodeBuilders();
 
-  public static String name(boolean aws, boolean speedConstant, double tor) {
-    String site = aws ? "AWS" : "RANDOM";
+  public static String name(Location loc, boolean speedConstant, double tor) {
+    String site = loc == Location.AWS ? "AWS" : loc == Location.RANDOM ? "RANDOM" : "CITIES";
     String speed = speedConstant ? "CONSTANT" : "GAUSSIAN";
-
     return (site + "_speed=" + speed + "_tor=" + (tor + "000").substring(0, 4)).toUpperCase();
   }
+
 
   public static Double[] tor() {
     return new Double[] {0.0, 0.10, 0.20, .33, .5, .6, .8};
@@ -38,29 +36,23 @@ public class RegistryNodeBuilders {
     Geo geoAWS = new GeoAWS();
     Geo geoAllCities = new GeoAllCities();
 
-    registry.put(RANDOM_POSITION, new NodeBuilder.NodeBuilderWithRandomPosition());
-    registry.put(AWS_SITE, new NodeBuilder.NodeBuilderWithCity(
-        NetworkLatency.AwsRegionNetworkLatency.cities(), geoAWS));
-    registry.put(ALL_CITIES, new NodeBuilder.NodeBuilderWithCity(lr.cities(), geoAllCities));
-
-    NodeBuilder nb = new NodeBuilder.NodeBuilderWithCity(
-        NetworkLatency.AwsRegionNetworkLatency.cities(), geoAWS);
-    nb.aspects.add(new Node.ExtraLatencyAspect(.33));
-    registry.put(AWS_WITH_1THIRD_TOR, nb);
-
-    nb = new NodeBuilder.NodeBuilderWithCity(NetworkLatency.AwsRegionNetworkLatency.cities(),
-        geoAWS);
-    nb.aspects.add(new Node.ExtraLatencyAspect(.5));
-    registry.put(AWS_WITH_HALF_TOR, nb);
-
-    for (boolean aws : new Boolean[] {true, false}) {
+    for (Location loc : new Location[] {Location.AWS, Location.CITIES, Location.RANDOM}) {
       for (boolean speedConstant : new Boolean[] {true, false}) {
         for (double tor : tor()) {
-          if (aws) {
-            nb = new NodeBuilder.NodeBuilderWithCity(
-                NetworkLatency.AwsRegionNetworkLatency.cities(), new GeoAWS());
-          } else {
-            nb = new NodeBuilder.NodeBuilderWithRandomPosition();
+          NodeBuilder nb;
+          switch (loc) {
+            case AWS:
+              nb = new NodeBuilder.NodeBuilderWithCity(
+                  NetworkLatency.AwsRegionNetworkLatency.cities(), geoAWS);
+              break;
+            case CITIES:
+              nb = new NodeBuilder.NodeBuilderWithCity(lr.cities(), geoAllCities);
+              break;
+            case RANDOM:
+              nb = new NodeBuilder.NodeBuilderWithRandomPosition();
+              break;
+            default:
+              throw new IllegalStateException();
           }
           if (!speedConstant) {
             nb.aspects.add(new Node.SpeedRatioAspect(new Node.GaussianSpeed()));
@@ -68,7 +60,7 @@ public class RegistryNodeBuilders {
           if (tor > 0.001) {
             nb.aspects.add(new Node.ExtraLatencyAspect(tor));
           }
-          registry.put(name(aws, speedConstant, tor), nb);
+          registry.put(name(loc, speedConstant, tor), nb);
         }
       }
     }
@@ -76,7 +68,7 @@ public class RegistryNodeBuilders {
 
   public NodeBuilder getByName(String name) {
     if (name == null || name.trim().isEmpty()) {
-      name = RANDOM_POSITION;
+      name = name(Location.RANDOM, true, 0);
     }
 
     NodeBuilder c = registry.get(name);

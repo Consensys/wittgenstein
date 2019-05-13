@@ -17,7 +17,7 @@ public class ENRGossipingTest {
   //Test that copy method works
   @Test
   public void testCopy() {
-    String nb = RegistryNodeBuilders.RANDOM_POSITION;
+    String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
     String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
     ENRGossiping p1 = new ENRGossiping(
         new ENRGossiping.ENRParameters(100, 10, 25, 15000, 2, 20, 0.4f, 30, 20, 5, nb, nl));
@@ -41,7 +41,7 @@ public class ENRGossipingTest {
 
   @Test
   public void testPPT() {
-    String nb = RegistryNodeBuilders.RANDOM_POSITION;
+    String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);;
     String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
     ENRGossiping p1 = new ENRGossiping(
         new ENRGossiping.ENRParameters(100, 10, 25, 15000, 2, 20, 0.4f, 30, 20, 5, nb, nl));

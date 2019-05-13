@@ -6,7 +6,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class SlushTest {
-  private final String nb = RegistryNodeBuilders.RANDOM_POSITION;
+  private final String nb =
+      RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
   private final String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
 
   @Test

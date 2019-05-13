@@ -7,7 +7,7 @@ import org.junit.Test;
 
 public class HandelTest {
   private String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
-  private String nb = RegistryNodeBuilders.RANDOM_POSITION;
+  private String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
 
   @Test
   public void testCopy() {

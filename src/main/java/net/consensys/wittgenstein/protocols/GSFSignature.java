@@ -656,7 +656,7 @@ public class GSFSignature implements Protocol {
     double deadR = 0.10;
     double tsR = .85;
 
-    String nb = RegistryNodeBuilders.ALL_CITIES;// name(true, false, 0.33);
+    String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.AWS, false, 0.33);
     String nl = NetworkLatency.NetworkLatencyByCity.class.getSimpleName();
 
     int ts = (int) (tsR * nodeCt);

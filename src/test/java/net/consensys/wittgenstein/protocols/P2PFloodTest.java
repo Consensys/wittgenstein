@@ -12,7 +12,7 @@ public class P2PFloodTest {
   @Test
   public void testSimpleRun() {
     String nl = NetworkLatency.NetworkNoLatency.class.getSimpleName();
-    String nb = RegistryNodeBuilders.RANDOM_POSITION;
+    String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
 
     P2PFlood po = new P2PFlood(new P2PFlood.P2PFloodParameters(100, 10, 50, 1, 1, 10, 30, nb, nl));
     Protocol p = po.copy();
@@ -34,7 +34,7 @@ public class P2PFloodTest {
   @Test
   public void testLongRun() {
     String nl = NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName();
-    String nb = RegistryNodeBuilders.AWS_SITE;
+    String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.AWS, true, 0);
 
     Protocol po =
         new P2PFlood(new P2PFlood.P2PFloodParameters(4500, 4000, 500, 1, 1, 50, 300, nb, nl));
@@ -56,7 +56,7 @@ public class P2PFloodTest {
 
   @Test
   public void testCopy() {
-    String nb = RegistryNodeBuilders.RANDOM_POSITION;
+    String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
     String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
     P2PFlood p1 = new P2PFlood(new P2PFlood.P2PFloodParameters(2000, 10, 50, 1, 1, 10, 30, nb, nl));
     P2PFlood p2 = p1.copy();

@@ -61,7 +61,8 @@ public class HandelScenarios {
     double treshold = (1.0 - (deadRatio + 0.01));
 
     Handel.HandelParameters p = new Handel.HandelParameters(nodes, (int) (nodes * treshold), 4, 10,
-        10, 10, (int) (nodes * deadRatio), RegistryNodeBuilders.name(true, false, tor),
+        10, 10, (int) (nodes * deadRatio),
+        RegistryNodeBuilders.name(RegistryNodeBuilders.Location.AWS, false, tor),
         NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName(), desynchronizedStart,
         byzantineSuicide, hiddenByzantine, bestLevelFunction, null);
 
@@ -210,9 +211,9 @@ public class HandelScenarios {
     System.out.println("\nallBadNodePos: " + ac.size());
 
     for (BitSet bads : ac) {
-      Handel.HandelParameters params =
-          new Handel.HandelParameters(n, 9, 4, 10, 20, 10, 7, RegistryNodeBuilders.RANDOM_POSITION,
-              NetworkLatency.NetworkNoLatency.class.getSimpleName(), 0, false, false, null, bads);
+      Handel.HandelParameters params = new Handel.HandelParameters(n, 9, 4, 10, 20, 10, 7,
+          RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0),
+          NetworkLatency.NetworkNoLatency.class.getSimpleName(), 0, false, false, null, bads);
 
       params.window = new Handel.WindowParameters(1, 16, 128, new Handel.CongestionExp(2, 4), true);
 

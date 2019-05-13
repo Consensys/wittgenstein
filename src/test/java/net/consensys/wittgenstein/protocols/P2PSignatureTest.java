@@ -11,7 +11,7 @@ import java.util.BitSet;
 
 public class P2PSignatureTest {
   private String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
-  private String nb = RegistryNodeBuilders.RANDOM_POSITION;
+  private String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
   private P2PSignature ps = new P2PSignature(new P2PSignature.P2PSignatureParameters(100, 0, 60, 10,
       2, 20, false, false, P2PSignature.SendSigsStrategy.dif, 4, nb, nl));
   private P2PSignature.P2PSigNode n1;

@@ -94,14 +94,14 @@ public class NodeBuilder implements Cloneable {
     final Map<String, CityInfo> citiesInfo;
 
     public NodeBuilderWithCity(List<String> cities, Geo geoInfo) {
-      this.cities = cities.stream().map(x -> x.toUpperCase()).collect(Collectors.toList());
+      this.cities = cities.stream().map(String::toUpperCase).collect(Collectors.toList());
 
       citiesInfo = geoInfo
           .citiesPosition()
           .entrySet()
           .stream()
           .filter(x -> this.cities.contains(x.getKey().toUpperCase()))
-          .collect(Collectors.toMap(x -> x.getKey(), x -> x.getValue()));
+          .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     @Override

@@ -8,7 +8,7 @@ import org.junit.Test;
 
 // add more tests
 public class DfinityTest {
-  private String nb = RegistryNodeBuilders.RANDOM_POSITION;
+  private String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
   private String nl = NetworkLatency.NetworkNoLatency.class.getSimpleName();
   private final Dfinity dfinity =
       new Dfinity(new Dfinity.DfinityParameters(10, 10, 10, 1, 1, 0, nb, nl));

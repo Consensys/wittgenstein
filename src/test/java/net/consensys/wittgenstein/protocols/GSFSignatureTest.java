@@ -8,7 +8,7 @@ import org.junit.Test;
 
 public class GSFSignatureTest {
   private String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
-  private String nb = RegistryNodeBuilders.RANDOM_POSITION;
+  private String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
   private GSFSignature p =
       new GSFSignature(new GSFSignature.GSFSignatureParameters(32, 1, 3, 20, 10, 10, 0, nb, nl));
   private GSFSignature.GSFNode n0;

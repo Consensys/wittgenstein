@@ -696,7 +696,7 @@ public class CasperIMD implements Protocol {
   private static boolean latencyPrinted = false;
 
   private static void runSet(int delay, boolean randomOnTies, Graph.Series report) {
-    String nb = RegistryNodeBuilders.RANDOM_POSITION;
+    String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
     String snl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
     CasperIMD bc = new CasperIMD(new CasperParemeters(5, randomOnTies, 5, 80, 1000, 1, nb, snl));
     //bc.network.setNetworkLatency(new NetworkLatency.EthScanNetworkLatency());
