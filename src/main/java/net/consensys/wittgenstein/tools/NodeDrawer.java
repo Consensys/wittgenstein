@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
  * compressed, so you will want to compress it: ffmpeg -f gif -i handel_anim.gif handel.mp4
  */
 public class NodeDrawer implements Closeable {
-  private final static int SIZE = 6;
+  private final static int SIZE = 5;
   private final static int MAX_X = Node.MAX_X;
   private final static int MAX_Y = Node.MAX_Y;
 

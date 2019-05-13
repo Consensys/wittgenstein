@@ -125,6 +125,7 @@ public class HandelScenarios {
     Handel p = new Handel(params);
     Predicate<Handel> contIf = Handel.newContIf();
     p.init();
+
     try (NodeDrawer nd = new NodeDrawer(p.new HNodeStatus(), new File(fileName), 10)) {
       do {
         p.network().runMs(10);
@@ -534,7 +535,7 @@ public class HandelScenarios {
   }
 
   void genAnim() {
-    int n = 2048;
+    int n = 4096;
     //runOnce(defaultParams(n, null, null, 200, null, null), "unsync.gif");
     runOnce(defaultParams(n, null, .33, 0, null, null, null, RegistryNodeBuilders.Location.CITIES),
         "tor.gif");

@@ -44,6 +44,9 @@ public class GeoAllCities extends Geo {
         int mercX = convertToMercatorX(longitude);
         int mercY = convertToMercatorY(latitude);
         int population = Integer.valueOf(csvRecord.get(3));
+
+        population += 200000;
+
         totalPopulation += population;
         cities.put(cityName, new int[] {mercX, mercY, population});
       }
