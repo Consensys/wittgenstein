@@ -3,6 +3,8 @@
 # Wittgenstein
 A simulator for some PoS, consensus or just distributed algorithms. Includes dfinity, Ethereum's Casper IMD, San Fermin and others. A somehow outdated presentation can be found [here](https://docs.google.com/presentation/d/1NQAm_zciVToOD3LpauKPxpkQ96WNh_3UMPMA483bHgM/edit?usp=sharing).
 
+It allows you to test protocol, and to generate large graph and videos of the protocol in action, such as this one (generated for Handel: aggregation at scale with Byzantine nodes: [![Watch the video](https://img.youtube.com/vi/reQTJF7EFLg/maxresdefault.jpg)](https://youtu.be/reQTJF7EFLg)
+
 
 ## Why this name?
 Wittgenstein was a concert pianist. He commissioned Ravel's Piano Concerto for the Left Hand, but changed it:
