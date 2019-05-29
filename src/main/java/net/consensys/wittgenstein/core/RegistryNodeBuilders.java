@@ -26,17 +26,21 @@ public class RegistryNodeBuilders {
     return (site + "_speed=" + speed + "_tor=" + (tor + "000").substring(0, 4)).toUpperCase();
   }
 
-
   public static Double[] tor() {
-    return new Double[] {0.0, 0.10, 0.20, .33, .5, .6, .8};
+    return new Double[] {0.0, 0.01, 0.10, 0.20, .33, .5, .6, .8};
   }
+
+  public static Location[] locations() {
+    return new Location[] {Location.AWS, Location.CITIES, Location.RANDOM};
+  }
+
 
   private RegistryNodeBuilders() {
     CSVLatencyReader lr = new CSVLatencyReader();
     Geo geoAWS = new GeoAWS();
     Geo geoAllCities = new GeoAllCities();
 
-    for (Location loc : new Location[] {Location.AWS, Location.CITIES, Location.RANDOM}) {
+    for (Location loc : locations()) {
       for (boolean speedConstant : new Boolean[] {true, false}) {
         for (double tor : tor()) {
           NodeBuilder nb;

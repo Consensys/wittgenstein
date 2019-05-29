@@ -23,6 +23,12 @@ public class Graph {
   private final String xName;
   private final String yName;
 
+  private Double forcedMinY = null;
+
+  public void setForcedMinY(Double forcedMinY) {
+    this.forcedMinY = forcedMinY;
+  }
+
   public static class Series {
     final String description;
     final List<ReportLine> vals = new ArrayList<>();
@@ -142,7 +148,7 @@ public class Graph {
 
     chart.getStyler().setXAxisMin(minX);
     chart.getStyler().setXAxisMax(maxX);
-    chart.getStyler().setYAxisMin(minY);
+    chart.getStyler().setYAxisMin(forcedMinY == null ? minY : forcedMinY);
     chart.getStyler().setYAxisMax(maxY);
 
     return chart;

@@ -34,9 +34,9 @@ public class Handel implements Protocol {
      */
     final int pairingTime;
 
-    final int levelWaitTime;
+    int levelWaitTime;
     final int periodDurationMs;
-    final int acceleratedCallsCount;
+    int acceleratedCallsCount;
 
     final int nodesDown;
     final BitSet badNodes;
@@ -49,7 +49,7 @@ public class Handel implements Protocol {
      * value is different than 0, all the nodes are starting at a time uniformly distributed between
      * zero and 'desynchronizedStart'
      */
-    final int desynchronizedStart;
+    int desynchronizedStart;
 
     /**
      * A Byzantine scenario where all nodes starts
