@@ -54,10 +54,10 @@ public class WServerTest {
     HttpEntity<String> entity = new HttpEntity<>(null, headers);
 
     ResponseEntity<String> response = restTemplate.exchange(createURLWithPort("/protocols"),
-        HttpMethod.GET, entity, String.class);
+            HttpMethod.GET, entity, String.class);
 
     CollectionType javaType =
-        objectMapper.getTypeFactory().constructCollectionType(List.class, String.class);
+            objectMapper.getTypeFactory().constructCollectionType(List.class, String.class);
 
     List<String> ps = objectMapper.readValue(response.getBody(), javaType);
     Assert.assertTrue(response.getBody(), ps.contains(PingPong.class.getName()));
@@ -68,24 +68,24 @@ public class WServerTest {
     HttpEntity<String> entity = new HttpEntity<>(null, headers);
 
     ResponseEntity<String> response = restTemplate.exchange(createURLWithPort("/protocols"),
-        HttpMethod.GET, entity, String.class);
+            HttpMethod.GET, entity, String.class);
 
     CollectionType javaType =
-        objectMapper.getTypeFactory().constructCollectionType(List.class, String.class);
+            objectMapper.getTypeFactory().constructCollectionType(List.class, String.class);
     List<String> ps = objectMapper.readValue(response.getBody(), javaType);
 
     for (String p : ps) {
       entity = new HttpEntity<>(null, headers);
       response = restTemplate.exchange(createURLWithPort("/protocols/" + p), HttpMethod.GET, entity,
-          String.class);
+              String.class);
 
       WParameters params = objectMapper.readValue(response.getBody(), WParameters.class);
       String jsonString = objectMapper.writeValueAsString(params);
 
       RequestEntity<String> requestEntity = RequestEntity
-          .post(createURIWithPort("/network/init/" + p))
-          .contentType(MediaType.APPLICATION_JSON)
-          .body(jsonString);
+              .post(createURIWithPort("/network/init/" + p))
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(jsonString);
       ResponseEntity<Void> responseInit = restTemplate.exchange(requestEntity, Void.class);
       Assert.assertEquals(p, HttpStatus.OK, responseInit.getStatusCode());
 
@@ -102,7 +102,7 @@ public class WServerTest {
         entity = new HttpEntity<>(null, headers);
 
         ResponseEntity<String> responseMsg = restTemplate
-            .exchange(createURLWithPort("/network/messages"), HttpMethod.GET, entity, String.class);
+                .exchange(createURLWithPort("/network/messages"), HttpMethod.GET, entity, String.class);
         Assert.assertEquals(HttpStatus.OK, responseMsg.getStatusCode());
 
         // TODO: we should also check we can deserialize the messages, as in allMessagesInfo()
@@ -117,8 +117,8 @@ public class WServerTest {
     HttpEntity<String> entity = new HttpEntity<>(null, headers);
 
     ResponseEntity<String> response =
-        restTemplate.exchange(createURLWithPort("/protocols/" + PingPong.class.getName()),
-            HttpMethod.GET, entity, String.class);
+            restTemplate.exchange(createURLWithPort("/protocols/" + PingPong.class.getName()),
+                    HttpMethod.GET, entity, String.class);
 
     WParameters ps = objectMapper.readValue(response.getBody(), WParameters.class);
     Assert.assertTrue(response.getBody(), ps instanceof PingPong.PingPongParameters);
@@ -128,11 +128,11 @@ public class WServerTest {
     HttpEntity<String> entity = new HttpEntity<>(null, headers);
 
     ResponseEntity<String> response = restTemplate.exchange(createURLWithPort("/network/nodes"),
-        HttpMethod.GET, entity, String.class);
+            HttpMethod.GET, entity, String.class);
     Assert.assertEquals(HttpStatus.OK, response.getStatusCode());
 
     CollectionType javaType =
-        objectMapper.getTypeFactory().constructCollectionType(List.class, Node.class);
+            objectMapper.getTypeFactory().constructCollectionType(List.class, Node.class);
     return objectMapper.readValue(response.getBody(), javaType);
   }
 
@@ -140,11 +140,11 @@ public class WServerTest {
     HttpEntity<String> entity = new HttpEntity<>(null, headers);
 
     ResponseEntity<String> response = restTemplate.exchange(createURLWithPort("/network/messages"),
-        HttpMethod.GET, entity, String.class);
+            HttpMethod.GET, entity, String.class);
     Assert.assertEquals(HttpStatus.OK, response.getStatusCode());
 
     CollectionType javaType =
-        objectMapper.getTypeFactory().constructCollectionType(List.class, EnvelopeInfo.class);
+            objectMapper.getTypeFactory().constructCollectionType(List.class, EnvelopeInfo.class);
     return objectMapper.readValue(response.getBody(), javaType);
   }
 
@@ -189,7 +189,7 @@ public class WServerTest {
 
     @Override
     public void action(Network<net.consensys.wittgenstein.core.Node> network,
-        net.consensys.wittgenstein.core.Node from, net.consensys.wittgenstein.core.Node to) {}
+                       net.consensys.wittgenstein.core.Node from, net.consensys.wittgenstein.core.Node to) {}
   }
 
   @Test
@@ -198,9 +198,9 @@ public class WServerTest {
     String jsonString = objectMapper.writeValueAsString(params);
 
     RequestEntity<String> requestEntity = RequestEntity
-        .post(createURIWithPort("/network/init/" + PingPong.class.getName()))
-        .contentType(MediaType.APPLICATION_JSON)
-        .body(jsonString);
+            .post(createURIWithPort("/network/init/" + PingPong.class.getName()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(jsonString);
 
     ResponseEntity<Void> response = restTemplate.exchange(requestEntity, Void.class);
 
@@ -216,9 +216,9 @@ public class WServerTest {
     String jsonString = objectMapper.writeValueAsString(params);
 
     RequestEntity<String> requestEntity = RequestEntity
-        .post(createURIWithPort("/network/init/" + DummyProtocol.class.getName()))
-        .contentType(MediaType.APPLICATION_JSON)
-        .body(jsonString);
+            .post(createURIWithPort("/network/init/" + DummyProtocol.class.getName()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(jsonString);
     ResponseEntity<Void> response = restTemplate.exchange(requestEntity, Void.class);
     Assert.assertEquals(response.toString(), HttpStatus.OK, response.getStatusCode());
 
@@ -230,9 +230,9 @@ public class WServerTest {
 
     SendMessage sm = new SendMessage(0, Collections.singletonList(1), 1, 0, new MessageTest());
     requestEntity = RequestEntity
-        .post(createURIWithPort("/network/send/"))
-        .contentType(MediaType.APPLICATION_JSON)
-        .body(objectMapper.writeValueAsString(sm));
+            .post(createURIWithPort("/network/send/"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(objectMapper.writeValueAsString(sm));
     response = restTemplate.exchange(requestEntity, Void.class);
     Assert.assertEquals(response.toString(), HttpStatus.OK, response.getStatusCode());
     mis = allMessagesInfo();
