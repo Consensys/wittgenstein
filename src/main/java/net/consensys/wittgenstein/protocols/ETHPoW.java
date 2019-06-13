@@ -22,11 +22,9 @@ public class ETHPoW implements Protocol {
     private String nodeBuilderName;
     private String networkLatencyName;
     private int numberOfMiners;
-
-
   }
 
-  ETHPoW(ETHPoWParameters params) {
+  public ETHPoW(ETHPoWParameters params) {
     this.network = new BlockChainNetwork<>();
     // Change Singleton to IC3
     this.nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
@@ -79,8 +77,6 @@ public class ETHPoW implements Protocol {
       this.minerId = ethMiner.nodeId;
       this.blockHeight = height;
       this.currentHeight = father.blockHeight;
-
-
     }
 
     POWBlock() {
@@ -168,7 +164,5 @@ public class ETHPoW implements Protocol {
       return null;
     }
   }
-
-
 
 }
