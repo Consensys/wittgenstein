@@ -67,6 +67,10 @@ public class ETHPoW implements Protocol {
     final long difficulty;
     final List<Transactions> transInBlock;
 
+    POWBlock(ETHMiningNode ethMiner, POWBlock father, int time) {
+      this(Collections.emptyList(), ethMiner, father, time);
+    }
+
     POWBlock(List<Transactions> transInBlock, ETHMiningNode ethMiner, POWBlock father, int time) {
       super(ethMiner, father.height + 1, father, true, time);
       this.transInBlock = transInBlock;
@@ -83,17 +87,24 @@ public class ETHPoW implements Protocol {
       return new POWBlock();
     }
 
+    /**
+     * Constantinople values.
+     * 
+     * @see https://github.com/ethereum/go-ethereum/blob/master/consensus/ethash/ethash.go
+     * @see https://eips.ethereum.org/EIPS/eip-1234
+     * @see
+     * @param ts - timestamp in seconds of the new block
+     */
     public static long calculateDifficulty(POWBlock father, int ts) {
       long gap = (ts - father.proposalTime) / 9;
-      long y = 1;
+      long y = 1; // todo: 2 si le father a un uncle
       long ugap = Math.max(-99, y - gap);
-      long nd = (father.difficulty / 2048) * ugap;
-      long bomb = 0; // 2**((block.number // 100000) - 2)
+      long diff = (father.difficulty / 2048) * ugap;
 
-      nd += father.difficulty;
-      nd += bomb;
+      long periods = (father.height - 5000000L) / 100000L;
+      long bomb = (long) Math.pow(2, periods - 2);
 
-      return nd;
+      return father.difficulty + diff + bomb;
     }
 
   }
