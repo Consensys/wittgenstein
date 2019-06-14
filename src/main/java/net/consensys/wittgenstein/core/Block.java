@@ -40,10 +40,10 @@ abstract public class Block<TB extends Block> {
     if (height <= 0) {
       throw new IllegalArgumentException("Only the genesis block has a special height");
     }
-    if (time < parent.proposalTime) {
+    if (parent != null && time < parent.proposalTime) {
       throw new IllegalArgumentException("bad time: parent is (" + parent + "), our time:" + time);
     }
-    if (parent.height >= height) {
+    if (parent != null && parent.height >= height) {
       throw new IllegalArgumentException("Bad parent. me:" + this + ", parent:" + parent);
     }
 

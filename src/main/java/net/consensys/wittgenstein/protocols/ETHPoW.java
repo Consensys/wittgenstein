@@ -12,12 +12,11 @@ public class ETHPoW implements Protocol {
   final BlockChainNetwork<POWBlock, ETHMiningNode> network;
   final NodeBuilder nb;
   final POWBlock genesis = new POWBlock();
-  ETHPoWParameters params;
+  final ETHPoWParameters params;
 
   public static class ETHPoWParameters extends WParameters {
     private int hashRate;
-    private int blockConstructionTime;
-    private int gasLimit; //Equates to block size
+    private int gasLimit;
     private int blockReward;
     private String nodeBuilderName;
     private String networkLatencyName;
@@ -25,6 +24,7 @@ public class ETHPoW implements Protocol {
   }
 
   public ETHPoW(ETHPoWParameters params) {
+    this.params = params;
     this.network = new BlockChainNetwork<>();
     // Change Singleton to IC3
     this.nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
@@ -59,36 +59,49 @@ public class ETHPoW implements Protocol {
   @Override
   public void init() {
     for (int i = 0; i < 65; i++) {
-      ETHMiningNode ethN = new ETHMiningNode(network.rd, nb, 4, this.genesis);
       network.addNode(new ETHMiningNode(network.rd, nb, 4, this.genesis));
     }
   }
 
-  class POWBlock extends Block<POWBlock> {
-    int minerId;
-    int blockHeight;
-    int currentHeight;
-    List<Transactions> transInBlock;
+  static class POWBlock extends Block<POWBlock> {
+    final long difficulty;
+    final List<Transactions> transInBlock;
 
-    POWBlock(List<Transactions> transInBlock, ETHMiningNode ethMiner, int height, POWBlock father,
-        int time) {
-      super(ethMiner, height, father, true, time);
+    POWBlock(List<Transactions> transInBlock, ETHMiningNode ethMiner, POWBlock father, int time) {
+      super(ethMiner, father.height + 1, father, true, time);
       this.transInBlock = transInBlock;
-      this.minerId = ethMiner.nodeId;
-      this.blockHeight = height;
-      this.currentHeight = father.blockHeight;
+      this.difficulty = calculateDifficulty(father, time);
     }
 
     POWBlock() {
+      super(null, 7951081, null, true, 1);
       this.transInBlock = Collections.emptyList();
+      this.difficulty = 1949482043446410L;
     }
+
+    static public POWBlock createGenesis() {
+      return new POWBlock();
+    }
+
+    public static long calculateDifficulty(POWBlock father, int ts) {
+      long gap = (ts - father.proposalTime) / 9;
+      long y = 1;
+      long ugap = Math.max(-99, y - gap);
+      long nd = (father.difficulty / 2048) * ugap;
+      long bomb = 0; // 2**((block.number // 100000) - 2)
+
+      nd += father.difficulty;
+      nd += bomb;
+
+      return nd;
+    }
+
   }
 
-  public class Transactions {
+  static class Transactions {
     int gasLimit;
     String type;
     int gastCost = 0;
-    boolean inABlock = false;
 
     Transactions(int gasLimit, String type) {
       this.gasLimit = gasLimit;
@@ -102,7 +115,7 @@ public class ETHPoW implements Protocol {
 
   abstract class ETHPoWNode extends BlockChainNode<POWBlock> {
 
-    public ETHPoWNode(Random rd, NodeBuilder nb, POWBlock genesis) {
+    ETHPoWNode(Random rd, NodeBuilder nb, POWBlock genesis) {
       super(rd, nb, false, genesis);
 
     }
@@ -133,9 +146,7 @@ public class ETHPoW implements Protocol {
       } else {
         hashDistribution.add(remaining / (params.numberOfMiners - miningPools.length));
       }
-
     }
-
   }
 
   class ETHMiningNode extends ETHPoWNode {
@@ -149,7 +160,7 @@ public class ETHPoW implements Protocol {
     POWBlock createNewBlock(POWBlock base, int height) {
       //TODO: set ommers list
       //TODO: Select highest paying transactions from transaction pool and create new block
-      return new POWBlock(null, this, height, base, network.time);
+      return new POWBlock(null, this, base, network.time);
 
     }
 
