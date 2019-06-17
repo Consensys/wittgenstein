@@ -160,6 +160,7 @@ public class CasperIMD implements Protocol {
     }
 
     public CasperBlock() {
+      super(0);
       this.attestationsByHeight = Collections.emptyMap();
     }
 
