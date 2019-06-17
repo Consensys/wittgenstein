@@ -86,6 +86,7 @@ public class ETHPoW implements Protocol {
     final long difficulty;
     final BigInteger totalDifficulty;
     final List<Transactions> transInBlock;
+    final List<Long> uncles = new ArrayList<>();
 
     POWBlock(ETHMiningNode ethMiner, POWBlock father, int time) {
       this(Collections.emptyList(), ethMiner, father, time);
@@ -98,6 +99,11 @@ public class ETHPoW implements Protocol {
 
       // Total difficulty should take uncles into account as well
       this.totalDifficulty = father.totalDifficulty.add(BigInteger.valueOf(this.difficulty));
+    }
+
+    POWBlock(ETHMiningNode ethMiner, POWBlock father, int time, List<POWBlock> u) {
+      this(Collections.emptyList(), ethMiner, father, time);
+      u.stream().forEach(b -> uncles.add(b.id));
     }
 
     POWBlock() {
@@ -120,9 +126,12 @@ public class ETHPoW implements Protocol {
      * @see https://eips.ethereum.org/EIPS/eip-1234
      * @see https://eips.ethereum.org/EIPS/eip-100
      */
-    public static long calculateDifficulty(POWBlock father, int ts) {
+    public long calculateDifficulty(POWBlock father, int ts) {
       long gap = (ts - father.proposalTime) / 9000;
-      long y = 1; // todo: 2 si le father a un uncle
+      long y = 1;
+      if (!uncles.isEmpty()) {
+        y = 2;//  2 si le father a un uncle
+      }
       long ugap = Math.max(-99, y - gap);
       long diff = (father.difficulty / 2048) * ugap;
 
@@ -210,6 +219,7 @@ public class ETHPoW implements Protocol {
 
     private POWBlock inMining;
     private double threshold;
+    private List<POWBlock> uncles = new ArrayList<>();
 
     public ETHMiningNode(Random rd, NodeBuilder nb, int hashPower, POWBlock genesis) {
       super(rd, nb, genesis);
@@ -218,8 +228,14 @@ public class ETHPoW implements Protocol {
 
     private void mine1ms() {
       if (inMining == null) {
-        inMining = new POWBlock(this, this.head, network.time);
-        threshold = solveByMs(inMining.difficulty);
+        if (uncles.isEmpty()) {
+          inMining = new POWBlock(this, this.head, network.time);
+          threshold = solveByMs(inMining.difficulty);
+        } else {
+          inMining = new POWBlock(this, this.head, network.time, this.uncles);
+          this.uncles.clear();
+          threshold = solveByMs(inMining.difficulty);
+        }
       }
       if (network.rd.nextDouble() < threshold) {
         network.sendAll(new BlockChainNetwork.SendBlock<>(inMining), this);
@@ -231,10 +247,14 @@ public class ETHPoW implements Protocol {
     @Override
     public boolean onBlock(POWBlock b) {
       boolean res = super.onBlock(b);
+
       if (res) {
         // Someone sent us a new block, so we're going to switch
         //  our mining to this new head
         inMining = null;
+      }
+      if (this.blocksReceivedByBlockId.put(b.id, b) != null) {
+        this.uncles.add(b);
       }
       return res;
     }
