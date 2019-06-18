@@ -103,6 +103,9 @@ public class ETHPoW implements Protocol {
 
     POWBlock(ETHMiningNode ethMiner, POWBlock father, int time, List<POWBlock> u) {
       this(Collections.emptyList(), ethMiner, father, time);
+      if (u.size() > 2) {
+        throw new IllegalArgumentException("" + u);
+      }
       u.stream().forEach(b -> uncles.add(b.id));
     }
 
@@ -215,11 +218,11 @@ public class ETHPoW implements Protocol {
   }
 
   class ETHMiningNode extends ETHPoWNode {
-    private int hashPower; // hash power in GH/s
+    protected int hashPower; // hash power in GH/s
 
-    private POWBlock inMining;
-    private double threshold;
-    private List<POWBlock> uncles = new ArrayList<>();
+    protected POWBlock inMining;
+    protected double threshold;
+    protected List<POWBlock> uncles = new ArrayList<>();
 
     public ETHMiningNode(Random rd, NodeBuilder nb, int hashPower, POWBlock genesis) {
       super(rd, nb, genesis);
@@ -238,21 +241,36 @@ public class ETHPoW implements Protocol {
         }
       }
       if (network.rd.nextDouble() < threshold) {
-        network.sendAll(new BlockChainNetwork.SendBlock<>(inMining), this);
-        onBlock(inMining);
-        inMining = null;
+        onFoundNewBlock();
       }
+    }
+
+    protected void onFoundNewBlock() {
+      network.sendAll(new BlockChainNetwork.SendBlock<>(inMining), this);
+      onBlock(inMining);
+      inMining = null;
+
     }
 
     @Override
     public boolean onBlock(POWBlock b) {
+      if (!b.valid) {
+        return false;
+      }
+
       boolean res = super.onBlock(b);
 
       if (res) {
         // Someone sent us a new block, so we're going to switch
         //  our mining to this new head
         inMining = null;
+      } else {
+        // May be 'b' is not better than our current head but we
+        //  can still use it as an uncle for the block we're mining?
+        // todo
       }
+
+
       if (this.blocksReceivedByBlockId.put(b.id, b) != null) {
         this.uncles.add(b);
       }
@@ -269,4 +287,19 @@ public class ETHPoW implements Protocol {
     }
   }
 
+  class ETHAgentMiningNode extends ETHMiningNode {
+    ETHAgentMiningNode(Random rd, NodeBuilder nb, int hp, POWBlock genesis) {
+      super(rd, nb, hp, genesis);
+    }
+
+    @Override
+    protected void onFoundNewBlock() {
+      super.onFoundNewBlock();
+    }
+
+    @Override
+    public boolean onBlock(POWBlock b) {
+      return super.onBlock(b);
+    }
+  }
 }
