@@ -222,7 +222,7 @@ public class ETHPoW implements Protocol {
 
     protected POWBlock inMining;
     protected double threshold;
-    protected List<POWBlock> uncles = new ArrayList<>();
+
 
     public ETHMiningNode(Random rd, NodeBuilder nb, int hashPower, POWBlock genesis) {
       super(rd, nb, genesis);
@@ -230,18 +230,23 @@ public class ETHPoW implements Protocol {
     }
 
     private void mine1ms() {
+      List<POWBlock> uncles= new ArrayList<>();
       if (inMining == null) {
+        if(this.blocksReceivedByHeight.get(this.head.height)!=null) {
+          uncles.add(this.blocksReceivedByHeight.get(this.head.height));
+        }
         if (uncles.isEmpty()) {
           inMining = new POWBlock(this, this.head, network.time);
           threshold = solveByMs(inMining.difficulty);
         } else {
-          inMining = new POWBlock(this, this.head, network.time, this.uncles);
-          this.uncles.clear();
+
+          inMining = new POWBlock(this, this.head, network.time, uncles);
           threshold = solveByMs(inMining.difficulty);
         }
       }
       if (network.rd.nextDouble() < threshold) {
         onFoundNewBlock();
+        System.out.println("Height: "+this.head.height+" with uncles: "+uncles);
       }
     }
 
@@ -263,16 +268,19 @@ public class ETHPoW implements Protocol {
       if (res) {
         // Someone sent us a new block, so we're going to switch
         //  our mining to this new head
+        //super.blocksReceivedByBlockId.put(b.id,b);
+        super.blocksReceivedByHeight.put(b.height,b);
         inMining = null;
       } else {
         // May be 'b' is not better than our current head but we
         //  can still use it as an uncle for the block we're mining?
         // todo
+
       }
 
 
       if (this.blocksReceivedByBlockId.put(b.id, b) != null) {
-        this.uncles.add(b);
+        //add uncle block
       }
       return res;
     }

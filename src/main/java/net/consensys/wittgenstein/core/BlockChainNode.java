@@ -10,8 +10,8 @@ public abstract class BlockChainNode<TB extends Block> extends Node {
    * We keep some data that should be useful for all implementations
    */
   protected final Map<Long, TB> blocksReceivedByBlockId = new HashMap<>();
-  protected final Map<Long, Set<TB>> blocksReceivedByFatherId = new HashMap<>();
-  protected final Map<Integer, TB> blocksReceivedByHeight = new HashMap<>();
+  public final Map<Long, Set<TB>> blocksReceivedByFatherId = new HashMap<>();
+  public final Map<Integer, TB> blocksReceivedByHeight = new HashMap<>();
 
   public TB head;
 
@@ -37,7 +37,7 @@ public abstract class BlockChainNode<TB extends Block> extends Node {
     Set<TB> pa = this.blocksReceivedByFatherId.computeIfAbsent(b.parent.id, k -> new HashSet<>());
     pa.add(b);
     blocksReceivedByHeight.put(b.height, b);
-
+    System.out.println("added new block: "+b.height);
     head = best(head, b);
 
     return true;

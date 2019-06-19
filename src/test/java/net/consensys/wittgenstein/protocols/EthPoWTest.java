@@ -1,5 +1,6 @@
 package net.consensys.wittgenstein.protocols;
 
+import net.consensys.wittgenstein.core.BlockChainNetwork;
 import net.consensys.wittgenstein.core.NetworkLatency;
 import net.consensys.wittgenstein.core.NodeBuilder;
 import net.consensys.wittgenstein.core.RegistryNodeBuilders;
@@ -69,7 +70,25 @@ public class EthPoWTest {
     ETHPoW.ETHPoWParameters params = new ETHPoW.ETHPoWParameters(0, 0, 0, builderName, nlName, 5);
     ETHPoW p = new ETHPoW(params);
     p.init();
-    p.network().run(100);
+    p.network().run(100000);
     p.network().printStat(false);
+  }
+
+  @Test
+  public void testUncles(){
+    ETHPoW.ETHPoWParameters params = new ETHPoW.ETHPoWParameters(0, 0, 0, builderName, nlName, 5);
+    ETHPoW p = new ETHPoW(params);
+    p.init();
+    p.network().run(50000);
+    ETHPoW.ETHMiningNode m = p.new ETHMiningNode(rd, nb, 150 * 1024, gen);
+    //ETHMiningNode ethMiner, POWBlock father, int time
+    int timestamp = p.network().time+50;
+    ETHPoW.POWBlock brother =p.network.observer.blocksReceivedByHeight.get(gen.height+1);
+    //ETHPoW.POWBlock brother = p.network.allNodes.get(0).blocksReceivedByHeight.get(m.head.height-2);
+    ETHPoW.POWBlock uncle = new ETHPoW.POWBlock(m,brother,timestamp);
+    p.network.sendAll(new BlockChainNetwork.SendBlock<>(uncle), m);
+   // p.network().run(1000);
+    Assert.assertTrue(p.network.allNodes.get(1).blocksReceivedByHeight.containsKey(uncle.height));
+
   }
 }
