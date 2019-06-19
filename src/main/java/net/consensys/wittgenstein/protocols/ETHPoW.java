@@ -230,9 +230,9 @@ public class ETHPoW implements Protocol {
     }
 
     private void mine1ms() {
-      List<POWBlock> uncles= new ArrayList<>();
+      List<POWBlock> uncles = new ArrayList<>();
       if (inMining == null) {
-        if(this.blocksReceivedByHeight.get(this.head.height)!=null) {
+        if (this.blocksReceivedByHeight.get(this.head.height) != null) {
           uncles.add(this.blocksReceivedByHeight.get(this.head.height));
         }
         if (uncles.isEmpty()) {
@@ -246,7 +246,7 @@ public class ETHPoW implements Protocol {
       }
       if (network.rd.nextDouble() < threshold) {
         onFoundNewBlock();
-        System.out.println("Height: "+this.head.height+" with uncles: "+uncles);
+        System.out.println("Height: " + this.head.height + " with uncles: " + uncles);
       }
     }
 
@@ -269,7 +269,7 @@ public class ETHPoW implements Protocol {
         // Someone sent us a new block, so we're going to switch
         //  our mining to this new head
         //super.blocksReceivedByBlockId.put(b.id,b);
-        super.blocksReceivedByHeight.put(b.height,b);
+        super.blocksReceivedByHeight.put(b.height, b);
         inMining = null;
       } else {
         // May be 'b' is not better than our current head but we
