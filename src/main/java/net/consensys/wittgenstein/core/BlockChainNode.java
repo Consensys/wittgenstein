@@ -37,7 +37,6 @@ public abstract class BlockChainNode<TB extends Block> extends Node {
     Set<TB> pa = this.blocksReceivedByFatherId.computeIfAbsent(b.parent.id, k -> new HashSet<>());
     pa.add(b);
     blocksReceivedByHeight.put(b.height, b);
-    System.out.println("added new block: " + b.height);
     head = best(head, b);
 
     return true;

@@ -270,12 +270,18 @@ public class ETHPoW implements Protocol {
         //  our mining to this new head
         //super.blocksReceivedByBlockId.put(b.id,b);
         super.blocksReceivedByHeight.put(b.height, b);
+        System.out.println("Added new block " + b);
         inMining = null;
       } else {
         // May be 'b' is not better than our current head but we
         //  can still use it as an uncle for the block we're mining?
-        // todo
+        //
+        if (b.valid) {
+          if (super.blocksReceivedByFatherId.get(b.parent.id).size() < 3) {
+            super.blocksReceivedByHeight.put(b.height, b);
+          }
 
+        }
       }
 
 
@@ -283,6 +289,11 @@ public class ETHPoW implements Protocol {
         //add uncle block
       }
       return res;
+    }
+
+    private boolean isPossibleUncle() {
+
+      return false;
     }
 
     double solveByMs(long difficulty) {

@@ -74,21 +74,23 @@ public class EthPoWTest {
     p.network().printStat(false);
   }
 
-  @Test
-  public void testUncles() {
-    ETHPoW.ETHPoWParameters params = new ETHPoW.ETHPoWParameters(0, 0, 0, builderName, nlName, 5);
-    ETHPoW p = new ETHPoW(params);
-    p.init();
-    p.network().run(50000);
-    ETHPoW.ETHMiningNode m = p.new ETHMiningNode(rd, nb, 150 * 1024, gen);
-    //ETHMiningNode ethMiner, POWBlock father, int time
-    int timestamp = p.network().time + 50;
-    ETHPoW.POWBlock brother = p.network.observer.blocksReceivedByHeight.get(gen.height + 1);
-    //ETHPoW.POWBlock brother = p.network.allNodes.get(0).blocksReceivedByHeight.get(m.head.height-2);
-    ETHPoW.POWBlock uncle = new ETHPoW.POWBlock(m, brother, timestamp);
-    p.network.sendAll(new BlockChainNetwork.SendBlock<>(uncle), m);
-    // p.network().run(1000);
-    Assert.assertTrue(p.network.allNodes.get(1).blocksReceivedByHeight.containsKey(uncle.height));
-
-  }
+//  @Test
+//  public void testUncles() {
+//    ETHPoW.ETHPoWParameters params = new ETHPoW.ETHPoWParameters(0, 0, 0, builderName, nlName, 5);
+//    ETHPoW p = new ETHPoW(params);
+//    p.init();
+//    p.network().run(50000);
+//    ETHPoW.ETHMiningNode m = p.new ETHMiningNode(rd, nb, 150 * 1024, gen);
+//    //ETHMiningNode ethMiner, POWBlock father, int time
+//    int timestamp = p.network().time;
+//    ETHPoW.POWBlock brother = p.network.observer.blocksReceivedByHeight.get(gen.height + 1);
+//    //New block created with same father as existing block
+//    ETHPoW.POWBlock uncle = new ETHPoW.POWBlock(m, brother, timestamp);
+//
+//    p.network.sendAll(new BlockChainNetwork.SendBlock<>(uncle), m);
+//    p.network().run(10000);
+//
+//    Assert.assertTrue(p.network.allNodes.get(1).blocksReceivedByHeight.containsKey(uncle.height));
+//
+//  }
 }
