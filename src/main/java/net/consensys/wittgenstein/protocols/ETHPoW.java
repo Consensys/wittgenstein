@@ -1,7 +1,6 @@
 package net.consensys.wittgenstein.protocols;
 
 import net.consensys.wittgenstein.core.*;
-import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.server.WParameters;
 import java.math.BigInteger;
 import java.util.*;
@@ -71,7 +70,7 @@ public class ETHPoW implements Protocol {
   @Override
   public void init() {
     for (int i = 0; i < params.numberOfMiners; i++) {
-      final ETHMiningNode cur = new ETHMiningNode(network.rd, nb, 250, this.genesis);
+      final ETHMiningNode cur = new ETHMiningNode(network.rd, nb, 250 - 25 * i, this.genesis);
       if (i == 0) {
         network.addObserver(cur);
       } else {
@@ -102,12 +101,18 @@ public class ETHPoW implements Protocol {
     }
 
     POWBlock(ETHMiningNode ethMiner, POWBlock father, int time, Set<POWBlock> u) {
-      this(Collections.emptyList(), ethMiner, father, time);
+      super(ethMiner, father.height + 1, father, true, time);
+      this.transInBlock = Collections.emptyList();
+
       if (u.size() > 2) {
         throw new IllegalArgumentException("" + u);
       }
 
       u.stream().forEach(b -> uncles.add(b.id));
+      this.difficulty = calculateDifficulty(father, time);
+
+      // Total difficulty should take uncles into account as well
+      this.totalDifficulty = father.totalDifficulty.add(BigInteger.valueOf(this.difficulty));
     }
 
     POWBlock() {
@@ -136,8 +141,8 @@ public class ETHPoW implements Protocol {
       long ugap = Math.max(-99, y - gap);
       long diff = (father.difficulty / 2048) * ugap;
 
-      long periods = (father.height - 5000000L) / 100000L;
-      long bomb = (long) Math.pow(2, periods - 2);
+      long periods = (father.height - 4_999_999L) / 100000L;
+      long bomb = periods > 1 ? (long) Math.pow(2, periods - 2) : diff;
 
       return father.difficulty + diff + bomb;
     }
@@ -220,22 +225,19 @@ public class ETHPoW implements Protocol {
     protected POWBlock inMining;
     protected double threshold;
 
-
     public ETHMiningNode(Random rd, NodeBuilder nb, int hashPower, POWBlock genesis) {
       super(rd, nb, genesis);
       this.hashPower = hashPower;
     }
 
     private void mine1ms() {
-      Set<POWBlock> uncles = new HashSet<>();
       if (inMining == null) {
         inMining = new POWBlock(this, this.head, network.time);
         threshold = solveByMs(inMining.difficulty);
-
       }
       if (network.rd.nextDouble() < threshold) {
         onFoundNewBlock();
-        System.out.println("Height: " + this.head.height + " with uncles: " + uncles);
+        System.out.println("Height: " + this.head.height);
       }
     }
 
@@ -283,11 +285,9 @@ public class ETHPoW implements Protocol {
         //  can still use it as an uncle for the block we're mining?
         boolean mined = mine1ms(b);
         if (mined) {
-
           if (isPossibleUncle(b) && !blocksReceivedByHeight.get(b.height).contains(b)) {
             blocksReceivedByHeight.get(b.height).add(b);
           }
-
         }
       }
 

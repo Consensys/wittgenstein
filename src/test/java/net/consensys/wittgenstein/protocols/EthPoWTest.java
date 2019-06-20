@@ -6,6 +6,7 @@ import net.consensys.wittgenstein.core.NodeBuilder;
 import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 import org.junit.Assert;
 import org.junit.Test;
+import java.util.Collections;
 import java.util.Random;
 import java.util.Set;
 
@@ -33,6 +34,20 @@ public class EthPoWTest {
 
     ETHPoW.POWBlock b5 = new ETHPoW.POWBlock(null, b4, b4.proposalTime + 39000);
     Assert.assertEquals(1948528359750282L, b5.difficulty);
+
+    ETHPoW.POWBlock b6 = new ETHPoW.POWBlock(null, b5, b5.proposalTime + 3000);
+    Assert.assertEquals(1949479923831169L, b6.difficulty);
+
+    ETHPoW.POWBlock b7 = new ETHPoW.POWBlock(null, b6, b6.proposalTime + 15000);
+    Assert.assertEquals(1949480058048897L, b7.difficulty);
+
+    ETHPoW.POWBlock u1 = new ETHPoW.POWBlock(null, b7, b7.proposalTime + 11000);
+    ETHPoW.POWBlock b8 = new ETHPoW.POWBlock(null, b7, b7.proposalTime + 11000);
+    Assert.assertEquals(1949480192266625L, b8.difficulty);
+
+    ETHPoW.POWBlock b9 =
+        new ETHPoW.POWBlock(null, b8, b8.proposalTime + 3000, Collections.singleton(u1));
+    Assert.assertEquals(1951384115734613L, b9.difficulty);
   }
 
   @Test
@@ -83,7 +98,6 @@ public class EthPoWTest {
     p.init();
     p.network().run(10000);
     ETHPoW.ETHMiningNode m = p.network.observer;
-    //ETHMiningNode ethMiner, POWBlock father, int time
     int timestamp = p.network().time;
     Set<ETHPoW.POWBlock> main = p.network.observer.blocksReceivedByHeight.get(gen.height + 2);
     ETHPoW.POWBlock father = main.iterator().next().parent;
