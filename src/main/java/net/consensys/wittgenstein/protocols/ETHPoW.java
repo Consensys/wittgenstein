@@ -132,10 +132,7 @@ public class ETHPoW implements Protocol {
      */
     public long calculateDifficulty(POWBlock father, int ts) {
       long gap = (ts - father.proposalTime) / 9000;
-      long y = 1;
-      if (!uncles.isEmpty()) {
-        y = 2;//  2 si le father a un uncle
-      }
+      long y = (uncles.isEmpty() ? 1 : 2);
       long ugap = Math.max(-99, y - gap);
       long diff = (father.difficulty / 2048) * ugap;
 
@@ -245,7 +242,7 @@ public class ETHPoW implements Protocol {
     private boolean mine1ms(POWBlock b) {
       Set<POWBlock> curr = this.blocksReceivedByHeight.get(this.head.height);
       if (inMining == null) {
-       curr.add(b);
+        curr.add(b);
         inMining = new POWBlock(this, this.head, network.time, curr);
         threshold = solveByMs(inMining.difficulty);
       }
@@ -276,18 +273,18 @@ public class ETHPoW implements Protocol {
         // Someone sent us a new block, so we're going to switch
         //  our mining to this new head
         //super.blocksReceivedByBlockId.put(b.id,b);
-        Set<POWBlock> pb = blocksReceivedByHeight.computeIfAbsent(b.height,k -> new HashSet<>());
+        Set<POWBlock> pb = blocksReceivedByHeight.computeIfAbsent(b.height, k -> new HashSet<>());
         pb.add(b);
         blocksReceivedByHeight.put(b.height, pb);
-//        System.out.println("Added new block " + b);
+        //        System.out.println("Added new block " + b);
         inMining = null;
       } else {
         // May be 'b' is not better than our current head but we
         //  can still use it as an uncle for the block we're mining?
-       boolean mined = mine1ms(b);
+        boolean mined = mine1ms(b);
         if (mined) {
 
-          if(isPossibleUncle(b) && !blocksReceivedByHeight.get(b.height).contains(b)){
+          if (isPossibleUncle(b) && !blocksReceivedByHeight.get(b.height).contains(b)) {
             blocksReceivedByHeight.get(b.height).add(b);
           }
 
@@ -300,11 +297,11 @@ public class ETHPoW implements Protocol {
     private boolean isPossibleUncle(POWBlock b) {
       //If you receive a valid block you must check it has not already been added for its height and it's not exceeding the limit of 3 (1 main block +2 Uncles at most)
       //Check it has the same parent as the main block
-      if(head.height<2){
+      if (head.height < 2) {
         return false;
       }
-      return blocksReceivedByFatherId.get(b.parent.id).size() < 3 &&
-              b.parent==blocksReceivedByHeight.get(b.height).iterator().next().parent;
+      return blocksReceivedByFatherId.get(b.parent.id).size() < 3
+          && b.parent == blocksReceivedByHeight.get(b.height).iterator().next().parent;
     }
 
     double solveByMs(long difficulty) {
