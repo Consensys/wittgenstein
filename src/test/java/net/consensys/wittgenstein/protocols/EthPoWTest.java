@@ -7,6 +7,7 @@ import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 import org.junit.Assert;
 import org.junit.Test;
 import java.util.Random;
+import java.util.Set;
 
 public class EthPoWTest {
   private ETHPoW.POWBlock gen = ETHPoW.POWBlock.createGenesis();
@@ -73,24 +74,25 @@ public class EthPoWTest {
     p.network().run(100000);
     p.network().printStat(false);
   }
-
+  //Create a new block with same parent as another block and checks block is included in chain as uncle
   @Test
   public void testUncles() {
     ETHPoW.ETHPoWParameters params = new ETHPoW.ETHPoWParameters(0, 0, 0, builderName, nlName, 5);
     ETHPoW p = new ETHPoW(params);
     p.init();
-    p.network().run(50000);
+    p.network().run(10000);
     ETHPoW.ETHMiningNode m = p.network.observer;
     //ETHMiningNode ethMiner, POWBlock father, int time
     int timestamp = p.network().time;
-    ETHPoW.POWBlock brother = p.network.observer.blocksReceivedByHeight.get(gen.height + 1);
+    Set<ETHPoW.POWBlock> main = p.network.observer.blocksReceivedByHeight.get(gen.height + 2);
+    ETHPoW.POWBlock father = main.iterator().next().parent;
     //New block created with same father as existing block
-    ETHPoW.POWBlock uncle = new ETHPoW.POWBlock(m, brother, timestamp);
+    ETHPoW.POWBlock uncle = new ETHPoW.POWBlock(m,father , timestamp);
 
     p.network.sendAll(new BlockChainNetwork.SendBlock<>(uncle), m);
-    p.network().run(10000);
+    p.network().run(1000);
 
-    Assert.assertTrue(p.network.allNodes.get(1).blocksReceivedByHeight.containsKey(uncle.height));
+    Assert.assertTrue(p.network.allNodes.get(1).blocksReceivedByHeight.get(uncle.height).contains(uncle));
 
   }
 }

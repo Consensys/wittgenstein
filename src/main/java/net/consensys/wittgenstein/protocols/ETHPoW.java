@@ -71,7 +71,7 @@ public class ETHPoW implements Protocol {
   @Override
   public void init() {
     for (int i = 0; i < params.numberOfMiners; i++) {
-      final ETHMiningNode cur = new ETHMiningNode(network.rd, nb, 50, this.genesis);
+      final ETHMiningNode cur = new ETHMiningNode(network.rd, nb, 250, this.genesis);
       if (i == 0) {
         network.addObserver(cur);
       } else {
@@ -101,11 +101,12 @@ public class ETHPoW implements Protocol {
       this.totalDifficulty = father.totalDifficulty.add(BigInteger.valueOf(this.difficulty));
     }
 
-    POWBlock(ETHMiningNode ethMiner, POWBlock father, int time, List<POWBlock> u) {
+    POWBlock(ETHMiningNode ethMiner, POWBlock father, int time, Set<POWBlock> u) {
       this(Collections.emptyList(), ethMiner, father, time);
       if (u.size() > 2) {
         throw new IllegalArgumentException("" + u);
       }
+
       u.stream().forEach(b -> uncles.add(b.id));
     }
 
@@ -219,7 +220,6 @@ public class ETHPoW implements Protocol {
 
   class ETHMiningNode extends ETHPoWNode {
     protected int hashPower; // hash power in GH/s
-
     protected POWBlock inMining;
     protected double threshold;
 
@@ -230,24 +230,31 @@ public class ETHPoW implements Protocol {
     }
 
     private void mine1ms() {
-      List<POWBlock> uncles = new ArrayList<>();
+      Set<POWBlock> uncles = new HashSet<>();
       if (inMining == null) {
-        if (this.blocksReceivedByHeight.get(this.head.height) != null) {
-          uncles.add(this.blocksReceivedByHeight.get(this.head.height));
-        }
-        if (uncles.isEmpty()) {
-          inMining = new POWBlock(this, this.head, network.time);
-          threshold = solveByMs(inMining.difficulty);
-        } else {
+        inMining = new POWBlock(this, this.head, network.time);
+        threshold = solveByMs(inMining.difficulty);
 
-          inMining = new POWBlock(this, this.head, network.time, uncles);
-          threshold = solveByMs(inMining.difficulty);
-        }
       }
       if (network.rd.nextDouble() < threshold) {
         onFoundNewBlock();
         System.out.println("Height: " + this.head.height + " with uncles: " + uncles);
       }
+    }
+
+    private boolean mine1ms(POWBlock b) {
+      Set<POWBlock> curr = this.blocksReceivedByHeight.get(this.head.height);
+      if (inMining == null) {
+       curr.add(b);
+        inMining = new POWBlock(this, this.head, network.time, curr);
+        threshold = solveByMs(inMining.difficulty);
+      }
+      if (network.rd.nextDouble() < threshold) {
+        onFoundNewBlock();
+        System.out.println("Height: " + this.head.height + " with uncles: " + curr);
+        return true;
+      }
+      return false;
     }
 
     protected void onFoundNewBlock() {
@@ -269,31 +276,35 @@ public class ETHPoW implements Protocol {
         // Someone sent us a new block, so we're going to switch
         //  our mining to this new head
         //super.blocksReceivedByBlockId.put(b.id,b);
-        super.blocksReceivedByHeight.put(b.height, b);
-        System.out.println("Added new block " + b);
+        Set<POWBlock> pb = blocksReceivedByHeight.computeIfAbsent(b.height,k -> new HashSet<>());
+        pb.add(b);
+        blocksReceivedByHeight.put(b.height, pb);
+//        System.out.println("Added new block " + b);
         inMining = null;
       } else {
         // May be 'b' is not better than our current head but we
         //  can still use it as an uncle for the block we're mining?
-        //
-        if (b.valid) {
-          if (super.blocksReceivedByFatherId.get(b.parent.id).size() < 3) {
-            super.blocksReceivedByHeight.put(b.height, b);
+       boolean mined = mine1ms(b);
+        if (mined) {
+
+          if(isPossibleUncle(b) && !blocksReceivedByHeight.get(b.height).contains(b)){
+            blocksReceivedByHeight.get(b.height).add(b);
           }
 
         }
       }
 
-
-      if (this.blocksReceivedByBlockId.put(b.id, b) != null) {
-        //add uncle block
-      }
       return res;
     }
 
-    private boolean isPossibleUncle() {
-
-      return false;
+    private boolean isPossibleUncle(POWBlock b) {
+      //If you receive a valid block you must check it has not already been added for its height and it's not exceeding the limit of 3 (1 main block +2 Uncles at most)
+      //Check it has the same parent as the main block
+      if(head.height<2){
+        return false;
+      }
+      return blocksReceivedByFatherId.get(b.parent.id).size() < 3 &&
+              b.parent==blocksReceivedByHeight.get(b.height).iterator().next().parent;
     }
 
     double solveByMs(long difficulty) {
