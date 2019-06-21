@@ -11,6 +11,7 @@ import java.util.*;
  * Check the difficulty calculation (rounding error?) when mining add uncle add reward (depends on
  * uncle) add call to external strategy (eg. decision)
  */
+@SuppressWarnings("WeakerAccess")
 public class ETHPoW implements Protocol {
   final BlockChainNetwork<POWBlock, ETHMiningNode> network;
   final NodeBuilder nb;

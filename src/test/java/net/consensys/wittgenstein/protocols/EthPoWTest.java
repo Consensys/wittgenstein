@@ -41,13 +41,33 @@ public class EthPoWTest {
     ETHPoW.POWBlock b7 = new ETHPoW.POWBlock(null, b6, b6.proposalTime + 15000);
     Assert.assertEquals(1949480058048897L, b7.difficulty);
 
-    ETHPoW.POWBlock u1 = new ETHPoW.POWBlock(null, b7, b7.proposalTime + 11000);
-    ETHPoW.POWBlock b8 = new ETHPoW.POWBlock(null, b7, b7.proposalTime + 11000);
+    /*
+    ETHPoW.POWBlock u1 = new ETHPoW.POWBlock(null, b5, b5.proposalTime + 11000);
+    ETHPoW.POWBlock b8 = new ETHPoW.POWBlock(null, b7, b7.proposalTime + 11000 , Collections.singleton(u1));
     Assert.assertEquals(1949480192266625L, b8.difficulty);
-
+    
     ETHPoW.POWBlock b9 =
         new ETHPoW.POWBlock(null, b8, b8.proposalTime + 3000, Collections.singleton(u1));
-    Assert.assertEquals(1951384115734613L, b9.difficulty);
+    Assert.assertEquals(1951384115734613L, b9.difficulty);*/
+  }
+
+  @Test
+  public void testInitialDifficulty() {
+    // Difficulties & hashrate at block 7999565
+    // We should get an avg block generation time of 13s
+    ETHPoW.ETHMiningNode m = ep.new ETHMiningNode(rd, nb, 162 * 1024, gen);
+    long avgD = 2031093808891300L + 2028116957207141L + 2032085740451229L;
+    avgD += 2033078320257064L + 2032085956568356L + 2032085822350628L;
+    avgD /= 6;
+    double curProba = m.solveByMs(avgD);
+    int found = 0;
+    int time = 100_000_000;
+    for (int t = 0; t < time; t++) {
+      if (rd.nextDouble() < curProba) {
+        found++;
+      }
+    }
+    Assert.assertEquals(13.0, (time / (1000.0 * found)), 0.5);
   }
 
   @Test
@@ -75,10 +95,7 @@ public class EthPoWTest {
       }
     }
     double found = cur.height - gen.height;
-    if (found > 0) {
-      System.out.println("Found " + (int) found + " blocks, avg time=" + (tot / found) + "s");
-      Assert.assertEquals(13.0, (tot / found), 0.5); // todo: does it makes sense?
-    }
+    Assert.assertEquals(13.0, (tot / found), 0.5);
   }
 
   @Test
@@ -86,8 +103,12 @@ public class EthPoWTest {
     ETHPoW.ETHPoWParameters params = new ETHPoW.ETHPoWParameters(0, 0, 0, builderName, nlName, 5);
     ETHPoW p = new ETHPoW(params);
     p.init();
-    p.network().run(100000);
-    p.network().printStat(false);
+    p.network().run(30000);
+    int c0 = p.network.getNodeById(0).head.height - gen.height;
+    int c1 = p.network.getNodeById(1).head.height - gen.height;
+    int diff = Math.abs(c0 - c1);
+    int th = (c0 + c1) / 20;
+    Assert.assertTrue(diff < th);
   }
 
   //Create a new block with same parent as another block and checks block is included in chain as uncle
