@@ -43,9 +43,10 @@ public class EthPoWTest {
 
 
     ETHPoW.POWBlock u1 = new ETHPoW.POWBlock(null, b5, b5.proposalTime + 11000);
-    ETHPoW.POWBlock b8 = new ETHPoW.POWBlock(null, b7, b7.proposalTime + 11000 , Collections.singleton(u1));
+    ETHPoW.POWBlock b8 =
+        new ETHPoW.POWBlock(null, b7, b7.proposalTime + 11000, Collections.singleton(u1));
     Assert.assertEquals(1949480192266625L, b8.difficulty);
-    
+
     ETHPoW.POWBlock b9 =
         new ETHPoW.POWBlock(null, b8, b8.proposalTime + 3000, Collections.singleton(u1));
     Assert.assertEquals(1951384115734613L, b9.difficulty);

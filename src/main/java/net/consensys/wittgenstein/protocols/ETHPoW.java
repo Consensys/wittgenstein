@@ -301,7 +301,7 @@ public class ETHPoW implements Protocol {
       if (head.height < 2) {
         return false;
       }
-      if(head.height - 7 >b.height){
+      if (head.height - 7 > b.height) {
         return false;
       }
       return blocksReceivedByFatherId.get(b.parent.id).size() < 3
@@ -318,7 +318,7 @@ public class ETHPoW implements Protocol {
     }
   }
 
-  public void collectData(){
+  public void collectData() {
 
   }
 
