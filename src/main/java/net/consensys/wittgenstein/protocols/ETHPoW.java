@@ -138,7 +138,7 @@ public class ETHPoW implements Protocol {
      */
     public long calculateDifficulty(POWBlock father, int ts) {
       long gap = (ts - father.proposalTime) / 9000;
-      long y = (uncles.isEmpty() ? 1 : 2);
+      long y = (father.uncles.isEmpty() ? 1 : 2);
       long ugap = Math.max(-99, y - gap);
       long diff = (father.difficulty / 2048) * ugap;
 
@@ -301,6 +301,9 @@ public class ETHPoW implements Protocol {
       if (head.height < 2) {
         return false;
       }
+      if(head.height - 7 >b.height){
+        return false;
+      }
       return blocksReceivedByFatherId.get(b.parent.id).size() < 3
           && b.parent == blocksReceivedByHeight.get(b.height).iterator().next().parent;
     }
@@ -313,6 +316,10 @@ public class ETHPoW implements Protocol {
       double noSuccess = Math.pow(1.0 - singleHashSuccess, hpMs);
       return 1 - noSuccess;
     }
+  }
+
+  public void collectData(){
+
   }
 
   class ETHAgentMiningNode extends ETHMiningNode {
