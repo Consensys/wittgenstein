@@ -343,7 +343,7 @@ public class EthPoWTest {
     protected int extraSendDelay(ETHPoW.POWBlock mined) {
       int duration = network.time - mined.proposalTime;
       int depth = depth(mined);
-      int delay = network.rd.nextBoolean() ? 0 : 1000;
+      int delay = network.rd.nextInt(20) * 500;
       ExtraSendDelayDecision dec =
           new ExtraSendDelayDecision(mined.height, depth, mined.height + 10, duration, delay);
       addDecision(dec);
@@ -371,18 +371,21 @@ public class EthPoWTest {
 
   @Test
   public void testDelayedMiner() {
-    ETHPoW p = new ETHPoW(
-        new ETHPoW.ETHPoWParameters(builderName, nlName, 3, DelayedMiner.class.getName()));
-    p.init();
-    p.network.runH(5);
-    HashMap<ETHPoW.ETHMiningNode, Double> rs = p.network.observer.head.allRewards();
-    System.out.println(" " + p.network.observer.head.uncleRate());
-    System.out.println("" + rs);
-    final double tot = rs.values().stream().reduce(0.0, Double::sum);
-    Map<ETHPoW.ETHMiningNode, String> pc = rs.entrySet().stream().collect(Collectors
-        .toMap(Map.Entry::getKey, k -> ("" + 100 * k.getValue() / tot).substring(0, 5) + "%"));
-    System.out.println("" + pc);
+    ETHPoW.ETHPoWParameters params =
+        new ETHPoW.ETHPoWParameters(builderName, nlName, 3, DelayedMiner.class.getName());
+    for (int i = 0; i < 1; i++) {
+      ETHPoW p = new ETHPoW(params);
+      p.init();
+      p.network.runH(5);
+      HashMap<ETHPoW.ETHMiningNode, Double> rs = p.network.observer.head.allRewards();
+      System.out.println(" " + p.network.observer.head.uncleRate());
+      System.out.println("" + rs);
+      final double tot = rs.values().stream().reduce(0.0, Double::sum);
+      Map<ETHPoW.ETHMiningNode, String> pc = rs.entrySet().stream().collect(Collectors
+          .toMap(Map.Entry::getKey, k -> ("" + 100 * k.getValue() / tot).substring(0, 5) + "%"));
+      System.out.println("" + pc);
 
-    ((DelayedMiner) p.getByzantineNode()).close();
+      ((DelayedMiner) p.getByzantineNode()).close();
+    }
   }
 }

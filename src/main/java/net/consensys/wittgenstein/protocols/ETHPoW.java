@@ -2,10 +2,7 @@ package net.consensys.wittgenstein.protocols;
 
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.server.WParameters;
-import java.io.Closeable;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.math.BigInteger;
 import java.util.*;
 
@@ -486,7 +483,6 @@ public class ETHPoW implements Protocol {
     }
   }
 
-
   /**
    * Class to be extended to store decisions that will be used later to learn.
    */
@@ -512,6 +508,9 @@ public class ETHPoW implements Protocol {
       return forCSV();
     }
 
+    /**
+     * Overload this function to change the way the reward is calculated.
+     */
     public double reward(POWBlock currentHead, ETHAgentMiningNode miner) {
       return currentHead.allRewards(takenAtHeight).getOrDefault(miner, 0.0);
     }
@@ -522,18 +521,23 @@ public class ETHPoW implements Protocol {
      * List of the decision taken that we need to evaluate. Sorted by evaluation height.
      */
     private final LinkedList<Decision> decisions = new LinkedList<>();
-    private final FileOutputStream decisionStream;
+    private final PrintWriter decisionOutput;
 
     public ETHAgentMiningNode(BlockChainNetwork<POWBlock, ETHMiningNode> network, NodeBuilder nb,
         int hashPower, POWBlock genesis) {
       super(network, nb, hashPower, genesis);
       try {
-        decisionStream = new FileOutputStream("decisions.csv");
-      } catch (FileNotFoundException e) {
+        FileWriter fw = new FileWriter("decisions.csv", true);
+        BufferedWriter bw = new BufferedWriter(fw);
+        decisionOutput = new PrintWriter(bw);
+      } catch (Throwable e) {
         throw new IllegalStateException(e);
       }
     }
 
+    /**
+     * Add a decision tp the list of decisions to be evaluated.
+     */
     protected void addDecision(Decision d) {
       if (d.rewardAtHeight <= head.height) {
         throw new IllegalArgumentException("Can't calculate a reward for " + d + ", head=" + head);
@@ -541,27 +545,20 @@ public class ETHPoW implements Protocol {
       decisions.addLast(d);
     }
 
+    @Override
     public void onNewHead(POWBlock oldHead, POWBlock newHead) {
       while (!decisions.isEmpty() && decisions.peekFirst().rewardAtHeight <= newHead.height) {
         Decision cur = decisions.pollFirst();
         assert cur != null;
         double reward = cur.reward(newHead, this);
         String toWrite = cur.forCSV() + "," + reward + "\n";
-        try {
-          decisionStream.write(toWrite.getBytes());
-        } catch (IOException e) {
-          throw new IllegalStateException(e);
-        }
+        decisionOutput.write(toWrite);
       }
     }
 
     @Override
     public void close() {
-      try {
-        decisionStream.close();
-      } catch (IOException e) {
-        throw new IllegalStateException(e);
-      }
+      decisionOutput.close();
     }
   }
 }
