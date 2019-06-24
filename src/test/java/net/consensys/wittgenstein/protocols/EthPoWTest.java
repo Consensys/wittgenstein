@@ -5,64 +5,90 @@ import net.consensys.wittgenstein.core.NetworkLatency;
 import net.consensys.wittgenstein.core.NodeBuilder;
 import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
-import java.util.Collections;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class EthPoWTest {
   private ETHPoW.POWBlock gen = ETHPoW.POWBlock.createGenesis();
-  private String nlName = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
+  private String nlName = NetworkLatency.IC3NetworkLatency.class.getSimpleName();
   private String builderName =
-      RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
-  private ETHPoW ep = new ETHPoW(new ETHPoW.ETHPoWParameters(0, 0, 0, builderName, nlName, 1));
+      RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 1);
+  private ETHPoW ep = new ETHPoW(new ETHPoW.ETHPoWParameters(builderName, nlName, 4, null));
   private Random rd = new Random();
   private NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
-  private ETHPoW.ETHMiningNode m1 = ep.new ETHMiningNode(rd, nb, 1024, gen);
+  private ETHPoW.ETHMiningNode m0;
+  private ETHPoW.ETHMiningNode m1;
+  private ETHPoW.ETHMiningNode m2;
+  private ETHPoW.ETHMiningNode m3;
 
+  @Before
+  public void before() {
+    ep.init();
+    m0 = ep.network.getNodeById(0);
+    m1 = ep.network.getNodeById(1);
+    m2 = ep.network.getNodeById(2);
+    m3 = ep.network.getNodeById(3);
+  }
+
+  /**
+   * Test difficulty calculation against real data.
+   */
   @Test
   public void testDifficulty() {
     ETHPoW.POWBlock b1 = gen;
     ETHPoW.POWBlock b2 = new ETHPoW.POWBlock(null, b1, b1.proposalTime + 13000);
     Assert.assertEquals(1949482177664138L, b2.difficulty);
+    Assert.assertEquals("10591884163387748525067", b2.totalDifficulty.toString());
 
     ETHPoW.POWBlock b3 = new ETHPoW.POWBlock(null, b2, b2.proposalTime + 7000);
     Assert.assertEquals(1950434207476428L, b3.difficulty);
+    Assert.assertEquals("10591886113821956001495", b3.totalDifficulty.toString());
 
     ETHPoW.POWBlock b4 = new ETHPoW.POWBlock(null, b3, b3.proposalTime + 4000);
     Assert.assertEquals(1951386702147025L, b4.difficulty);
+    Assert.assertEquals("10591888065208658148520", b4.totalDifficulty.toString());
 
     ETHPoW.POWBlock b5 = new ETHPoW.POWBlock(null, b4, b4.proposalTime + 39000);
     Assert.assertEquals(1948528359750282L, b5.difficulty);
+    Assert.assertEquals("10591890013737017898802", b5.totalDifficulty.toString());
 
     ETHPoW.POWBlock b6 = new ETHPoW.POWBlock(null, b5, b5.proposalTime + 3000);
     Assert.assertEquals(1949479923831169L, b6.difficulty);
+    Assert.assertEquals("10591891963216941729971", b6.totalDifficulty.toString());
 
     ETHPoW.POWBlock b7 = new ETHPoW.POWBlock(null, b6, b6.proposalTime + 15000);
     Assert.assertEquals(1949480058048897L, b7.difficulty);
+    Assert.assertEquals("10591893912696999778868", b7.totalDifficulty.toString());
 
-    /*
-    ETHPoW.POWBlock u1 = new ETHPoW.POWBlock(null, b5, b5.proposalTime + 11000);
-    ETHPoW.POWBlock b8 = new ETHPoW.POWBlock(null, b7, b7.proposalTime + 11000 , Collections.singleton(u1));
+    ETHPoW.POWBlock u1 = new ETHPoW.POWBlock(null, b5, b5.proposalTime);
+    ETHPoW.POWBlock b8 =
+        new ETHPoW.POWBlock(null, b7, b7.proposalTime + 11000, Collections.singleton(u1));
     Assert.assertEquals(1949480192266625L, b8.difficulty);
-    
+    Assert.assertEquals("10591895862177192045493", b8.totalDifficulty.toString());
+
     ETHPoW.POWBlock b9 =
         new ETHPoW.POWBlock(null, b8, b8.proposalTime + 3000, Collections.singleton(u1));
-    Assert.assertEquals(1951384115734613L, b9.difficulty);*/
+    Assert.assertEquals(1951384115734613L, b9.difficulty);
+    Assert.assertEquals("10591897813561307780106", b9.totalDifficulty.toString());
   }
 
+  /**
+   * Test time to find a hash against real data.
+   */
   @Test
   public void testInitialDifficulty() {
     // Difficulties & hashrate at block 7999565
     // We should get an avg block generation time of 13s
-    ETHPoW.ETHMiningNode m = ep.new ETHMiningNode(rd, nb, 162 * 1024, gen);
+    ETHPoW.ETHMiningNode m = new ETHPoW.ETHMiningNode(ep.network, nb, 162 * 1024, gen);
     long avgD = 2031093808891300L + 2028116957207141L + 2032085740451229L;
     avgD += 2033078320257064L + 2032085956568356L + 2032085822350628L;
     avgD /= 6;
-    double curProba = m.solveByMs(avgD);
+    double curProba = m.solveByTMs(avgD);
     int found = 0;
-    int time = 100_000_000;
-    for (int t = 0; t < time; t++) {
+    int time = 200_000_000;
+    for (int t = 0; t < time; t += 10) {
       if (rd.nextDouble() < curProba) {
         found++;
       }
@@ -72,49 +98,52 @@ public class EthPoWTest {
 
   @Test
   public void testFindHash() {
-    double p = m1.solveByMs(1);
+    double p = m0.solveByTMs(1);
     Assert.assertEquals(1, p, 0.00001);
-
-    p = m1.solveByMs(gen.difficulty);
-    Assert.assertEquals(6.103513762178991E-7, p, 0.00001);
   }
 
   @Test
-  public void testBlockDuration() {
-    ETHPoW.ETHMiningNode m = ep.new ETHMiningNode(rd, nb, 150 * 1024, gen);
+  public void testBlockDurationConvergence() {
+    ETHPoW.ETHMiningNode m = new ETHPoW.ETHMiningNode(ep.network, nb, 100 * 1024, gen);
     ETHPoW.POWBlock cur = gen;
-    double curProba = m.solveByMs(cur.difficulty);
+    double curProba = m.solveByTMs(cur.difficulty);
     int tot = 0;
-    for (int t = gen.proposalTime; cur.height - gen.height < 10000; t++) {
+    long target = 10000;
+    double found = 0;
+    for (int t = gen.proposalTime; cur.height - gen.height < target; t += 10) {
       if (rd.nextDouble() < curProba) {
-        int foundIn = t / 1000 - cur.proposalTime / 1000;
-        tot += foundIn;
-        //System.out.println("Found a new block at time " + (t/1000)+" in "+foundIn+"s, difficulty was " + cur.difficulty);
+        if (cur.height > gen.height + target * .8) {
+          int foundIn = t - cur.proposalTime;
+          tot += foundIn;
+          found++;
+        }
         cur = new ETHPoW.POWBlock(m, cur, t);
-        curProba = m.solveByMs(cur.difficulty);
+        curProba = m.solveByTMs(cur.difficulty);
       }
     }
-    double found = cur.height - gen.height;
+    tot /= 1000;
     Assert.assertEquals(13.0, (tot / found), 0.5);
   }
 
   @Test
-  public void test2Miners() {
-    ETHPoW.ETHPoWParameters params = new ETHPoW.ETHPoWParameters(0, 0, 0, builderName, nlName, 5);
-    ETHPoW p = new ETHPoW(params);
-    p.init();
-    p.network().run(30000);
-    int c0 = p.network.getNodeById(0).head.height - gen.height;
-    int c1 = p.network.getNodeById(1).head.height - gen.height;
-    int diff = Math.abs(c0 - c1);
-    int th = (c0 + c1) / 20;
+  public void testMinersFairness() {
+    ep.network().run(10_000);
+    HashMap<ETHPoW.ETHMiningNode, Double> rs = m0.head.allRewards();
+    double c0 = rs.getOrDefault(m0, 0.0);
+    double c1 = rs.getOrDefault(m1, 0.0);
+    double diff = Math.abs(c0 - c1);
+    double th = (c0 + c1) / 10;
+    System.out.println(" " + m0.head.uncleRate());
     Assert.assertTrue(diff < th);
   }
 
-  //Create a new block with same parent as another block and checks block is included in chain as uncle
+  /**
+   * Create a new block with same parent as another block and checks block is included in chain as
+   * uncle
+   */
   @Test
   public void testUncles() {
-    ETHPoW.ETHPoWParameters params = new ETHPoW.ETHPoWParameters(0, 0, 0, builderName, nlName, 5);
+    ETHPoW.ETHPoWParameters params = new ETHPoW.ETHPoWParameters(builderName, nlName, 5, null);
     ETHPoW p = new ETHPoW(params);
     p.init();
     p.network().run(10000);
@@ -130,6 +159,228 @@ public class EthPoWTest {
 
     Assert.assertTrue(
         p.network.allNodes.get(1).blocksReceivedByHeight.get(uncle.height).contains(uncle));
+  }
 
+  @Test
+  public void testReward() {
+    ETHPoW.POWBlock b1 = gen;
+    ETHPoW.POWBlock b2 = new ETHPoW.POWBlock(m1, b1, b1.proposalTime + 13000);
+
+    List<ETHPoW.Reward> r = b2.rewards();
+    Assert.assertEquals(1, r.size());
+    Assert.assertEquals(2.0, r.get(0).amount, 0.001);
+    Assert.assertEquals(m1, r.get(0).who);
+
+    ETHPoW.POWBlock u = new ETHPoW.POWBlock(m2, b1, b1.proposalTime + 13000);
+    double[] ur = new double[] {1.75, 1.5, 1.25, 1.0, 0.75, 0.50, 0.25};
+    ETHPoW.POWBlock cur = b2;
+    for (int p = 0; p < 7; p++) {
+      cur = new ETHPoW.POWBlock(m1, cur, cur.proposalTime + 13000, Collections.singleton(u));
+
+      r = cur.rewards();
+      Assert.assertEquals(2, r.size());
+
+      HashMap<ETHPoW.ETHMiningNode, Double> s = new HashMap<>();
+      ETHPoW.Reward.sumRewards(s, r);
+      Assert.assertEquals(2, s.size());
+      Assert.assertEquals(2.0625, s.get(m1), 0.0000001);
+      Assert.assertEquals(ur[p], s.get(m2), 0.0000001);
+    }
+
+    cur = new ETHPoW.POWBlock(m1, b2, b2.proposalTime + 13000);
+    ETHPoW.POWBlock u2 = new ETHPoW.POWBlock(m3, cur, cur.proposalTime + 13000);
+    cur = new ETHPoW.POWBlock(m1, cur, cur.proposalTime + 13000);
+    cur = new ETHPoW.POWBlock(m1, cur, cur.proposalTime + 13000, Set.of(u, u2));
+
+    r = cur.rewards();
+    Assert.assertEquals(3, r.size());
+    HashMap<ETHPoW.ETHMiningNode, Double> s = new HashMap<>();
+    ETHPoW.Reward.sumRewards(s, r);
+    Assert.assertEquals(3, s.size());
+    Assert.assertEquals(2.0 + .0625 * 2, s.get(m1), 0.0000001);
+    Assert.assertEquals(1.25, s.get(m2), 0.0000001);
+    Assert.assertEquals(1.75, s.get(m3), 0.0000001);
+  }
+
+  @Test
+  public void testUncleSort() {
+    ETHPoW.POWBlock b1 = new ETHPoW.POWBlock(m0, gen, gen.proposalTime + 1);
+    ETHPoW.POWBlock b2 = new ETHPoW.POWBlock(m1, gen, gen.proposalTime + 1);
+
+    List<ETHPoW.POWBlock> us = new ArrayList<>();
+    us.add(b1);
+    us.add(b2);
+
+    us.sort(m0.uncleCmp);
+    Assert.assertEquals(us.get(0).producer, m0);
+
+    us.sort(m1.uncleCmp);
+    Assert.assertEquals(us.get(0).producer, m1);
+
+    Assert.assertTrue(m0.uncleCmp.compare(b1, b2) < 0);
+    Assert.assertTrue(m1.uncleCmp.compare(b1, b2) > 0);
+
+    ETHPoW.POWBlock b3 = new ETHPoW.POWBlock(m0, gen, gen.proposalTime + 1);
+    ETHPoW.POWBlock b4 = new ETHPoW.POWBlock(m0, b1, gen.proposalTime + 1);
+    Assert.assertTrue(m0.uncleCmp.compare(b3, b4) > 0);
+    Assert.assertTrue(m1.uncleCmp.compare(b3, b4) < 0);
+  }
+
+  @Test
+  public void testUncleSelection() {
+    ETHPoW.POWBlock b1 = new ETHPoW.POWBlock(m0, gen, gen.proposalTime + 1);
+    ETHPoW.POWBlock b2 = new ETHPoW.POWBlock(m0, b1, b1.proposalTime + 1);
+    ETHPoW.POWBlock b3 = new ETHPoW.POWBlock(m0, b2, b2.proposalTime + 1);
+
+    List<ETHPoW.POWBlock> bs = new ArrayList<>();
+    for (ETHPoW.POWBlock b : List.of(b1, b2, b3)) {
+      bs.add(b);
+      bs.add(new ETHPoW.POWBlock(m1, b, b.proposalTime + 1));
+      bs.add(new ETHPoW.POWBlock(m2, b, b.proposalTime + 1));
+      bs.add(new ETHPoW.POWBlock(m3, b, b.proposalTime + 1));
+    }
+
+    for (ETHPoW.POWBlock b : bs) {
+      for (ETHPoW.ETHPoWNode n : ep.network.allNodes) {
+        n.onBlock(b);
+      }
+    }
+
+    List<ETHPoW.POWBlock> us = m0.possibleUncles(b1);
+    Assert.assertEquals(0, us.size());
+
+    us = m1.possibleUncles(b1);
+    Assert.assertEquals(0, us.size());
+
+    us = m0.possibleUncles(b2);
+    Assert.assertEquals(3, us.size());
+    Assert.assertFalse(us.contains(b1));
+    Assert.assertFalse(us.contains(b2));
+
+    us = m1.possibleUncles(b2);
+    Assert.assertEquals(3, us.size());
+    Assert.assertFalse(us.contains(b1));
+    Assert.assertFalse(us.contains(b2));
+
+    us = m0.possibleUncles(b3);
+    Assert.assertEquals(6, us.size());
+    Assert.assertFalse(us.contains(b1));
+    Assert.assertFalse(us.contains(b2));
+
+    us = m1.possibleUncles(b3);
+    Assert.assertEquals(6, us.size());
+    Assert.assertFalse(us.contains(b1));
+    Assert.assertFalse(us.contains(b2));
+  }
+
+  @Test
+  public void testMiningWithUncle() {
+    ETHPoW.POWBlock b1 = new ETHPoW.POWBlock(m0, gen, gen.proposalTime + 1);
+    ETHPoW.POWBlock b2 = new ETHPoW.POWBlock(m0, b1, b1.proposalTime + 1);
+    ETHPoW.POWBlock b3 = new ETHPoW.POWBlock(m0, b2, b2.proposalTime + 1);
+    ETHPoW.POWBlock b4 = new ETHPoW.POWBlock(m0, b3, b3.proposalTime + 1);
+
+    for (ETHPoW.POWBlock b : List.of(b1, b2, b3)) {
+      m0.onBlock(b);
+      m0.onBlock(new ETHPoW.POWBlock(m1, b, b.proposalTime + 1));
+      m0.onBlock(new ETHPoW.POWBlock(m2, b, b.proposalTime + 1));
+      m0.onBlock(new ETHPoW.POWBlock(m3, b, b.proposalTime + 1));
+    }
+    m0.onBlock(b4);
+
+    ep.network.time = b4.proposalTime + 1;
+    m0.luckyMine();
+    Assert.assertEquals(2, m0.head.uncles.size()); // father is b1 for both
+    Assert.assertEquals(b2.height, m0.head.uncles.get(0).height);
+
+    ep.network.time++;
+    m0.luckyMine();
+    Assert.assertEquals(2, m0.head.uncles.size()); // fathers: b1 and b2
+
+    ep.network.time++;
+    m0.luckyMine();
+    Assert.assertEquals(2, m0.head.uncles.size()); // father is b2 for both
+    Assert.assertEquals(b3.height, m0.head.uncles.get(0).height);
+
+    ep.network.time++;
+    m0.luckyMine();
+    Assert.assertEquals(2, m0.head.uncles.size()); // father is b3 for both
+    Assert.assertEquals(b3.height + 1, m0.head.uncles.get(0).height);
+    Assert.assertEquals(b3.height + 1, m0.head.uncles.get(1).height);
+
+    ep.network.time++;
+    m0.luckyMine();
+    Assert.assertEquals(1, m0.head.uncles.size()); // father is b3
+    Assert.assertEquals(b3.height + 1, m0.head.uncles.get(0).height);
+
+    ep.network.time++;
+    m0.luckyMine();
+    Assert.assertEquals(0, m0.head.uncles.size());
+  }
+
+  static class DelayedMiner extends ETHPoW.ETHAgentMiningNode {
+
+    public DelayedMiner(BlockChainNetwork<ETHPoW.POWBlock, ETHPoW.ETHMiningNode> network,
+        NodeBuilder nb, int hashPower, ETHPoW.POWBlock genesis) {
+      super(network, nb, hashPower, genesis);
+    }
+
+    /**
+     * @return the number of blocks we mined in a row ourselves from the block 'b'
+     */
+    int depth(ETHPoW.POWBlock b) {
+      int res = 0;
+
+      while (b != null && b.producer == this) {
+        res++;
+        b = b.parent;
+      }
+
+      return res;
+    }
+
+    @Override
+    protected int extraSendDelay(ETHPoW.POWBlock mined) {
+      int duration = network.time - mined.proposalTime;
+      int depth = depth(mined);
+      int delay = network.rd.nextBoolean() ? 0 : 1000;
+      ExtraSendDelayDecision dec =
+          new ExtraSendDelayDecision(mined.height, depth, mined.height + 10, duration, delay);
+      addDecision(dec);
+      return delay;
+    }
+  }
+
+  static class ExtraSendDelayDecision extends ETHPoW.Decision {
+    final int miningDurationMs;
+    final int ownMiningDepth;
+    final int delay;
+
+    ExtraSendDelayDecision(int takenAtHeight, int ownMiningDepth, int rewardAtHeight,
+        int miningDurationMs, int delay) {
+      super(takenAtHeight, rewardAtHeight);
+      this.miningDurationMs = miningDurationMs;
+      this.ownMiningDepth = ownMiningDepth;
+      this.delay = delay;
+    }
+
+    public String forCSV() {
+      return miningDurationMs + "," + ownMiningDepth + "," + delay;
+    }
+  }
+
+  @Test
+  public void testDelayedMiner() {
+    ETHPoW p = new ETHPoW(
+        new ETHPoW.ETHPoWParameters(builderName, nlName, 3, DelayedMiner.class.getName()));
+    p.init();
+    p.network.runH(5);
+    HashMap<ETHPoW.ETHMiningNode, Double> rs = p.network.observer.head.allRewards();
+    System.out.println(" " + p.network.observer.head.uncleRate());
+    System.out.println("" + rs);
+    final double tot = rs.values().stream().reduce(0.0, Double::sum);
+    Map<ETHPoW.ETHMiningNode, String> pc = rs.entrySet().stream().collect(Collectors
+        .toMap(Map.Entry::getKey, k -> ("" + 100 * k.getValue() / tot).substring(0, 5) + "%"));
+    System.out.println("" + pc);
   }
 }

@@ -27,7 +27,7 @@ public class RegistryNodeBuilders {
   }
 
   public static Double[] tor() {
-    return new Double[] {0.0, 0.01, 0.10, 0.20, .33, .5, .6, .8};
+    return new Double[] {0.0, 0.01, 0.10, 0.20, .33, .5, .6, .8, 1.0};
   }
 
   public static Location[] locations() {

@@ -279,6 +279,14 @@ public class Network<TN extends Node> {
     runMs(seconds * 1000);
   }
 
+  public void runH(int hours) {
+    int max = (Integer.MAX_VALUE - time) / 3600_000;
+    if (hours >= max) {
+      throw new IllegalArgumentException("can't run this long: " + hours + ", max is:" + max);
+    }
+    runMs(hours * 3600_000);
+  }
+
   public boolean runMs(int ms) {
     if (ms <= 0) {
       throw new IllegalArgumentException("Should be greater than 0. ms=" + ms);

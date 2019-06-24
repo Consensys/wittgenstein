@@ -37,6 +37,7 @@ public abstract class BlockChainNode<TB extends Block> extends Node {
     Set<TB> pa = this.blocksReceivedByFatherId.computeIfAbsent(b.parent.id, k -> new HashSet<>());
     pa.add(b);
     Set<TB> ub = this.blocksReceivedByHeight.computeIfAbsent(b.height, k -> new HashSet<>());
+    ub.add(b);
     head = best(head, b);
 
     return true;
