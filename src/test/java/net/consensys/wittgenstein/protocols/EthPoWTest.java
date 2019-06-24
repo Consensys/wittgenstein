@@ -87,7 +87,7 @@ public class EthPoWTest {
     avgD /= 6;
     double curProba = m.solveByTMs(avgD);
     int found = 0;
-    int time = 200_000_000;
+    int time = 300_000_000;
     for (int t = 0; t < time; t += 10) {
       if (rd.nextDouble() < curProba) {
         found++;

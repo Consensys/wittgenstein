@@ -497,7 +497,6 @@ public class ETHPoW implements Protocol {
     }
   }
 
-
   public static class ETHAgentMiningNode extends ETHMiningNode implements Closeable {
     private final LinkedList<Decision> decisions = new LinkedList<>();
     private final FileOutputStream decisionStream;
