@@ -382,5 +382,7 @@ public class EthPoWTest {
     Map<ETHPoW.ETHMiningNode, String> pc = rs.entrySet().stream().collect(Collectors
         .toMap(Map.Entry::getKey, k -> ("" + 100 * k.getValue() / tot).substring(0, 5) + "%"));
     System.out.println("" + pc);
+
+    ((DelayedMiner) p.getByzantineNode()).close();
   }
 }

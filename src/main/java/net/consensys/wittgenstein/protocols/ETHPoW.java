@@ -65,6 +65,13 @@ public class ETHPoW implements Protocol {
     return new ETHPoW(params);
   }
 
+  public ETHMiningNode getByzantineNode() {
+    if (params.byzClassName == null) {
+      throw new IllegalArgumentException("no byzantine node in this network");
+    }
+    return network.getNodeById(1); // We decided that the bad node will always be at pos 1.
+  }
+
   @Override
   public void init() {
     for (int i = 0; i < params.numberOfMiners; i++) {
@@ -298,24 +305,6 @@ public class ETHPoW implements Protocol {
     }
   }
 
-
-  public static abstract class Decision {
-    final int takenAtHeight;
-    final int rewardAtHeight;
-
-    public Decision(int takenAtHeight, int rewardAtHeight) {
-      this.takenAtHeight = takenAtHeight;
-      this.rewardAtHeight = rewardAtHeight;
-    }
-
-    abstract String forCSV();
-
-    public String toString() {
-      return forCSV();
-    }
-  }
-
-
   public static class ETHMiningNode extends ETHPoWNode {
     protected int hashPower; // hash power in GH/s
     protected POWBlock inMining;
@@ -497,7 +486,41 @@ public class ETHPoW implements Protocol {
     }
   }
 
+
+  /**
+   * Class to be extended to store decisions that will be used later to learn.
+   */
+  public static abstract class Decision {
+    final int takenAtHeight;
+
+    /**
+     * We will calculate the reward and store the decision when the head reach this point.
+     */
+    final int rewardAtHeight;
+
+    public Decision(int takenAtHeight, int rewardAtHeight) {
+      this.takenAtHeight = takenAtHeight;
+      this.rewardAtHeight = rewardAtHeight;
+    }
+
+    /**
+     * Should return the fields to be store in a CSV like format.
+     */
+    abstract String forCSV();
+
+    public String toString() {
+      return forCSV();
+    }
+
+    public double reward(POWBlock currentHead, ETHAgentMiningNode miner) {
+      return currentHead.allRewards(takenAtHeight).getOrDefault(miner, 0.0);
+    }
+  }
+
   public static class ETHAgentMiningNode extends ETHMiningNode implements Closeable {
+    /**
+     * List of the decision taken that we need to evaluate. Sorted by evaluation height.
+     */
     private final LinkedList<Decision> decisions = new LinkedList<>();
     private final FileOutputStream decisionStream;
 
@@ -522,7 +545,7 @@ public class ETHPoW implements Protocol {
       while (!decisions.isEmpty() && decisions.peekFirst().rewardAtHeight <= newHead.height) {
         Decision cur = decisions.pollFirst();
         assert cur != null;
-        double reward = newHead.allRewards(cur.takenAtHeight).getOrDefault(this, 0.0);
+        double reward = cur.reward(newHead, this);
         String toWrite = cur.forCSV() + "," + reward + "\n";
         try {
           decisionStream.write(toWrite.getBytes());
