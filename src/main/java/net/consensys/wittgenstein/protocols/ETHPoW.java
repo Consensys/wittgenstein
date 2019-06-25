@@ -25,13 +25,15 @@ public class ETHPoW implements Protocol {
     private final String networkLatencyName;
     private final int numberOfMiners;
     private final String byzClassName;
+    private final double byzMiningRatio;
 
     public ETHPoWParameters(String nodeBuilderName, String networkLatencyName, int numberOfMiners,
-        String byzClassName) {
+        String byzClassName, double byzMiningRatio) {
       this.nodeBuilderName = nodeBuilderName;
       this.networkLatencyName = networkLatencyName;
       this.numberOfMiners = numberOfMiners;
-      this.byzClassName = byzClassName;
+      this.byzClassName = byzClassName == null || byzClassName.isEmpty() ? null : byzClassName;
+      this.byzMiningRatio = this.byzClassName == null ? 0 : byzMiningRatio;
     }
 
     public ETHPoWParameters() {
@@ -39,6 +41,7 @@ public class ETHPoW implements Protocol {
       networkLatencyName = null;
       numberOfMiners = 1;
       byzClassName = null;
+      byzMiningRatio = 0;
     }
   }
 
@@ -71,19 +74,23 @@ public class ETHPoW implements Protocol {
 
   @Override
   public void init() {
+    final int totalHashPower = 200 * 1024;
+    final int byzHashPower = (int) (totalHashPower * params.byzMiningRatio);
+    final int honestMiners = byzHashPower == 0 ? params.numberOfMiners : params.numberOfMiners - 1;
+    final int honestHashPower = (totalHashPower - byzHashPower) / honestMiners;
     for (int i = 0; i < params.numberOfMiners; i++) {
       ETHMiningNode cur;
       if (i == 1 && params.byzClassName != null && params.byzClassName.length() > 0) {
-        Class<?> clazz = null;
+        Class<?> clazz;
         try {
           clazz = Class.forName(params.byzClassName);
-          cur = (ETHMiningNode) clazz.getConstructors()[0].newInstance(network, nb,
-              (200 / params.numberOfMiners) * 1024, this.genesis);
+          cur = (ETHMiningNode) clazz.getConstructors()[0].newInstance(network, nb, byzHashPower,
+              this.genesis);
         } catch (Throwable e) {
           throw new IllegalArgumentException(e);
         }
       } else {
-        cur = new ETHMiningNode(network, nb, (200 / params.numberOfMiners) * 1024, this.genesis);
+        cur = new ETHMiningNode(network, nb, honestHashPower, this.genesis);
       }
       if (i == 0) {
         network.addObserver(cur);
@@ -188,13 +195,31 @@ public class ETHPoW implements Protocol {
     }
 
     public HashMap<ETHMiningNode, Double> allRewards(int untilHeight) {
-      POWBlock cur = this;
       HashMap<ETHMiningNode, Double> res = new HashMap<>();
+      allRewards(res, untilHeight);
+      return res;
+    }
+
+    public void allRewards(HashMap<ETHMiningNode, Double> res, int untilHeight) {
+      POWBlock cur = this;
       while (cur.producer != null && cur.height >= untilHeight - 1) {
         Reward.sumRewards(res, cur.rewards());
         cur = cur.parent;
       }
-      return res;
+    }
+
+    public void allRewards(HashMap<Integer, Double> sum) {
+      POWBlock cur = this;
+      while (cur.producer != null) {
+
+        for (Reward r : cur.rewards()) {
+          double cR = sum.getOrDefault(r.who.nodeId, 0.0);
+          cR += r.amount;
+          sum.put(r.who.nodeId, cR);
+        }
+
+        cur = cur.parent;
+      }
     }
 
     public double uncleRate() {
