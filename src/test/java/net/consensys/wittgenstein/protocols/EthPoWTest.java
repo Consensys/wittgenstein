@@ -85,20 +85,21 @@ public class EthPoWTest {
     long avgD = 2031093808891300L + 2028116957207141L + 2032085740451229L;
     avgD += 2033078320257064L + 2032085956568356L + 2032085822350628L;
     avgD /= 6;
-    double curProba = m.solveByTMs(avgD);
+    double curProba = m.solveIn10ms(avgD);
     int found = 0;
-    int time = 300_000_000;
+    int time = 500_000_000;
     for (int t = 0; t < time; t += 10) {
       if (rd.nextDouble() < curProba) {
         found++;
       }
     }
-    Assert.assertEquals(13.0, (time / (1000.0 * found)), 0.5);
+    double avg = (time / (1000.0 * found));
+    Assert.assertEquals("avg=" + avg, 13.0, avg, 0.5);
   }
 
   @Test
   public void testFindHash() {
-    double p = m0.solveByTMs(1);
+    double p = m0.solveIn10ms(1);
     Assert.assertEquals(1, p, 0.00001);
   }
 
@@ -106,7 +107,7 @@ public class EthPoWTest {
   public void testBlockDurationConvergence() {
     ETHPoW.ETHMiningNode m = new ETHPoW.ETHMiningNode(ep.network, nb, 100 * 1024, gen);
     ETHPoW.POWBlock cur = gen;
-    double curProba = m.solveByTMs(cur.difficulty);
+    double curProba = m.solveIn10ms(cur.difficulty);
     int tot = 0;
     long target = 10000;
     double found = 0;
@@ -118,7 +119,7 @@ public class EthPoWTest {
           found++;
         }
         cur = new ETHPoW.POWBlock(m, cur, t);
-        curProba = m.solveByTMs(cur.difficulty);
+        curProba = m.solveIn10ms(cur.difficulty);
       }
     }
     tot /= 1000;
@@ -318,6 +319,40 @@ public class EthPoWTest {
     Assert.assertEquals(0, m0.head.uncles.size());
   }
 
+  private class EmptyDecision extends ETHPoW.Decision {
+    final int p;
+
+    public EmptyDecision(int rewardAtHeight) {
+      super(1, gen.height + 1 + rewardAtHeight);
+      p = rewardAtHeight;
+    }
+
+    @Override
+    String forCSV() {
+      return "" + p;
+    }
+  }
+
+  @Test
+  public void testDecisionSorting() {
+    ETHPoW.ETHAgentMiningNode n = new ETHPoW.ETHAgentMiningNode(ep.network, nb, 1, gen);
+    n.addDecision(new EmptyDecision(100));
+    n.addDecision(new EmptyDecision(50));
+    n.addDecision(new EmptyDecision(125));
+    n.addDecision(new EmptyDecision(25));
+    n.addDecision(new EmptyDecision(120));
+    n.addDecision(new EmptyDecision(75));
+    n.addDecision(new EmptyDecision(35));
+    n.addDecision(new EmptyDecision(1));
+
+    Assert.assertEquals(8, n.decisions.size());
+    int cur = 0;
+    for (ETHPoW.Decision f : n.decisions) {
+      Assert.assertTrue("cur=" + cur + ", f=" + f, f.rewardAtHeight >= cur);
+      cur = f.rewardAtHeight;
+    }
+  }
+
   static class DelayedMiner extends ETHPoW.ETHAgentMiningNode {
 
     public DelayedMiner(BlockChainNetwork<ETHPoW.POWBlock, ETHPoW.ETHMiningNode> network,
@@ -386,6 +421,31 @@ public class EthPoWTest {
       System.out.println("" + pc);
 
       ((DelayedMiner) p.getByzantineNode()).close();
+    }
+  }
+
+
+  static class SelfishMiner extends ETHPoW.ETHMiningNode {
+
+    int myHead() {
+      return bestMinedBlock == null ? 0 : bestMinedBlock.height;
+    }
+
+    int theirHead() {
+      ETHPoW.POWBlock b = head;
+      while (b.producer != this) {
+        b = b.parent;
+      }
+      return b.height;
+    }
+
+    int delta() {
+      return myHead() - theirHead();
+    }
+
+    public SelfishMiner(BlockChainNetwork<ETHPoW.POWBlock, ETHPoW.ETHMiningNode> network,
+        NodeBuilder nb, int hashPower, ETHPoW.POWBlock genesis) {
+      super(network, nb, hashPower, genesis);
     }
   }
 }

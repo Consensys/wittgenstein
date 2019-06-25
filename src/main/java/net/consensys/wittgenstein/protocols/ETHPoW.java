@@ -303,18 +303,18 @@ public class ETHPoW implements Protocol {
   }
 
   public static class ETHMiningNode extends ETHPoWNode {
-    protected int hashPower; // hash power in GH/s
+    protected int hashPowerGHs; // hash power in GH/s
     protected POWBlock inMining;
     protected POWBlock bestMinedBlock;
     protected Set<POWBlock> minedToSend = new HashSet<>();
-    protected double threshold;
-    protected UncleCmp uncleCmp = new UncleCmp();
+    private double threshold;
+    UncleCmp uncleCmp = new UncleCmp();
 
 
     public ETHMiningNode(BlockChainNetwork<POWBlock, ETHMiningNode> network, NodeBuilder nb,
-        int hashPower, POWBlock genesis) {
+        int hashPowerGHs, POWBlock genesis) {
       super(network, nb, genesis);
-      this.hashPower = hashPower;
+      this.hashPowerGHs = hashPowerGHs;
     }
 
     protected boolean includeUncle(POWBlock uncle) {
@@ -364,15 +364,16 @@ public class ETHPoW implements Protocol {
       return res;
     }
 
+    /**
+     * Sort the uncle. Between two uncles:</br>
+     * - if we produced one of them, we include it first</br>
+     * - if we produced two of them, we take the one with the higher height (better reward)</br>
+     * - if we produced none of them, we take the one with the smallest height (opportunity to
+     * include the other later)</br>
+     */
     class UncleCmp implements Comparator<POWBlock> {
-
       @Override
       public int compare(POWBlock o1, POWBlock o2) {
-        // Between two uncles:
-        //  if we produced one of them, we include it first
-        //  if we produced two of them, we take the one with the higher height (better reward)
-        //  if we produced none of them, we take the one with the smallest height (opportunity to include the other later)
-
         if (o1.producer == ETHMiningNode.this) {
           if (o2.producer != o1.producer) {
             return -1;
@@ -389,7 +390,10 @@ public class ETHPoW implements Protocol {
       }
     }
 
-    boolean mine10ms() {
+    /**
+     * Mine for 10 milliseconds.
+     */
+    private boolean mine10ms() {
       if (inMining == null) {
         startNewMining(head);
       }
@@ -401,14 +405,17 @@ public class ETHPoW implements Protocol {
       }
     }
 
-    void startNewMining(POWBlock father) {
+    private void startNewMining(POWBlock father) {
       List<POWBlock> us = possibleUncles(father);
       Set<POWBlock> uss = us.isEmpty() ? Collections.emptySet()
           : us.size() <= 2 ? new HashSet<>(us) : new HashSet<>(us.subList(0, 2));
       inMining = new POWBlock(this, father, network.time, uss);
-      threshold = solveByTMs(inMining.difficulty);
+      threshold = solveIn10ms(inMining.difficulty);
     }
 
+    /**
+     * For tests: we force a successful mining.
+     */
     protected void luckyMine() {
       if (!mine10ms()) {
         threshold = 10;
@@ -416,7 +423,7 @@ public class ETHPoW implements Protocol {
       }
     }
 
-    protected void sendBlock(POWBlock mined) {
+    private void sendBlock(POWBlock mined) {
       int sendTime = network.time + 1 + extraSendDelay(mined);
       if (sendTime < 1) {
         throw new IllegalArgumentException("extraSendDelay(" + mined + ") sent a negative time");
@@ -424,7 +431,7 @@ public class ETHPoW implements Protocol {
       network.sendAll(new BlockChainNetwork.SendBlock<>(mined), sendTime, this);
     }
 
-    protected void onFoundNewBlock(POWBlock mined) {
+    private void onFoundNewBlock(POWBlock mined) {
       bestMinedBlock = (bestMinedBlock == null ? mined : best(bestMinedBlock, mined));
 
       if (sendMinedBlock(mined)) {
@@ -436,10 +443,10 @@ public class ETHPoW implements Protocol {
       inMining = null;
     }
 
-    public void onNewHead(POWBlock oldHead, POWBlock newHead) {}
+    protected void onNewHead(POWBlock oldHead, POWBlock newHead) {}
 
     @Override
-    public boolean onBlock(POWBlock b) {
+    final public boolean onBlock(POWBlock b) {
       POWBlock oldHead = head;
       if (!super.onBlock(b)) {
         return false;
@@ -473,9 +480,11 @@ public class ETHPoW implements Protocol {
       return true;
     }
 
-    double solveByTMs(long difficulty) {
-      // total hashpower  = ~200K GH/s
-      double hpTMs = (hashPower * 1024.0 * 1024 * 1024) / 100.0; // hashPower is in GH/s
+    /**
+     * Calculate the probability for this node to find the right hash in 10ms.
+     */
+    double solveIn10ms(long difficulty) {
+      double hpTMs = (hashPowerGHs * 1024.0 * 1024 * 1024) / 100.0;
 
       double singleHashSuccess = (1.0 / difficulty);
       double noSuccess = Math.pow(1.0 - singleHashSuccess, hpTMs);
@@ -520,7 +529,7 @@ public class ETHPoW implements Protocol {
     /**
      * List of the decision taken that we need to evaluate. Sorted by evaluation height.
      */
-    private final LinkedList<Decision> decisions = new LinkedList<>();
+    final LinkedList<Decision> decisions = new LinkedList<>();
     private final PrintWriter decisionOutput;
 
     public ETHAgentMiningNode(BlockChainNetwork<POWBlock, ETHMiningNode> network, NodeBuilder nb,
@@ -538,15 +547,27 @@ public class ETHPoW implements Protocol {
     /**
      * Add a decision tp the list of decisions to be evaluated.
      */
-    protected void addDecision(Decision d) {
+    final protected void addDecision(Decision d) {
       if (d.rewardAtHeight <= head.height) {
         throw new IllegalArgumentException("Can't calculate a reward for " + d + ", head=" + head);
       }
-      decisions.addLast(d);
+
+      if (decisions.isEmpty() || decisions.peekLast().rewardAtHeight <= d.rewardAtHeight) {
+        decisions.addLast(d);
+      } else {
+        ListIterator<Decision> it = decisions.listIterator(decisions.size());
+        while (it.hasPrevious()) {
+          if (it.previous().rewardAtHeight <= d.rewardAtHeight) {
+            it.next();
+            break;
+          }
+        }
+        it.add(d);
+      }
     }
 
     @Override
-    public void onNewHead(POWBlock oldHead, POWBlock newHead) {
+    final protected void onNewHead(POWBlock oldHead, POWBlock newHead) {
       while (!decisions.isEmpty() && decisions.peekFirst().rewardAtHeight <= newHead.height) {
         Decision cur = decisions.pollFirst();
         assert cur != null;
