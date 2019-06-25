@@ -322,13 +322,13 @@ public class EthPoWTest {
   private class EmptyDecision extends ETHPoW.Decision {
     final int p;
 
-    public EmptyDecision(int rewardAtHeight) {
+    EmptyDecision(int rewardAtHeight) {
       super(1, gen.height + 1 + rewardAtHeight);
       p = rewardAtHeight;
     }
 
     @Override
-    String forCSV() {
+    public String forCSV() {
       return "" + p;
     }
   }
@@ -360,20 +360,6 @@ public class EthPoWTest {
       super(network, nb, hashPower, genesis);
     }
 
-    /**
-     * @return the number of blocks we mined in a row ourselves from the block 'b'
-     */
-    int depth(ETHPoW.POWBlock b) {
-      int res = 0;
-
-      while (b != null && b.producer == this) {
-        res++;
-        b = b.parent;
-      }
-
-      return res;
-    }
-
     @Override
     protected int extraSendDelay(ETHPoW.POWBlock mined) {
       int duration = network.time - mined.proposalTime;
@@ -385,6 +371,7 @@ public class EthPoWTest {
       return delay;
     }
   }
+
 
   static class ExtraSendDelayDecision extends ETHPoW.Decision {
     final int miningDurationMs;
@@ -404,10 +391,9 @@ public class EthPoWTest {
     }
   }
 
-  @Test
-  public void testDelayedMiner() {
+  private void testBadMiner(Class<?> miner) {
     ETHPoW.ETHPoWParameters params =
-        new ETHPoW.ETHPoWParameters(builderName, nlName, 3, DelayedMiner.class.getName());
+        new ETHPoW.ETHPoWParameters(builderName, nlName, 3, miner.getName());
     for (int i = 0; i < 1; i++) {
       ETHPoW p = new ETHPoW(params);
       p.init();
@@ -420,32 +406,106 @@ public class EthPoWTest {
           .toMap(Map.Entry::getKey, k -> ("" + 100 * k.getValue() / tot).substring(0, 5) + "%"));
       System.out.println("" + pc);
 
-      ((DelayedMiner) p.getByzantineNode()).close();
+      p.getByzantineNode().close();
     }
+  }
+
+  @Test
+  public void testDelayedMiner() {
+    testBadMiner(DelayedMiner.class);
+  }
+
+  @Test
+  public void testSelfishMiner() {
+    testBadMiner(SelfishMiner.class);
   }
 
 
   static class SelfishMiner extends ETHPoW.ETHMiningNode {
-
-    int myHead() {
-      return bestMinedBlock == null ? 0 : bestMinedBlock.height;
-    }
-
-    int theirHead() {
-      ETHPoW.POWBlock b = head;
-      while (b.producer != this) {
-        b = b.parent;
-      }
-      return b.height;
-    }
-
-    int delta() {
-      return myHead() - theirHead();
-    }
+    ETHPoW.POWBlock privateMinerBlock;
 
     public SelfishMiner(BlockChainNetwork<ETHPoW.POWBlock, ETHPoW.ETHMiningNode> network,
         NodeBuilder nb, int hashPower, ETHPoW.POWBlock genesis) {
       super(network, nb, hashPower, genesis);
+    }
+
+    /**
+     * We maintain the publicHead, eg, the head as seen by others.
+     */
+    private ETHPoW.POWBlock publicHead() {
+      ETHPoW.POWBlock best = genesis;
+      for (ETHPoW.ETHPoWNode n : network.allNodes) {
+        if (n != this && n.head.height > best.height) {
+          best = n.head;
+        }
+      }
+      // todo: we miss the heads in transit if we have just sent a block.
+      return best;
+    }
+
+    int myHead() {
+      return privateMinerBlock == null ? 0 : privateMinerBlock.height;
+    }
+
+    @Override
+    protected boolean sendMinedBlock(ETHPoW.POWBlock mined) {
+      return false;
+    }
+
+    @Override
+    protected void onMinedBlock(ETHPoW.POWBlock mined) {
+      privateMinerBlock = privateMinerBlock == null ? mined : best(privateMinerBlock, mined);
+
+      if (privateMinerBlock != mined) {
+        throw new IllegalStateException(
+            "privateMinerBlock=" + privateMinerBlock + ", mined=" + mined);
+      }
+
+      ETHPoW.POWBlock theirHead = publicHead();
+      int deltaP = myHead() - theirHead.height;
+      if (deltaP == 0 && depth(privateMinerBlock) == 2) {
+        sendBlock(privateMinerBlock.parent);
+        sendBlock(privateMinerBlock);
+        if (!minedToSend.isEmpty()) {
+          throw new IllegalStateException("minedToSend should be empty:" + minedToSend);
+        }
+      }
+
+      startNewMining(privateMinerBlock);
+    }
+
+    @Override
+    protected void onReceivedBlock(ETHPoW.POWBlock rcv) {
+      ETHPoW.POWBlock theirHead = publicHead();
+      if (rcv != theirHead) {
+        return;
+      }
+
+      int deltaP = myHead() - theirHead.height;
+      if (deltaP <= 0) {
+        sendAllMined();
+        startNewMining(head);
+      } else {
+        ETHPoW.POWBlock toSend;
+        if (deltaP == 1) {
+          toSend = privateMinerBlock;
+        } else if (deltaP == 2) {
+          toSend = privateMinerBlock.parent;
+        } else {
+          toSend = privateMinerBlock;
+          while (minedToSend.contains(toSend.parent)) {
+            toSend = toSend.parent;
+            assert toSend != null;
+          }
+        }
+        if (!minedToSend.contains(toSend)) {
+          throw new IllegalStateException(toSend + " not in " + minedToSend);
+        }
+        do {
+          sendBlock(toSend);
+          toSend = toSend.parent;
+        } while (toSend != null && toSend.producer == this && minedToSend.contains(toSend));
+      }
     }
   }
 }

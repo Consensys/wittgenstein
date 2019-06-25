@@ -305,7 +305,6 @@ public class ETHPoW implements Protocol {
   public static class ETHMiningNode extends ETHPoWNode {
     protected int hashPowerGHs; // hash power in GH/s
     protected POWBlock inMining;
-    protected POWBlock bestMinedBlock;
     protected Set<POWBlock> minedToSend = new HashSet<>();
     private double threshold;
     UncleCmp uncleCmp = new UncleCmp();
@@ -325,16 +324,33 @@ public class ETHPoW implements Protocol {
       return true;
     }
 
-    protected boolean sendMinedBlock(POWBlock received, POWBlock mined) {
-      return true;
-    }
-
     protected int extraSendDelay(POWBlock mined) {
       return 0;
     }
 
     protected boolean switchMining(POWBlock rcv) {
       return true;
+    }
+
+    protected void onNewHead(POWBlock oldHead, POWBlock newHead) {}
+
+    protected void onMinedBlock(POWBlock mined) {}
+
+    protected void onReceivedBlock(POWBlock rcv) {}
+
+
+    /**
+     * @return the number of blocks we mined in a row ourselves from the block 'b'
+     */
+    int depth(ETHPoW.POWBlock b) {
+      int res = 0;
+
+      while (b != null && b.producer == this) {
+        res++;
+        b = b.parent;
+      }
+
+      return res;
     }
 
     /**
@@ -405,7 +421,7 @@ public class ETHPoW implements Protocol {
       }
     }
 
-    private void startNewMining(POWBlock father) {
+    protected void startNewMining(POWBlock father) {
       List<POWBlock> us = possibleUncles(father);
       Set<POWBlock> uss = us.isEmpty() ? Collections.emptySet()
           : us.size() <= 2 ? new HashSet<>(us) : new HashSet<>(us.subList(0, 2));
@@ -423,41 +439,52 @@ public class ETHPoW implements Protocol {
       }
     }
 
-    private void sendBlock(POWBlock mined) {
+    protected void sendBlock(POWBlock mined) {
+      if (mined.producer != this) {
+        throw new IllegalArgumentException(
+            "logic error: you're not the producer of this block" + mined);
+      }
       int sendTime = network.time + 1 + extraSendDelay(mined);
       if (sendTime < 1) {
         throw new IllegalArgumentException("extraSendDelay(" + mined + ") sent a negative time");
       }
       network.sendAll(new BlockChainNetwork.SendBlock<>(mined), sendTime, this);
+      minedToSend.remove(mined);
+    }
+
+    protected void sendAllMined() {
+      List<POWBlock> all = new ArrayList<>(minedToSend);
+      minedToSend.clear();
+      for (POWBlock b : all) {
+        sendMinedBlock(b);
+      }
     }
 
     private void onFoundNewBlock(POWBlock mined) {
-      bestMinedBlock = (bestMinedBlock == null ? mined : best(bestMinedBlock, mined));
+      POWBlock oldHead = head;
+      inMining = null;
 
       if (sendMinedBlock(mined)) {
         sendBlock(mined);
       } else {
         minedToSend.add(mined);
       }
-      onBlock(mined);
-      inMining = null;
+      if (!super.onBlock(mined)) {
+        throw new IllegalStateException("invalid mined block:" + mined);
+      }
+
+      if (mined == head) {
+        onNewHead(oldHead, mined);
+      }
+      onMinedBlock(mined);
     }
 
-    protected void onNewHead(POWBlock oldHead, POWBlock newHead) {}
 
     @Override
     final public boolean onBlock(POWBlock b) {
       POWBlock oldHead = head;
       if (!super.onBlock(b)) {
         return false;
-      }
-
-      for (Iterator<POWBlock> it = minedToSend.iterator(); it.hasNext(); it.next()) {
-        POWBlock bns = it.next();
-        if (sendMinedBlock(b, bns)) {
-          sendBlock(bns);
-          it.remove();
-        }
       }
 
       if (b == head) {
@@ -477,6 +504,7 @@ public class ETHPoW implements Protocol {
         }
       }
 
+      onReceivedBlock(b);
       return true;
     }
 
@@ -511,7 +539,7 @@ public class ETHPoW implements Protocol {
     /**
      * Should return the fields to be store in a CSV like format.
      */
-    abstract String forCSV();
+    public abstract String forCSV();
 
     public String toString() {
       return forCSV();
