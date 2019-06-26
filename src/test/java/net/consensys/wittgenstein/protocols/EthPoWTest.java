@@ -18,10 +18,10 @@ public class EthPoWTest {
   private ETHPoW ep = new ETHPoW(new ETHPoW.ETHPoWParameters(builderName, nlName, 4, null, 0));
   private Random rd = new Random();
   private NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
-  private ETHPoW.ETHMiningNode m0;
-  private ETHPoW.ETHMiningNode m1;
-  private ETHPoW.ETHMiningNode m2;
-  private ETHPoW.ETHMiningNode m3;
+  private ETHMiner m0;
+  private ETHMiner m1;
+  private ETHMiner m2;
+  private ETHMiner m3;
 
   @Before
   public void before() {
@@ -81,7 +81,7 @@ public class EthPoWTest {
   public void testInitialDifficulty() {
     // Difficulties & hashrate at block 7999565
     // We should get an avg block generation time of 13s
-    ETHPoW.ETHMiningNode m = new ETHPoW.ETHMiningNode(ep.network, nb, 162 * 1024, gen);
+    ETHMiner m = new ETHMiner(ep.network, nb, 162 * 1024, gen);
     long avgD = 2031093808891300L + 2028116957207141L + 2032085740451229L;
     avgD += 2033078320257064L + 2032085956568356L + 2032085822350628L;
     avgD /= 6;
@@ -105,7 +105,7 @@ public class EthPoWTest {
 
   @Test
   public void testBlockDurationConvergence() {
-    ETHPoW.ETHMiningNode m = new ETHPoW.ETHMiningNode(ep.network, nb, 100 * 1024, gen);
+    ETHMiner m = new ETHMiner(ep.network, nb, 100 * 1024, gen);
     ETHPoW.POWBlock cur = gen;
     double curProba = m.solveIn10ms(cur.difficulty);
     int tot = 0;
@@ -129,7 +129,7 @@ public class EthPoWTest {
   @Test
   public void testMinersFairness() {
     ep.network().run(10_000);
-    HashMap<ETHPoW.ETHMiningNode, Double> rs = m0.head.allRewards();
+    HashMap<ETHMiner, Double> rs = m0.head.allRewards();
     double c0 = rs.getOrDefault(m0, 0.0);
     double c1 = rs.getOrDefault(m1, 0.0);
     double diff = Math.abs(c0 - c1);
@@ -148,7 +148,7 @@ public class EthPoWTest {
     ETHPoW p = new ETHPoW(params);
     p.init();
     p.network().run(10000);
-    ETHPoW.ETHMiningNode m = p.network.observer;
+    ETHMiner m = p.network.observer;
     int timestamp = p.network().time;
     Set<ETHPoW.POWBlock> main = p.network.observer.blocksReceivedByHeight.get(gen.height + 2);
     ETHPoW.POWBlock father = main.iterator().next().parent;
@@ -181,7 +181,7 @@ public class EthPoWTest {
       r = cur.rewards();
       Assert.assertEquals(2, r.size());
 
-      HashMap<ETHPoW.ETHMiningNode, Double> s = new HashMap<>();
+      HashMap<ETHMiner, Double> s = new HashMap<>();
       ETHPoW.Reward.sumRewards(s, r);
       Assert.assertEquals(2, s.size());
       Assert.assertEquals(2.0625, s.get(m1), 0.0000001);
@@ -195,7 +195,7 @@ public class EthPoWTest {
 
     r = cur.rewards();
     Assert.assertEquals(3, r.size());
-    HashMap<ETHPoW.ETHMiningNode, Double> s = new HashMap<>();
+    HashMap<ETHMiner, Double> s = new HashMap<>();
     ETHPoW.Reward.sumRewards(s, r);
     Assert.assertEquals(3, s.size());
     Assert.assertEquals(2.0 + .0625 * 2, s.get(m1), 0.0000001);
@@ -335,7 +335,7 @@ public class EthPoWTest {
 
   @Test
   public void testDecisionSorting() {
-    ETHPoW.ETHAgentMiningNode n = new ETHPoW.ETHAgentMiningNode(ep.network, nb, 1, gen);
+    ETHAgentMiner n = new ETHAgentMiner(ep.network, nb, 1, gen);
     n.addDecision(new EmptyDecision(100));
     n.addDecision(new EmptyDecision(50));
     n.addDecision(new EmptyDecision(125));
@@ -353,10 +353,10 @@ public class EthPoWTest {
     }
   }
 
-  static class DelayedMiner extends ETHPoW.ETHAgentMiningNode {
+  static class DelayedMiner extends ETHAgentMiner {
 
-    public DelayedMiner(BlockChainNetwork<ETHPoW.POWBlock, ETHPoW.ETHMiningNode> network,
-        NodeBuilder nb, int hashPower, ETHPoW.POWBlock genesis) {
+    public DelayedMiner(BlockChainNetwork<ETHPoW.POWBlock, ETHMiner> network, NodeBuilder nb,
+        int hashPower, ETHPoW.POWBlock genesis) {
       super(network, nb, hashPower, genesis);
     }
 
@@ -392,25 +392,31 @@ public class EthPoWTest {
   }
 
   private void testBadMiner(Class<?> miner) {
-    ETHPoW.ETHPoWParameters params =
-        new ETHPoW.ETHPoWParameters(builderName, nlName, 2, miner.getName(), 0.40);
-    HashMap<Integer, Double> rewards = new HashMap<>();
+    for (double pow : new double[] {0.20}) {
+      ETHPoW.ETHPoWParameters params =
+          new ETHPoW.ETHPoWParameters(builderName, nlName, 10, miner.getName(), pow);
+      HashMap<Integer, Double> rewards = new HashMap<>();
 
-    for (int i = 1; i <= 1; i++) {
-      ETHPoW p = new ETHPoW(params);
-      p.network.rd.setSeed(i);
-      p.init();
-      p.network.runH(5);
+      ETHPoW p;
+      double ur = 0;
+      for (int i = 1; i <= 1; i++) {
+        p = new ETHPoW(params);
+        p.network.rd.setSeed(i);
+        p.init();
+        p.network.runH(5);
 
-      p.network.observer.head.allRewards(rewards);
-      System.out.println("Uncle rate for round " + i + ": " + p.network.observer.head.uncleRate());
-      System.out.println("Rewards for all rounds: " + rewards);
+        // We skip the first blocks: the system is starting and is tuning the difficulty & so on.
+        p.network.observer.head.allRewardsById(rewards, p.genesis.height + 1000);
+        ur += p.network.observer.head.uncleRate();
+
+        p.getByzantineNode().close();
+      }
       final double tot = rewards.values().stream().reduce(0.0, Double::sum);
-      Map<Integer, String> pc = rewards.entrySet().stream().collect(Collectors
-          .toMap(Map.Entry::getKey, k -> ("" + 100 * k.getValue() / tot).substring(0, 5) + "%"));
-      System.out.println("Rewards ratio for all rounds: " + pc);
+      Map<Integer, Double> pc = rewards.entrySet().stream().collect(
+          Collectors.toMap(Map.Entry::getKey, k -> (k.getValue() / tot)));
 
-      p.getByzantineNode().close();
+      System.out.println(
+          "res: " + pow + "," + pc.get(1) + ", " + rewards.get(1) + ", " + (ur / 2) + ", " + tot);
     }
   }
 
@@ -421,97 +427,12 @@ public class EthPoWTest {
 
   @Test
   public void testSelfishMiner() {
-    testBadMiner(SelfishMiner.class);
+    testBadMiner(ETHSelfishMiner.class);
   }
 
-  static class SelfishMiner extends ETHPoW.ETHMiningNode {
-    ETHPoW.POWBlock privateMinerBlock;
-
-    public SelfishMiner(BlockChainNetwork<ETHPoW.POWBlock, ETHPoW.ETHMiningNode> network,
-        NodeBuilder nb, int hashPower, ETHPoW.POWBlock genesis) {
-      super(network, nb, hashPower, genesis);
-    }
-
-    /**
-     * We maintain the publicHead, eg, the head as seen by others.
-     */
-    private ETHPoW.POWBlock publicHead() {
-      ETHPoW.POWBlock best = genesis;
-      for (ETHPoW.ETHPoWNode n : network.allNodes) {
-        if (n != this && n.head.height > best.height) {
-          best = n.head;
-        }
-      }
-      // todo: we miss the heads in transit if we have just sent a block.
-      return best;
-    }
-
-    int myHead() {
-      return privateMinerBlock == null ? 0 : privateMinerBlock.height;
-    }
-
-    @Override
-    protected boolean includeUncle(ETHPoW.POWBlock uncle) {
-      return true; // uncle.producer == this;
-    }
-
-    @Override
-    protected boolean sendMinedBlock(ETHPoW.POWBlock mined) {
-      return false;
-    }
-
-    @Override
-    protected void onMinedBlock(ETHPoW.POWBlock mined) {
-      privateMinerBlock = privateMinerBlock == null ? mined : best(privateMinerBlock, mined);
-
-      if (privateMinerBlock != mined) {
-        throw new IllegalStateException(
-            "privateMinerBlock=" + privateMinerBlock + ", mined=" + mined);
-      }
-
-      ETHPoW.POWBlock theirHead = publicHead();
-      int deltaP = myHead() - (theirHead.height - 1);
-      if (deltaP == 0 && depth(privateMinerBlock) == 2) {
-        sendAllMined();
-      }
-
-      startNewMining(privateMinerBlock);
-    }
-
-    @Override
-    protected void onReceivedBlock(ETHPoW.POWBlock rcv) {
-      ETHPoW.POWBlock theirHead = publicHead();
-      if (rcv != theirHead) {
-        return;
-      }
-
-      // The previous delta between the two chains
-      int deltaP = myHead() - (theirHead.height - 1);
-
-      if (deltaP <= 0) {
-        // They won => We move to their chain
-        sendAllMined();
-        startNewMining(head);
-      } else {
-        ETHPoW.POWBlock toSend;
-        if (deltaP == 1) {
-          // Tie => We going to send our secret block to try to win.
-          toSend = privateMinerBlock;
-        } else if (deltaP == 2) {
-          // We're in advance, we're sending a block to move them to our chain.
-          toSend = privateMinerBlock.parent;
-        } else {
-          toSend = privateMinerBlock;
-          while (minedToSend.contains(toSend.parent)) {
-            toSend = toSend.parent;
-            assert toSend != null;
-          }
-        }
-        while (toSend != null && toSend.producer == this && minedToSend.contains(toSend)) {
-          sendBlock(toSend);
-          toSend = toSend.parent;
-        }
-      }
-    }
+  @Test
+  public void testStandardMiner() {
+    testBadMiner(ETHMiner.class);
   }
+
 }

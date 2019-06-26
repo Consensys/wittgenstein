@@ -9,9 +9,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import static net.consensys.wittgenstein.core.Node.MAX_X;
 import static net.consensys.wittgenstein.core.Node.MAX_Y;
-import java.util.stream.Collectors;
 
 @SuppressWarnings("WeakerAccess")
 public class NodeBuilder implements Cloneable {

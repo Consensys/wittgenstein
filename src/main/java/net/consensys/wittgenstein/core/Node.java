@@ -6,7 +6,6 @@ import net.consensys.wittgenstein.core.json.ExternalConverter;
 import net.consensys.wittgenstein.core.utils.GeneralizedParetoDistribution;
 import net.consensys.wittgenstein.server.External;
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.List;
 import java.util.Random;
 
