@@ -90,13 +90,15 @@ public class ETHSelfishMiner extends ETHMiner {
   }
 
   public static void main(String... args) {
-    final String nlName = NetworkLatency.IC3NetworkLatency.class.getSimpleName();
+    final String nlName = NetworkLatency.NetworkNoLatency.class.getSimpleName();
     final String bdlName = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
     final double[] pows = new double[] {0.01, 0.1, 0.2, 0.25, 0.3, 0.35, 0.40, 0.45, 0.50};
 
-    final int runs = 2;
-    final int hours = 11;
+    final int runs = 4;
+    final int hours = 500;
 
+    // Merge the two results with:
+    //  paste -d ',' bad.txt good.txt | awk -F "," '{ print $2 ", " $5 ", " $3 ", " $4 ", " $12 ", " $11 ", "  $6 ", " $13 ", " $7 ", " $14 }'
     ETHMiner.tryMiner(bdlName, nlName, ETHSelfishMiner.class, pows, hours, runs);
     ETHMiner.tryMiner(bdlName, nlName, ETHMiner.class, pows, hours, runs);
   }
