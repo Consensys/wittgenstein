@@ -1,4 +1,4 @@
-package net.consensys.wittgenstein.protocols;
+package net.consensys.wittgenstein.protocols.ethpow;
 
 import net.consensys.wittgenstein.core.BlockChainNetwork;
 import net.consensys.wittgenstein.core.NodeBuilder;
@@ -19,14 +19,23 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
     this.hashPowerGHs = hashPowerGHs;
   }
 
+  /**
+   * Override this if you want to choose the uncle to include.
+   */
   protected boolean includeUncle(ETHPoW.POWBlock uncle) {
     return true;
   }
 
+  /**
+   * Override this if you want to choose if we send a block we've just mined.
+   */
   protected boolean sendMinedBlock(ETHPoW.POWBlock mined) {
     return true;
   }
 
+  /**
+   * Override this if you want to add a delay when we send a mined block.
+   */
   protected int extraSendDelay(ETHPoW.POWBlock mined) {
     return 0;
   }
@@ -35,10 +44,19 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
     return true;
   }
 
+  /**
+   * Called when the head changes.
+   */
   protected void onNewHead(ETHPoW.POWBlock oldHead, ETHPoW.POWBlock newHead) {}
 
+  /**
+   * Called when we find a new block.
+   */
   protected void onMinedBlock(ETHPoW.POWBlock mined) {}
 
+  /**
+   * Called when we receive a new valid block.
+   */
   protected void onReceivedBlock(ETHPoW.POWBlock rcv) {}
 
 
@@ -125,6 +143,9 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
     }
   }
 
+  /**
+   * Start to mine a new block as a son of 'father'
+   */
   protected void startNewMining(ETHPoW.POWBlock father) {
     List<ETHPoW.POWBlock> us = possibleUncles(father);
     Set<ETHPoW.POWBlock> uss = us.isEmpty() ? Collections.emptySet()
@@ -143,6 +164,9 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
     }
   }
 
+  /**
+   * Helper function: send a mined block.
+   */
   protected void sendBlock(ETHPoW.POWBlock mined) {
     if (mined.producer != this) {
       throw new IllegalArgumentException(
@@ -156,6 +180,9 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
     minedToSend.remove(mined);
   }
 
+  /**
+   * Helper function: send all the blocks mined not yet sent.
+   */
   protected void sendAllMined() {
     List<ETHPoW.POWBlock> all = new ArrayList<>(minedToSend);
     minedToSend.clear();

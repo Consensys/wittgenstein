@@ -1,4 +1,4 @@
-package net.consensys.wittgenstein.protocols;
+package net.consensys.wittgenstein.protocols.ethpow;
 
 import net.consensys.wittgenstein.core.BlockChainNetwork;
 import net.consensys.wittgenstein.core.NodeBuilder;
@@ -10,6 +10,8 @@ import java.util.ListIterator;
 
 @SuppressWarnings("WeakerAccess")
 public class ETHAgentMiner extends ETHMiner {
+  private static final String DATA_FILE = "decisions.csv";
+
   /**
    * List of the decision taken that we need to evaluate. Sorted by evaluation height.
    */
@@ -20,7 +22,7 @@ public class ETHAgentMiner extends ETHMiner {
       int hashPower, ETHPoW.POWBlock genesis) {
     super(network, nb, hashPower, genesis);
     try {
-      FileWriter fw = new FileWriter("decisions.csv", true);
+      FileWriter fw = new FileWriter(DATA_FILE, true);
       BufferedWriter bw = new BufferedWriter(fw);
       decisionOutput = new PrintWriter(bw);
     } catch (Throwable e) {

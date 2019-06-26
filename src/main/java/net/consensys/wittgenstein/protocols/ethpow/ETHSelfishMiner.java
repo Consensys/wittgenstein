@@ -1,8 +1,14 @@
-package net.consensys.wittgenstein.protocols;
+package net.consensys.wittgenstein.protocols.ethpow;
 
 import net.consensys.wittgenstein.core.BlockChainNetwork;
 import net.consensys.wittgenstein.core.NodeBuilder;
 
+
+/**
+ *
+ * Implementation of the algo proposed by Ittay Eyal and Emin Gun Sirer in
+ * https://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf (algorithm 1, page 6)
+ */
 public class ETHSelfishMiner extends ETHMiner {
   private ETHPoW.POWBlock privateMinerBlock;
   private ETHPoW.POWBlock otherMinersHead = genesis;
@@ -12,13 +18,8 @@ public class ETHSelfishMiner extends ETHMiner {
     super(network, nb, hashPower, genesis);
   }
 
-  private int myHead() {
+  private int privateHeight() {
     return privateMinerBlock == null ? 0 : privateMinerBlock.height;
-  }
-
-  @Override
-  protected boolean includeUncle(ETHPoW.POWBlock uncle) {
-    return true; // uncle.producer == this;
   }
 
   @Override
@@ -35,7 +36,7 @@ public class ETHSelfishMiner extends ETHMiner {
           "privateMinerBlock=" + privateMinerBlock + ", mined=" + mined);
     }
 
-    int deltaP = myHead() - (otherMinersHead.height - 1);
+    int deltaP = privateHeight() - (otherMinersHead.height - 1);
     if (deltaP == 0 && depth(privateMinerBlock) == 2) {
       otherMinersHead = best(otherMinersHead, privateMinerBlock);
       sendAllMined();
@@ -54,12 +55,12 @@ public class ETHSelfishMiner extends ETHMiner {
     }
 
     // The previous delta between the two chains
-    int deltaP = myHead() - (otherMinersHead.height - 1);
+    int deltaP = privateHeight() - (otherMinersHead.height - 1);
 
     if (deltaP <= 0) {
       // They won => We move to their chain
-      sendAllMined();
       otherMinersHead = best(otherMinersHead, privateMinerBlock);
+      sendAllMined();
       startNewMining(head);
     } else {
       ETHPoW.POWBlock toSend;

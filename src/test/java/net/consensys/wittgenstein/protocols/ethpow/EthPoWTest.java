@@ -1,4 +1,4 @@
-package net.consensys.wittgenstein.protocols;
+package net.consensys.wittgenstein.protocols.ethpow;
 
 import net.consensys.wittgenstein.core.BlockChainNetwork;
 import net.consensys.wittgenstein.core.NetworkLatency;
