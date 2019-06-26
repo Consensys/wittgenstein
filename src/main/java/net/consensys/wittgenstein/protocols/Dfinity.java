@@ -87,8 +87,9 @@ public class Dfinity implements Protocol {
       super(blockProducerNode, height, head, b, time);
     }
 
-    DfinityBlock() {}
-
+    DfinityBlock() {
+      super(0);
+    }
 
     static public DfinityBlock createGenesis() {
       return new DfinityBlock();

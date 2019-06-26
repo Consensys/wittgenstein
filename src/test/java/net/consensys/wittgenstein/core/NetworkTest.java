@@ -354,6 +354,10 @@ public class NetworkTest {
     Node n1 = new Node(network.rd, nb);
     Node n2 = new Node(network.rd, nb);
     Node n3 = new Node(network.rd, nb);
+    net.addNode(n0);
+    net.addNode(n1);
+    net.addNode(n2);
+    net.addNode(n3);
 
     AtomicInteger ab = new AtomicInteger(0);
     Message<Node> act = new Message<>() {

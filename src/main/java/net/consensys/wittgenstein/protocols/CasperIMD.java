@@ -160,6 +160,7 @@ public class CasperIMD implements Protocol {
     }
 
     public CasperBlock() {
+      super(0);
       this.attestationsByHeight = Collections.emptyMap();
     }
 
@@ -542,7 +543,7 @@ public class CasperIMD implements Protocol {
         } else {
           onOlderAncestor++;
           // Sometimes we received our direct father but it wasn't the best head
-          Block possibleFather = blocksReceivedByHeight.get(h - 1);
+          Block possibleFather = blocksReceivedByHeight.get(h - 1).iterator().next();
           if (possibleFather != null && possibleFather.parent.height != h - 1) {
             incNotTheBestFather++;
           }
@@ -607,7 +608,7 @@ public class CasperIMD implements Protocol {
         reevaluateH(network.time);
 
         if (head.id != 0 && head.height == h - 1 && head.parent.height == h - 3) {
-          CasperBlock b = blocksReceivedByHeight.get(h - 2);
+          CasperBlock b = blocksReceivedByHeight.get(h - 2).iterator().next();
           if (b != null) {
             head = b;
             skipped++;

@@ -64,7 +64,7 @@ public class WServerTest {
   }
 
   @Test
-  public void testBasicAllProtocols() throws Exception {
+  public void testBasicAllProtocols() {
     HttpEntity<String> entity = new HttpEntity<>(null, headers);
 
     ResponseEntity<String> response = restTemplate.exchange(createURLWithPort("/protocols"),
@@ -72,15 +72,27 @@ public class WServerTest {
 
     CollectionType javaType =
         objectMapper.getTypeFactory().constructCollectionType(List.class, String.class);
-    List<String> ps = objectMapper.readValue(response.getBody(), javaType);
+
+    List<String> ps = null;
+    try {
+      ps = objectMapper.readValue(response.getBody(), javaType);
+    } catch (IOException e) {
+      Assert.fail(e.getMessage());
+    }
+
 
     for (String p : ps) {
       entity = new HttpEntity<>(null, headers);
       response = restTemplate.exchange(createURLWithPort("/protocols/" + p), HttpMethod.GET, entity,
           String.class);
 
-      WParameters params = objectMapper.readValue(response.getBody(), WParameters.class);
-      String jsonString = objectMapper.writeValueAsString(params);
+      String jsonString = "";
+      try {
+        WParameters params = objectMapper.readValue(response.getBody(), WParameters.class);
+        jsonString = objectMapper.writeValueAsString(params);
+      } catch (IOException e) {
+        Assert.fail(p + ": " + e.getMessage());
+      }
 
       RequestEntity<String> requestEntity = RequestEntity
           .post(createURIWithPort("/network/init/" + p))
@@ -156,6 +168,7 @@ public class WServerTest {
     public Node() {}
   }
 
+
   public static class DummyProtocol implements Protocol {
     final NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
     final Network<net.consensys.wittgenstein.core.Node> network = new Network<>();
@@ -183,6 +196,7 @@ public class WServerTest {
       public DummyParameters() {}
     }
   }
+
 
   public static class MessageTest extends Message<net.consensys.wittgenstein.core.Node> {
     public MessageTest() {}

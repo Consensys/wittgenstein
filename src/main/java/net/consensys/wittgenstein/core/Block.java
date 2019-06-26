@@ -21,8 +21,8 @@ abstract public class Block<TB extends Block> {
   /**
    * To create a genesis block...
    */
-  protected Block() {
-    height = 0;
+  public Block(int h) {
+    height = h;
     lastTxId = 0;
     id = 0;
     parent = null;
@@ -40,10 +40,10 @@ abstract public class Block<TB extends Block> {
     if (height <= 0) {
       throw new IllegalArgumentException("Only the genesis block has a special height");
     }
-    if (time < parent.proposalTime) {
+    if (parent != null && time < parent.proposalTime) {
       throw new IllegalArgumentException("bad time: parent is (" + parent + "), our time:" + time);
     }
-    if (parent.height >= height) {
+    if (parent != null && parent.height >= height) {
       throw new IllegalArgumentException("Bad parent. me:" + this + ", parent:" + parent);
     }
 
@@ -109,13 +109,13 @@ abstract public class Block<TB extends Block> {
 
   @Override
   public String toString() {
-    if (id == 0)
+    if (id == 0) {
       return "genesis";
-    assert producer != null;
-    assert parent != null;
+    }
 
     return "h:" + height + ", id=" + id + ", creationTime:" + proposalTime + ", producer="
-        + producer.nodeId + ", parent:" + parent.id;
+        + (producer != null ? "" + producer.nodeId : "null") + ", parent:"
+        + (parent != null ? "" + parent.id : "null");
   }
 
 }

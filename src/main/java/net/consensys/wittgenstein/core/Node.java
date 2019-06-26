@@ -5,12 +5,13 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import net.consensys.wittgenstein.core.json.ExternalConverter;
 import net.consensys.wittgenstein.core.utils.GeneralizedParetoDistribution;
 import net.consensys.wittgenstein.server.External;
+import java.io.Closeable;
 import java.util.List;
 import java.util.Random;
 
 @SuppressWarnings({"WeakerAccess"})
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-public class Node {
+public class Node implements Closeable {
   public final static int MAX_X = 2000;
   public final static int MAX_Y = 1112;
   public final static int MAX_DIST =
@@ -143,6 +144,12 @@ public class Node {
   public External getExternal() {
     return external;
   }
+
+  /**
+   * If a node uses any extra resource it can free them here.
+   */
+  @Override
+  public void close() {}
 
 
   public static class Aspect {

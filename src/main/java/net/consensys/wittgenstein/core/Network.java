@@ -279,6 +279,14 @@ public class Network<TN extends Node> {
     runMs(seconds * 1000);
   }
 
+  public void runH(int hours) {
+    int max = (Integer.MAX_VALUE - time) / 3600_000;
+    if (hours >= max) {
+      throw new IllegalArgumentException("can't run this long: " + hours + ", max is:" + max);
+    }
+    runMs(hours * 3600_000);
+  }
+
   public boolean runMs(int ms) {
     if (ms <= 0) {
       throw new IllegalArgumentException("Should be greater than 0. ms=" + ms);
@@ -332,6 +340,13 @@ public class Network<TN extends Node> {
    * Send a message to a single node.
    */
   public void send(Message<? extends TN> mc, int sendTime, TN fromNode, TN toNode) {
+    if (fromNode.nodeId >= allNodes.size() || getNodeById(fromNode.nodeId) != fromNode) {
+      throw new IllegalArgumentException("The from node is not in the network. From=" + fromNode);
+    }
+    if (toNode.nodeId >= allNodes.size() || getNodeById(toNode.nodeId) != toNode) {
+      throw new IllegalArgumentException("The from node is not in the network. To=" + toNode);
+    }
+
     MessageArrival ms = createMessageArrival(mc, fromNode, toNode, sendTime, rd.nextInt());
     if (ms != null) {
       Envelope<?> m = new Envelope.SingleDestEnvelope<>(mc, fromNode, toNode, sendTime, ms.arrival);
@@ -377,6 +392,10 @@ public class Network<TN extends Node> {
 
   public void send(Message<? extends TN> m, int sendTime, TN fromNode, List<? extends Node> dests,
       int delaysBetweenMessage) {
+    if (fromNode.nodeId >= allNodes.size() || getNodeById(fromNode.nodeId) != fromNode) {
+      throw new IllegalArgumentException("The from node is not in the network. From=" + fromNode);
+    }
+
     int randomSeed = rd.nextInt();
 
     List<MessageArrival> da =
