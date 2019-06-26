@@ -2,6 +2,7 @@ package net.consensys.wittgenstein.protocols.ethpow;
 
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.server.WParameters;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
 
@@ -15,11 +16,11 @@ public class ETHPoW implements Protocol {
 
 
   public static class ETHPoWParameters extends WParameters {
-    private final String nodeBuilderName;
-    private final String networkLatencyName;
-    private final int numberOfMiners;
-    private final String byzClassName;
-    private final double byzMiningRatio;
+    public final String nodeBuilderName;
+    public final String networkLatencyName;
+    public final int numberOfMiners;
+    public final String byzClassName;
+    public final double byzMiningRatio;
 
     public ETHPoWParameters(String nodeBuilderName, String networkLatencyName, int numberOfMiners,
         String byzClassName, double byzMiningRatio) {
@@ -30,6 +31,7 @@ public class ETHPoW implements Protocol {
       this.byzMiningRatio = this.byzClassName == null ? 0 : byzMiningRatio;
     }
 
+    // For json...
     public ETHPoWParameters() {
       nodeBuilderName = null;
       networkLatencyName = null;
@@ -164,6 +166,16 @@ public class ETHPoW implements Protocol {
       this.totalDifficulty = new BigInteger("10591882213905570860929");
     }
 
+    // For tests
+    POWBlock(ETHMiner ethMiner, POWBlock father, int height, int diff, int time) {
+      super(ethMiner, height, father, true, time);
+      this.transactions = Collections.emptyList();
+      this.difficulty = diff;
+      this.totalDifficulty =
+          father != null ? father.totalDifficulty.add(BigInteger.valueOf(this.difficulty))
+              : BigInteger.valueOf(this.difficulty);
+    }
+
     /**
      * @return the list of rewards for this block.
      */
@@ -215,11 +227,28 @@ public class ETHPoW implements Protocol {
       }
     }
 
-    public double uncleRate() {
+    public long avgDifficulty(int untilHeight) {
+      POWBlock cur = this;
+      while (cur.producer != null && cur.height > untilHeight) {
+        cur = cur.parent;
+      }
+
+      if (cur == this) {
+        return cur.difficulty;
+      }
+
+      BigInteger diff =
+          totalDifficulty.subtract(cur.totalDifficulty).add(BigInteger.valueOf(cur.difficulty));
+      long blocks = 1 + height - cur.height;
+
+      return diff.divide(BigInteger.valueOf(blocks)).longValue();
+    }
+
+    public double uncleRate(int untilHeight) {
       double uncles = 0;
       POWBlock cur = this;
       POWBlock first = null;
-      while (cur.producer != null) {
+      while (cur.producer != null && cur.height > untilHeight) {
         uncles += cur.uncles.size();
         first = cur;
         cur = cur.parent;

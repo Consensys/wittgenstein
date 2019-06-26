@@ -2,7 +2,9 @@ package net.consensys.wittgenstein.protocols.ethpow;
 
 import net.consensys.wittgenstein.core.BlockChainNetwork;
 import net.consensys.wittgenstein.core.NodeBuilder;
+import java.math.BigDecimal;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @SuppressWarnings("WeakerAccess")
 public class ETHMiner extends ETHPoW.ETHPoWNode {
@@ -248,5 +250,58 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
     double singleHashSuccess = (1.0 / difficulty);
     double noSuccess = Math.pow(1.0 - singleHashSuccess, hpTMs);
     return 1 - noSuccess;
+  }
+
+
+  /**
+   * To try a strategy.
+   */
+  public static void tryMiner(String builderName, String nlName, Class<?> miner, double[] pows,
+      int hours, int runs) {
+
+    System.out.println(
+        "miner class, hashrate ratio, revenue ratio, revenue, uncle rate, total revenue, avg difficulty");
+
+    for (double pow : pows) {
+      ETHPoW.ETHPoWParameters params =
+          new ETHPoW.ETHPoWParameters(builderName, nlName, 10, miner.getName(), pow);
+
+      HashMap<Integer, Double> rewards = new HashMap<>();
+      double ur = 0;
+      long avgDiff = 0;
+
+      for (int i = 1; i <= runs; i++) {
+        ETHPoW p = new ETHPoW(params);
+        p.network.rd.setSeed(i);
+        p.init();
+        p.network.runH(hours);
+
+        // For real tests, we skip the first blocks: the system is starting and is tuning
+        //   the difficulty & so on. So not including them removes some noise.
+        int limit = (hours > 10 ? 1000 : 0) + p.genesis.height;
+
+        p.network.observer.head.allRewardsById(rewards, limit);
+        ur += p.network.observer.head.uncleRate(limit);
+        avgDiff += p.network.observer.head.avgDifficulty(limit);
+
+        p.getByzantineNode().close();
+      }
+
+      ur /= runs;
+      avgDiff /= runs;
+
+      final double tot = rewards.values().stream().reduce(0.0, Double::sum);
+      Map<Integer, Double> pc = rewards.entrySet().stream().collect(
+          Collectors.toMap(Map.Entry::getKey, k -> (k.getValue() / tot)));
+
+      String powS = String.format("%.2f", pow);
+      String urS = String.format("%.4f", ur);
+      String rateS = String.format("%.4f", pc.get(1));
+      String rewS = String.format("%.0f", rewards.get(1) / runs);
+      String totS = String.format("%.0f", tot / runs);
+
+      System.out.println(miner.getSimpleName() + ", " + powS + ", " + rateS + ", " + rewS + ", "
+          + urS + ", " + totS + ", " + avgDiff);
+    }
   }
 }

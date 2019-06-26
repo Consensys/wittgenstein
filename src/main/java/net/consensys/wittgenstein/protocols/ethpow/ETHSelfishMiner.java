@@ -1,7 +1,9 @@
 package net.consensys.wittgenstein.protocols.ethpow;
 
 import net.consensys.wittgenstein.core.BlockChainNetwork;
+import net.consensys.wittgenstein.core.NetworkLatency;
 import net.consensys.wittgenstein.core.NodeBuilder;
+import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 
 
 /**
@@ -85,5 +87,17 @@ public class ETHSelfishMiner extends ETHMiner {
         toSend = toSend.parent;
       }
     }
+  }
+
+  public static void main(String... args) {
+    final String nlName = NetworkLatency.IC3NetworkLatency.class.getSimpleName();
+    final String bdlName = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
+    final double[] pows = new double[] {0.01, 0.1, 0.2, 0.25, 0.3, 0.35, 0.40, 0.45, 0.50};
+
+    final int runs = 2;
+    final int hours = 11;
+
+    ETHMiner.tryMiner(bdlName, nlName, ETHSelfishMiner.class, pows, hours, runs);
+    ETHMiner.tryMiner(bdlName, nlName, ETHMiner.class, pows, hours, runs);
   }
 }

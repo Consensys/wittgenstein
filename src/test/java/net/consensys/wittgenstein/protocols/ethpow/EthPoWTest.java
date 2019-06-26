@@ -8,7 +8,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class EthPoWTest {
   private ETHPoW.POWBlock gen = ETHPoW.POWBlock.createGenesis();
@@ -134,7 +133,6 @@ public class EthPoWTest {
     double c1 = rs.getOrDefault(m1, 0.0);
     double diff = Math.abs(c0 - c1);
     double th = (c0 + c1) / 10;
-    System.out.println(" " + m0.head.uncleRate());
     Assert.assertTrue(diff < th);
   }
 
@@ -160,6 +158,21 @@ public class EthPoWTest {
 
     Assert.assertTrue(
         p.network.allNodes.get(1).blocksReceivedByHeight.get(uncle.height).contains(uncle));
+  }
+
+  @Test
+  public void testAvgDifficulty() {
+    ETHPoW.POWBlock b1 = new ETHPoW.POWBlock(null, null, 1, 100, 1);
+    Assert.assertEquals(100, b1.avgDifficulty(0));
+
+    ETHPoW.POWBlock b2 = new ETHPoW.POWBlock(m1, b1, 2, 100, 1);
+    Assert.assertEquals(100, b2.avgDifficulty(0));
+
+    ETHPoW.POWBlock b3 = new ETHPoW.POWBlock(m1, b2, 3, 400, 1);
+    Assert.assertEquals(200, b3.avgDifficulty(0));
+
+    ETHPoW.POWBlock b4 = new ETHPoW.POWBlock(m1, b3, 4, 400, 1);
+    Assert.assertEquals(400, b4.avgDifficulty(b3.height));
   }
 
   @Test
@@ -372,7 +385,6 @@ public class EthPoWTest {
     }
   }
 
-
   static class ExtraSendDelayDecision extends ETHPoW.Decision {
     final int miningDurationMs;
     final int ownMiningDepth;
@@ -392,32 +404,10 @@ public class EthPoWTest {
   }
 
   private void testBadMiner(Class<?> miner) {
-    for (double pow : new double[] {0.20}) {
-      ETHPoW.ETHPoWParameters params =
-          new ETHPoW.ETHPoWParameters(builderName, nlName, 10, miner.getName(), pow);
-      HashMap<Integer, Double> rewards = new HashMap<>();
-
-      ETHPoW p;
-      double ur = 0;
-      for (int i = 1; i <= 1; i++) {
-        p = new ETHPoW(params);
-        p.network.rd.setSeed(i);
-        p.init();
-        p.network.runH(5);
-
-        // We skip the first blocks: the system is starting and is tuning the difficulty & so on.
-        p.network.observer.head.allRewardsById(rewards, p.genesis.height + 1000);
-        ur += p.network.observer.head.uncleRate();
-
-        p.getByzantineNode().close();
-      }
-      final double tot = rewards.values().stream().reduce(0.0, Double::sum);
-      Map<Integer, Double> pc = rewards.entrySet().stream().collect(
-          Collectors.toMap(Map.Entry::getKey, k -> (k.getValue() / tot)));
-
-      System.out.println(
-          "res: " + pow + "," + pc.get(1) + ", " + rewards.get(1) + ", " + (ur / 2) + ", " + tot);
-    }
+    final String nlName = NetworkLatency.IC3NetworkLatency.class.getSimpleName();
+    final String bdlName = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
+    final double[] pows = new double[] {0.01, 0.1};
+    ETHMiner.tryMiner(bdlName, nlName, miner, pows, 11, 2);
   }
 
   @Test
