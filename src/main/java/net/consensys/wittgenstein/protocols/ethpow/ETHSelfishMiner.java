@@ -1,9 +1,6 @@
 package net.consensys.wittgenstein.protocols.ethpow;
 
-import net.consensys.wittgenstein.core.BlockChainNetwork;
-import net.consensys.wittgenstein.core.NetworkLatency;
-import net.consensys.wittgenstein.core.NodeBuilder;
-import net.consensys.wittgenstein.core.RegistryNodeBuilders;
+import net.consensys.wittgenstein.core.*;
 
 
 /**
@@ -28,6 +25,11 @@ public class ETHSelfishMiner extends ETHMiner {
   protected boolean sendMinedBlock(ETHPoW.POWBlock mined) {
     return false;
   }
+
+  protected boolean includeUncle(ETHPoW.POWBlock uncle) {
+    return true;
+  }
+
 
   @Override
   protected void onMinedBlock(ETHPoW.POWBlock mined) {
@@ -90,11 +92,11 @@ public class ETHSelfishMiner extends ETHMiner {
   }
 
   public static void main(String... args) {
-    final String nlName = NetworkLatency.NetworkNoLatency.class.getSimpleName();
+    final String nlName = RegistryNetworkLatencies.name(RegistryNetworkLatencies.Type.FIXED, 2000);
     final String bdlName = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
     final double[] pows = new double[] {0.01, 0.1, 0.2, 0.25, 0.3, 0.35, 0.40, 0.45, 0.50};
 
-    final int runs = 4;
+    final int runs = 2;
     final int hours = 500;
 
     // Merge the two results with:

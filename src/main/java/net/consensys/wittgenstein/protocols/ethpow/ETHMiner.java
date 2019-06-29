@@ -260,7 +260,7 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
       int hours, int runs) {
 
     System.out.println(
-        "miner class, hashrate ratio, revenue ratio, revenue, uncle rate, total revenue, avg difficulty");
+        "miner, hashrate ratio, revenue ratio, revenue, uncle rate, total revenue, avg difficulty");
 
     for (double pow : pows) {
       ETHPoW.ETHPoWParameters params =
@@ -278,7 +278,7 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
 
         // For real tests, we skip the first blocks: the system is starting and is tuning
         //   the difficulty & so on. So not including them removes some noise.
-        int limit = (hours > 10 ? 1000 : 0) + p.genesis.height;
+        int limit = (hours > 30 ? 1000 : 0) + p.genesis.height;
 
         p.network.observer.head.allRewardsById(rewards, limit);
         ur += p.network.observer.head.uncleRate(limit);
@@ -300,7 +300,7 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
       String rewS = String.format("%.0f", rewards.get(1) / runs);
       String totS = String.format("%.0f", tot / runs);
 
-      System.out.println(miner.getSimpleName() + ", " + powS + ", " + rateS + ", " + rewS + ", "
+      System.out.println(miner.getSimpleName()+"/"+nlName + ", " + powS + ", " + rateS + ", " + rewS + ", "
           + urS + ", " + totS + ", " + avgDiff);
     }
   }

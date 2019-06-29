@@ -284,6 +284,7 @@ public class ETHPoW implements Protocol {
      * @link {https://eips.ethereum.org/EIPS/eip-100}
      */
     public long calculateDifficulty(POWBlock father, int ts) {
+      //if (true) return 2585307757225701L + father.uncles.size();
       long gap = (ts - father.proposalTime) / 9000;
       long y = (father.uncles.isEmpty() ? 1 : 2);
       long ugap = Math.max(-99, y - gap);
