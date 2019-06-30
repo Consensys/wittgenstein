@@ -2,7 +2,6 @@ package net.consensys.wittgenstein.protocols.ethpow;
 
 import net.consensys.wittgenstein.core.BlockChainNetwork;
 import net.consensys.wittgenstein.core.NodeBuilder;
-import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -260,13 +259,14 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
       int hours, int runs) {
 
     System.out.println(
-        "miner class, hashrate ratio, revenue ratio, revenue, uncle rate, total revenue, avg difficulty");
+        "miner, hashrate ratio, revenue ratio, revenue, uncle rate, total revenue, avg difficulty");
 
     for (double pow : pows) {
       ETHPoW.ETHPoWParameters params =
           new ETHPoW.ETHPoWParameters(builderName, nlName, 10, miner.getName(), pow);
 
       HashMap<Integer, Double> rewards = new HashMap<>();
+      rewards.put(1, 0.0);
       double ur = 0;
       long avgDiff = 0;
 
@@ -278,11 +278,18 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
 
         // For real tests, we skip the first blocks: the system is starting and is tuning
         //   the difficulty & so on. So not including them removes some noise.
-        int limit = (hours > 10 ? 1000 : 0) + p.genesis.height;
+        int limit = (hours > 30 ? 5000 : 0) + p.genesis.height;
 
-        p.network.observer.head.allRewardsById(rewards, limit);
-        ur += p.network.observer.head.uncleRate(limit);
-        avgDiff += p.network.observer.head.avgDifficulty(limit);
+        // We also skip the last blocks. Especially if there are long private chains we
+        //  don't want the last block to decide as it may be very random.
+        ETHPoW.POWBlock base = p.network.getNodeById(1).head;
+        for (int j = 0; hours > 30 && j < 5000; j++) {
+          base = base.parent;
+        }
+
+        base.allRewardsById(rewards, limit);
+        ur += base.uncleRate(limit);
+        avgDiff += base.avgDifficulty(limit);
 
         p.getByzantineNode().close();
       }
@@ -300,8 +307,8 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
       String rewS = String.format("%.0f", rewards.get(1) / runs);
       String totS = String.format("%.0f", tot / runs);
 
-      System.out.println(miner.getSimpleName() + ", " + powS + ", " + rateS + ", " + rewS + ", "
-          + urS + ", " + totS + ", " + avgDiff);
+      System.out.println(miner.getSimpleName() + "/" + nlName + "/" + hours + "/" + runs + ", "
+          + powS + ", " + rateS + ", " + rewS + ", " + urS + ", " + totS + ", " + avgDiff);
     }
   }
 }

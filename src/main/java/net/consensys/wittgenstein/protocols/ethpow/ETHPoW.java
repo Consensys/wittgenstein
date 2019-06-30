@@ -2,7 +2,6 @@ package net.consensys.wittgenstein.protocols.ethpow;
 
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.server.WParameters;
-import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
 
@@ -176,6 +175,10 @@ public class ETHPoW implements Protocol {
               : BigInteger.valueOf(this.difficulty);
     }
 
+    protected long onCalculateDifficulty(long all, POWBlock father, long diff, long bomb) {
+      return all;//2586243382184844L;
+    }
+
     /**
      * @return the list of rewards for this block.
      */
@@ -292,8 +295,11 @@ public class ETHPoW implements Protocol {
       long periods = (father.height - 4_999_999L) / 100_000L;
       long bomb = periods > 1 ? (long) Math.pow(2, periods - 2) : diff;
 
-      return father.difficulty + diff + bomb;
+      long all = father.difficulty + diff + bomb;
+
+      return onCalculateDifficulty(all, father, diff, bomb);
     }
+
   }
 
 

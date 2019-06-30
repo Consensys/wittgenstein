@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import static net.consensys.wittgenstein.core.Node.MAX_X;
 import static net.consensys.wittgenstein.core.Node.MAX_Y;
@@ -27,6 +28,11 @@ public class NodeBuilder implements Cloneable {
    * List of the aspects we can add to the node (speed, latency, ...)
    */
   public final List<Node.Aspect> aspects = new ArrayList<>();
+
+  /**
+   * Unique reference shared by all nodes when they need to allocate a unique id.
+   */
+  private final AtomicInteger uIntId = new AtomicInteger();
 
   public NodeBuilder() {
     try {
@@ -71,6 +77,10 @@ public class NodeBuilder implements Cloneable {
    */
   protected byte[] getHash(int nodeId) {
     return digest.digest(ByteBuffer.allocate(4).putInt(nodeId).array());
+  }
+
+  public AtomicInteger getUniqueIntIdReference() {
+    return uIntId;
   }
 
   public static class NodeBuilderWithRandomPosition extends NodeBuilder {

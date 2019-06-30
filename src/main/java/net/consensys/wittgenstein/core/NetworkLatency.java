@@ -191,7 +191,7 @@ public abstract class NetworkLatency {
     final int fixedLatency;
 
     public NetworkFixedLatency(int fixedLatency) {
-      this.fixedLatency = fixedLatency;
+      this.fixedLatency = Math.max(1, fixedLatency);
     }
 
     public int getExtendedLatency(Node from, Node to, int delta) {
@@ -205,12 +205,31 @@ public abstract class NetworkLatency {
   }
 
 
+  /**
+   * A latency following the uniform law. Will never happen in practice but useful to analyse some
+   * protocols under simple conditions.
+   */
+  public static class NetworkUniformLatency extends NetworkLatency {
+    final int maxLatency;
+
+    public NetworkUniformLatency(int maxLatency) {
+      this.maxLatency = Math.max(1, maxLatency);
+    }
+
+    public int getExtendedLatency(Node from, Node to, int delta) {
+      return (int) ((delta / 99.0) * maxLatency);
+    }
+
+    public String toString() {
+      return "NetworkUniformLatency:" + maxLatency;
+    }
+  }
+
   public static class NetworkNoLatency extends NetworkLatency {
     public int getExtendedLatency(Node from, Node to, int delta) {
       return 1;
     }
   }
-
 
   public static class MeasuredNetworkLatency extends NetworkLatency {
     final int[] longDistrib = new int[100];
@@ -369,7 +388,6 @@ public abstract class NetworkLatency {
       return SW / 2; // The table in the paper does not show any number
     }
   }
-
 
   private static void addToStats(int lat, int[] props, int[] vals) {
     int p = 0;

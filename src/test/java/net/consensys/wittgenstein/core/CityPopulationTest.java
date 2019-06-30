@@ -6,7 +6,9 @@ import net.consensys.wittgenstein.core.geoinfo.GeoAllCities;
 import net.consensys.wittgenstein.tools.CSVLatencyReader;
 import org.junit.Assert;
 import org.junit.Test;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 
 class GeoTest extends Geo {

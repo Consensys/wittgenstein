@@ -1,9 +1,6 @@
 package net.consensys.wittgenstein.protocols.ethpow;
 
-import net.consensys.wittgenstein.core.BlockChainNetwork;
-import net.consensys.wittgenstein.core.NetworkLatency;
-import net.consensys.wittgenstein.core.NodeBuilder;
-import net.consensys.wittgenstein.core.RegistryNodeBuilders;
+import net.consensys.wittgenstein.core.*;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -404,15 +401,12 @@ public class EthPoWTest {
   }
 
   private void testBadMiner(Class<?> miner) {
-    final String nlName = NetworkLatency.IC3NetworkLatency.class.getSimpleName();
+    final double[] pows = new double[] {0.01, 0.50};
+    final int runs = 2;
+    final int hours = 2;
+    final String nlName = RegistryNetworkLatencies.name(RegistryNetworkLatencies.Type.FIXED, 1000);
     final String bdlName = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
-    final double[] pows = new double[] {0.01, 0.1};
-    ETHMiner.tryMiner(bdlName, nlName, miner, pows, 11, 2);
-  }
-
-  @Test
-  public void testDelayedMiner() {
-    testBadMiner(DelayedMiner.class);
+    ETHMiner.tryMiner(bdlName, nlName, miner, pows, hours, runs);
   }
 
   @Test
@@ -421,8 +415,17 @@ public class EthPoWTest {
   }
 
   @Test
+  public void testSelfishMiner2() {
+    testBadMiner(ETHSelfishMiner2.class);
+  }
+
+  @Test
   public void testStandardMiner() {
     testBadMiner(ETHMiner.class);
   }
 
+  @Test
+  public void testDelayedMiner() {
+    testBadMiner(DelayedMiner.class);
+  }
 }

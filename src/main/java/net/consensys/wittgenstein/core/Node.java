@@ -8,6 +8,7 @@ import net.consensys.wittgenstein.server.External;
 import java.io.Closeable;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @SuppressWarnings({"WeakerAccess"})
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
@@ -84,6 +85,12 @@ public class Node implements Closeable {
   protected long msgSent = 0;
   protected long bytesSent = 0;
   protected long bytesReceived = 0;
+
+  private final AtomicInteger iuid;
+
+  public int generateNewUniqueIntId() {
+    return iuid.incrementAndGet();
+  }
 
   @JsonSerialize(converter = ExternalConverter.class)
   private External external = null;
@@ -242,6 +249,7 @@ public class Node implements Closeable {
   }
 
   public Node(Random rd, NodeBuilder nb, boolean byzantine) {
+    this.iuid = nb.getUniqueIntIdReference();
     this.nodeId = nb.allocateNodeId();
     if (this.nodeId < 0) {
       throw new IllegalArgumentException("bad nodeId:" + nodeId);
