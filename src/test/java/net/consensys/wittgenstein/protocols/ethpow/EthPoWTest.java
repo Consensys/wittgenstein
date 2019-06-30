@@ -400,82 +400,32 @@ public class EthPoWTest {
     }
   }
 
-  final double[] pows = new double[] {0.5};
-  final int runs = 1;
-  final int hours = 500;
-
-
-  private void testBadMiner4(Class<?> miner) {
-    final String nlName = RegistryNetworkLatencies.name(RegistryNetworkLatencies.Type.FIXED, 4000);
-    final String bdlName = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
-    ETHMiner.tryMiner(bdlName, nlName, miner, pows, hours, runs);
-  }
-
-  private void testBadMiner2(Class<?> miner) {
-    final String nlName = RegistryNetworkLatencies.name(RegistryNetworkLatencies.Type.FIXED, 2000);
-    final String bdlName = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
-    ETHMiner.tryMiner(bdlName, nlName, miner, pows, hours, runs);
-  }
-
-  private void testBadMiner1(Class<?> miner) {
+  private void testBadMiner(Class<?> miner) {
+    final double[] pows = new double[] {0.01, 0.50};
+    final int runs = 2;
+    final int hours = 2;
     final String nlName = RegistryNetworkLatencies.name(RegistryNetworkLatencies.Type.FIXED, 1000);
     final String bdlName = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
     ETHMiner.tryMiner(bdlName, nlName, miner, pows, hours, runs);
   }
 
-  //          miner,           hashrate ratio, revenue ratio, revenue, uncle rate, total revenue, avg difficulty
-  // 518/5000/NetworkFixedLatency(1000), 0.50,        0.3205,   88361,     0.0450,        275663, 1410362791033290
-//   518/1000/NetworkFixedLatency(1000), 0.50,        0.3395,   96338,      0.0446,       283777, 1415792998372002
-  // 500/1000/NetworkFixedLatency(1000), 0.50,        0.3518,   96338,      0.0451, 273821, 1416538523137623
-
-  private void testBadMiner0(Class<?> miner) {
-    final String nlName = NetworkLatency.NetworkNoLatency.class.getSimpleName();
-    final String bdlName = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
-    ETHMiner.tryMiner(bdlName, nlName, miner, pows, hours, runs);
+  @Test
+  public void testSelfishMiner() {
+    testBadMiner(ETHSelfishMiner.class);
   }
 
   @Test
-  public void testSelfishMiner0() {
-    testBadMiner0(ETHSelfishMiner.class);
+  public void testSelfishMiner2() {
+    testBadMiner(ETHSelfishMiner2.class);
   }
 
   @Test
-  public void testStandardMinerO() {
-    testBadMiner0(ETHMiner.class);
+  public void testStandardMiner() {
+    testBadMiner(ETHMiner.class);
   }
 
   @Test
-  public void testSelfishMiner1() {
-    testBadMiner1(ETHSelfishMiner.class);
+  public void testDelayedMiner() {
+    testBadMiner(DelayedMiner.class);
   }
-
-  @Test
-  public void testStandardMiner1() {
-    testBadMiner1(ETHMiner.class);
-  }
-
-  @Test
-  public void testSelfishMiner2() throws InterruptedException {
-    Thread.sleep(1000 * 60 * 120);
-    testBadMiner2(ETHSelfishMiner.class);
-  }
-
-  @Test
-  public void testStandardMiner2() throws InterruptedException {
-    Thread.sleep(1000 * 60 * 120);
-    testBadMiner2(ETHMiner.class);
-  }
-
-  @Test
-  public void testSelfishMiner4() throws InterruptedException {
-    Thread.sleep(1000 * 60 * 120);
-    testBadMiner4(ETHSelfishMiner.class);
-  }
-
-  @Test
-  public void testStandardMiner4() throws InterruptedException {
-    Thread.sleep(1000 * 60 * 120);
-    testBadMiner4(ETHMiner.class);
-  }
-
 }

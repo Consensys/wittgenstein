@@ -16,11 +16,17 @@ public class RegistryNetworkLatencies {
   }
 
   public static String name(Type t, int fixed) {
-    return "NetworkFixedLatency("+fixed+")";
+    switch (t) {
+      case FIXED:
+        return "NetworkFixedLatency(" + fixed + ")";
+      case UNIFORM:
+        return "NetworkUniformLatency(" + fixed + ")";
+    }
+    throw new IllegalStateException();
   }
 
   public RegistryNetworkLatencies() {
-    for (int f : new int[]{100, 200, 500, 1000, 2000, 4000, 8000}) {
+    for (int f : new int[] {0, 100, 200, 500, 1000, 2000, 4000, 8000}) {
       registry.put(name(Type.FIXED, f), new NetworkLatency.NetworkFixedLatency(f));
       registry.put(name(Type.UNIFORM, f), new NetworkLatency.NetworkUniformLatency(f));
     }
