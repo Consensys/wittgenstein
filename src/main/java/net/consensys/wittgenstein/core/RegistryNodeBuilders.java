@@ -1,12 +1,12 @@
 package net.consensys.wittgenstein.core;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import net.consensys.wittgenstein.core.geoinfo.Geo;
 import net.consensys.wittgenstein.core.geoinfo.GeoAWS;
 import net.consensys.wittgenstein.core.geoinfo.GeoAllCities;
 import net.consensys.wittgenstein.tools.CSVLatencyReader;
-import java.util.HashMap;
-import java.util.Map;
-
 
 public class RegistryNodeBuilders {
   private Map<String, NodeBuilder> registry = new HashMap<>();
@@ -16,7 +16,6 @@ public class RegistryNodeBuilders {
     CITIES,
     RANDOM
   }
-
 
   public static RegistryNodeBuilders singleton = new RegistryNodeBuilders();
 
@@ -34,7 +33,6 @@ public class RegistryNodeBuilders {
     return new Location[] {Location.AWS, Location.CITIES, Location.RANDOM};
   }
 
-
   private RegistryNodeBuilders() {
     CSVLatencyReader lr = new CSVLatencyReader();
     Geo geoAWS = new GeoAWS();
@@ -46,8 +44,9 @@ public class RegistryNodeBuilders {
           NodeBuilder nb;
           switch (loc) {
             case AWS:
-              nb = new NodeBuilder.NodeBuilderWithCity(
-                  NetworkLatency.AwsRegionNetworkLatency.cities(), geoAWS);
+              nb =
+                  new NodeBuilder.NodeBuilderWithCity(
+                      NetworkLatency.AwsRegionNetworkLatency.cities(), geoAWS);
               break;
             case CITIES:
               nb = new NodeBuilder.NodeBuilderWithCity(lr.cities(), geoAllCities);

@@ -1,8 +1,5 @@
 package net.consensys.wittgenstein.tools;
 
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
 import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
@@ -10,6 +7,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 
 public class CSVLatencyReader {
   private static final Path DATA_PATH = Paths.get("resources/Data");
@@ -38,7 +39,6 @@ public class CSVLatencyReader {
   public List<String> cities() {
     return new ArrayList<>(latencyMatrix.keySet());
   }
-
 
   private Map<String, Map<String, Float>> makeLatencyMatrix() {
     Map<String, Map<String, Float>> latencies = new HashMap<>();
@@ -88,13 +88,12 @@ public class CSVLatencyReader {
 
   private Optional<String> processCityName(String cityAndLocation) {
 
-    //Directory names have format "Name1+Name2" for two word city names, but
-    //the format in the csv file is "Name1 Name2 country, region"
-    //this logic normalizes the naming convention
-    //returns Empty if a city is not present in the csv file
+    // Directory names have format "Name1+Name2" for two word city names, but
+    // the format in the csv file is "Name1 Name2 country, region"
+    // this logic normalizes the naming convention
+    // returns Empty if a city is not present in the csv file
 
-    return cities
-        .stream()
+    return cities.stream()
         .filter(c -> cityAndLocation.contains(c.replace('+', ' ')))
         .max(Comparator.comparing(String::length));
   }
@@ -126,17 +125,15 @@ public class CSVLatencyReader {
           float v = latenciesTo.get(cityTo);
           // System.out.println(cityFrom + " ->  " + cityTo + " = " + v);
           if (v <= 1) {
-            System.err
-                .println(
-                    "Strange latency for " + cityTo + ", latency is " + v + ", from " + cityFrom);
+            System.err.println(
+                "Strange latency for " + cityTo + ", latency is " + v + ", from " + cityFrom);
           }
         } else {
           float v = latencyMatrix.get(cityTo).get(cityFrom);
-          //System.out.println(cityFrom + " ->  " + cityTo + " = " + v);
+          // System.out.println(cityFrom + " ->  " + cityTo + " = " + v);
           if (v <= 1) {
-            System.err
-                .println(
-                    "Strange latency for " + cityTo + ", latency is " + v + ", from " + cityFrom);
+            System.err.println(
+                "Strange latency for " + cityTo + ", latency is " + v + ", from " + cityFrom);
           }
         }
       }

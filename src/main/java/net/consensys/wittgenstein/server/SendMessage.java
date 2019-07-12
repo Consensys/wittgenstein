@@ -1,7 +1,8 @@
 package net.consensys.wittgenstein.server;
 
-import net.consensys.wittgenstein.core.messages.Message;
 import java.util.List;
+
+import net.consensys.wittgenstein.core.messages.Message;
 
 @SuppressWarnings("WeakerAccess")
 public class SendMessage {
@@ -16,8 +17,8 @@ public class SendMessage {
     this(0, null, 0, 0, null);
   }
 
-  public SendMessage(int from, List<Integer> to, int sendTime, int delayBetweenSend,
-      Message<?> message) {
+  public SendMessage(
+      int from, List<Integer> to, int sendTime, int delayBetweenSend, Message<?> message) {
     this.from = from;
     this.to = to;
     this.sendTime = sendTime;

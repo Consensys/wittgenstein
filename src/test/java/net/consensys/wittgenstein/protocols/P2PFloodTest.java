@@ -76,5 +76,4 @@ public class P2PFloodTest {
       Assert.assertEquals(n1.peers, n2.peers);
     }
   }
-
 }

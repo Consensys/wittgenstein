@@ -1,25 +1,28 @@
 package net.consensys.wittgenstein.protocols.ethpow;
 
-import net.consensys.wittgenstein.core.BlockChainNetwork;
-import net.consensys.wittgenstein.core.NodeBuilder;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.util.LinkedList;
 import java.util.ListIterator;
 
+import net.consensys.wittgenstein.core.BlockChainNetwork;
+import net.consensys.wittgenstein.core.NodeBuilder;
+
 @SuppressWarnings("WeakerAccess")
 public class ETHAgentMiner extends ETHMiner {
   private static final String DATA_FILE = "decisions.csv";
 
-  /**
-   * List of the decision taken that we need to evaluate. Sorted by evaluation height.
-   */
+  /** List of the decision taken that we need to evaluate. Sorted by evaluation height. */
   final LinkedList<ETHPoW.Decision> decisions = new LinkedList<>();
+
   private final PrintWriter decisionOutput;
 
-  public ETHAgentMiner(BlockChainNetwork<ETHPoW.POWBlock, ETHMiner> network, NodeBuilder nb,
-      int hashPower, ETHPoW.POWBlock genesis) {
+  public ETHAgentMiner(
+      BlockChainNetwork<ETHPoW.POWBlock, ETHMiner> network,
+      NodeBuilder nb,
+      int hashPower,
+      ETHPoW.POWBlock genesis) {
     super(network, nb, hashPower, genesis);
     try {
       FileWriter fw = new FileWriter(DATA_FILE, true);
@@ -30,10 +33,8 @@ public class ETHAgentMiner extends ETHMiner {
     }
   }
 
-  /**
-   * Add a decision tp the list of decisions to be evaluated.
-   */
-  final protected void addDecision(ETHPoW.Decision d) {
+  /** Add a decision tp the list of decisions to be evaluated. */
+  protected final void addDecision(ETHPoW.Decision d) {
     if (d.rewardAtHeight <= head.height) {
       throw new IllegalArgumentException("Can't calculate a reward for " + d + ", head=" + head);
     }
@@ -53,7 +54,7 @@ public class ETHAgentMiner extends ETHMiner {
   }
 
   @Override
-  final protected void onNewHead(ETHPoW.POWBlock oldHead, ETHPoW.POWBlock newHead) {
+  protected final void onNewHead(ETHPoW.POWBlock oldHead, ETHPoW.POWBlock newHead) {
     while (!decisions.isEmpty() && decisions.peekFirst().rewardAtHeight <= newHead.height) {
       ETHPoW.Decision cur = decisions.pollFirst();
       assert cur != null;

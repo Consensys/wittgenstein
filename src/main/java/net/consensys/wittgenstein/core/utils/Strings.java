@@ -4,7 +4,6 @@ import java.lang.reflect.Field;
 
 public class Strings {
 
-
   public static String toString(Object o) {
     StringBuilder sb = new StringBuilder();
 

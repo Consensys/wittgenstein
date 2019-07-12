@@ -9,10 +9,7 @@ public class MoreMath {
     return 31 - Integer.numberOfLeadingZeros(n);
   }
 
-
-  /**
-   * @return n rounded to the next power of 2. n itself if it's already rounded.
-   */
+  /** @return n rounded to the next power of 2. n itself if it's already rounded. */
   public static int roundPow2(int n) {
     int res = Integer.highestOneBit(n);
     if (res != n) {

@@ -1,5 +1,8 @@
 package net.consensys.wittgenstein.server.ws;
 
+import java.util.Collections;
+import java.util.List;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.consensys.wittgenstein.core.EnvelopeInfo;
 import net.consensys.wittgenstein.core.Node;
@@ -12,12 +15,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import java.util.Collections;
-import java.util.List;
 
-/**
- * Dummy implementation of an external node. It just prints the messages.
- */
+/** Dummy implementation of an external node. It just prints the messages. */
 @RestController
 @EnableAutoConfiguration
 @RequestMapping("/w")
@@ -28,9 +27,9 @@ public class ExternalWS implements External {
   public <TN extends Node> List<SendMessage> receive(@RequestBody EnvelopeInfo<TN> ei) {
     System.out.println("Received message: " + ei);
 
-    //FloodMessage<?> f = new FloodMessage<>(2000, 10,10);
-    //SendMessage m = new SendMessage(0, new ArrayList<>( List.of(1,2,3)), 1200, 1, f);
-    //return new ArrayList<>(Collections.singleton(m));
+    // FloodMessage<?> f = new FloodMessage<>(2000, 10,10);
+    // SendMessage m = new SendMessage(0, new ArrayList<>( List.of(1,2,3)), 1200, 1, f);
+    // return new ArrayList<>(Collections.singleton(m));
     return Collections.emptyList();
   }
 

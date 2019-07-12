@@ -5,7 +5,6 @@ import net.consensys.wittgenstein.core.NodeBuilder;
 import net.consensys.wittgenstein.core.RegistryNetworkLatencies;
 import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 
-
 /**
  * Implementation of the algo proposed by Ittay Eyal and Emin Gun Sirer in
  * https://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf (algorithm 1, page 6)
@@ -14,8 +13,11 @@ public class ETHSelfishMiner extends ETHMiner {
   private ETHPoW.POWBlock privateMinerBlock;
   private ETHPoW.POWBlock otherMinersHead = genesis;
 
-  public ETHSelfishMiner(BlockChainNetwork<ETHPoW.POWBlock, ETHMiner> network, NodeBuilder nb,
-      int hashPower, ETHPoW.POWBlock genesis) {
+  public ETHSelfishMiner(
+      BlockChainNetwork<ETHPoW.POWBlock, ETHMiner> network,
+      NodeBuilder nb,
+      int hashPower,
+      ETHPoW.POWBlock genesis) {
     super(network, nb, hashPower, genesis);
   }
 
@@ -61,7 +63,6 @@ public class ETHSelfishMiner extends ETHMiner {
     // The previous delta between the two chains
     int deltaP = privateHeight() - (otherMinersHead.height - 1);
 
-
     // In ethereum difficulty changes all the time, the block kept does
     //  not depend on network order issue but on the (total) difficulty. So we
     //  could optimize this attack by not looking only at the depth
@@ -84,7 +85,8 @@ public class ETHSelfishMiner extends ETHMiner {
 
         // Most of the time toSend.height wil equal rcv.height but there could some exception
         //  (1) if you receive two blocks for the same height from different other miners
-        // The original paper.doesn't care because the second block will be ignored by a bitcoin node
+        // The original paper.doesn't care because the second block will be ignored by a bitcoin
+        // node
         //    but in ethereum it can happen if the second block has a greater total difficulty.
         //  (2) if you receive a block but haven't yet received the parent block.
         toSend = privateMinerBlock;
@@ -122,7 +124,8 @@ public class ETHSelfishMiner extends ETHMiner {
       final String nlName =
           RegistryNetworkLatencies.name(RegistryNetworkLatencies.Type.FIXED, time);
       // Merge the two results with:
-      //  paste -d ',' bad.txt good.txt | awk -F "," '{ print $2 "," $5 "," $3 "," $4 "," $12 ", " $11 ","  $6 "," $13 "," $7 "," $14 }'
+      //  paste -d ',' bad.txt good.txt | awk -F "," '{ print $2 "," $5 "," $3 "," $4 "," $12 ", "
+      // $11 ","  $6 "," $13 "," $7 "," $14 }'
       ETHMiner.tryMiner(bdlName, nlName, ETHSelfishMiner.class, pows, hours, runs);
       ETHMiner.tryMiner(bdlName, nlName, ETHMiner.class, pows, hours, runs);
     }

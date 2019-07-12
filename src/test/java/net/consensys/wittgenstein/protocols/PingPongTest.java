@@ -18,9 +18,7 @@ public class PingPongTest {
     }
   }
 
-  /**
-   * Test that two runs gives exactly the same result.
-   */
+  /** Test that two runs gives exactly the same result. */
   @Test
   public void testCopy() {
     PingPong p1 = new PingPong(new PingPong.PingPongParameters());

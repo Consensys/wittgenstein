@@ -1,12 +1,13 @@
 package net.consensys.wittgenstein.protocols;
 
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
+
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.server.WParameters;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Predicate;
 
 @SuppressWarnings("WeakerAccess")
 public class Snowflake implements Protocol {
@@ -24,22 +25,25 @@ public class Snowflake implements Protocol {
      */
     private final int M;
 
-    /**
-     * K is the sample size you take
-     */
+    /** K is the sample size you take */
     private final int K;
 
-    /**
-     * A stands for the alpha threshold
-     */
+    /** A stands for the alpha threshold */
     private final double A;
+
     private double AK;
 
     private final int B;
     final String nodeBuilderName;
     final String networkLatencyName;
 
-    public SnowflakeParameters(int nodeAv, int M, int K, double A, int B, String nodeBuilderName,
+    public SnowflakeParameters(
+        int nodeAv,
+        int M,
+        int K,
+        double A,
+        int B,
+        String nodeBuilderName,
         String networkLatencyName) {
       this.NODES_AV = nodeAv;
       this.M = M;
@@ -60,8 +64,8 @@ public class Snowflake implements Protocol {
     this.params = params;
     this.network = new Network<>();
     this.nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
-    this.network
-        .setNetworkLatency(RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
+    this.network.setNetworkLatency(
+        RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
   }
 
   @Override
@@ -103,7 +107,6 @@ public class Snowflake implements Protocol {
     }
   }
 
-
   static class AnswerQuery extends Message<SnowflakeNode> {
     final Query originalQuery;
     final int color;
@@ -118,7 +121,6 @@ public class Snowflake implements Protocol {
       to.onAnswer(originalQuery.id, color);
     }
   }
-
 
   class SnowflakeNode extends Node {
 
@@ -161,8 +163,8 @@ public class Snowflake implements Protocol {
      * do 4: if col = ⊥ then continue 5: K := sample(N \ u, k) 6: P := [query(v, col) for v ∈ K] 7:
      * for col' ∈ {R, B} do 8: if P.count(col') ≥ α · k then 9: if col' != col then 10: col := col'
      * , cnt := 0 11: else 12: if ++cnt > β then accept(col)
-     * <p>
-     * What's not very clear is what happens during the process: are we returning the color in
+     *
+     * <p>What's not very clear is what happens during the process: are we returning the color in
      * progress.
      */
     void onAnswer(int queryId, int color) {
@@ -193,13 +195,24 @@ public class Snowflake implements Protocol {
 
     @Override
     public String toString() {
-      return "SanFerminNode{" + "nodeId=" + nodeId + ", thresholdAt=" + params.K + ", doneAt="
-          + doneAt + ", msgReceived=" + msgReceived + ", msgSent=" + msgSent + ", KBytesSent="
-          + bytesSent / 1024 + ", KBytesReceived=" + bytesReceived / 1024 + '}';
+      return "SanFerminNode{"
+          + "nodeId="
+          + nodeId
+          + ", thresholdAt="
+          + params.K
+          + ", doneAt="
+          + doneAt
+          + ", msgReceived="
+          + msgReceived
+          + ", msgSent="
+          + msgSent
+          + ", KBytesSent="
+          + bytesSent / 1024
+          + ", KBytesReceived="
+          + bytesReceived / 1024
+          + '}';
     }
-
   }
-
 
   static class Answer {
     final int round;
@@ -223,39 +236,48 @@ public class Snowflake implements Protocol {
     String desc = "";
 
     // sl.network.setNetworkLatency(nl);
-    StatsHelper.StatsGetter stats = new StatsHelper.StatsGetter() {
-      final List<String> fields = List.of("avg");
+    StatsHelper.StatsGetter stats =
+        new StatsHelper.StatsGetter() {
+          final List<String> fields = List.of("avg");
 
-      @Override
-      public List<String> fields() {
-        return fields;
-      }
+          @Override
+          public List<String> fields() {
+            return fields;
+          }
 
-      @Override
-      public StatsHelper.Stat get(List<? extends Node> liveNodes) {
+          @Override
+          public StatsHelper.Stat get(List<? extends Node> liveNodes) {
 
-        int[] colors = getDominantColor(liveNodes);
-        System.out
-            .println("Colored nodes by the numbers: " + colors[0] + " remain uncolored " + colors[1]
-                + " are red " + colors[2] + " are blue.");
-        return StatsHelper.getStatsOn(liveNodes, n -> colors[((SnowflakeNode) n).myColor]);
-      }
-    };
-    ProgressPerTime ppt = new ProgressPerTime(this, desc, "Number of y-Colored Nodes", stats, 10,
-        null, 10, TimeUnit.MILLISECONDS);
+            int[] colors = getDominantColor(liveNodes);
+            System.out.println(
+                "Colored nodes by the numbers: "
+                    + colors[0]
+                    + " remain uncolored "
+                    + colors[1]
+                    + " are red "
+                    + colors[2]
+                    + " are blue.");
+            return StatsHelper.getStatsOn(liveNodes, n -> colors[((SnowflakeNode) n).myColor]);
+          }
+        };
+    ProgressPerTime ppt =
+        new ProgressPerTime(
+            this, desc, "Number of y-Colored Nodes", stats, 10, null, 10, TimeUnit.MILLISECONDS);
 
-    Predicate<Protocol> contIf = p1 -> {
-      int[] colors;
-      for (Node n : p1.network().allNodes) {
-        SnowflakeNode gn = (SnowflakeNode) n;
-        colors = getDominantColor(p1.network().allNodes);
-        if ((gn.cnt < params.B && colors[1] != 100) || (gn.cnt < params.B && colors[2] != 100)) {
-          return true;
-        }
-      }
+    Predicate<Protocol> contIf =
+        p1 -> {
+          int[] colors;
+          for (Node n : p1.network().allNodes) {
+            SnowflakeNode gn = (SnowflakeNode) n;
+            colors = getDominantColor(p1.network().allNodes);
+            if ((gn.cnt < params.B && colors[1] != 100)
+                || (gn.cnt < params.B && colors[2] != 100)) {
+              return true;
+            }
+          }
 
-      return false;
-    };
+          return false;
+        };
     ppt.run(contIf);
   }
 
@@ -270,8 +292,18 @@ public class Snowflake implements Protocol {
 
   @Override
   public String toString() {
-    return "Snowflake{" + "nodes=" + params.NODES_AV + ", latency=" + network.networkLatency
-        + ", M=" + params.M + ", AK=" + params.AK + ", B=" + params.B + '}';
+    return "Snowflake{"
+        + "nodes="
+        + params.NODES_AV
+        + ", latency="
+        + network.networkLatency
+        + ", M="
+        + params.M
+        + ", AK="
+        + params.AK
+        + ", B="
+        + params.B
+        + '}';
   }
 
   public static void main(String... args) {

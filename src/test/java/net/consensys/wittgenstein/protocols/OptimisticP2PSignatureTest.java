@@ -14,8 +14,9 @@ public class OptimisticP2PSignatureTest {
   public void testSimple() {
     int nCt = 100;
     OptimisticP2PSignature p =
-        new OptimisticP2PSignature(new OptimisticP2PSignature.OptimisticP2PSignatureParameters(nCt,
-            nCt / 2 + 1, 13, 3, nb, nl));
+        new OptimisticP2PSignature(
+            new OptimisticP2PSignature.OptimisticP2PSignatureParameters(
+                nCt, nCt / 2 + 1, 13, 3, nb, nl));
     p.init();
     p.network().run(10);
 
@@ -31,8 +32,9 @@ public class OptimisticP2PSignatureTest {
 
   @Test
   public void testCopy() {
-    OptimisticP2PSignature p1 = new OptimisticP2PSignature(
-        new OptimisticP2PSignature.OptimisticP2PSignatureParameters(200, 160, 10, 2, nb, nl));
+    OptimisticP2PSignature p1 =
+        new OptimisticP2PSignature(
+            new OptimisticP2PSignature.OptimisticP2PSignatureParameters(200, 160, 10, 2, nb, nl));
     OptimisticP2PSignature p2 = p1.copy();
     p1.init();
     p1.network().runMs(200);

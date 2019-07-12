@@ -5,14 +5,12 @@ package net.consensys.wittgenstein.core;
  * context of a scenario, typically executing multiple runs to extract min/max/avg behavior on some
  * network conditions. A protocol must have a public constructor taking WParameters as the unique
  * parameter.
- * 
+ *
  * @see net.consensys.wittgenstein.protocols.PingPong
  */
 public interface Protocol {
 
-  /**
-   * @return the network used by this protocol
-   */
+  /** @return the network used by this protocol */
   Network<?> network();
 
   /**
@@ -21,9 +19,6 @@ public interface Protocol {
    */
   Protocol copy();
 
-  /**
-   * Initialize, ig. create all the nodes, byzantine or not & so on.
-   */
+  /** Initialize, ig. create all the nodes, byzantine or not & so on. */
   void init();
-
 }

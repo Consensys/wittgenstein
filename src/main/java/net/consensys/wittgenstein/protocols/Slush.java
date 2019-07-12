@@ -1,12 +1,13 @@
 package net.consensys.wittgenstein.protocols;
 
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
+
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.server.WParameters;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Predicate;
 
 @SuppressWarnings("WeakerAccess")
 public class Slush implements Protocol {
@@ -24,21 +25,18 @@ public class Slush implements Protocol {
      */
     private final int M;
 
-    /**
-     * K is the sample size you take
-     */
+    /** K is the sample size you take */
     private final int K;
 
-    /**
-     * A stands for the alpha threshold
-     */
+    /** A stands for the alpha threshold */
     private final double A;
+
     private double AK;
     final String nodeBuilderName;
     final String networkLatencyName;
 
-    public SlushParameters(int NODES_AV, int M, int K, double A, String nodeBuilderName,
-        String networkLatencyName) {
+    public SlushParameters(
+        int NODES_AV, int M, int K, double A, String nodeBuilderName, String networkLatencyName) {
       this.NODES_AV = NODES_AV;
       this.M = M;
       this.K = K;
@@ -57,8 +55,8 @@ public class Slush implements Protocol {
     this.params = params;
     this.network = new Network<>();
     this.nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
-    this.network
-        .setNetworkLatency(RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
+    this.network.setNetworkLatency(
+        RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
   }
 
   @Override
@@ -125,7 +123,6 @@ public class Slush implements Protocol {
       super(rd, nb);
     }
 
-
     List<SlushNode> randomRemotes() {
       List<SlushNode> res = new ArrayList<>(params.K);
 
@@ -186,9 +183,22 @@ public class Slush implements Protocol {
 
     @Override
     public String toString() {
-      return "SlushNode{" + "nodeId=" + nodeId + ", thresholdAt=" + params.K + ", doneAt=" + doneAt
-          + ", msgReceived=" + msgReceived + ", msgSent=" + msgSent + ", KBytesSent="
-          + bytesSent / 1024 + ", KBytesReceived=" + bytesReceived / 1024 + '}';
+      return "SlushNode{"
+          + "nodeId="
+          + nodeId
+          + ", thresholdAt="
+          + params.K
+          + ", doneAt="
+          + doneAt
+          + ", msgReceived="
+          + msgReceived
+          + ", msgSent="
+          + msgSent
+          + ", KBytesSent="
+          + bytesSent / 1024
+          + ", KBytesReceived="
+          + bytesReceived / 1024
+          + '}';
     }
   }
 
@@ -213,39 +223,47 @@ public class Slush implements Protocol {
     String desc = "";
 
     // sl.network.setNetworkLatency(nl);
-    StatsHelper.StatsGetter stats = new StatsHelper.StatsGetter() {
-      final List<String> fields = List.of("avg");
+    StatsHelper.StatsGetter stats =
+        new StatsHelper.StatsGetter() {
+          final List<String> fields = List.of("avg");
 
-      @Override
-      public List<String> fields() {
-        return fields;
-      }
+          @Override
+          public List<String> fields() {
+            return fields;
+          }
 
-      @Override
-      public StatsHelper.Stat get(List<? extends Node> liveNodes) {
-        int[] colors = getDominantColor(liveNodes);
-        System.out
-            .println("Colored nodes by the numbers: " + colors[0] + " remain uncolored " + colors[1]
-                + " are red " + colors[2] + " are blue.");
-        return StatsHelper.getStatsOn(liveNodes, n -> colors[((SlushNode) n).myColor]);
-      }
-    };
-    ProgressPerTime ppt = new ProgressPerTime(this, desc, "Number of y-Colored Nodes", stats, 10,
-        null, 10, TimeUnit.MILLISECONDS);
+          @Override
+          public StatsHelper.Stat get(List<? extends Node> liveNodes) {
+            int[] colors = getDominantColor(liveNodes);
+            System.out.println(
+                "Colored nodes by the numbers: "
+                    + colors[0]
+                    + " remain uncolored "
+                    + colors[1]
+                    + " are red "
+                    + colors[2]
+                    + " are blue.");
+            return StatsHelper.getStatsOn(liveNodes, n -> colors[((SlushNode) n).myColor]);
+          }
+        };
+    ProgressPerTime ppt =
+        new ProgressPerTime(
+            this, desc, "Number of y-Colored Nodes", stats, 10, null, 10, TimeUnit.MILLISECONDS);
 
-    Predicate<Protocol> contIf = p1 -> {
-      int[] colors;
-      for (Node n : p1.network().allNodes) {
-        SlushNode gn = (SlushNode) n;
-        colors = getDominantColor(p1.network().allNodes);
-        if ((gn.round < this.params.M && colors[1] != 100)
-            || (gn.round < this.params.M && colors[2] != 100)) {
-          return true;
-        }
-      }
+    Predicate<Protocol> contIf =
+        p1 -> {
+          int[] colors;
+          for (Node n : p1.network().allNodes) {
+            SlushNode gn = (SlushNode) n;
+            colors = getDominantColor(p1.network().allNodes);
+            if ((gn.round < this.params.M && colors[1] != 100)
+                || (gn.round < this.params.M && colors[2] != 100)) {
+              return true;
+            }
+          }
 
-      return false;
-    };
+          return false;
+        };
     ppt.run(contIf);
   }
 
@@ -258,15 +276,21 @@ public class Slush implements Protocol {
     return colors;
   }
 
-
   @Override
   public String toString() {
-    return "Slush{" + "Nodes=" + params.NODES_AV + ", latency=" + network.networkLatency + ", M="
-        + params.M + ", AK=" + params.AK + '}';
+    return "Slush{"
+        + "Nodes="
+        + params.NODES_AV
+        + ", latency="
+        + network.networkLatency
+        + ", M="
+        + params.M
+        + ", AK="
+        + params.AK
+        + '}';
   }
 
   public static void main(String... args) {
     new Slush(new SlushParameters(100, 5, 7, 4.0 / 7.0, null, null)).play();
   }
-
 }

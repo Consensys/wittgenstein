@@ -1,5 +1,13 @@
 package net.consensys.wittgenstein.protocols;
 
+import static java.util.Map.entry;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
+
 import net.consensys.wittgenstein.core.NetworkLatency;
 import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 import net.consensys.wittgenstein.core.RunMultipleTimes;
@@ -8,12 +16,6 @@ import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.tools.CSVFormatter;
 import net.consensys.wittgenstein.tools.Graph;
 import net.consensys.wittgenstein.tools.NodeDrawer;
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Predicate;
-import static java.util.Map.entry;
 
 public class HandelScenarios {
 
@@ -26,8 +28,12 @@ public class HandelScenarios {
     final int msgRcvAvg;
     final int msgRcvMax;
 
-
-    BasicStats(long doneAtMin, long doneAtAvg, long doneAtMax, long msgRcvMin, long msgRcvAvg,
+    BasicStats(
+        long doneAtMin,
+        long doneAtAvg,
+        long doneAtMax,
+        long msgRcvMin,
+        long msgRcvAvg,
         long msgRcvMax) {
       this.doneAtMin = (int) doneAtMin;
       this.doneAtAvg = (int) doneAtAvg;
@@ -47,9 +53,16 @@ public class HandelScenarios {
     return defaultParams(null, null, null, null, null, null, null, null, null);
   }
 
-  private Handel.HandelParameters defaultParams(Integer nodes, Double deadRatio, Double tor,
-      Integer periodTime, Integer desynchronizedStart, Boolean byzantineSuicide,
-      Boolean hiddenByzantine, String bestLevelFunction, RegistryNodeBuilders.Location loc) {
+  private Handel.HandelParameters defaultParams(
+      Integer nodes,
+      Double deadRatio,
+      Double tor,
+      Integer periodTime,
+      Integer desynchronizedStart,
+      Boolean byzantineSuicide,
+      Boolean hiddenByzantine,
+      String bestLevelFunction,
+      RegistryNodeBuilders.Location loc) {
     nodes = nodes != null ? nodes : 2048;
     deadRatio = deadRatio != null ? deadRatio : 0.10;
     tor = tor != null ? tor : 0;
@@ -58,22 +71,35 @@ public class HandelScenarios {
     hiddenByzantine = hiddenByzantine != null ? hiddenByzantine : false;
     byzantineSuicide = byzantineSuicide != null ? byzantineSuicide : false;
     loc = loc == null ? RegistryNodeBuilders.Location.AWS : loc;
-    String lat = loc == RegistryNodeBuilders.Location.AWS
-        ? NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName()
-        : loc == RegistryNodeBuilders.Location.CITIES
-            ? NetworkLatency.NetworkLatencyByCity.class.getSimpleName()
-            : NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
+    String lat =
+        loc == RegistryNodeBuilders.Location.AWS
+            ? NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName()
+            : loc == RegistryNodeBuilders.Location.CITIES
+                ? NetworkLatency.NetworkLatencyByCity.class.getSimpleName()
+                : NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
 
     double treshold = (1.0 - (deadRatio + 0.01));
 
-    Handel.HandelParameters p = new Handel.HandelParameters(nodes, (int) (nodes * treshold), 4, 50,
-        periodTime, 10, (int) (nodes * deadRatio), RegistryNodeBuilders.name(loc, false, tor), lat,
-        desynchronizedStart, byzantineSuicide, hiddenByzantine, bestLevelFunction, null);
+    Handel.HandelParameters p =
+        new Handel.HandelParameters(
+            nodes,
+            (int) (nodes * treshold),
+            4,
+            50,
+            periodTime,
+            10,
+            (int) (nodes * deadRatio),
+            RegistryNodeBuilders.name(loc, false, tor),
+            lat,
+            desynchronizedStart,
+            byzantineSuicide,
+            hiddenByzantine,
+            bestLevelFunction,
+            null);
 
     p.window = new Handel.WindowParameters(16, 1, 128, new Handel.CongestionExp(2, 4), true);
     return p;
   }
-
 
   private BasicStats run(int rounds, Handel.HandelParameters params) {
     List<StatsHelper.StatsGetter> stats =
@@ -82,10 +108,14 @@ public class HandelScenarios {
         new RunMultipleTimes<>(new Handel(params), rounds, 0, stats, null);
     List<StatsHelper.Stat> res = rmt.run(Handel.newContIf());
 
-    return new BasicStats(res.get(0).get("min"), res.get(0).get("avg"), res.get(0).get("max"),
-        res.get(1).get("min"), res.get(1).get("avg"), res.get(1).get("max"));
+    return new BasicStats(
+        res.get(0).get("min"),
+        res.get(0).get("avg"),
+        res.get(0).get("max"),
+        res.get(1).get("min"),
+        res.get(1).get("avg"),
+        res.get(1).get("max"));
   }
-
 
   private void runOnce(Handel.HandelParameters params, String fileName) {
     Handel p = new Handel(params);
@@ -101,13 +131,11 @@ public class HandelScenarios {
     System.out.println(fileName + " written - ffmpeg -f gif -i " + fileName + " handel.mp4");
   }
 
-
   private void tor() {
     int n = 8;
-    System.out
-        .println("\nImpact of the ratio of nodes behind tor - "
+    System.out.println(
+        "\nImpact of the ratio of nodes behind tor - "
             + defaultParams(n, null, null, null, null, null, null, null, null));
-
 
     for (double tor : RegistryNodeBuilders.tor()) {
       Handel.HandelParameters params =
@@ -131,10 +159,9 @@ public class HandelScenarios {
   private void byzantineSuicide() {
     int n = 512;
 
-    System.out
-        .println("\nByzantine nodes are filling honest node's queues with bad signatures - "
+    System.out.println(
+        "\nByzantine nodes are filling honest node's queues with bad signatures - "
             + defaultParams(n, null, null, null, null, true, null, null, null));
-
 
     for (int ni = 128; ni <= 2048; ni *= 2) {
       Handel.HandelParameters params =
@@ -187,9 +214,22 @@ public class HandelScenarios {
     System.out.println("\nallBadNodePos: " + ac.size());
 
     for (BitSet bads : ac) {
-      Handel.HandelParameters params = new Handel.HandelParameters(n, 9, 4, 10, 20, 10, 7,
-          RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0),
-          NetworkLatency.NetworkNoLatency.class.getSimpleName(), 0, false, false, null, bads);
+      Handel.HandelParameters params =
+          new Handel.HandelParameters(
+              n,
+              9,
+              4,
+              10,
+              20,
+              10,
+              7,
+              RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0),
+              NetworkLatency.NetworkNoLatency.class.getSimpleName(),
+              0,
+              false,
+              false,
+              null,
+              bads);
 
       params.window = new Handel.WindowParameters(1, 16, 128, new Handel.CongestionExp(2, 4), true);
 
@@ -201,10 +241,9 @@ public class HandelScenarios {
   private void hiddenByzantine() {
     int n = 4096;
 
-    System.out
-        .println("\nByzantine nodes are creating nearly useless signatures"
+    System.out.println(
+        "\nByzantine nodes are creating nearly useless signatures"
             + defaultParams(n, null, null, null, null, true, null, null, null));
-
 
     for (int ni = 128; ni < n; ni *= 2) {
       Handel.HandelParameters params =
@@ -232,9 +271,8 @@ public class HandelScenarios {
     int n = 2048;
     System.out.println("\nSEvaluation with FIXED window size, n;" + n);
 
-
     double[] deadRatios = new double[] {0.50};
-    //Boolean[][] byzs = new Boolean[][] {new Boolean[] {false, false},
+    // Boolean[][] byzs = new Boolean[][] {new Boolean[] {false, false},
     //    new Boolean[] {true, false}, new Boolean[] {false, true}};
     Boolean[][] byzs = new Boolean[][] {new Boolean[] {true, false}};
     Boolean[] scorings = new Boolean[] {true, false};
@@ -244,12 +282,21 @@ public class HandelScenarios {
           for (double dr : deadRatios) {
             Handel.HandelParameters params =
                 defaultParams(n, dr, null, null, null, byz[0], byz[1], null, null);
-            Handel.WindowParameters windowParam = new Handel.WindowParameters(w, false, score); // no moving window
+            Handel.WindowParameters windowParam =
+                new Handel.WindowParameters(w, false, score); // no moving window
             params.window = windowParam;
             BasicStats bs = run(3, params);
-            System.out
-                .println("WindowEvaluation: Window: " + w + ", DeadRatio: " + dr + " suicideBiz="
-                    + byz[0] + ", hiddenByz=" + byz[1] + " => " + bs);
+            System.out.println(
+                "WindowEvaluation: Window: "
+                    + w
+                    + ", DeadRatio: "
+                    + dr
+                    + " suicideBiz="
+                    + byz[0]
+                    + ", hiddenByz="
+                    + byz[1]
+                    + " => "
+                    + bs);
           }
         }
       }
@@ -259,9 +306,15 @@ public class HandelScenarios {
         Handel.HandelParameters params =
             defaultParams(n, dr, null, null, null, byz[0], byz[1], null, null);
         BasicStats bs = run(3, params);
-        System.out
-            .println("ByzantineSuicide: DeadRatio: " + dr + " suicideBiz=" + byz[0] + ", hiddenByz="
-                + byz[1] + " => " + bs);
+        System.out.println(
+            "ByzantineSuicide: DeadRatio: "
+                + dr
+                + " suicideBiz="
+                + byz[0]
+                + ", hiddenByz="
+                + byz[1]
+                + " => "
+                + bs);
       }
     }
   }
@@ -269,8 +322,6 @@ public class HandelScenarios {
   private void byzantineWithVariableWindow2() {
     int n = 4096;
     System.out.println("\nSEvaluation with priority list of variable size; with n=" + n);
-
-
 
     double[] deadRatios = new double[] {0.01, 0.10, 0.20, 0.5};
     int[] minimum = new int[] {4096};
@@ -280,8 +331,10 @@ public class HandelScenarios {
     Handel.CongestionWindow[] congestions =
         new Handel.CongestionWindow[] {new Handel.CongestionExp(2, 4)};
 
-    Boolean[][] byzs = new Boolean[][] {new Boolean[] {false, false}, new Boolean[] {false, true},
-        new Boolean[] {true, false}};
+    Boolean[][] byzs =
+        new Boolean[][] {
+          new Boolean[] {false, false}, new Boolean[] {false, true}, new Boolean[] {true, false}
+        };
     for (Boolean[] byz : byzs) {
       for (double dr : deadRatios) {
         for (boolean moving : movings) {
@@ -300,13 +353,24 @@ public class HandelScenarios {
                   attack = params.byzantineSuicide ? ", att=suicide" : attack;
                   attack = params.hiddenByzantine ? ", att=hidden" : attack;
 
-                  System.out
-                      .println("WindowEvaluation: initial=" + init + ",min=" + min + ",max=" + max
-                          + ",cong=" + c + ",movingWindow=" + moving + ", deadRatio=" + dr + attack
-                          + "   " + bs);
+                  System.out.println(
+                      "WindowEvaluation: initial="
+                          + init
+                          + ",min="
+                          + min
+                          + ",max="
+                          + max
+                          + ",cong="
+                          + c
+                          + ",movingWindow="
+                          + moving
+                          + ", deadRatio="
+                          + dr
+                          + attack
+                          + "   "
+                          + bs);
                 }
               }
-
             }
           }
         }
@@ -314,25 +378,25 @@ public class HandelScenarios {
     }
   }
 
-
   private void byzantineWithVariableWindow() {
     int n = 2048;
     System.out.println("\nSEvaluation with priority list of variable size; with n=" + n);
-
 
     double[] deadRatios = new double[] {0, 0.50};
     int[] minimum = new int[] {1};
     int[] maximum = new int[] {64};
     int[] initials = new int[] {10};
-    //boolean[] movings = new boolean[] {false, true};
+    // boolean[] movings = new boolean[] {false, true};
     boolean[] movings = new boolean[] {false};
 
     Handel.CongestionWindow[] congestions =
-        new Handel.CongestionWindow[] {new Handel.CongestionLinear(1),
-            //new Handel.CongestionLinear(10),
-            new Handel.CongestionExp(1.5, 2), //new Handel.CongestionExp(2, 2),};
+        new Handel.CongestionWindow[] {
+          new Handel.CongestionLinear(1),
+          // new Handel.CongestionLinear(10),
+          new Handel.CongestionExp(1.5, 2), // new Handel.CongestionExp(2, 2),};
         };
-    //Boolean[][] byzs = new Boolean[][] {new Boolean[] {false, false}, new Boolean[] {true, false},
+    // Boolean[][] byzs = new Boolean[][] {new Boolean[] {false, false}, new Boolean[] {true,
+    // false},
     //   new Boolean[] {false, true}};
     Boolean[][] byzs = new Boolean[][] {new Boolean[] {true, false}};
     for (int init : initials) {
@@ -349,13 +413,27 @@ public class HandelScenarios {
                   params.window = windowParam;
                   BasicStats bs = run(2, params);
 
-                  System.out
-                      .println("initial=" + init + ",min=" + min + ",max=" + max + ",cong=" + c
-                          + ",movingWindow=" + moving + ", deadRatio=" + dr + ",suicide=" + byz[0]
-                          + ",hidden=" + byz[1] + "\t=>\t " + bs);
+                  System.out.println(
+                      "initial="
+                          + init
+                          + ",min="
+                          + min
+                          + ",max="
+                          + max
+                          + ",cong="
+                          + c
+                          + ",movingWindow="
+                          + moving
+                          + ", deadRatio="
+                          + dr
+                          + ",suicide="
+                          + byz[0]
+                          + ",hidden="
+                          + byz[1]
+                          + "\t=>\t "
+                          + bs);
                 }
               }
-
             }
           }
         }
@@ -368,10 +446,14 @@ public class HandelScenarios {
     int nbRounds = 2;
     double[] deadRatios = new double[] {0, 0.50};
     double[] tors = new double[] {0.20};
-    Boolean[][] byzs = new Boolean[][] {new Boolean[] {false, false}, new Boolean[] {true, false},
-        new Boolean[] {false, true}};
-    String[] chooseLevels = new String[] {Handel.HandelParameters.BESTLEVEL_RANDOM,
-        Handel.HandelParameters.BESTLEVEL_SCORE};
+    Boolean[][] byzs =
+        new Boolean[][] {
+          new Boolean[] {false, false}, new Boolean[] {true, false}, new Boolean[] {false, true}
+        };
+    String[] chooseLevels =
+        new String[] {
+          Handel.HandelParameters.BESTLEVEL_RANDOM, Handel.HandelParameters.BESTLEVEL_SCORE
+        };
 
     // fixed-length window
     int[] windows = new int[] {64, 1024};
@@ -383,18 +465,35 @@ public class HandelScenarios {
     int[] initials = new int[] {10};
     boolean[] movings = new boolean[] {false};
     Handel.CongestionWindow[] congestions =
-        new Handel.CongestionWindow[] {new Handel.CongestionLinear(5),
-            //new Handel.CongestionLinear(10),
-            new Handel.CongestionExp(1.5, 2), //new Handel.CongestionExp(2, 2),};
+        new Handel.CongestionWindow[] {
+          new Handel.CongestionLinear(5),
+          // new Handel.CongestionLinear(10),
+          new Handel.CongestionExp(1.5, 2), // new Handel.CongestionExp(2, 2),};
         };
 
-
-    CSVFormatter formatter = new CSVFormatter(Arrays
-        .asList("n", "technique", "tor", "deadRatio", "byLevels", "suicide", "hidden", "window",
-            "useScore", // constant length window
-            "minimum", "maximum", "initial", "moving", "linear", "exp_inc", "exp_dec",
-            // variable-length window
-            "doneMin", "doneAvg", "doneMax")); // general stats
+    CSVFormatter formatter =
+        new CSVFormatter(
+            Arrays.asList(
+                "n",
+                "technique",
+                "tor",
+                "deadRatio",
+                "byLevels",
+                "suicide",
+                "hidden",
+                "window",
+                "useScore", // constant length window
+                "minimum",
+                "maximum",
+                "initial",
+                "moving",
+                "linear",
+                "exp_inc",
+                "exp_dec",
+                // variable-length window
+                "doneMin",
+                "doneAvg",
+                "doneMax")); // general stats
 
     Handel.HandelParameters params = null;
     BasicStats bs;
@@ -407,15 +506,19 @@ public class HandelScenarios {
             // 1. naive run
             params = defaultParams(n, null, tor, null, 0, byz[0], byz[1], byLevels, null);
             bs = run(nbRounds, params);
-            formatter
-                .add(Map
-                    .ofEntries(entry("n", n), entry("tor", tor), entry("deadRatio", dr),
-                        entry("byLevels", byLevels), entry("suicide", byz[0]),
-                        entry("hidden", byz[1]), entry("technique", "ranking"),
-                        entry("doneMin", bs.doneAtMin), entry("doneAvg", bs.doneAtAvg),
-                        entry("doneMax", bs.doneAtMax)));
+            formatter.add(
+                Map.ofEntries(
+                    entry("n", n),
+                    entry("tor", tor),
+                    entry("deadRatio", dr),
+                    entry("byLevels", byLevels),
+                    entry("suicide", byz[0]),
+                    entry("hidden", byz[1]),
+                    entry("technique", "ranking"),
+                    entry("doneMin", bs.doneAtMin),
+                    entry("doneAvg", bs.doneAtAvg),
+                    entry("doneMax", bs.doneAtMax)));
           }
-
         }
       }
     }
@@ -436,14 +539,20 @@ public class HandelScenarios {
                     new Handel.WindowParameters(window, false, score); // no moving window
                 params.window = windowParam;
                 bs = run(nbRounds, params);
-                formatter
-                    .add(Map
-                        .ofEntries(entry("n", n), entry("tor", tor), entry("deadRatio", dr),
-                            entry("byLevels", byLevels), entry("suicide", byz[0]),
-                            entry("hidden", byz[1]), entry("technique", "fixed"),
-                            entry("window", window), entry("useScore", score),
-                            entry("doneMin", bs.doneAtMin), entry("doneAvg", bs.doneAtAvg),
-                            entry("doneMax", bs.doneAtMax)));
+                formatter.add(
+                    Map.ofEntries(
+                        entry("n", n),
+                        entry("tor", tor),
+                        entry("deadRatio", dr),
+                        entry("byLevels", byLevels),
+                        entry("suicide", byz[0]),
+                        entry("hidden", byz[1]),
+                        entry("technique", "fixed"),
+                        entry("window", window),
+                        entry("useScore", score),
+                        entry("doneMin", bs.doneAtMin),
+                        entry("doneAvg", bs.doneAtAvg),
+                        entry("doneMax", bs.doneAtMax)));
               }
             }
           }
@@ -469,13 +578,21 @@ public class HandelScenarios {
                       params.window = windowParam;
                       bs = run(nbRounds, params);
                       Map<String, Object> row = new HashMap<>();
-                      Map<String, Object> staticEntries = Map
-                          .ofEntries(entry("n", n), entry("tor", tor), entry("deadRatio", dr),
-                              entry("byLevels", byLevels), entry("suicide", byz[0]),
-                              entry("hidden", byz[1]), entry("technique", c.name()),
-                              entry("minimum", minimum), entry("maximum", maximum),
-                              entry("initial", initial), entry("moving", moving),
-                              entry("doneMin", bs.doneAtMin), entry("doneAvg", bs.doneAtAvg),
+                      Map<String, Object> staticEntries =
+                          Map.ofEntries(
+                              entry("n", n),
+                              entry("tor", tor),
+                              entry("deadRatio", dr),
+                              entry("byLevels", byLevels),
+                              entry("suicide", byz[0]),
+                              entry("hidden", byz[1]),
+                              entry("technique", c.name()),
+                              entry("minimum", minimum),
+                              entry("maximum", maximum),
+                              entry("initial", initial),
+                              entry("moving", moving),
+                              entry("doneMin", bs.doneAtMin),
+                              entry("doneAvg", bs.doneAtAvg),
                               entry("doneMax", bs.doneAtMax));
 
                       row.putAll(staticEntries);
@@ -483,14 +600,13 @@ public class HandelScenarios {
                         row.put("linear", ((Handel.CongestionLinear) c).delta);
                       } else {
                         Handel.CongestionExp exp = (Handel.CongestionExp) c;
-                        row
-                            .putAll(Map
-                                .ofEntries(entry("exp_inc", exp.increaseFactor),
-                                    entry("exp_dec", exp.decreaseFactor)));
+                        row.putAll(
+                            Map.ofEntries(
+                                entry("exp_inc", exp.increaseFactor),
+                                entry("exp_dec", exp.decreaseFactor)));
                       }
                       formatter.add(row);
                     }
-
                   }
                 }
               }
@@ -501,7 +617,6 @@ public class HandelScenarios {
     }
 
     System.out.println(formatter.toString());
-
   }
 
   void shuffleTimeTest() {
@@ -511,10 +626,10 @@ public class HandelScenarios {
         defaultParams(n, null, 0.0, null, null, null, null, null, null);
     String[] shuffle =
         new String[] {Handel.HandelParameters.SHUFFLE_SQUARE, Handel.HandelParameters.SHUFFLE_XOR};
-    //new String[] {Handel.HandelParameters.SHUFFLE_XOR};
-    //new String[] {Handel.HandelParameters.SHUFFLE_SQUARE};
+    // new String[] {Handel.HandelParameters.SHUFFLE_XOR};
+    // new String[] {Handel.HandelParameters.SHUFFLE_SQUARE};
     // if we remove this, the shuffle square is faster
-    //params.window = new Handel.WindowParameters(10, true, true);
+    // params.window = new Handel.WindowParameters(10, true, true);
     for (String s : shuffle) {
       params.shuffle = s;
       long startTime = System.nanoTime();
@@ -527,12 +642,12 @@ public class HandelScenarios {
 
   void genAnim() {
     int n = 4096;
-    //runOnce(defaultParams(n, null, null, 200, null, null), "unsync.gif");
-    runOnce(defaultParams(n, null, 0.0, null, null, null, null, null,
-        RegistryNodeBuilders.Location.CITIES), "tor.gif");
+    // runOnce(defaultParams(n, null, null, 200, null, null), "unsync.gif");
+    runOnce(
+        defaultParams(
+            n, null, 0.0, null, null, null, null, null, RegistryNodeBuilders.Location.CITIES),
+        "tor.gif");
   }
-
-
 
   void delayedStartImpact(int n, int waitTime, int period) {
     int mF = 0;
@@ -547,11 +662,16 @@ public class HandelScenarios {
         }
       }
     }
-    System.out
-        .println("Sent w/o waitTime: " + mF + ", w/ waitTime:" + mS + ", saved= " + (mF - mS)
-            + " - " + ((mF - mS) / (0.0 + mS)));
+    System.out.println(
+        "Sent w/o waitTime: "
+            + mF
+            + ", w/ waitTime:"
+            + mS
+            + ", saved= "
+            + (mF - mS)
+            + " - "
+            + ((mF - mS) / (0.0 + mS)));
   }
-
 
   private void log() throws IOException {
     System.out.println("\nBehavior when the number of nodes increases - " + defaultParams());
@@ -574,15 +694,21 @@ public class HandelScenarios {
       mM.addLine(new Graph.ReportLine(n, bs.msgRcvMax));
     }
 
-    Graph graph = new Graph("time vs. number of nodes" + defaultParams().toString(),
-        "number of nodes", "time in milliseconds");
+    Graph graph =
+        new Graph(
+            "time vs. number of nodes" + defaultParams().toString(),
+            "number of nodes",
+            "time in milliseconds");
 
     graph.addSerie(tA);
     graph.addSerie(tM);
     graph.save(new File("handel_log_time.png"));
 
-    graph = new Graph("messages vs. number of nodes" + defaultParams().toString(),
-        "number of nodes", "number of messages");
+    graph =
+        new Graph(
+            "messages vs. number of nodes" + defaultParams().toString(),
+            "number of nodes",
+            "number of messages");
     graph.addSerie(mA);
     graph.addSerie(mM);
     graph.save(new File("handel_log_msg.png"));
@@ -612,14 +738,20 @@ public class HandelScenarios {
       mA.addLine(new Graph.ReportLine(p, bs.msgRcvAvg));
     }
 
-    Graph graph = new Graph("time vs. period time" + defaultParams().toString(),
-        "period time in ms", "time in milliseconds");
+    Graph graph =
+        new Graph(
+            "time vs. period time" + defaultParams().toString(),
+            "period time in ms",
+            "time in milliseconds");
 
     graph.addSerie(tA);
     graph.save(new File("handel_period_time.png"));
 
-    graph = new Graph("messages vs. period time" + defaultParams().toString(), "period time in ms",
-        "number of messages");
+    graph =
+        new Graph(
+            "messages vs. period time" + defaultParams().toString(),
+            "period time in ms",
+            "number of messages");
     graph.addSerie(mA);
     graph.save(new File("handel_period_msg.png"));
   }
@@ -651,15 +783,21 @@ public class HandelScenarios {
       mA.addLine(new Graph.ReportLine(s, bs.msgRcvAvg));
     }
 
-    Graph graph = new Graph("time vs. delayed start" + defaultParams().toString(), "delay in ms",
-        "time in milliseconds");
+    Graph graph =
+        new Graph(
+            "time vs. delayed start" + defaultParams().toString(),
+            "delay in ms",
+            "time in milliseconds");
 
     graph.addSerie(tA);
     graph.setForcedMinY(0.0);
     graph.save(new File("handel_delayedStart_time.png"));
 
-    graph = new Graph("messages vs. start time" + defaultParams().toString(), "start time in ms",
-        "number of messages");
+    graph =
+        new Graph(
+            "messages vs. start time" + defaultParams().toString(),
+            "start time in ms",
+            "number of messages");
     graph.addSerie(mA);
     graph.setForcedMinY(0.0);
     graph.save(new File("handel_delayedStart_msg.png"));
@@ -692,14 +830,20 @@ public class HandelScenarios {
       mA.addLine(new Graph.ReportLine(s, bs.msgRcvAvg));
     }
 
-    Graph graph = new Graph("time vs. start time" + defaultParams().toString(), "start time in ms",
-        "time in milliseconds");
+    Graph graph =
+        new Graph(
+            "time vs. start time" + defaultParams().toString(),
+            "start time in ms",
+            "time in milliseconds");
 
     graph.addSerie(tA);
     graph.save(new File("handel_startTime_time.png"));
 
-    graph = new Graph("messages vs. start time" + defaultParams().toString(), "start time in ms",
-        "number of messages");
+    graph =
+        new Graph(
+            "messages vs. start time" + defaultParams().toString(),
+            "start time in ms",
+            "number of messages");
     graph.addSerie(mA);
     graph.save(new File("handel_startTime_msg.png"));
   }
@@ -731,14 +875,20 @@ public class HandelScenarios {
       mA.addLine(new Graph.ReportLine(a, bs.msgRcvAvg));
     }
 
-    Graph graph = new Graph("time vs. fast path peer count" + defaultParams().toString(),
-        "fast path peer count", "time in milliseconds");
+    Graph graph =
+        new Graph(
+            "time vs. fast path peer count" + defaultParams().toString(),
+            "fast path peer count",
+            "time in milliseconds");
 
     graph.addSerie(tA);
     graph.save(new File("handel_fastpath_time.png"));
 
-    graph = new Graph("messages vs. start time" + defaultParams().toString(),
-        "fast path peer count", "number of messages");
+    graph =
+        new Graph(
+            "messages vs. start time" + defaultParams().toString(),
+            "fast path peer count",
+            "number of messages");
     graph.addSerie(mA);
     graph.save(new File("handel_fastpath_msg.png"));
   }
@@ -770,6 +920,4 @@ public class HandelScenarios {
     HandelScenarios scenario = new HandelScenarios();
     scenario.logDelayedStart(RegistryNodeBuilders.Location.CITIES, 0.2, 0.00);
   }
-
-
 }

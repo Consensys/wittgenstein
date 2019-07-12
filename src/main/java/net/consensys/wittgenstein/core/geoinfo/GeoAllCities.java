@@ -1,8 +1,8 @@
 package net.consensys.wittgenstein.core.geoinfo;
 
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
+import static net.consensys.wittgenstein.core.Node.MAX_X;
+import static net.consensys.wittgenstein.core.Node.MAX_Y;
+
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
@@ -10,15 +10,16 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
-import static net.consensys.wittgenstein.core.Node.MAX_X;
-import static net.consensys.wittgenstein.core.Node.MAX_Y;
+
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 
 public class GeoAllCities extends Geo {
   private final Map<String, CityInfo> citiesPosition;
   private final double mapWidth;
   private final double mapHeight;
-  private final static Path CITY_PATH = Paths.get("resources/cities.csv");
-
+  private static final Path CITY_PATH = Paths.get("resources/cities.csv");
 
   public GeoAllCities() {
     this.mapWidth = MAX_X;
@@ -75,7 +76,6 @@ public class GeoAllCities extends Geo {
     }
     return posY;
   }
-
 
   // main method for  testing
   public static void main(String[] args) {

@@ -63,5 +63,4 @@ public class CasperByzantineTest {
     ci.network.run(1); // 22s: 24 -2 seconds delay
     Assert.assertEquals(3, byz.head.height);
   }
-
 }

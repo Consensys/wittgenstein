@@ -1,25 +1,24 @@
 package net.consensys.wittgenstein.core;
 
+import java.util.*;
+import java.util.stream.Collectors;
+
 import net.consensys.wittgenstein.core.messages.ConditionalTask;
 import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.messages.PeriodicTask;
 import net.consensys.wittgenstein.core.messages.Task;
 import net.consensys.wittgenstein.server.SendMessage;
-import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * There is a single network for a simulation.
- * <p>
- * Nothing is executed in parallel, so the code does not have to be multithread safe.
+ *
+ * <p>Nothing is executed in parallel, so the code does not have to be multithread safe.
  */
 @SuppressWarnings({"WeakerAccess", "unused", "UnusedReturnValue"})
 public class Network<TN extends Node> {
-  final static int duration = 60 * 1000;
+  static final int duration = 60 * 1000;
 
-  /**
-   * The messages in transit. Sorted by their arrival time.
-   */
+  /** The messages in transit. Sorted by their arrival time. */
   public final MessageStorage msgs = new MessageStorage();
 
   /**
@@ -28,16 +27,13 @@ public class Network<TN extends Node> {
    */
   public final List<ConditionalTask<TN>> conditionalTasks = new LinkedList<>();
 
-
   /**
    * Internal variable. Nodes id are sequential & start at zero, so we can we index them in an
    * array.
    */
   public final List<TN> allNodes = new ArrayList<>(2048);
 
-  /**
-   * By using a single random generator, we have repeatable runs.
-   */
+  /** By using a single random generator, we have repeatable runs. */
   public final Random rd = new Random(0);
 
   final List<Integer> partitionsInX = new ArrayList<>();
@@ -48,9 +44,7 @@ public class Network<TN extends Node> {
    */
   int msgDiscardTime = Integer.MAX_VALUE;
 
-  /**
-   * The network latency. The default one is for a WAN
-   */
+  /** The network latency. The default one is for a WAN */
   public NetworkLatency networkLatency = new NetworkLatency.IC3NetworkLatency();
 
   /**
@@ -73,8 +67,8 @@ public class Network<TN extends Node> {
    * A desperate attempt to have something less memory consuming than a PriorityQueue or a guava
    * multimap, by using raw array. The idea is to optimize the case when there are multiple messages
    * in the same millisecond, but the global time range for all messages is limited.
-   * <p>
-   * The second idea is to have a repeatable run when there are multiple messages arriving at the
+   *
+   * <p>The second idea is to have a repeatable run when there are multiple messages arriving at the
    * same millisecond.
    */
   final class MsgsSlot {
@@ -98,8 +92,13 @@ public class Network<TN extends Node> {
     public void addMsg(Envelope<?> m) {
       int aTime = m.nextArrivalTime(Network.this);
       if (aTime < time) {
-        throw new IllegalStateException("Can't add a message arriving in the past! time=" + time
-            + ", arriving at " + aTime + ", m=" + m);
+        throw new IllegalStateException(
+            "Can't add a message arriving in the past! time="
+                + time
+                + ", arriving at "
+                + aTime
+                + ", m="
+                + m);
       }
       int pos = getPos(aTime);
       m.setNextSameTime(msgsByMs[pos]);
@@ -156,7 +155,6 @@ public class Network<TN extends Node> {
       return res;
     }
   }
-
 
   public final class MessageStorage {
     public final ArrayList<MsgsSlot> msgsBySlot = new ArrayList<>();
@@ -227,14 +225,11 @@ public class Network<TN extends Node> {
       cleanup();
     }
 
-    /**
-     * @return the first message in the queue, null if the queue is empty.
-     */
+    /** @return the first message in the queue, null if the queue is empty. */
     Envelope<?> peekFirst() {
       for (MsgsSlot ms : msgsBySlot) {
         Envelope<?> m = ms.peekFirst();
-        if (m != null)
-          return m;
+        if (m != null) return m;
       }
       return null;
     }
@@ -248,33 +243,24 @@ public class Network<TN extends Node> {
       return res;
     }
 
-
-    /**
-     * For tests: they can find their message content.
-     */
+    /** For tests: they can find their message content. */
     public Message<?> peekFirstMessageContent() {
       Envelope<?> m = peekFirst();
       return m == null ? null : m.getMessage();
     }
 
-    /**
-     * @return the first message in the queue, null if the queue is empty.
-     */
+    /** @return the first message in the queue, null if the queue is empty. */
     public Envelope<?> pollFirst() {
       Envelope<?> m = peekFirst();
       return m == null ? null : poll(m.nextArrivalTime(Network.this));
     }
   }
 
-
   public interface Condition {
     boolean check();
   }
 
-
-  /**
-   * Simulate for x seconds. Can be called multiple time.
-   */
+  /** Simulate for x seconds. Can be called multiple time. */
   public void run(int seconds) {
     runMs(seconds * 1000);
   }
@@ -309,10 +295,7 @@ public class Network<TN extends Node> {
     return didSomething;
   }
 
-
-  /**
-   * Send a message to all nodes.
-   */
+  /** Send a message to all nodes. */
   public void sendAll(Message<? extends TN> m, int sendTime, TN fromNode) {
     send(m, sendTime, fromNode, allNodes);
   }
@@ -336,9 +319,7 @@ public class Network<TN extends Node> {
     send(m, time + 1, fromNode, toNode);
   }
 
-  /**
-   * Send a message to a single node.
-   */
+  /** Send a message to a single node. */
   public void send(Message<? extends TN> mc, int sendTime, TN fromNode, TN toNode) {
     if (fromNode.nodeId >= allNodes.size() || getNodeById(fromNode.nodeId) != fromNode) {
       throw new IllegalArgumentException("The from node is not in the network. From=" + fromNode);
@@ -362,7 +343,7 @@ public class Network<TN extends Node> {
     msgs.addMsg(new Envelope.SingleDestEnvelope<>(mc, fromNode, toNode, time, arriveAt));
   }
 
-  final static class MessageArrival implements Comparable<MessageArrival> {
+  static final class MessageArrival implements Comparable<MessageArrival> {
     final Node dest;
     final int arrival;
 
@@ -390,7 +371,11 @@ public class Network<TN extends Node> {
     send(m, sendTime, fromNode, dests, 0);
   }
 
-  public void send(Message<? extends TN> m, int sendTime, TN fromNode, List<? extends Node> dests,
+  public void send(
+      Message<? extends TN> m,
+      int sendTime,
+      TN fromNode,
+      List<? extends Node> dests,
       int delaysBetweenMessage) {
     if (fromNode.nodeId >= allNodes.size() || getNodeById(fromNode.nodeId) != fromNode) {
       throw new IllegalArgumentException("The from node is not in the network. From=" + fromNode);
@@ -412,12 +397,16 @@ public class Network<TN extends Node> {
         msg = new Envelope.MultipleDestWithDelayEnvelope<>(m, fromNode, da, sendTime);
       }
       msgs.addMsg(msg);
-
     }
   }
 
-  List<MessageArrival> createMessageArrivals(Message<? extends TN> m, int sendTime, TN fromNode,
-      List<? extends Node> dests, int randomSeed, int delaysBetweenMessage) {
+  List<MessageArrival> createMessageArrivals(
+      Message<? extends TN> m,
+      int sendTime,
+      TN fromNode,
+      List<? extends Node> dests,
+      int randomSeed,
+      int delaysBetweenMessage) {
     ArrayList<MessageArrival> da = new ArrayList<>(dests.size());
     for (Node n : dests) {
       MessageArrival ma = createMessageArrival(m, fromNode, n, sendTime, randomSeed);
@@ -431,8 +420,8 @@ public class Network<TN extends Node> {
     return da;
   }
 
-  private MessageArrival createMessageArrival(Message<?> m, Node fromNode, Node toNode,
-      int sendTime, int randomSeed) {
+  private MessageArrival createMessageArrival(
+      Message<?> m, Node fromNode, Node toNode, int sendTime, int randomSeed) {
     if (sendTime <= time) {
       throw new IllegalStateException("" + m + ", sendTime=" + sendTime + ", time=" + time);
     }
@@ -453,7 +442,7 @@ public class Network<TN extends Node> {
 
   /**
    * @return always the same number for the same parameters, between 0 and 99, uniformly
-   *         distributed.
+   *     distributed.
    */
   public static int getPseudoRandom(int nodeId, int randomSeed) {
     int x = hash(nodeId) ^ randomSeed;
@@ -477,14 +466,19 @@ public class Network<TN extends Node> {
     msgs.addMsg(new Envelope.SingleDestEnvelope<>(sw, fromNode, fromNode, time, startAt));
   }
 
-  public void registerPeriodicTask(final Runnable task, int startAt, int period, TN fromNode,
-      Condition c) {
+  public void registerPeriodicTask(
+      final Runnable task, int startAt, int period, TN fromNode, Condition c) {
     PeriodicTask<TN> sw = new PeriodicTask<>(task, fromNode, period, c);
     msgs.addMsg(new Envelope.SingleDestEnvelope<>(sw, fromNode, fromNode, time, startAt));
   }
 
-  public void registerConditionalTask(final Runnable task, int startAt, int duration, TN fromNode,
-      Condition startIf, Condition repeatIf) {
+  public void registerConditionalTask(
+      final Runnable task,
+      int startAt,
+      int duration,
+      TN fromNode,
+      Condition startIf,
+      Condition repeatIf) {
     ConditionalTask<TN> ct = new ConditionalTask<>(startIf, repeatIf, task, startAt, duration);
     conditionalTasks.add(ct);
   }
@@ -631,5 +625,4 @@ public class Network<TN extends Node> {
   public void endPartition() {
     partitionsInX.clear();
   }
-
 }

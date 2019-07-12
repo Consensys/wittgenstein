@@ -1,15 +1,15 @@
 package net.consensys.wittgenstein.core;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+
 import net.consensys.wittgenstein.core.geoinfo.CityInfo;
 import net.consensys.wittgenstein.core.geoinfo.Geo;
 import net.consensys.wittgenstein.core.geoinfo.GeoAllCities;
 import net.consensys.wittgenstein.tools.CSVLatencyReader;
 import org.junit.Assert;
 import org.junit.Test;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-
 
 class GeoTest extends Geo {
   private final Map<String, CityInfo> citiesInfo;
@@ -23,7 +23,6 @@ class GeoTest extends Geo {
   }
 }
 
-
 public class CityPopulationTest {
 
   @Test
@@ -34,11 +33,12 @@ public class CityPopulationTest {
         new NodeBuilder.NodeBuilderWithCity(lr.cities(), new GeoAllCities());
 
     for (Map.Entry<String, CityInfo> cityInfo : nb.getCitiesInfo().entrySet()) {
-      Assert
-          .assertTrue(
-              "wrong cumulative probability for " + cityInfo.getKey() + ":"
-                  + cityInfo.getValue().cumulativeProbability,
-              cityInfo.getValue().cumulativeProbability < 1.00001f);
+      Assert.assertTrue(
+          "wrong cumulative probability for "
+              + cityInfo.getKey()
+              + ":"
+              + cityInfo.getValue().cumulativeProbability,
+          cityInfo.getValue().cumulativeProbability < 1.00001f);
     }
   }
 
@@ -64,9 +64,7 @@ public class CityPopulationTest {
         bigCityCount++;
       }
     }
-    Assert
-        .assertEquals("Bigger cities should be selected more often than smaller", 6, bigCityCount);
+    Assert.assertEquals(
+        "Bigger cities should be selected more often than smaller", 6, bigCityCount);
   }
 }
-
-

@@ -1,26 +1,26 @@
 package net.consensys.wittgenstein.protocols;
 
-
-import net.consensys.wittgenstein.core.*;
-import net.consensys.wittgenstein.core.messages.Message;
-import net.consensys.wittgenstein.server.WParameters;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
 
+import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.messages.Message;
+import net.consensys.wittgenstein.server.WParameters;
+
 /**
  * The simplest protocol to exchange signatures: just send the signatures, and do an aggregation at
  * the end.
- * <p>
- * Protocol: forward the message to all your peers if you have not done it already.
- * <p>
- * That's the optimistic case. If the aggregated signature fails, the aggregator needs to test the
- * sub bases to find the culprit: that's a log N time. For 1000 nodes there would be a total of 2 +
- * 10 * 2 + 2 pairing (~50 ms) Of course, if more nodes are byzantine then it will take longer, the
- * worse case being 2*N pairings if 49% of the nodes are byzantine.
  *
- * <p>
- * Sends a lot of messages so uses a lot of memory and slow to test.
+ * <p>Protocol: forward the message to all your peers if you have not done it already.
+ *
+ * <p>That's the optimistic case. If the aggregated signature fails, the aggregator needs to test
+ * the sub bases to find the culprit: that's a log N time. For 1000 nodes there would be a total of
+ * 2 + 10 * 2 + 2 pairing (~50 ms) Of course, if more nodes are byzantine then it will take longer,
+ * the worse case being 2*N pairings if 49% of the nodes are byzantine.
+ *
+ * <p>Sends a lot of messages so uses a lot of memory and slow to test.
+ *
  * <p>
  */
 @SuppressWarnings("WeakerAccess")
@@ -31,25 +31,18 @@ public class OptimisticP2PSignature implements Protocol {
   final NodeBuilder nb;
 
   public static class OptimisticP2PSignatureParameters extends WParameters {
-    /**
-     * The number of nodes in the network
-     */
+    /** The number of nodes in the network */
     final int nodeCount;
 
-    /**
-     * The number of signatures to reach to finish the protocol.
-     */
+    /** The number of signatures to reach to finish the protocol. */
     final int threshold;
 
-    /**
-     * The typical number of peers a peer has. It can be less (but at least 3) or more.
-     */
+    /** The typical number of peers a peer has. It can be less (but at least 3) or more. */
     final int connectionCount;
 
-    /**
-     * The time it takes to do a pairing for a node.
-     */
+    /** The time it takes to do a pairing for a node. */
     final int pairingTime;
+
     final String nodeBuilderName;
     final String networkLatencyName;
 
@@ -62,8 +55,13 @@ public class OptimisticP2PSignature implements Protocol {
       this.networkLatencyName = null;
     }
 
-    public OptimisticP2PSignatureParameters(int nodeCount, int threshold, int connectionCount,
-        int pairingTime, String nodeBuilderName, String networkLatencyName) {
+    public OptimisticP2PSignatureParameters(
+        int nodeCount,
+        int threshold,
+        int connectionCount,
+        int pairingTime,
+        String nodeBuilderName,
+        String networkLatencyName) {
       this.nodeCount = nodeCount;
       this.threshold = threshold;
       this.connectionCount = connectionCount;
@@ -77,8 +75,8 @@ public class OptimisticP2PSignature implements Protocol {
     this.params = params;
     this.network = new P2PNetwork<>(params.connectionCount, false);
     this.nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
-    this.network
-        .setNetworkLatency(RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
+    this.network.setNetworkLatency(
+        RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
   }
 
   public OptimisticP2PSignature copy() {
@@ -103,7 +101,6 @@ public class OptimisticP2PSignature implements Protocol {
       to.onSig(from, this);
     }
   }
-
 
   public class P2PSigNode extends P2PNode<P2PSigNode> {
     final BitSet verifiedSignatures = new BitSet(params.nodeCount);
@@ -135,13 +132,24 @@ public class OptimisticP2PSignature implements Protocol {
       }
     }
 
-
     @Override
     public String toString() {
-      return "P2PSigNode{" + "nodeId=" + nodeId + ", doneAt=" + doneAt + ", sigs="
-          + verifiedSignatures.cardinality() + ", msgReceived=" + msgReceived + ", msgSent="
-          + msgSent + ", KBytesSent=" + bytesSent / 1024 + ", KBytesReceived="
-          + bytesReceived / 1024 + '}';
+      return "P2PSigNode{"
+          + "nodeId="
+          + nodeId
+          + ", doneAt="
+          + doneAt
+          + ", sigs="
+          + verifiedSignatures.cardinality()
+          + ", msgReceived="
+          + msgReceived
+          + ", msgSent="
+          + msgSent
+          + ", KBytesSent="
+          + bytesSent / 1024
+          + ", KBytesReceived="
+          + bytesReceived / 1024
+          + '}';
     }
   }
 
@@ -168,8 +176,9 @@ public class OptimisticP2PSignature implements Protocol {
     boolean printLat = false;
 
     for (int i = 1000; i < 2000; i += 1000) {
-      OptimisticP2PSignature p2ps = new OptimisticP2PSignature(
-          new OptimisticP2PSignatureParameters(i, i / 2 + 1, 13, 3, nb, nl));
+      OptimisticP2PSignature p2ps =
+          new OptimisticP2PSignature(
+              new OptimisticP2PSignatureParameters(i, i / 2 + 1, 13, 3, nb, nl));
       p2ps.init();
       P2PSigNode observer = p2ps.network.getNodeById(0);
 

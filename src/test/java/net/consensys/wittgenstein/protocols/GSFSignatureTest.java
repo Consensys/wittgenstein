@@ -58,10 +58,11 @@ public class GSFSignatureTest {
   }
 
   // TODO
-  //@Test
+  // @Test
   public void testNonPowerTwoNodeCount() {
-    GSFSignature p = new GSFSignature(
-        new GSFSignature.GSFSignatureParameters(31, 1, 3, 20, 10, 10, 0.1, nb, nl));
+    GSFSignature p =
+        new GSFSignature(
+            new GSFSignature.GSFSignatureParameters(31, 1, 3, 20, 10, 10, 0.1, nb, nl));
     p.init();
     GSFSignature.GSFNode n3 = p.network.getNodeById(3);
     Assert.assertEquals(6, n3.levels.size());
@@ -70,8 +71,9 @@ public class GSFSignatureTest {
 
   @Test
   public void testDeadNodes() {
-    GSFSignature p = new GSFSignature(
-        new GSFSignature.GSFSignatureParameters(32, 0.8, 3, 20, 10, 10, 0.1, nb, nl));
+    GSFSignature p =
+        new GSFSignature(
+            new GSFSignature.GSFSignatureParameters(32, 0.8, 3, 20, 10, 10, 0.1, nb, nl));
     p.init();
     long dead = p.network.allNodes.stream().filter(n -> n.isDown()).count();
     Assert.assertEquals(3, dead);
@@ -104,8 +106,9 @@ public class GSFSignatureTest {
 
   @Test
   public void testSimpleThreshold() {
-    GSFSignature p = new GSFSignature(
-        new GSFSignature.GSFSignatureParameters(64, .50, 3, 20, 10, 10, .2, nb, nl));
+    GSFSignature p =
+        new GSFSignature(
+            new GSFSignature.GSFSignatureParameters(64, .50, 3, 20, 10, 10, .2, nb, nl));
     p.init();
     p.network.run(10);
 
@@ -122,8 +125,9 @@ public class GSFSignatureTest {
 
   @Test
   public void testCopy() {
-    GSFSignature p1 = new GSFSignature(
-        new GSFSignature.GSFSignatureParameters(128, .75, 6, 10, 5, 10, .2, nb, nl));
+    GSFSignature p1 =
+        new GSFSignature(
+            new GSFSignature.GSFSignatureParameters(128, .75, 6, 10, 5, 10, .2, nb, nl));
     GSFSignature p2 = p1.copy();
     p1.init();
     p2.init();
@@ -141,5 +145,4 @@ public class GSFSignatureTest {
       }
     }
   }
-
 }

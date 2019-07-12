@@ -4,9 +4,7 @@ import java.util.Arrays;
 
 public class Kademlia {
 
-  /**
-   * Calculates the XOR distance between two values. Taken from pantheon code.
-   */
+  /** Calculates the XOR distance between two values. Taken from pantheon code. */
   public static int distance(byte[] v1b, byte[] v2b) {
     assert (v1b.length == v2b.length);
 
@@ -29,7 +27,6 @@ public class Kademlia {
     }
     return distance;
   }
-
 
   /*
    * http://www.scs.stanford.edu/~dm/home/papers/kpos.pdf

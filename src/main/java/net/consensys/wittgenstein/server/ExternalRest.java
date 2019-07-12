@@ -1,5 +1,9 @@
 package net.consensys.wittgenstein.server;
 
+import java.net.URL;
+import java.util.Collections;
+import java.util.List;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.CollectionType;
 import net.consensys.wittgenstein.core.EnvelopeInfo;
@@ -10,9 +14,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
-import java.net.URL;
-import java.util.Collections;
-import java.util.List;
 
 public class ExternalRest implements External {
   private final String httpFullAddress;
@@ -36,10 +37,10 @@ public class ExternalRest implements External {
     try {
       jsonString = objectMapper.writeValueAsString(ei);
 
-      RequestEntity<String> requestEntity = RequestEntity
-          .put(new URL(httpFullAddress).toURI())
-          .contentType(MediaType.APPLICATION_JSON)
-          .body(jsonString);
+      RequestEntity<String> requestEntity =
+          RequestEntity.put(new URL(httpFullAddress).toURI())
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(jsonString);
 
       ResponseEntity<String> re = restTemplate.exchange(requestEntity, String.class);
       if (re.hasBody()) {

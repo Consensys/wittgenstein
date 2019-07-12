@@ -1,25 +1,27 @@
 package net.consensys.wittgenstein.core;
 
-import net.consensys.wittgenstein.core.geoinfo.Geo;
-import net.consensys.wittgenstein.core.geoinfo.GeoAWS;
-import net.consensys.wittgenstein.core.geoinfo.GeoAllCities;
-import net.consensys.wittgenstein.tools.CSVLatencyReader;
-import org.junit.Assert;
-import org.junit.Test;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import net.consensys.wittgenstein.core.geoinfo.Geo;
+import net.consensys.wittgenstein.core.geoinfo.GeoAWS;
+import net.consensys.wittgenstein.core.geoinfo.GeoAllCities;
+import net.consensys.wittgenstein.tools.CSVLatencyReader;
+import org.junit.Assert;
+import org.junit.Test;
+
 public class NetworkLatencyTest {
   private final AtomicInteger ai = new AtomicInteger(1);
-  private final NodeBuilder nb = new NodeBuilder() {
-    @Override
-    public int getX(int rdi) {
-      return ai.getAndAdd(Node.MAX_X / 2);
-    }
-  };
+  private final NodeBuilder nb =
+      new NodeBuilder() {
+        @Override
+        public int getX(int rdi) {
+          return ai.getAndAdd(Node.MAX_X / 2);
+        }
+      };
   private final Node n1 = new Node(new Random(0), nb);
   private final Node n2 = new Node(new Random(0), nb);
 
@@ -60,17 +62,18 @@ public class NetworkLatencyTest {
     Node a00 = new Node(new Random(0), new NodeBuilder());
     Assert.assertEquals(NetworkLatency.IC3NetworkLatency.S10 / 2, nl.getLatency(a0, a00, 0));
 
-    NodeBuilder nb = new NodeBuilder() {
-      @Override
-      public int getX(int rdi) {
-        return Node.MAX_X / 2;
-      }
+    NodeBuilder nb =
+        new NodeBuilder() {
+          @Override
+          public int getX(int rdi) {
+            return Node.MAX_X / 2;
+          }
 
-      @Override
-      public int getY(int rdi) {
-        return Node.MAX_Y / 2;
-      }
-    };
+          @Override
+          public int getY(int rdi) {
+            return Node.MAX_Y / 2;
+          }
+        };
     Node a1 = new Node(new Random(0), nb);
     Assert.assertEquals(NetworkLatency.IC3NetworkLatency.SW / 2, nl.getLatency(a0, a1, 0));
     Assert.assertEquals(NetworkLatency.IC3NetworkLatency.SW / 2, nl.getLatency(a1, a0, 0));
@@ -98,14 +101,12 @@ public class NetworkLatencyTest {
         } else if (f.cityName.equals(t.cityName)) {
           Assert.assertTrue(l > 0);
         } else {
-          Assert
-              .assertTrue("l=" + l + ", from=" + f.fullToString() + ", to=" + t.fullToString(),
-                  l > 0);
+          Assert.assertTrue(
+              "l=" + l + ", from=" + f.fullToString() + ", to=" + t.fullToString(), l > 0);
         }
       }
     }
   }
-
 
   @Test
   public void testEstimateLatency() {

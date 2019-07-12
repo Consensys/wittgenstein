@@ -1,13 +1,14 @@
 package net.consensys.wittgenstein.protocols;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
 import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.core.NodeBuilder;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
 
 public class SanFerminTest {
   private List<Node> allNodes;
@@ -17,8 +18,7 @@ public class SanFerminTest {
     allNodes = new ArrayList<>();
     NodeBuilder nb = new NodeBuilder();
     int count = 8;
-    for (int i = 0; i < count; i++)
-      allNodes.add(new Node(new Random(0), nb));
+    for (int i = 0; i < count; i++) allNodes.add(new Node(new Random(0), nb));
   }
 
   @Test
@@ -55,5 +55,4 @@ public class SanFerminTest {
     List<Node> set22 = helper.pickNextNodes(2, 10);
     Assert.assertTrue(set22.isEmpty());
   }
-
 }

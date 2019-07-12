@@ -1,10 +1,10 @@
 package net.consensys.wittgenstein.protocols;
 
+import java.util.*;
 
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.server.WParameters;
-import java.util.*;
 
 @SuppressWarnings({"WeakerAccess", "SameParameterValue"})
 public class Dfinity implements Protocol {
@@ -14,7 +14,9 @@ public class Dfinity implements Protocol {
   final NodeBuilder nb;
 
   public static class DfinityParameters extends WParameters {
-    final int roundTime = 3000; // the delay between the block generation and the start of the next random beacon generation
+    final int roundTime =
+        3000; // the delay between the block generation and the start of the next random beacon
+    // generation
 
     final int blockProducersCount;
     final int blockProducersPerRound = 5;
@@ -41,9 +43,15 @@ public class Dfinity implements Protocol {
     final String nodeBuilderName;
     final String networkLatencyName;
 
-    DfinityParameters(int blockProducersCount, int attestersCount, int attestersPerRound,
-        int blockConstructionTime, int attestationConstructionTime, int percentageDeadAttester,
-        String nodeBuilderName, String networkLatencyName) {
+    DfinityParameters(
+        int blockProducersCount,
+        int attestersCount,
+        int attestersPerRound,
+        int blockConstructionTime,
+        int attestationConstructionTime,
+        int percentageDeadAttester,
+        String nodeBuilderName,
+        String networkLatencyName) {
       this.blockProducersCount = blockProducersCount;
       this.blockProducersRound = blockProducersCount / blockProducersPerRound;
 
@@ -51,7 +59,9 @@ public class Dfinity implements Protocol {
       this.attestersCount = attestersCount;
       this.attestersPerRound = attestersPerRound;
 
-      this.randomBeaconCount = attestersPerRound; // simplification: the committee doesn't change and has the same size of the attesters'.
+      this.randomBeaconCount =
+          attestersPerRound; // simplification: the committee doesn't change and has the same size
+      // of the attesters'.
 
       this.majority = (attestersPerRound / 2) + 1;
       this.blockConstructionTime = blockConstructionTime;
@@ -82,8 +92,8 @@ public class Dfinity implements Protocol {
   }
 
   static class DfinityBlock extends Block<DfinityBlock> {
-    public DfinityBlock(BlockProducerNode blockProducerNode, int height, DfinityBlock head,
-        boolean b, int time) {
+    public DfinityBlock(
+        BlockProducerNode blockProducerNode, int height, DfinityBlock head, boolean b, int time) {
       super(blockProducerNode, height, head, b, time);
     }
 
@@ -91,27 +101,23 @@ public class Dfinity implements Protocol {
       super(0);
     }
 
-    static public DfinityBlock createGenesis() {
+    public static DfinityBlock createGenesis() {
       return new DfinityBlock();
     }
   }
 
   static class DfinityBlockComparator implements Comparator<DfinityBlock> {
 
-    /**
-     * @return -1 if o1 is lower than o2,
-     */
+    /** @return -1 if o1 is lower than o2, */
     @Override
     public int compare(DfinityBlock o1, DfinityBlock o2) {
-      if (o1 == o2)
-        return 0;
+      if (o1 == o2) return 0;
 
-      if (!o2.valid)
-        return 1;
-      if (!o1.valid)
-        return -1;
+      if (!o2.valid) return 1;
+      if (!o1.valid) return -1;
 
-      if (o1.hasDirectLink(o2)) { // if 'o1' is an ancestor of 'o2', then 'o1' is NOT greater than 'o2'
+      if (o1.hasDirectLink(
+          o2)) { // if 'o1' is an ancestor of 'o2', then 'o1' is NOT greater than 'o2'
         return (o1.height < o2.height ? -1 : 1);
       }
 
@@ -152,7 +158,6 @@ public class Dfinity implements Protocol {
     }
   }
 
-
   static class RandomBeaconExchange extends Message<RandomBeaconNode> {
     final int height;
 
@@ -161,8 +166,8 @@ public class Dfinity implements Protocol {
     }
 
     @Override
-    public void action(Network<RandomBeaconNode> network, RandomBeaconNode from,
-        RandomBeaconNode to) {
+    public void action(
+        Network<RandomBeaconNode> network, RandomBeaconNode from, RandomBeaconNode to) {
       to.onRandomBeaconExchange(from, height);
     }
   }
@@ -182,12 +187,10 @@ public class Dfinity implements Protocol {
     }
   }
 
-
   abstract class DfinityNode extends BlockChainNode<DfinityBlock> {
     final Set<Long> committeeMajorityBlocks = new HashSet<>();
     final Set<Integer> committeeMajorityHeight = new HashSet<>();
     int lastRandomBeacon;
-
 
     @Override
     public DfinityBlock best(DfinityBlock o1, DfinityBlock o2) {
@@ -200,9 +203,7 @@ public class Dfinity implements Protocol {
 
     public void onVote(Node voter, DfinityBlock voteFor) {}
 
-    /**
-     * Can be called multiple times for a single node
-     */
+    /** Can be called multiple times for a single node */
     final void onRandomBeacon(int height, long rd) {
       if (lastRandomBeacon < height) {
         lastRandomBeacon = height;
@@ -212,7 +213,6 @@ public class Dfinity implements Protocol {
 
     void onRandomBeaconOnce(int height, long rd) {}
   }
-
 
   class BlockProducerNode extends DfinityNode {
     final int myRound;
@@ -233,16 +233,17 @@ public class Dfinity implements Protocol {
 
       List<DfinityNode> attestersS = new ArrayList<>(params.attesters);
       Collections.shuffle(attestersS, network.rd);
-      network
-          .send(new BlockProposal(newBlock), network.time + params.blockConstructionTime, this,
-              attestersS);
+      network.send(
+          new BlockProposal(newBlock),
+          network.time + params.blockConstructionTime,
+          this,
+          attestersS);
       waitForBlockHeight = -1;
     }
 
     @Override
     public boolean onBlock(DfinityBlock b) {
-      if (!super.onBlock(b))
-        return false;
+      if (!super.onBlock(b)) return false;
       if (head.height == waitForBlockHeight) {
         createProposal(waitForBlockHeight + 1);
       }
@@ -325,7 +326,8 @@ public class Dfinity implements Protocol {
       }
       committeeMajorityBlocks.add(b.id);
       committeeMajorityHeight.add(b.height);
-      if (voteForHeight == b.height) { // We have a full block, not need to continue voting for this height
+      if (voteForHeight
+          == b.height) { // We have a full block, not need to continue voting for this height
         voteForHeight = -1;
       }
       return true;
@@ -398,8 +400,7 @@ public class Dfinity implements Protocol {
         } else {
           assert head.parent != null;
           int wt = head.parent.proposalTime + params.roundTime * 2;
-          if (wt <= network.time)
-            wt = network.time + params.attestationConstructionTime;
+          if (wt <= network.time) wt = network.time + params.attestationConstructionTime;
           RandomBeaconExchange rbe = new RandomBeaconExchange(height);
 
           List<DfinityNode> rdsSends = new ArrayList<>(params.rds);
@@ -450,7 +451,6 @@ public class Dfinity implements Protocol {
     }
   }
 
-
   public static void main(String... args) {
     Dfinity bc = new Dfinity(new DfinityParameters());
     bc.init();
@@ -472,7 +472,6 @@ public class Dfinity implements Protocol {
 
 // bad network, 20% partition
 // block count:4665, all tx: 20205547
-
 
 ////////////////////
 

@@ -5,7 +5,6 @@ import net.consensys.wittgenstein.core.NodeBuilder;
 import net.consensys.wittgenstein.core.RegistryNetworkLatencies;
 import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 
-
 /**
  * Implementation of the algo proposed by Ittay Eyal and Emin Gun Sirer in
  * https://www.cs.cornell.edu/~ie53/publications/btcProcFC.pdf (algorithm 1, page 6)
@@ -14,8 +13,11 @@ public class ETHSelfishMiner2 extends ETHMiner {
   private ETHPoW.POWBlock privateMinerBlock;
   private ETHPoW.POWBlock otherMinersHead = genesis;
 
-  public ETHSelfishMiner2(BlockChainNetwork<ETHPoW.POWBlock, ETHMiner> network, NodeBuilder nb,
-      int hashPower, ETHPoW.POWBlock genesis) {
+  public ETHSelfishMiner2(
+      BlockChainNetwork<ETHPoW.POWBlock, ETHMiner> network,
+      NodeBuilder nb,
+      int hashPower,
+      ETHPoW.POWBlock genesis) {
     super(network, nb, hashPower, genesis);
   }
 
@@ -31,7 +33,6 @@ public class ETHSelfishMiner2 extends ETHMiner {
   protected boolean includeUncle(ETHPoW.POWBlock uncle) {
     return true;
   }
-
 
   @Override
   protected void onMinedBlock(ETHPoW.POWBlock mined) {
@@ -65,7 +66,8 @@ public class ETHSelfishMiner2 extends ETHMiner {
     } else {
       // We're ahead. We
       ETHPoW.POWBlock toSend = privateMinerBlock;
-      while (toSend.parent != null && toSend.height >= rcv.height
+      while (toSend.parent != null
+          && toSend.height >= rcv.height
           && toSend.parent.totalDifficulty.compareTo(rcv.totalDifficulty) > 0) {
         toSend = toSend.parent;
       }
@@ -83,16 +85,19 @@ public class ETHSelfishMiner2 extends ETHMiner {
     final int hours = 518;
     final String bdlName = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
 
-    for (RegistryNetworkLatencies.Type type : new RegistryNetworkLatencies.Type[] {
-        RegistryNetworkLatencies.Type.FIXED, RegistryNetworkLatencies.Type.UNIFORM}) {
+    for (RegistryNetworkLatencies.Type type :
+        new RegistryNetworkLatencies.Type[] {
+          RegistryNetworkLatencies.Type.FIXED, RegistryNetworkLatencies.Type.UNIFORM
+        }) {
       for (int time : new int[] {2000, 4000, 8000}) {
         final String nlName = RegistryNetworkLatencies.name(type, time);
         final double[] pows = new double[] {0.01, 0.1, 0.2, 0.25, 0.3, 0.35, 0.40, 0.45, 0.50};
 
         // Merge the two results with:
-        //  paste -d ',' bad.txt good.txt | awk -F "," '{ print $2 ", " $5 ", " $3 ", " $4 ", " $12 ", " $11 ", "  $6 ", " $13 ", " $7 ", " $14 }'
+        //  paste -d ',' bad.txt good.txt | awk -F "," '{ print $2 ", " $5 ", " $3 ", " $4 ", " $12
+        // ", " $11 ", "  $6 ", " $13 ", " $7 ", " $14 }'
         ETHMiner.tryMiner(bdlName, nlName, ETHSelfishMiner2.class, pows, hours, runs);
-        //ETHMiner.tryMiner(bdlName, nlName, ETHMiner.class, pows, hours, runs);
+        // ETHMiner.tryMiner(bdlName, nlName, ETHMiner.class, pows, hours, runs);
       }
     }
   }

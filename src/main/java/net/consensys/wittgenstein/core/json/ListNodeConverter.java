@@ -1,10 +1,11 @@
 package net.consensys.wittgenstein.core.json;
 
-import com.fasterxml.jackson.databind.util.StdConverter;
-import net.consensys.wittgenstein.core.Node;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import com.fasterxml.jackson.databind.util.StdConverter;
+import net.consensys.wittgenstein.core.Node;
 
 public class ListNodeConverter extends StdConverter<List<? extends Node>, List<Integer>> {
   @Override

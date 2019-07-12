@@ -1,10 +1,10 @@
 package net.consensys.wittgenstein.protocols.ethpow;
 
-import net.consensys.wittgenstein.core.*;
-import net.consensys.wittgenstein.server.WParameters;
 import java.math.BigInteger;
 import java.util.*;
 
+import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.server.WParameters;
 
 @SuppressWarnings("WeakerAccess")
 public class ETHPoW implements Protocol {
@@ -13,7 +13,6 @@ public class ETHPoW implements Protocol {
   final POWBlock genesis = POWBlock.createGenesis();
   final ETHPoWParameters params;
 
-
   public static class ETHPoWParameters extends WParameters {
     public final String nodeBuilderName;
     public final String networkLatencyName;
@@ -21,8 +20,12 @@ public class ETHPoW implements Protocol {
     public final String byzClassName;
     public final double byzMiningRatio;
 
-    public ETHPoWParameters(String nodeBuilderName, String networkLatencyName, int numberOfMiners,
-        String byzClassName, double byzMiningRatio) {
+    public ETHPoWParameters(
+        String nodeBuilderName,
+        String networkLatencyName,
+        int numberOfMiners,
+        String byzClassName,
+        double byzMiningRatio) {
       this.nodeBuilderName = nodeBuilderName;
       this.networkLatencyName = networkLatencyName;
       this.numberOfMiners = numberOfMiners;
@@ -45,10 +48,9 @@ public class ETHPoW implements Protocol {
     this.network = new BlockChainNetwork<>();
     // Change Singleton to IC3
     this.nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
-    this.network
-        .setNetworkLatency(RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
+    this.network.setNetworkLatency(
+        RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
   }
-
 
   @Override
   public BlockChainNetwork<POWBlock, ETHMiner> network() {
@@ -79,8 +81,9 @@ public class ETHPoW implements Protocol {
         Class<?> clazz;
         try {
           clazz = Class.forName(params.byzClassName);
-          cur = (ETHMiner) clazz.getConstructors()[0]
-              .newInstance(network, nb, byzHashPower, this.genesis);
+          cur =
+              (ETHMiner)
+                  clazz.getConstructors()[0].newInstance(network, nb, byzHashPower, this.genesis);
         } catch (Throwable e) {
           throw new IllegalArgumentException(e);
         }
@@ -113,7 +116,6 @@ public class ETHPoW implements Protocol {
       }
     }
   }
-
 
   static class POWBlock extends Block<POWBlock> {
     final long difficulty;
@@ -154,9 +156,7 @@ public class ETHPoW implements Protocol {
       this.totalDifficulty = father.totalDifficulty.add(BigInteger.valueOf(this.difficulty));
     }
 
-    /**
-     * Creates a genesis block.
-     */
+    /** Creates a genesis block. */
     protected POWBlock() {
       // We start at https://etherscan.io/block/7951081
       super(7951081);
@@ -171,17 +171,16 @@ public class ETHPoW implements Protocol {
       this.transactions = Collections.emptyList();
       this.difficulty = diff;
       this.totalDifficulty =
-          father != null ? father.totalDifficulty.add(BigInteger.valueOf(this.difficulty))
+          father != null
+              ? father.totalDifficulty.add(BigInteger.valueOf(this.difficulty))
               : BigInteger.valueOf(this.difficulty);
     }
 
     protected long onCalculateDifficulty(long all, POWBlock father, long diff, long bomb) {
-      return all;//2586243382184844L;
+      return all; // 2586243382184844L;
     }
 
-    /**
-     * @return the list of rewards for this block.
-     */
+    /** @return the list of rewards for this block. */
     List<Reward> rewards() {
       final double rwd = 2.0;
       if (uncles.isEmpty()) {
@@ -259,9 +258,7 @@ public class ETHPoW implements Protocol {
       return first == null ? 0.0 : uncles / (uncles + this.height - first.height);
     }
 
-    /**
-     * @return true if 'b' can be an uncle
-     */
+    /** @return true if 'b' can be an uncle */
     boolean isPossibleUncle(POWBlock b) {
       if (b.height >= height || height - b.height > 7) {
         return false;
@@ -274,7 +271,7 @@ public class ETHPoW implements Protocol {
       return cur != null && cur.parent == b.parent;
     }
 
-    static public POWBlock createGenesis() {
+    public static POWBlock createGenesis() {
       return new POWBlock();
     }
 
@@ -299,26 +296,20 @@ public class ETHPoW implements Protocol {
 
       return onCalculateDifficulty(all, father, diff, bomb);
     }
-
   }
-
 
   static class POWBlockComparator implements Comparator<POWBlock> {
 
     @Override
     public int compare(POWBlock o1, POWBlock o2) {
-      if (o1 == o2)
-        return 0;
+      if (o1 == o2) return 0;
 
-      if (!o2.valid)
-        return 1;
-      if (!o1.valid)
-        return -1;
+      if (!o2.valid) return 1;
+      if (!o1.valid) return -1;
 
       return o1.totalDifficulty.compareTo(o2.totalDifficulty);
     }
   }
-
 
   static class Transactions {
     final int gasLimit;
@@ -331,10 +322,9 @@ public class ETHPoW implements Protocol {
     }
   }
 
-
   abstract static class ETHPoWNode extends BlockChainNode<POWBlock> {
-    final private transient POWBlockComparator blockComparator = new POWBlockComparator();
-    final protected transient BlockChainNetwork<POWBlock, ETHMiner> network;
+    private final transient POWBlockComparator blockComparator = new POWBlockComparator();
+    protected final transient BlockChainNetwork<POWBlock, ETHMiner> network;
 
     ETHPoWNode(BlockChainNetwork<POWBlock, ETHMiner> network, NodeBuilder nb, POWBlock genesis) {
       super(network.rd, nb, false, genesis);
@@ -342,7 +332,8 @@ public class ETHPoW implements Protocol {
     }
 
     void createTransaction() {
-      //TODO: Create transactions with different types, gas cost and limit to be added to pool at different rates
+      // TODO: Create transactions with different types, gas cost and limit to be added to pool at
+      // different rates
     }
 
     @Override
@@ -354,22 +345,16 @@ public class ETHPoW implements Protocol {
         return alt;
       }
       int res = blockComparator.compare(cur, alt);
-      if (res == 0)
-        return alt.producer == this ? alt : cur;
+      if (res == 0) return alt.producer == this ? alt : cur;
       return res > 0 ? cur : alt;
     }
   }
 
-
-  /**
-   * Class to be extended to store decisions that will be used later to learn.
-   */
-  public static abstract class Decision {
+  /** Class to be extended to store decisions that will be used later to learn. */
+  public abstract static class Decision {
     final int takenAtHeight;
 
-    /**
-     * We will calculate the reward and store the decision when the head reach this point.
-     */
+    /** We will calculate the reward and store the decision when the head reach this point. */
     final int rewardAtHeight;
 
     public Decision(int takenAtHeight, int rewardAtHeight) {
@@ -377,21 +362,16 @@ public class ETHPoW implements Protocol {
       this.rewardAtHeight = rewardAtHeight;
     }
 
-    /**
-     * Should return the fields to be store in a CSV like format.
-     */
+    /** Should return the fields to be store in a CSV like format. */
     public abstract String forCSV();
 
     public String toString() {
       return forCSV();
     }
 
-    /**
-     * Overload this function to change the way the reward is calculated.
-     */
+    /** Overload this function to change the way the reward is calculated. */
     public double reward(POWBlock currentHead, ETHAgentMiner miner) {
       return currentHead.allRewards(takenAtHeight).getOrDefault(miner, 0.0);
     }
   }
-
 }

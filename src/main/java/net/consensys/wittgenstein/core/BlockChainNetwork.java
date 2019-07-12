@@ -1,8 +1,8 @@
 package net.consensys.wittgenstein.core;
 
+import java.util.*;
 
 import net.consensys.wittgenstein.core.messages.Message;
-import java.util.*;
 
 /**
  * Adds some concept to a standard network: it's about to send blocks between nodes. Blockchain
@@ -11,9 +11,7 @@ import java.util.*;
 @SuppressWarnings({"SameParameterValue", "FieldCanBeLocal", "unused"})
 public class BlockChainNetwork<TB extends Block, TN extends BlockChainNode<TB>>
     extends Network<TN> {
-  /**
-   * The node we use as an observer for the final stats
-   */
+  /** The node we use as an observer for the final stats */
   public TN observer;
 
   public void addObserver(TN observer) {
@@ -64,8 +62,7 @@ public class BlockChainNetwork<TB extends Block, TN extends BlockChainNode<TB>>
     while (cur != observer.genesis) {
       assert cur != null;
       assert cur.producer != null;
-      if (!small)
-        System.out.println("block: " + cur.toString());
+      if (!small) System.out.println("block: " + cur.toString());
       blockInChain++;
 
       productionCount.putIfAbsent(cur.producer.nodeId, new HashSet<>());
@@ -76,8 +73,12 @@ public class BlockChainNetwork<TB extends Block, TN extends BlockChainNode<TB>>
     }
 
     if (!small) {
-      System.out
-          .println("block count:" + blockInChain + " on " + Block.getLastBlockId() + ", all tx: "
+      System.out.println(
+          "block count:"
+              + blockInChain
+              + " on "
+              + Block.getLastBlockId()
+              + ", all tx: "
               + observer.head.lastTxId);
     }
     List<BlockChainNode> bps = new ArrayList<>(blockProducers);
@@ -89,10 +90,16 @@ public class BlockChainNetwork<TB extends Block, TN extends BlockChainNode<TB>>
         bpTx += b.txCount();
       }
       if (!small | bp.byzantine) {
-        System.out
-            .println(bp + "; " + productionCount.get(bp.nodeId).size() + "; " + bpTx + "; "
-                + bp.msgSent + "; " + bp.msgReceived);
-
+        System.out.println(
+            bp
+                + "; "
+                + productionCount.get(bp.nodeId).size()
+                + "; "
+                + bpTx
+                + "; "
+                + bp.msgSent
+                + "; "
+                + bp.msgReceived);
       }
     }
   }

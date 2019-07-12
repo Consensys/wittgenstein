@@ -1,5 +1,12 @@
 package net.consensys.wittgenstein.server;
 
+import java.lang.reflect.Constructor;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import net.consensys.wittgenstein.core.EnvelopeInfo;
 import net.consensys.wittgenstein.core.Network;
 import net.consensys.wittgenstein.core.Node;
@@ -11,16 +18,8 @@ import org.springframework.beans.factory.support.SimpleBeanDefinitionRegistry;
 import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
 import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
-import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
-/**
- * Allows to run the protocols in a (web)server.
- */
+/** Allows to run the protocols in a (web)server. */
 public class Server implements IServer {
   private Protocol protocol;
 
@@ -67,8 +66,7 @@ public class Server implements IServer {
     s.scan("net.consensys");
 
     String[] beans = bdr.getBeanDefinitionNames();
-    return Arrays
-        .stream(beans)
+    return Arrays.stream(beans)
         .map(n -> bdr.getBeanDefinition(n).getBeanClassName())
         .collect(Collectors.toList());
   }
@@ -83,8 +81,11 @@ public class Server implements IServer {
       }
     }
     if (bc == null) {
-      throw new IllegalStateException("no constructor in " + fullClassName + ", we need a *public* "
-          + "constructor taking a subclass of WParameters as unique parameter.");
+      throw new IllegalStateException(
+          "no constructor in "
+              + fullClassName
+              + ", we need a *public* "
+              + "constructor taking a subclass of WParameters as unique parameter.");
     }
 
     Class<?> type = bc.getParameters()[0].getType();
@@ -111,7 +112,6 @@ public class Server implements IServer {
         res.add(wp.getClass());
       } catch (Throwable ignored) {
       }
-
     }
     return res;
   }
@@ -123,12 +123,10 @@ public class Server implements IServer {
 
     s.scan("net.consensys");
     String[] beans = bdr.getBeanDefinitionNames();
-    return Arrays
-        .stream(beans)
+    return Arrays.stream(beans)
         .map(n -> bdr.getBeanDefinition(n).getBeanClassName())
         .collect(Collectors.toSet());
   }
-
 
   @Override
   public void runMs(int ms) {

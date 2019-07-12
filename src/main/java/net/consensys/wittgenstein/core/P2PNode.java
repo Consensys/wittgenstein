@@ -1,9 +1,10 @@
 package net.consensys.wittgenstein.core;
 
+import java.util.*;
+
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import net.consensys.wittgenstein.core.json.ListNodeConverter;
 import net.consensys.wittgenstein.core.messages.FloodMessage;
-import java.util.*;
 
 public class P2PNode<TN extends P2PNode> extends Node {
 
@@ -26,5 +27,3 @@ public class P2PNode<TN extends P2PNode> extends Node {
 
   public void onFlood(TN from, FloodMessage floodMessage) {}
 }
-
-

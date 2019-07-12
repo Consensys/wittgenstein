@@ -1,5 +1,13 @@
 package net.consensys.wittgenstein.server.ws;
 
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.Collections;
+import java.util.List;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.CollectionType;
 import net.consensys.wittgenstein.core.EnvelopeInfo;
@@ -18,13 +26,6 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.http.*;
 import org.springframework.test.context.junit4.SpringRunner;
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.util.Collections;
-import java.util.List;
 
 @SuppressWarnings("WeakerAccess")
 @RunWith(SpringRunner.class)
@@ -33,6 +34,7 @@ public class WServerTest {
   @SuppressWarnings("unused")
   @LocalServerPort
   private int port;
+
   private TestRestTemplate restTemplate = new TestRestTemplate();
   private HttpHeaders headers = new HttpHeaders();
   private ObjectMapper objectMapper = new WServer().objectMapper();
@@ -53,8 +55,9 @@ public class WServerTest {
   public void testGetProtocols() throws Exception {
     HttpEntity<String> entity = new HttpEntity<>(null, headers);
 
-    ResponseEntity<String> response = restTemplate
-        .exchange(createURLWithPort("/protocols"), HttpMethod.GET, entity, String.class);
+    ResponseEntity<String> response =
+        restTemplate.exchange(
+            createURLWithPort("/protocols"), HttpMethod.GET, entity, String.class);
 
     CollectionType javaType =
         objectMapper.getTypeFactory().constructCollectionType(List.class, String.class);
@@ -67,8 +70,9 @@ public class WServerTest {
   public void testBasicAllProtocols() {
     HttpEntity<String> entity = new HttpEntity<>(null, headers);
 
-    ResponseEntity<String> response = restTemplate
-        .exchange(createURLWithPort("/protocols"), HttpMethod.GET, entity, String.class);
+    ResponseEntity<String> response =
+        restTemplate.exchange(
+            createURLWithPort("/protocols"), HttpMethod.GET, entity, String.class);
 
     CollectionType javaType =
         objectMapper.getTypeFactory().constructCollectionType(List.class, String.class);
@@ -80,11 +84,11 @@ public class WServerTest {
       Assert.fail(e.getMessage());
     }
 
-
     for (String p : ps) {
       entity = new HttpEntity<>(null, headers);
-      response = restTemplate
-          .exchange(createURLWithPort("/protocols/" + p), HttpMethod.GET, entity, String.class);
+      response =
+          restTemplate.exchange(
+              createURLWithPort("/protocols/" + p), HttpMethod.GET, entity, String.class);
 
       String jsonString = "";
       try {
@@ -94,10 +98,10 @@ public class WServerTest {
         Assert.fail(p + ": " + e.getMessage());
       }
 
-      RequestEntity<String> requestEntity = RequestEntity
-          .post(createURIWithPort("/network/init/" + p))
-          .contentType(MediaType.APPLICATION_JSON)
-          .body(jsonString);
+      RequestEntity<String> requestEntity =
+          RequestEntity.post(createURIWithPort("/network/init/" + p))
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(jsonString);
       ResponseEntity<Void> responseInit = restTemplate.exchange(requestEntity, Void.class);
       Assert.assertEquals(p, HttpStatus.OK, responseInit.getStatusCode());
 
@@ -109,12 +113,12 @@ public class WServerTest {
       }
       Assert.assertNotEquals(p, 0, allNodes.size());
 
-
       try {
         entity = new HttpEntity<>(null, headers);
 
-        ResponseEntity<String> responseMsg = restTemplate
-            .exchange(createURLWithPort("/network/messages"), HttpMethod.GET, entity, String.class);
+        ResponseEntity<String> responseMsg =
+            restTemplate.exchange(
+                createURLWithPort("/network/messages"), HttpMethod.GET, entity, String.class);
         Assert.assertEquals(HttpStatus.OK, responseMsg.getStatusCode());
 
         // TODO: we should also check we can deserialize the messages, as in allMessagesInfo()
@@ -128,9 +132,12 @@ public class WServerTest {
   public void testGetProtocolParameters() throws Exception {
     HttpEntity<String> entity = new HttpEntity<>(null, headers);
 
-    ResponseEntity<String> response = restTemplate
-        .exchange(createURLWithPort("/protocols/" + PingPong.class.getName()), HttpMethod.GET,
-            entity, String.class);
+    ResponseEntity<String> response =
+        restTemplate.exchange(
+            createURLWithPort("/protocols/" + PingPong.class.getName()),
+            HttpMethod.GET,
+            entity,
+            String.class);
 
     WParameters ps = objectMapper.readValue(response.getBody(), WParameters.class);
     Assert.assertTrue(response.getBody(), ps instanceof PingPong.PingPongParameters);
@@ -139,8 +146,9 @@ public class WServerTest {
   private List<Node> allNodeInfo() throws IOException {
     HttpEntity<String> entity = new HttpEntity<>(null, headers);
 
-    ResponseEntity<String> response = restTemplate
-        .exchange(createURLWithPort("/network/nodes"), HttpMethod.GET, entity, String.class);
+    ResponseEntity<String> response =
+        restTemplate.exchange(
+            createURLWithPort("/network/nodes"), HttpMethod.GET, entity, String.class);
     Assert.assertEquals(HttpStatus.OK, response.getStatusCode());
 
     CollectionType javaType =
@@ -151,8 +159,9 @@ public class WServerTest {
   private List<EnvelopeInfo> allMessagesInfo() throws IOException {
     HttpEntity<String> entity = new HttpEntity<>(null, headers);
 
-    ResponseEntity<String> response = restTemplate
-        .exchange(createURLWithPort("/network/messages"), HttpMethod.GET, entity, String.class);
+    ResponseEntity<String> response =
+        restTemplate.exchange(
+            createURLWithPort("/network/messages"), HttpMethod.GET, entity, String.class);
     Assert.assertEquals(HttpStatus.OK, response.getStatusCode());
 
     CollectionType javaType =
@@ -160,14 +169,12 @@ public class WServerTest {
     return objectMapper.readValue(response.getBody(), javaType);
   }
 
-
   public static class Node {
     @SuppressWarnings("unused")
     int nodeId;
 
     public Node() {}
   }
-
 
   public static class DummyProtocol implements Protocol {
     final NodeBuilder nb = new NodeBuilder.NodeBuilderWithRandomPosition();
@@ -197,13 +204,14 @@ public class WServerTest {
     }
   }
 
-
   public static class MessageTest extends Message<net.consensys.wittgenstein.core.Node> {
     public MessageTest() {}
 
     @Override
-    public void action(Network<net.consensys.wittgenstein.core.Node> network,
-        net.consensys.wittgenstein.core.Node from, net.consensys.wittgenstein.core.Node to) {}
+    public void action(
+        Network<net.consensys.wittgenstein.core.Node> network,
+        net.consensys.wittgenstein.core.Node from,
+        net.consensys.wittgenstein.core.Node to) {}
   }
 
   @Test
@@ -211,10 +219,10 @@ public class WServerTest {
     WParameters params = new PingPong.PingPongParameters(123, null, null);
     String jsonString = objectMapper.writeValueAsString(params);
 
-    RequestEntity<String> requestEntity = RequestEntity
-        .post(createURIWithPort("/network/init/" + PingPong.class.getName()))
-        .contentType(MediaType.APPLICATION_JSON)
-        .body(jsonString);
+    RequestEntity<String> requestEntity =
+        RequestEntity.post(createURIWithPort("/network/init/" + PingPong.class.getName()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(jsonString);
 
     ResponseEntity<Void> response = restTemplate.exchange(requestEntity, Void.class);
 
@@ -229,10 +237,10 @@ public class WServerTest {
     WParameters params = new DummyProtocol.DummyParameters();
     String jsonString = objectMapper.writeValueAsString(params);
 
-    RequestEntity<String> requestEntity = RequestEntity
-        .post(createURIWithPort("/network/init/" + DummyProtocol.class.getName()))
-        .contentType(MediaType.APPLICATION_JSON)
-        .body(jsonString);
+    RequestEntity<String> requestEntity =
+        RequestEntity.post(createURIWithPort("/network/init/" + DummyProtocol.class.getName()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(jsonString);
     ResponseEntity<Void> response = restTemplate.exchange(requestEntity, Void.class);
     Assert.assertEquals(response.toString(), HttpStatus.OK, response.getStatusCode());
 
@@ -243,10 +251,10 @@ public class WServerTest {
     Assert.assertEquals(0, mis.size());
 
     SendMessage sm = new SendMessage(0, Collections.singletonList(1), 1, 0, new MessageTest());
-    requestEntity = RequestEntity
-        .post(createURIWithPort("/network/send/"))
-        .contentType(MediaType.APPLICATION_JSON)
-        .body(objectMapper.writeValueAsString(sm));
+    requestEntity =
+        RequestEntity.post(createURIWithPort("/network/send/"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(objectMapper.writeValueAsString(sm));
     response = restTemplate.exchange(requestEntity, Void.class);
     Assert.assertEquals(response.toString(), HttpStatus.OK, response.getStatusCode());
     mis = allMessagesInfo();
@@ -263,5 +271,4 @@ public class WServerTest {
     Assert.assertEquals(ress.toString(), HttpStatus.OK, ress.getStatusCode());
     Assert.assertEquals("10000", ress.getBody());
   }
-
 }

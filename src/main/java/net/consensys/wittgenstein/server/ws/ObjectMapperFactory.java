@@ -12,7 +12,7 @@ import net.consensys.wittgenstein.server.Server;
 public class ObjectMapperFactory {
 
   @SuppressWarnings("unused")
-  static public ObjectMapper objectMapper() {
+  public static ObjectMapper objectMapper() {
     ObjectMapper mapper = new ObjectMapper();
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     mapper.configure(MapperFeature.DEFAULT_VIEW_INCLUSION, true);
@@ -29,5 +29,4 @@ public class ObjectMapperFactory {
 
     return mapper;
   }
-
 }

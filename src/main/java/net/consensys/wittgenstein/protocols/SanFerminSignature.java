@@ -1,5 +1,10 @@
 package net.consensys.wittgenstein.protocols;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.Message;
@@ -7,16 +12,11 @@ import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.server.WParameters;
 import net.consensys.wittgenstein.tools.Graph;
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
-import java.util.stream.Collectors;
-
 
 /**
  * San Fermin's protocol adapted to BLS signature aggregation.
- * <p>
- * San Fermin is a protocol for distributed aggregation of a large data set over a large set of
+ *
+ * <p>San Fermin is a protocol for distributed aggregation of a large data set over a large set of
  * nodes. It imposes a special binomial tree structures on the communication patterns of the node so
  * that each node only needs to contact O(log(n)) other nodes to get the final aggregated result.
  * SanFerminNode{nodeId=1000000001, doneAt=4860, sigs=874, msgReceived=272, msgSent=275,
@@ -41,9 +41,7 @@ public class SanFerminSignature implements Protocol {
   SanFerminSignatureParameters params;
 
   public static class SanFerminSignatureParameters extends WParameters {
-    /**
-     * The number of nodes in the network
-     */
+    /** The number of nodes in the network */
     final int nodeCount;
 
     /**
@@ -51,9 +49,7 @@ public class SanFerminSignature implements Protocol {
      * used to represent the length of the binary string of a node's id.
      */
     final int powerOfTwo;
-    /**
-     * The number of signatures to reach to finish the protocol
-     */
+    /** The number of signatures to reach to finish the protocol */
     final int threshold;
 
     /**
@@ -61,29 +57,19 @@ public class SanFerminSignature implements Protocol {
      */
     final int pairingTime;
 
-    /**
-     * Size of a BLS signature (can be aggregated or not)
-     */
+    /** Size of a BLS signature (can be aggregated or not) */
     final int signatureSize;
 
-    /**
-     * how much time to wait for a reply upon a given request
-     */
+    /** how much time to wait for a reply upon a given request */
     final int replyTimeout;
 
-    /**
-     * Do we print logging information from nodes or not
-     */
+    /** Do we print logging information from nodes or not */
     boolean verbose;
 
-    /**
-     * Should we shuffle the list of the candidate sets at each peers
-     */
+    /** Should we shuffle the list of the candidate sets at each peers */
     boolean shuffledLists;
 
-    /**
-     * how many candidate do we try to reach at the same time for a given level
-     */
+    /** how many candidate do we try to reach at the same time for a given level */
     int candidateCount;
 
     final String nodeBuilderName;
@@ -102,9 +88,16 @@ public class SanFerminSignature implements Protocol {
       this.networkLatencyName = null;
     }
 
-    public SanFerminSignatureParameters(int nodeCount, int threshold, int pairingTime,
-        int signatureSize, int replyTimeout, int candidateCount, boolean shuffledLists,
-        String nodeBuilderName, String nl) {
+    public SanFerminSignatureParameters(
+        int nodeCount,
+        int threshold,
+        int pairingTime,
+        int signatureSize,
+        int replyTimeout,
+        int candidateCount,
+        boolean shuffledLists,
+        String nodeBuilderName,
+        String nl) {
       this.nodeCount = nodeCount;
       this.powerOfTwo = MoreMath.log2(nodeCount);
       this.threshold = threshold;
@@ -122,8 +115,8 @@ public class SanFerminSignature implements Protocol {
     this.params = params;
     this.network = new Network<>();
     this.nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
-    this.network
-        .setNetworkLatency(RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
+    this.network.setNetworkLatency(
+        RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
     this.allNodes = new ArrayList<>(params.nodeCount);
     for (int i = 0; i < params.nodeCount; i++) {
       final SanFerminNode n = new SanFerminNode(this.nb);
@@ -132,8 +125,8 @@ public class SanFerminSignature implements Protocol {
     }
 
     // register the sanfermin helper with all the nodes
-    this.allNodes
-        .forEach(n -> n.candidateTree = new SanFerminHelper<>(n, allNodes, this.network.rd));
+    this.allNodes.forEach(
+        n -> n.candidateTree = new SanFerminHelper<>(n, allNodes, this.network.rd));
 
     finishedNodes = new ArrayList<>();
   }
@@ -142,27 +135,21 @@ public class SanFerminSignature implements Protocol {
     return new SanFerminSignature(params);
   }
 
-  /**
-   * init makes each node starts swapping with each other when the network starts
-   */
+  /** init makes each node starts swapping with each other when the network starts */
   public void init() {
-    for (SanFerminNode n : allNodes)
-      network.registerTask(n::goNextLevel, 1, n);
+    for (SanFerminNode n : allNodes) network.registerTask(n::goNextLevel, 1, n);
   }
 
   public Network<SanFerminNode> network() {
     return network;
   }
 
-
   /**
    * SanFerminNode is a node that carefully selects the peers he needs to contact to get the final
    * aggregated result
    */
   public class SanFerminNode extends Node {
-    /**
-     * The node's id in binary string form
-     */
+    /** The node's id in binary string form */
     public final String binaryId;
 
     /**
@@ -172,12 +159,9 @@ public class SanFerminSignature implements Protocol {
      */
     public int currentPrefixLength;
 
-    @JsonIgnore
-    private SanFerminHelper<SanFerminNode> candidateTree;
+    @JsonIgnore private SanFerminHelper<SanFerminNode> candidateTree;
 
-    /**
-     * BitSet to save which node have we sent swaprequest so far
-     */
+    /** BitSet to save which node have we sent swaprequest so far */
     HashMap<Integer, BitSet> usedCandidates;
 
     /**
@@ -194,7 +178,6 @@ public class SanFerminSignature implements Protocol {
 
     HashMap<Integer, Integer> futurSigs;
 
-
     /**
      * isSwapping indicates whether we are in a state where we can swap at the current level or not.
      * This is acting as a Lock, since between the time we receive a valid swap and the time we
@@ -203,7 +186,6 @@ public class SanFerminSignature implements Protocol {
      */
     boolean isSwapping;
 
-
     /**
      * Integer field that simulate an aggregated signature badly. It keeps increasing as the node do
      * more swaps. It assumes each node has the value "1" and the aggregation operation is the
@@ -211,29 +193,18 @@ public class SanFerminSignature implements Protocol {
      */
     int aggValue;
 
-    /**
-     * time when threshold of signature is reached
-     */
+    /** time when threshold of signature is reached */
     long thresholdAt;
-    /**
-     * have we reached the threshold or not
-     */
+    /** have we reached the threshold or not */
     boolean thresholdDone;
 
-    /**
-     * Are we done yet or not
-     */
+    /** Are we done yet or not */
     boolean done;
 
-    /**
-     * number of swap "request" this node sent (vs optimistic reply etc)
-     */
+    /** number of swap "request" this node sent (vs optimistic reply etc) */
     int sentRequests;
-    /**
-     * number of swap requests received by this node
-     */
+    /** number of swap requests received by this node */
     int receivedRequests;
-
 
     public SanFerminNode(NodeBuilder nb) {
       super(network.rd, nb);
@@ -261,12 +232,14 @@ public class SanFerminSignature implements Protocol {
       receivedRequests++;
       if (done || request.level != this.currentPrefixLength) {
         if (this.signatureCache.containsKey(request.level)) {
-          print("sending back CACHED signature at level " + request.level + " to node "
-              + node.binaryId);
+          print(
+              "sending back CACHED signature at level "
+                  + request.level
+                  + " to node "
+                  + node.binaryId);
           // OPTIMISTIC REPLY
-          this
-              .sendSwapReply(node, Status.OK, request.level,
-                  this.signatureCache.get(request.level));
+          this.sendSwapReply(
+              node, Status.OK, request.level, this.signatureCache.get(request.level));
         } else {
           this.sendSwapReply(node, Status.NO, 0);
           // it's a value we might want to keep for later!
@@ -296,7 +269,6 @@ public class SanFerminSignature implements Protocol {
       } else {
         print(" received  INVALID Swap" + "from " + node.binaryId + " at level " + request.level);
       }
-
     }
 
     public void onSwapReply(SanFerminNode from, SwapReply reply) {
@@ -305,8 +277,7 @@ public class SanFerminSignature implements Protocol {
         // future usage if it can be useful and is valid
         return;
       }
-      if (isSwapping)
-        return;
+      if (isSwapping) return;
 
       switch (reply.status) {
         case OK:
@@ -323,8 +294,12 @@ public class SanFerminSignature implements Protocol {
             if (isCandidate && goodLevel && isValidSig) {
               transition("UNEXPECTED swap REPLY", from.binaryId, reply.level, reply.aggValue);
             } else {
-              print(" received UNEXPECTED - WRONG swap reply " + "from " + from.binaryId
-                  + " at level " + reply.level);
+              print(
+                  " received UNEXPECTED - WRONG swap reply "
+                      + "from "
+                      + from.binaryId
+                      + " at level "
+                      + reply.level);
             }
             return;
           }
@@ -371,13 +346,15 @@ public class SanFerminSignature implements Protocol {
       this.sentRequests += candidates.size();
 
       SwapRequest r = new SwapRequest(this.currentPrefixLength, this.aggValue);
-      print(" send SwapRequest to " + String
-          .join(" - ", candidates.stream().map(n -> n.binaryId).collect(Collectors.toList())));
+      print(
+          " send SwapRequest to "
+              + String.join(
+                  " - ", candidates.stream().map(n -> n.binaryId).collect(Collectors.toList())));
       network.send(r, this, candidates);
 
       int currLevel = this.currentPrefixLength;
-      network
-          .registerTask(() -> {
+      network.registerTask(
+          () -> {
             // If we are still waiting on an answer for this level, we
             // try a new one.
             if (!SanFerminNode.this.done && SanFerminNode.this.currentPrefixLength == currLevel) {
@@ -388,10 +365,10 @@ public class SanFerminSignature implements Protocol {
                   this.candidateTree.pickNextNodes(this.currentPrefixLength, params.candidateCount);
               sendToNodes(newList);
             }
-          }, network.time + params.replyTimeout, SanFerminNode.this);
-
+          },
+          network.time + params.replyTimeout,
+          SanFerminNode.this);
     }
-
 
     /**
      * goNextLevel reduces the required length of common prefix of one, computes the new set of
@@ -428,8 +405,11 @@ public class SanFerminSignature implements Protocol {
       this.isSwapping = false;
       this.pendingNodes = new HashSet<>();
       if (futurSigs.containsKey(currentPrefixLength)) {
-        print(" FUTURe value at new level" + currentPrefixLength + " "
-            + "saved. Moving on directly !");
+        print(
+            " FUTURe value at new level"
+                + currentPrefixLength
+                + " "
+                + "saved. Moving on directly !");
         this.aggValue += futurSigs.get(currentPrefixLength);
         // directly go to the next level !
         goNextLevel();
@@ -455,13 +435,25 @@ public class SanFerminSignature implements Protocol {
      */
     private void transition(String type, String fromId, int level, int toAggregate) {
       this.isSwapping = true;
-      network.registerTask(() -> {
-        int before = this.aggValue;
-        this.aggValue += toAggregate;
-        print(" received " + type + " lvl=" + level + " from " + fromId + " aggValue " + before
-            + " -> " + this.aggValue);
-        this.goNextLevel();
-      }, network.time + params.pairingTime, this);
+      network.registerTask(
+          () -> {
+            int before = this.aggValue;
+            this.aggValue += toAggregate;
+            print(
+                " received "
+                    + type
+                    + " lvl="
+                    + level
+                    + " from "
+                    + fromId
+                    + " aggValue "
+                    + before
+                    + " -> "
+                    + this.aggValue);
+            this.goNextLevel();
+          },
+          network.time + params.pairingTime,
+          this);
     }
 
     private void timeout(int level) {
@@ -470,22 +462,46 @@ public class SanFerminSignature implements Protocol {
       int potentials = (int) Math.pow(2, diff) - 1;
     }
 
-    /**
-     * simple helper method to print node info + message
-     */
+    /** simple helper method to print node info + message */
     private void print(String s) {
       if (params.verbose)
-        System.out
-            .println("t=" + network.time + ", id=" + this.nodeId + ", lvl="
-                + this.currentPrefixLength + ", sent=" + this.msgSent + " -> " + s);
+        System.out.println(
+            "t="
+                + network.time
+                + ", id="
+                + this.nodeId
+                + ", lvl="
+                + this.currentPrefixLength
+                + ", sent="
+                + this.msgSent
+                + " -> "
+                + s);
     }
 
     @Override
     public String toString() {
-      return "SanFerminNode{" + "nodeId=" + binaryId + ", thresholdAt=" + thresholdAt + ", doneAt="
-          + doneAt + ", sigs=" + aggValue + ", msgReceived=" + msgReceived + ", msgSent=" + msgSent
-          + ", sentRequests=" + sentRequests + ", receivedRequests=" + receivedRequests
-          + ", KBytesSent=" + bytesSent / 1024 + ", KBytesReceived=" + bytesReceived / 1024 + '}';
+      return "SanFerminNode{"
+          + "nodeId="
+          + binaryId
+          + ", thresholdAt="
+          + thresholdAt
+          + ", doneAt="
+          + doneAt
+          + ", sigs="
+          + aggValue
+          + ", msgReceived="
+          + msgReceived
+          + ", msgSent="
+          + msgSent
+          + ", sentRequests="
+          + sentRequests
+          + ", receivedRequests="
+          + receivedRequests
+          + ", KBytesSent="
+          + bytesSent / 1024
+          + ", KBytesReceived="
+          + bytesReceived / 1024
+          + '}';
     }
 
     public long getThresholdAt() {
@@ -509,7 +525,6 @@ public class SanFerminSignature implements Protocol {
     int aggValue; // see Reply.aggValue
     // String data -- no need to specify it, but only in the size() method
 
-
     public SwapReply(Status s, int level, int aggValue) {
       this.level = level;
       this.status = s;
@@ -528,12 +543,10 @@ public class SanFerminSignature implements Protocol {
     }
   }
 
-
   class SwapRequest extends Message<SanFerminNode> {
     final int level;
     final int aggValue; // see Reply.aggValue
     // String data -- no need to specify it, but only in the size() method
-
 
     public SwapRequest(int level, int aggValue) {
       this.level = level;
@@ -555,10 +568,11 @@ public class SanFerminSignature implements Protocol {
   public static void sigsPerTime() {
     // NetworkLatency.NetworkLatencyByDistance nl = new NetworkLatency.NetworkLatencyByDistance();
     int nodeCt = 32768 / 2;
-    SanFerminSignature ps1 = new SanFerminSignature(
-        new SanFerminSignatureParameters(nodeCt, nodeCt, 2, 48, 300, 1, false, null, null));
+    SanFerminSignature ps1 =
+        new SanFerminSignature(
+            new SanFerminSignatureParameters(nodeCt, nodeCt, 2, 48, 300, 1, false, null, null));
 
-    //ps1.network.setNetworkLatency(nl);
+    // ps1.network.setNetworkLatency(nl);
 
     Graph graph = new Graph("number of sig per time", "time in ms", "sig count");
     Graph.Series series1min = new Graph.Series("sig count - worse node");
@@ -587,14 +601,18 @@ public class SanFerminSignature implements Protocol {
     }
 
     System.out.println("bytes sent: " + StatsHelper.getStatsOn(ps1.allNodes, Node::getBytesSent));
-    System.out
-        .println("bytes rcvd: " + StatsHelper.getStatsOn(ps1.allNodes, Node::getBytesReceived));
+    System.out.println(
+        "bytes rcvd: " + StatsHelper.getStatsOn(ps1.allNodes, Node::getBytesReceived));
     System.out.println("msg sent: " + StatsHelper.getStatsOn(ps1.allNodes, Node::getMsgSent));
     System.out.println("msg rcvd: " + StatsHelper.getStatsOn(ps1.allNodes, Node::getMsgReceived));
-    System.out.println("done at: " + StatsHelper.getStatsOn(ps1.network.allNodes, n -> {
-      long val = n.getDoneAt();
-      return val == 0 ? limit : val;
-    }));
+    System.out.println(
+        "done at: "
+            + StatsHelper.getStatsOn(
+                ps1.network.allNodes,
+                n -> {
+                  long val = n.getDoneAt();
+                  return val == 0 ? limit : val;
+                }));
   }
 
   public static void main(String... args) {

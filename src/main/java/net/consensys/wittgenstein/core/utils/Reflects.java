@@ -8,9 +8,7 @@ import java.util.List;
 @SuppressWarnings({"unchecked", "WeakerAccess"})
 public class Reflects {
 
-  /**
-   * Create an object with dummy values if there is no default constructor.
-   */
+  /** Create an object with dummy values if there is no default constructor. */
   public static <T> T newInstance(Class<T> cls) {
     Constructor<T> c = (Constructor<T>) cls.getConstructors()[0];
 

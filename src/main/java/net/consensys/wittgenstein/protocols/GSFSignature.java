@@ -1,5 +1,10 @@
 package net.consensys.wittgenstein.protocols;
 
+import java.io.File;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
+
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.json.ListNodeConverter;
@@ -8,16 +13,12 @@ import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.server.WParameters;
 import net.consensys.wittgenstein.tools.NodeDrawer;
-import java.io.File;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Predicate;
 
 /**
  * A p2p protocol for BLS signature aggregation.
- * <p>
- * A node runs San Fermin and communicates the results a la gossip. So it's a Gossiping San Fermin
- * Runs in parallel a task to validate the signatures sets it has received.
+ *
+ * <p>A node runs San Fermin and communicates the results a la gossip. So it's a Gossiping San
+ * Fermin Runs in parallel a task to validate the signatures sets it has received.
  */
 @SuppressWarnings("WeakerAccess")
 public class GSFSignature implements Protocol {
@@ -25,25 +26,18 @@ public class GSFSignature implements Protocol {
   final Network<GSFNode> network = new Network<>();
   NodeBuilder nb;
 
-
   public static class GSFSignatureParameters extends WParameters {
-    /**
-     * The number of nodes in the network
-     */
+    /** The number of nodes in the network */
     final int nodeCount;
 
-    /**
-     * The number of signatures to reach to finish the protocol.
-     */
+    /** The number of signatures to reach to finish the protocol. */
     final int threshold;
 
-    /**
-     * The minimum time it takes to do a pairing for a node.
-     */
+    /** The minimum time it takes to do a pairing for a node. */
     final int pairingTime;
 
-    final public int timeoutPerLevelMs;
-    final public int periodDurationMs;
+    public final int timeoutPerLevelMs;
+    public final int periodDurationMs;
     final int acceleratedCallsCount;
 
     final int nodesDown;
@@ -64,10 +58,19 @@ public class GSFSignature implements Protocol {
       this.networkLatencyName = null;
     }
 
-    public GSFSignatureParameters(int nodeCount, int threshold, int pairingTime,
-        int timeoutPerLevelMs, int periodDurationMs, int acceleratedCallsCount, int nodesDown,
-        String nodeBuilderName, String networkLatencyName) {
-      if (nodesDown >= nodeCount || nodesDown < 0 || threshold > nodeCount
+    public GSFSignatureParameters(
+        int nodeCount,
+        int threshold,
+        int pairingTime,
+        int timeoutPerLevelMs,
+        int periodDurationMs,
+        int acceleratedCallsCount,
+        int nodesDown,
+        String nodeBuilderName,
+        String networkLatencyName) {
+      if (nodesDown >= nodeCount
+          || nodesDown < 0
+          || threshold > nodeCount
           || (nodesDown + threshold > nodeCount)) {
         throw new IllegalArgumentException("nodeCount=" + nodeCount + ", threshold=" + threshold);
       }
@@ -82,29 +85,54 @@ public class GSFSignature implements Protocol {
       this.networkLatencyName = networkLatencyName;
     }
 
-    public GSFSignatureParameters(int nodeCount, double ratioThreshold, int pairingTime,
-        int timeoutPerLevelMs, int periodDurationMs, int acceleratedCallsCount,
-        double ratioNodesDown, String nodeBuilderName, String networkLatencyName) {
-      this(nodeCount, (int) (ratioThreshold * nodeCount), pairingTime, timeoutPerLevelMs,
-          periodDurationMs, acceleratedCallsCount, (int) (ratioNodesDown * nodeCount),
-          nodeBuilderName, networkLatencyName);
+    public GSFSignatureParameters(
+        int nodeCount,
+        double ratioThreshold,
+        int pairingTime,
+        int timeoutPerLevelMs,
+        int periodDurationMs,
+        int acceleratedCallsCount,
+        double ratioNodesDown,
+        String nodeBuilderName,
+        String networkLatencyName) {
+      this(
+          nodeCount,
+          (int) (ratioThreshold * nodeCount),
+          pairingTime,
+          timeoutPerLevelMs,
+          periodDurationMs,
+          acceleratedCallsCount,
+          (int) (ratioNodesDown * nodeCount),
+          nodeBuilderName,
+          networkLatencyName);
     }
   }
 
   public GSFSignature(GSFSignatureParameters params) {
     this.params = params;
     this.nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
-    this.network
-        .setNetworkLatency(RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
+    this.network.setNetworkLatency(
+        RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
   }
-
 
   @Override
   public String toString() {
-    return "GSFSignature, " + "nodes=" + params.nodeCount + ", threshold=" + params.threshold
-        + ", pairing=" + params.pairingTime + "ms, level waitTime=" + params.timeoutPerLevelMs
-        + "ms, period=" + params.periodDurationMs + "ms, acceleratedCallsCount="
-        + params.acceleratedCallsCount + ", dead nodes=" + params.nodesDown + ", builder="
+    return "GSFSignature, "
+        + "nodes="
+        + params.nodeCount
+        + ", threshold="
+        + params.threshold
+        + ", pairing="
+        + params.pairingTime
+        + "ms, level waitTime="
+        + params.timeoutPerLevelMs
+        + "ms, period="
+        + params.periodDurationMs
+        + "ms, acceleratedCallsCount="
+        + params.acceleratedCallsCount
+        + ", dead nodes="
+        + params.nodesDown
+        + ", builder="
         + params.nodeBuilderName;
   }
 
@@ -190,7 +218,8 @@ public class GSFSignature implements Protocol {
       BitSet toSend = getLastFinishedLevel();
       boolean previousLevelReceiveOk = true;
       for (SFLevel sfl : levels) {
-        sfl.doCycle(toSend, previousLevelReceiveOk); // We send what we collected at the previous levels
+        sfl.doCycle(
+            toSend, previousLevelReceiveOk); // We send what we collected at the previous levels
         previousLevelReceiveOk = sfl.hasReceivedAll();
         toSend.or(sfl.verifiedSignatures);
       }
@@ -198,15 +227,16 @@ public class GSFSignature implements Protocol {
 
     /**
      * At a given level, we send the signatures received from the previous level and we expect the
-     * equivalent from our peers of this level.<br/>
-     * If nodeId == 0<br/>
-     * l0: 0 => send to 1 <br/>
-     * l1: 0 1 => send to 2 3 <br/>
-     * l2: 0 1 2 3 => send to 4 5 6 7 <br/>
-     * l3: 0 1 2 3 4 5 6 7 => send to 8 9 10 11 12 13 14 15 <br/>
+     * equivalent from our peers of this level.<br>
+     * If nodeId == 0<br>
+     * l0: 0 => send to 1 <br>
+     * l1: 0 1 => send to 2 3 <br>
+     * l2: 0 1 2 3 => send to 4 5 6 7 <br>
+     * l3: 0 1 2 3 4 5 6 7 => send to 8 9 10 11 12 13 14 15 <br>
      */
     public class SFLevel {
       final int level;
+
       @JsonSerialize(converter = ListNodeConverter.class)
       final List<GSFNode> peers;
       // The peers when we have all signatures for this level.
@@ -222,9 +252,7 @@ public class GSFSignature implements Protocol {
        */
       int posInLevel = 0;
 
-      /**
-       * Number of message to send for each new update.
-       */
+      /** Number of message to send for each new update. */
       int remainingCalls;
 
       /**
@@ -240,9 +268,7 @@ public class GSFSignature implements Protocol {
         remainingCalls = 0;
       }
 
-      /**
-       * Build a level on top of the previous one.
-       */
+      /** Build a level on top of the previous one. */
       public SFLevel(SFLevel previousLevel, BitSet allPreviousNodes) {
         this.level = previousLevel.level + 1;
 
@@ -263,9 +289,7 @@ public class GSFSignature implements Protocol {
         return waitedSigs.cardinality();
       }
 
-      /**
-       * We start a level if we reached the time out or if we have all the signatures.
-       */
+      /** We start a level if we reached the time out or if we have all the signatures. */
       boolean hasStarted(BitSet toSend, boolean previousLevelReceiveOk) {
         if (network.time >= (level) * params.timeoutPerLevelMs) {
           return true;
@@ -303,7 +327,6 @@ public class GSFSignature implements Protocol {
       List<GSFNode> getRemainingPeers(int peersCt) {
         List<GSFNode> res = new ArrayList<>(peersCt);
 
-
         int start = posInLevel;
         while (peersCt > 0 && remainingCalls > 0) {
           remainingCalls--;
@@ -334,9 +357,7 @@ public class GSFSignature implements Protocol {
       }
     }
 
-    /**
-     * @return all the signatures you should have when this round is finished.
-     */
+    /** @return all the signatures you should have when this round is finished. */
     public BitSet allSigsAtLevel(int round) {
       if (round < 1) {
         throw new IllegalArgumentException("round=" + round);
@@ -358,7 +379,6 @@ public class GSFSignature implements Protocol {
       return a.equals(small);
     }
 
-
     /**
      * If the state has changed we send a message to all. If we're done, we update all our peers: it
      * will be our last message.
@@ -372,8 +392,8 @@ public class GSFSignature implements Protocol {
       sigs.or(sfl.indivVerifiedSig);
 
       // These lines remove Olivier's optimisation
-      //sigs = (BitSet) sigs.clone();
-      //sigs.and(sfl.waitedSigs);
+      // sigs = (BitSet) sigs.clone();
+      // sigs.and(sfl.waitedSigs);
 
       boolean resetRemaining = false;
       if (sigs.cardinality() > sfl.expectedSigs()) {
@@ -443,8 +463,9 @@ public class GSFSignature implements Protocol {
 
     private List<GSFNode> randomSubset(BitSet nodes, int nodeCt) {
       List<GSFNode> res = new ArrayList<>(nodes.cardinality());
-      for (int pos, cur = nodes.nextSetBit(0); cur >= 0; pos = cur + 1, cur =
-          nodes.nextSetBit(pos)) {
+      for (int pos, cur = nodes.nextSetBit(0);
+          cur >= 0;
+          pos = cur + 1, cur = nodes.nextSetBit(pos)) {
         res.add(network.getNodeById(cur));
       }
 
@@ -462,8 +483,11 @@ public class GSFSignature implements Protocol {
      */
     private int evaluateSig(SFLevel l, BitSet sig) {
       int newTotal = 0; // The number of signatures in our new best
-      int addedSigs = 0; // The number of sigs we add with our new best compared to the existing one. Can be negative
-      int combineCt = 0; // The number of sigs in our new best that come from combining it with individual sigs
+      int addedSigs =
+          0; // The number of sigs we add with our new best compared to the existing one. Can be
+      // negative
+      int combineCt =
+          0; // The number of sigs in our new best that come from combining it with individual sigs
 
       if (l.verifiedSignatures.cardinality() >= l.expectedSigs()) {
         return 0;
@@ -511,10 +535,7 @@ public class GSFSignature implements Protocol {
       return 100000 - l.level * 100 + addedSigs;
     }
 
-
-    /**
-     * Nothing much to do when we receive a sig set: we just add it to our toVerify list.
-     */
+    /** Nothing much to do when we receive a sig set: we just add it to our toVerify list. */
     void onNewSig(GSFNode from, SendSigs ssigs) {
       SFLevel l = levels.get(ssigs.level);
 
@@ -556,20 +577,31 @@ public class GSFSignature implements Protocol {
         sigChecked++;
         sigQueueSize = toVerify.size();
         final SendSigs tBest = best;
-        network
-            .registerTask(
-                () -> GSFNode.this.updateVerifiedSignatures(tBest.from, tBest.level, tBest.sigs),
-                network.time + nodePairingTime, GSFNode.this);
+        network.registerTask(
+            () -> GSFNode.this.updateVerifiedSignatures(tBest.from, tBest.level, tBest.sigs),
+            network.time + nodePairingTime,
+            GSFNode.this);
       }
     }
 
-
     @Override
     public String toString() {
-      return "GSFNode{" + "nodeId=" + nodeId + ", doneAt=" + doneAt + ", sigs="
-          + verifiedSignatures.cardinality() + ", msgReceived=" + msgReceived + ", msgSent="
-          + msgSent + ", KBytesSent=" + bytesSent / 1024 + ", KBytesReceived="
-          + bytesReceived / 1024 + '}';
+      return "GSFNode{"
+          + "nodeId="
+          + nodeId
+          + ", doneAt="
+          + doneAt
+          + ", sigs="
+          + verifiedSignatures.cardinality()
+          + ", msgReceived="
+          + msgReceived
+          + ", msgSent="
+          + msgSent
+          + ", KBytesSent="
+          + bytesSent / 1024
+          + ", KBytesReceived="
+          + bytesReceived / 1024
+          + '}';
     }
   }
 
@@ -584,7 +616,7 @@ public class GSFSignature implements Protocol {
       network.addNode(n);
     }
 
-    for (int setDown = 0; setDown < params.nodesDown;) {
+    for (int setDown = 0; setDown < params.nodesDown; ) {
       int down = network.rd.nextInt(params.nodeCount);
       Node n = network.allNodes.get(down);
       if (!n.isDown() && down != 1) {
@@ -598,9 +630,8 @@ public class GSFSignature implements Protocol {
       if (!n.isDown()) {
         n.initLevel();
         network.registerPeriodicTask(n::doCycle, 1, params.periodDurationMs, n);
-        network
-            .registerConditionalTask(n::checkSigs, 1, n.nodePairingTime, n,
-                () -> !n.toVerify.isEmpty(), () -> !n.done);
+        network.registerConditionalTask(
+            n::checkSigs, 1, n.nodePairingTime, n, () -> !n.toVerify.isEmpty(), () -> !n.done);
       }
     }
   }
@@ -609,7 +640,6 @@ public class GSFSignature implements Protocol {
   public Network<GSFNode> network() {
     return network;
   }
-
 
   static class GFSNodeStatus implements NodeDrawer.NodeStatus {
     final GSFSignatureParameters params;
@@ -691,38 +721,41 @@ public class GSFSignature implements Protocol {
     }
   }
 
-
   public static void sigsPerTime() {
     GSFSignature p = newProtocol();
 
-    StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
-      final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
+    StatsHelper.StatsGetter sg =
+        new StatsHelper.StatsGetter() {
+          final List<String> fields = new StatsHelper.SimpleStats(0, 0, 0).fields();
 
-      @Override
-      public List<String> fields() {
-        return fields;
-      }
+          @Override
+          public List<String> fields() {
+            return fields;
+          }
 
-      @Override
-      public StatsHelper.Stat get(List<? extends Node> liveNodes) {
-        return StatsHelper
-            .getStatsOn(liveNodes, n -> ((GSFNode) n).verifiedSignatures.cardinality());
-      }
-    };
+          @Override
+          public StatsHelper.Stat get(List<? extends Node> liveNodes) {
+            return StatsHelper.getStatsOn(
+                liveNodes, n -> ((GSFNode) n).verifiedSignatures.cardinality());
+          }
+        };
 
-    ProgressPerTime.OnSingleRunEnd cb = p12 -> {
-      StatsHelper.SimpleStats ss =
-          StatsHelper.getStatsOn(p12.network().liveNodes(), n -> (int) ((GSFNode) n).speedRatio);
-      System.out.println("min/avg/max speedRatio=" + ss.min + "/" + ss.avg + "/" + ss.max);
+    ProgressPerTime.OnSingleRunEnd cb =
+        p12 -> {
+          StatsHelper.SimpleStats ss =
+              StatsHelper.getStatsOn(
+                  p12.network().liveNodes(), n -> (int) ((GSFNode) n).speedRatio);
+          System.out.println("min/avg/max speedRatio=" + ss.min + "/" + ss.avg + "/" + ss.max);
 
-      ss = StatsHelper.getStatsOn(p12.network().liveNodes(), n -> ((GSFNode) n).sigChecked);
-      System.out.println("min/avg/max sigChecked=" + ss.min + "/" + ss.avg + "/" + ss.max);
+          ss = StatsHelper.getStatsOn(p12.network().liveNodes(), n -> ((GSFNode) n).sigChecked);
+          System.out.println("min/avg/max sigChecked=" + ss.min + "/" + ss.avg + "/" + ss.max);
 
-      ss = StatsHelper
-          .getStatsOn(p12.network().liveNodes(),
-              n -> ((GSFNode) n).sigQueueSize / ((GSFNode) n).sigChecked);
-      System.out.println("min/avg/max queueSize=" + ss.min + "/" + ss.avg + "/" + ss.max);
-    };
+          ss =
+              StatsHelper.getStatsOn(
+                  p12.network().liveNodes(),
+                  n -> ((GSFNode) n).sigQueueSize / ((GSFNode) n).sigChecked);
+          System.out.println("min/avg/max queueSize=" + ss.min + "/" + ss.avg + "/" + ss.max);
+        };
 
     ProgressPerTime ppt =
         new ProgressPerTime(p, "", "number of signatures", sg, 1, cb, 10, TimeUnit.MILLISECONDS);
@@ -732,7 +765,7 @@ public class GSFSignature implements Protocol {
   }
 
   public static void main(String... args) {
-    //sigsPerTime();
+    // sigsPerTime();
     drawImgs();
   }
 }

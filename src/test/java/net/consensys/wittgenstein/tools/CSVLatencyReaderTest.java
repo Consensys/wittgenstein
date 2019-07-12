@@ -1,11 +1,11 @@
 package net.consensys.wittgenstein.tools;
 
+import java.util.HashMap;
+import java.util.Map;
 
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import java.util.HashMap;
-import java.util.Map;
 
 public class CSVLatencyReaderTest {
 
@@ -57,5 +57,4 @@ public class CSVLatencyReaderTest {
 
     return latencyMatrix;
   }
-
 }

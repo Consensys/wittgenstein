@@ -1,18 +1,20 @@
 package net.consensys.wittgenstein.core;
 
-import org.junit.Assert;
-import org.junit.Test;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.junit.Assert;
+import org.junit.Test;
+
 public class NetworkThroughputTest {
   private final AtomicInteger ai = new AtomicInteger(1);
-  private final NodeBuilder nb = new NodeBuilder() {
-    @Override
-    public int getX(int rdi) {
-      return ai.getAndAdd(Node.MAX_X / 2);
-    }
-  };
+  private final NodeBuilder nb =
+      new NodeBuilder() {
+        @Override
+        public int getX(int rdi) {
+          return ai.getAndAdd(Node.MAX_X / 2);
+        }
+      };
   private final Node n1 = new Node(new Random(0), nb);
   private final Node n2 = new Node(new Random(0), nb);
 

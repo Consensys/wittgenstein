@@ -1,15 +1,14 @@
 package net.consensys.wittgenstein.server;
 
+import java.util.Collections;
+import java.util.List;
+
 import net.consensys.wittgenstein.core.EnvelopeInfo;
 import net.consensys.wittgenstein.core.Network;
 import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.core.messages.Message;
-import java.util.Collections;
-import java.util.List;
 
-/**
- * Just print the messages received, but actually relays the execution to a real node.
- */
+/** Just print the messages received, but actually relays the execution to a real node. */
 public class ExternalMockImplementation implements External {
   private final Network<?> network;
 

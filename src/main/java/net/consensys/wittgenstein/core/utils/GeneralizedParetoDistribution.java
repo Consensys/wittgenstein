@@ -1,23 +1,17 @@
 package net.consensys.wittgenstein.core.utils;
 
 public class GeneralizedParetoDistribution {
-  /**
-   * shape ξ
-   */
+  /** shape ξ */
   private final double shape;
 
-  /**
-   * location μ
-   */
+  /** location μ */
   private final double location;
 
-  /**
-   * scale σ
-   */
+  /** scale σ */
   private final double scale;
 
-  final static private double ONE = 0.999999;
-  final static private double ZERO = 0.000001;
+  private static final double ONE = 0.999999;
+  private static final double ZERO = 0.000001;
 
   public GeneralizedParetoDistribution(double shape, double location, double scale) {
     if (scale <= 0.0) {

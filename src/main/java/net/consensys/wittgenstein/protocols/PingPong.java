@@ -4,21 +4,15 @@ import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.server.WParameters;
 
-/**
- * A simulation of a trivial protocol to be used as a sample.
- */
+/** A simulation of a trivial protocol to be used as a sample. */
 @SuppressWarnings("WeakerAccess")
 public class PingPong implements Protocol {
   final PingPongParameters params;
 
-  /**
-   * You need a network. Nodes are added to this network. Network latency can be set later.
-   */
+  /** You need a network. Nodes are added to this network. Network latency can be set later. */
   private final Network<PingPongNode> network = new Network<>();
 
-  /**
-   * Nodes have positions. This position is chosen by the builder.
-   */
+  /** Nodes have positions. This position is chosen by the builder. */
   private final NodeBuilder nb;
 
   /**
@@ -61,13 +55,11 @@ public class PingPong implements Protocol {
   public PingPong(PingPongParameters params) {
     this.params = params;
     this.nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
-    this.network
-        .setNetworkLatency(RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
+    this.network.setNetworkLatency(
+        RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
   }
 
-  /**
-   * Nodes are specialized for the protocol.
-   */
+  /** Nodes are specialized for the protocol. */
   class PingPongNode extends Node {
     int pong;
 
@@ -101,7 +93,6 @@ public class PingPong implements Protocol {
   public Network<PingPongNode> network() {
     return network;
   }
-
 
   public static void main(String... args) {
     PingPong p = new PingPong(new PingPongParameters());

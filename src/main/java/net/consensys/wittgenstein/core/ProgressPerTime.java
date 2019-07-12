@@ -1,7 +1,5 @@
 package net.consensys.wittgenstein.core;
 
-import net.consensys.wittgenstein.core.utils.StatsHelper;
-import net.consensys.wittgenstein.tools.Graph;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -12,9 +10,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-/**
- * This class runs a scenario for a protocol
- */
+import net.consensys.wittgenstein.core.utils.StatsHelper;
+import net.consensys.wittgenstein.tools.Graph;
+
+/** This class runs a scenario for a protocol */
 public class ProgressPerTime {
   private final Protocol protocol;
   private final String configDesc;
@@ -25,9 +24,15 @@ public class ProgressPerTime {
   private final int statEachXms;
   private final TimeUnit timeUnit;
 
-  public ProgressPerTime(Protocol template, String configDesc, String yAxisDesc,
-      StatsHelper.StatsGetter statsGetter, int roundCount, OnSingleRunEnd endCallback,
-      int statEachXms, TimeUnit timeUnit) {
+  public ProgressPerTime(
+      Protocol template,
+      String configDesc,
+      String yAxisDesc,
+      StatsHelper.StatsGetter statsGetter,
+      int roundCount,
+      OnSingleRunEnd endCallback,
+      int statEachXms,
+      TimeUnit timeUnit) {
     if (roundCount <= 0) {
       throw new IllegalArgumentException(
           "roundCount must be greater than 0. roundCount=" + roundCount);
@@ -123,8 +128,9 @@ public class ProgressPerTime {
     }
 
     protocol.init();
-    Graph graph = new Graph(protocol + " " + configDesc,
-        "time in " + timeUnit.toString().toLowerCase(), yAxisDesc);
+    Graph graph =
+        new Graph(
+            protocol + " " + configDesc, "time in " + timeUnit.toString().toLowerCase(), yAxisDesc);
 
     for (String field : statsGetter.fields()) {
       Graph.StatSeries s = Graph.statSeries(field, rawResults.get(field));

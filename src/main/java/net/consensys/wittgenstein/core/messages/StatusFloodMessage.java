@@ -1,7 +1,8 @@
 package net.consensys.wittgenstein.core.messages;
 
-import net.consensys.wittgenstein.core.P2PNode;
 import java.util.Set;
+
+import net.consensys.wittgenstein.core.P2PNode;
 
 /**
  * Class to use when a same node will update the message, i.e. the new version will replace the old
@@ -13,9 +14,7 @@ public class StatusFloodMessage<TN extends P2PNode<TN>> extends FloodMessage<TN>
    * multiple nodes are sending the same type of message they need to have two different msg id.
    */
   final int msgId;
-  /**
-   * The version number.
-   */
+  /** The version number. */
   final int seq;
 
   public StatusFloodMessage(int msgId, int seq, int size, int localDelay, int delayBetweenPeers) {
@@ -32,9 +31,7 @@ public class StatusFloodMessage<TN extends P2PNode<TN>> extends FloodMessage<TN>
     return msgId;
   }
 
-  /**
-   * We're adding this message to the node's received set only if the seq number is greater.
-   */
+  /** We're adding this message to the node's received set only if the seq number is greater. */
   @Override
   public boolean addToReceived(TN to) {
     Set<?> previousSet = to.getMsgReceived(msgId);

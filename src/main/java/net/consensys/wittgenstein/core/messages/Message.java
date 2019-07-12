@@ -7,8 +7,8 @@ import net.consensys.wittgenstein.core.utils.Strings;
 
 /**
  * The generic message that goes on a network. Triggers an 'action' on reception.
- * <p>
- * Object of this class must be immutable. Especially, Message is shared between the messages for
+ *
+ * <p>Object of this class must be immutable. Especially, Message is shared between the messages for
  * messages sent to multiple nodes.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")

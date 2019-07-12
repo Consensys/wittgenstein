@@ -1,10 +1,11 @@
 package net.consensys.wittgenstein.protocols.ethpow;
 
+import java.util.*;
+
 import net.consensys.wittgenstein.core.*;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import java.util.*;
 
 public class EthPoWTest {
   private ETHPoW.POWBlock gen = ETHPoW.POWBlock.createGenesis();
@@ -28,9 +29,7 @@ public class EthPoWTest {
     m3 = ep.network.getNodeById(3);
   }
 
-  /**
-   * Test difficulty calculation against real data.
-   */
+  /** Test difficulty calculation against real data. */
   @Test
   public void testDifficulty() {
     ETHPoW.POWBlock b1 = gen;
@@ -70,9 +69,7 @@ public class EthPoWTest {
     Assert.assertEquals("10591897813561307780106", b9.totalDifficulty.toString());
   }
 
-  /**
-   * Test time to find a hash against real data.
-   */
+  /** Test time to find a hash against real data. */
   @Test
   public void testInitialDifficulty() {
     // Difficulties & hashrate at block 7999565
@@ -147,15 +144,14 @@ public class EthPoWTest {
     int timestamp = p.network().time;
     Set<ETHPoW.POWBlock> main = p.network.observer.blocksReceivedByHeight.get(gen.height + 2);
     ETHPoW.POWBlock father = main.iterator().next().parent;
-    //New block created with same father as existing block
+    // New block created with same father as existing block
     ETHPoW.POWBlock uncle = new ETHPoW.POWBlock(m, father, timestamp);
 
     p.network.sendAll(new BlockChainNetwork.SendBlock<>(uncle), m);
     p.network().run(1000);
 
-    Assert
-        .assertTrue(
-            p.network.allNodes.get(1).blocksReceivedByHeight.get(uncle.height).contains(uncle));
+    Assert.assertTrue(
+        p.network.allNodes.get(1).blocksReceivedByHeight.get(uncle.height).contains(uncle));
   }
 
   @Test
@@ -366,8 +362,11 @@ public class EthPoWTest {
 
   static class DelayedMiner extends ETHAgentMiner {
 
-    public DelayedMiner(BlockChainNetwork<ETHPoW.POWBlock, ETHMiner> network, NodeBuilder nb,
-        int hashPower, ETHPoW.POWBlock genesis) {
+    public DelayedMiner(
+        BlockChainNetwork<ETHPoW.POWBlock, ETHMiner> network,
+        NodeBuilder nb,
+        int hashPower,
+        ETHPoW.POWBlock genesis) {
       super(network, nb, hashPower, genesis);
     }
 
@@ -388,8 +387,12 @@ public class EthPoWTest {
     final int ownMiningDepth;
     final int delay;
 
-    ExtraSendDelayDecision(int takenAtHeight, int ownMiningDepth, int rewardAtHeight,
-        int miningDurationMs, int delay) {
+    ExtraSendDelayDecision(
+        int takenAtHeight,
+        int ownMiningDepth,
+        int rewardAtHeight,
+        int miningDurationMs,
+        int delay) {
       super(takenAtHeight, rewardAtHeight);
       this.miningDurationMs = miningDurationMs;
       this.ownMiningDepth = ownMiningDepth;

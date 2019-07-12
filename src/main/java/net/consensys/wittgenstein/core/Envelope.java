@@ -1,14 +1,13 @@
 package net.consensys.wittgenstein.core;
 
-import net.consensys.wittgenstein.core.messages.Message;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * This is a class internal to the framework.
- */
+import net.consensys.wittgenstein.core.messages.Message;
+
+/** This is a class internal to the framework. */
 @SuppressWarnings("WeakerAccess")
 abstract class Envelope<TN extends Node> {
   final int sendTime;
@@ -34,8 +33,8 @@ abstract class Envelope<TN extends Node> {
   abstract int getFromId();
 
   EnvelopeInfo<?> curInfos(Network<?> network) {
-    return new EnvelopeInfo<>(getFromId(), getNextDestId(), sendTime, nextArrivalTime(network),
-        getMessage());
+    return new EnvelopeInfo<>(
+        getFromId(), getNextDestId(), sendTime, nextArrivalTime(network), getMessage());
   }
 
   abstract List<EnvelopeInfo<?>> infos(Network<?> network);
@@ -50,8 +49,8 @@ abstract class Envelope<TN extends Node> {
    * has been confirmed by looking at the behavior with yourkit 95% of the memory is messages - so
    * we want to optimize this case. - we have a single MultipleDestEnvelope for all nodes - we don't
    * keep the list of the network latency to save memory
-   * <p>
-   * To avoid storing the network latencies, we do: - generate the randomness from a unique per
+   *
+   * <p>To avoid storing the network latencies, we do: - generate the randomness from a unique per
    * MultipleDestEnvelope + the node id - sort the nodes with the calculated latency (hence the
    * first node is the first to receive the message) - recalculate them on the fly as the nodeId &
    * the randomSeed are kept. - this also allows on disk serialization
@@ -65,8 +64,12 @@ abstract class Envelope<TN extends Node> {
     protected int curPos = 0;
     private Envelope<?> nextSameTime = null;
 
-    MultipleDestEnvelope(Message<TN> m, Node fromNode, List<Network.MessageArrival> dests,
-        int sendTime, int randomSeed) {
+    MultipleDestEnvelope(
+        Message<TN> m,
+        Node fromNode,
+        List<Network.MessageArrival> dests,
+        int sendTime,
+        int randomSeed) {
       super(sendTime);
       this.message = m;
       this.fromNodeId = fromNode.nodeId;
@@ -80,8 +83,16 @@ abstract class Envelope<TN extends Node> {
 
     @Override
     public String toString() {
-      return "Envelope{" + "message=" + message + ", fromNode=" + fromNodeId + ", dests="
-          + Arrays.toString(destIds) + ", curPos=" + curPos + '}';
+      return "Envelope{"
+          + "message="
+          + message
+          + ", fromNode="
+          + fromNodeId
+          + ", dests="
+          + Arrays.toString(destIds)
+          + ", curPos="
+          + curPos
+          + '}';
     }
 
     @Override
@@ -135,16 +146,16 @@ abstract class Envelope<TN extends Node> {
     List<EnvelopeInfo<?>> infos(Network<?> network) {
       List<EnvelopeInfo<?>> res = new ArrayList<>();
       for (int i = curPos; i < destIds.length; i++) {
-        EnvelopeInfo<?> ei = new EnvelopeInfo<>(fromNodeId, destIds[i], sendTime,
-            arrivalTime(network, destIds[i]), message);
+        EnvelopeInfo<?> ei =
+            new EnvelopeInfo<>(
+                fromNodeId, destIds[i], sendTime, arrivalTime(network, destIds[i]), message);
         res.add(ei);
       }
       return res;
     }
-
   }
 
-  final static class MultipleDestWithDelayEnvelope<TN extends Node> extends Envelope<TN> {
+  static final class MultipleDestWithDelayEnvelope<TN extends Node> extends Envelope<TN> {
     final Message<TN> message;
     private final int fromNodeId;
 
@@ -153,8 +164,8 @@ abstract class Envelope<TN extends Node> {
     protected int curPos = 0;
     private Envelope<?> nextSameTime = null;
 
-    MultipleDestWithDelayEnvelope(Message<TN> m, Node fromNode, List<Network.MessageArrival> dests,
-        int sendTime) {
+    MultipleDestWithDelayEnvelope(
+        Message<TN> m, Node fromNode, List<Network.MessageArrival> dests, int sendTime) {
       super(sendTime);
       this.message = m;
       this.fromNodeId = fromNode.nodeId;
@@ -217,14 +228,12 @@ abstract class Envelope<TN extends Node> {
     }
   }
 
-
-  final static class SingleDestEnvelope<TN extends Node> extends Envelope<TN> {
+  static final class SingleDestEnvelope<TN extends Node> extends Envelope<TN> {
     final Message<TN> message;
     private final int fromNodeId;
     private final int toNodeId;
     private final int arrivalTime;
     private Envelope<?> nextSameTime = null;
-
 
     @Override
     Envelope<?> getNextSameTime() {
@@ -236,8 +245,8 @@ abstract class Envelope<TN extends Node> {
       this.nextSameTime = nextSameTime;
     }
 
-    SingleDestEnvelope(Message<TN> message, Node fromNode, Node toNode, int sendTime,
-        int arrivalTime) {
+    SingleDestEnvelope(
+        Message<TN> message, Node fromNode, Node toNode, int sendTime, int arrivalTime) {
       super(sendTime);
       this.message = message;
       this.fromNodeId = fromNode.nodeId;
@@ -247,7 +256,13 @@ abstract class Envelope<TN extends Node> {
 
     @Override
     public String toString() {
-      return "Envelope{" + "message=" + message + ", fromNode=" + fromNodeId + ", dest=" + toNodeId
+      return "Envelope{"
+          + "message="
+          + message
+          + ", fromNode="
+          + fromNodeId
+          + ", dest="
+          + toNodeId
           + '}';
     }
 
@@ -281,8 +296,8 @@ abstract class Envelope<TN extends Node> {
 
     @Override
     List<EnvelopeInfo<?>> infos(Network<?> network) {
-      return Collections
-          .singletonList(new EnvelopeInfo<>(fromNodeId, toNodeId, sendTime, arrivalTime, message));
+      return Collections.singletonList(
+          new EnvelopeInfo<>(fromNodeId, toNodeId, sendTime, arrivalTime, message));
     }
   }
 }

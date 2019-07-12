@@ -1,10 +1,11 @@
 package net.consensys.wittgenstein.core.messages;
 
-import net.consensys.wittgenstein.core.Network;
-import net.consensys.wittgenstein.core.P2PNode;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import net.consensys.wittgenstein.core.Network;
+import net.consensys.wittgenstein.core.P2PNode;
 
 /**
  * A P2P node supports flood by default. In P2P protocols: - you can wait before resending the

@@ -1,14 +1,15 @@
 package net.consensys.wittgenstein.protocols;
 
-import net.consensys.wittgenstein.core.*;
-import net.consensys.wittgenstein.core.messages.FloodMessage;
-import net.consensys.wittgenstein.core.utils.StatsHelper;
-import net.consensys.wittgenstein.server.WParameters;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
+
+import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.messages.FloodMessage;
+import net.consensys.wittgenstein.core.utils.StatsHelper;
+import net.consensys.wittgenstein.server.WParameters;
 
 /**
  * A simple flood protocol. When a node receives a message it has not yet received, it sends it to
@@ -21,12 +22,11 @@ public class P2PFlood implements Protocol {
   private final P2PNetwork<P2PFloodNode> network;
   private final NodeBuilder nb;
 
-
   class P2PFloodNode extends P2PNode<P2PFloodNode> {
     /**
      * @param down - if the node is marked down, it won't send/receive messages, but will still be
-     *        included in the peers. As such it's a byzantine behavior: officially available but
-     *        actually not participating.
+     *     included in the peers. As such it's a byzantine behavior: officially available but
+     *     actually not participating.
      */
     P2PFloodNode(NodeBuilder nb, boolean down) {
       super(network.rd, nb, down);
@@ -44,14 +44,10 @@ public class P2PFlood implements Protocol {
   }
 
   public static class P2PFloodParameters extends WParameters {
-    /**
-     * The total number of nodes in the network
-     */
+    /** The total number of nodes in the network */
     private final int nodeCount;
 
-    /**
-     * The total number of dead nodes: they won't be connected.
-     */
+    /** The total number of dead nodes: they won't be connected. */
     private final int deadNodeCount;
 
     /**
@@ -61,25 +57,18 @@ public class P2PFlood implements Protocol {
      */
     private final int delayBeforeResent;
 
-    /**
-     * The number of nodes sending a message (each one sending a different message)
-     */
+    /** The number of nodes sending a message (each one sending a different message) */
     private final int msgCount;
 
-    /**
-     * The number of messages to receive for a node to consider the protocol finished
-     */
+    /** The number of messages to receive for a node to consider the protocol finished */
     final int msgToReceive;
 
-    /**
-     * Average number of peers
-     */
+    /** Average number of peers */
     final int peersCount;
 
-    /**
-     * How long we wait between peers when we forward a message to our peers.
-     */
+    /** How long we wait between peers when we forward a message to our peers. */
     private final int delayBetweenSends;
+
     final String nodeBuilderName;
     final String networkLatencyName;
 
@@ -95,8 +84,15 @@ public class P2PFlood implements Protocol {
       this.networkLatencyName = null;
     }
 
-    public P2PFloodParameters(int nodeCount, int deadNodeCount, int delayBeforeResent, int msgCount,
-        int msgToReceive, int peersCount, int delayBetweenSends, String nodeBuilderName,
+    public P2PFloodParameters(
+        int nodeCount,
+        int deadNodeCount,
+        int delayBeforeResent,
+        int msgCount,
+        int msgToReceive,
+        int peersCount,
+        int delayBetweenSends,
+        String nodeBuilderName,
         String networkLatencyName) {
       this.nodeCount = nodeCount;
       this.deadNodeCount = deadNodeCount;
@@ -114,17 +110,30 @@ public class P2PFlood implements Protocol {
     this.params = params;
     this.network = new P2PNetwork<>(params.peersCount, true);
     this.nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
-    this.network
-        .setNetworkLatency(RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
+    this.network.setNetworkLatency(
+        RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
   }
 
   @Override
   public String toString() {
-    return "nodes=" + params.nodeCount + ", deadNodes=" + params.deadNodeCount
-        + ", delayBeforeResent=" + params.delayBeforeResent + "ms, msgSent=" + params.msgCount
-        + ", msgToReceive=" + params.msgToReceive + ", peers(minimum)=" + params.peersCount
-        + ", peers(avg)=" + network.avgPeers() + ", delayBetweenSends=" + params.delayBetweenSends
-        + "ms, latency=" + network.networkLatency.getClass().getSimpleName();
+    return "nodes="
+        + params.nodeCount
+        + ", deadNodes="
+        + params.deadNodeCount
+        + ", delayBeforeResent="
+        + params.delayBeforeResent
+        + "ms, msgSent="
+        + params.msgCount
+        + ", msgToReceive="
+        + params.msgToReceive
+        + ", peers(minimum)="
+        + params.peersCount
+        + ", peers(avg)="
+        + network.avgPeers()
+        + ", delayBetweenSends="
+        + params.delayBetweenSends
+        + "ms, latency="
+        + network.networkLatency.getClass().getSimpleName();
   }
 
   @Override
@@ -165,32 +174,35 @@ public class P2PFlood implements Protocol {
         new P2PFloodParameters(liveNodes, 0, 1, 2000, threshold, 15, 1, null, null);
     P2PFlood p = new P2PFlood(params);
 
-    Predicate<Protocol> contIf = p1 -> {
-      if (p1.network().time > 50000) {
-        return false;
-      }
+    Predicate<Protocol> contIf =
+        p1 -> {
+          if (p1.network().time > 50000) {
+            return false;
+          }
 
-      for (Node n : p1.network().allNodes) {
-        if (!n.isDown() && n.getDoneAt() == 0) {
-          return true;
-        }
-      }
-      return false;
-    };
+          for (Node n : p1.network().allNodes) {
+            if (!n.isDown() && n.getDoneAt() == 0) {
+              return true;
+            }
+          }
+          return false;
+        };
 
-    StatsHelper.StatsGetter sg = new StatsHelper.StatsGetter() {
-      final List<String> fields = new StatsHelper.Counter(0).fields();
+    StatsHelper.StatsGetter sg =
+        new StatsHelper.StatsGetter() {
+          final List<String> fields = new StatsHelper.Counter(0).fields();
 
-      @Override
-      public List<String> fields() {
-        return fields;
-      }
+          @Override
+          public List<String> fields() {
+            return fields;
+          }
 
-      @Override
-      public StatsHelper.Stat get(List<? extends Node> liveNodes) {
-        return new StatsHelper.Counter(liveNodes.stream().filter(n -> n.getDoneAt() > 0).count());
-      }
-    };
+          @Override
+          public StatsHelper.Stat get(List<? extends Node> liveNodes) {
+            return new StatsHelper.Counter(
+                liveNodes.stream().filter(n -> n.getDoneAt() > 0).count());
+          }
+        };
 
     new ProgressPerTime(p, "", "node count", sg, 1, null, 10, TimeUnit.MILLISECONDS).run(contIf);
   }

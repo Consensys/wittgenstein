@@ -1,10 +1,11 @@
 package net.consensys.wittgenstein.tools;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import java.util.ArrayList;
-import java.util.List;
 
 public class GraphTest {
   private Graph.Series series1 = new Graph.Series("Test Series 1");
@@ -33,8 +34,8 @@ public class GraphTest {
     testSeries5.add(series1);
   }
 
-  private void generateSeries(Graph.Series s, int x, int y, int incrementX, int incrementY,
-      int length) {
+  private void generateSeries(
+      Graph.Series s, int x, int y, int incrementX, int incrementY, int length) {
     for (int i = 0; i < length; i++) {
       s.addLine(new Graph.ReportLine(x * (1 + i * incrementX), y * (1 + i * incrementY)));
     }
@@ -58,9 +59,7 @@ public class GraphTest {
     Assert.assertTrue(Graph.statSeries("test", testSeries4).avg.vals.isEmpty());
   }
 
-  /**
-   * The average of 1 series is itself
-   */
+  /** The average of 1 series is itself */
   @Test
   public void averageOfOneSeries() {
     Graph.Series average = new Graph.Series("Test Series average 1 and 3");
@@ -79,9 +78,7 @@ public class GraphTest {
     Assert.assertEquals(average.vals.get(3).y, calculatedAvg.vals.get(3).y, 0.00001);
   }
 
-  /**
-   * Verify average values are calculated correctly when series are of equal length
-   */
+  /** Verify average values are calculated correctly when series are of equal length */
   @Test
   public void calculateAverageSameLength() {
     Graph.Series average = new Graph.Series("Test Series average 1 and 3");
@@ -120,5 +117,4 @@ public class GraphTest {
     Assert.assertEquals(average.vals.get(2).y, calculatedAvg.vals.get(2).y, 0.00001);
     Assert.assertEquals(155, calculatedAvg.vals.get(3).y, 0.00001);
   }
-
 }

@@ -6,16 +6,15 @@ import net.consensys.wittgenstein.core.Network;
 import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.core.json.NodeConverter;
 
-/**
- * Some protocols want some tasks to be executed periodically
- */
+/** Some protocols want some tasks to be executed periodically */
 @SuppressWarnings("WeakerAccess")
 public class PeriodicTask<TN extends Node> extends Task<TN> {
   public final int period;
+
   @JsonSerialize(converter = NodeConverter.class)
   public final TN sender;
-  @JsonIgnore
-  public final Network.Condition continuationCondition;
+
+  @JsonIgnore public final Network.Condition continuationCondition;
 
   public PeriodicTask(Runnable r, TN fromNode, int period, Network.Condition condition) {
     super(r);

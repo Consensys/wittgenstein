@@ -1,7 +1,8 @@
 package net.consensys.wittgenstein.core;
 
-import net.consensys.wittgenstein.core.messages.FloodMessage;
 import java.util.*;
+
+import net.consensys.wittgenstein.core.messages.FloodMessage;
 
 public class P2PNetwork<TN extends P2PNode<TN>> extends Network<TN> {
   private final int connectionCount;
@@ -11,7 +12,7 @@ public class P2PNetwork<TN extends P2PNode<TN>> extends Network<TN> {
   /**
    * @param connectionCount - the target for the number of connection
    * @param minimum - if true, connectionCount is the minimum number of connections per node. If
-   *        false, it's the average number of nodes, with a minimum of 3 connections per node.
+   *     false, it's the average number of nodes, with a minimum of 3 connections per node.
    */
   public P2PNetwork(int connectionCount, boolean minimum) {
     this.connectionCount = connectionCount;
@@ -111,7 +112,6 @@ public class P2PNetwork<TN extends P2PNode<TN>> extends Network<TN> {
     }
     return (int) (tot / allNodes.size());
   }
-
 
   public void sendPeers(FloodMessage<TN> msg, TN from) {
     msg.addToReceived(from);

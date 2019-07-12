@@ -1,27 +1,26 @@
 package net.consensys.wittgenstein.core;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import net.consensys.wittgenstein.core.json.ExternalConverter;
-import net.consensys.wittgenstein.core.utils.GeneralizedParetoDistribution;
-import net.consensys.wittgenstein.server.External;
 import java.io.Closeable;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import net.consensys.wittgenstein.core.json.ExternalConverter;
+import net.consensys.wittgenstein.core.utils.GeneralizedParetoDistribution;
+import net.consensys.wittgenstein.server.External;
+
 @SuppressWarnings({"WeakerAccess"})
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public class Node implements Closeable {
-  public final static int MAX_X = 2000;
-  public final static int MAX_Y = 1112;
-  public final static int MAX_DIST =
+  public static final int MAX_X = 2000;
+  public static final int MAX_Y = 1112;
+  public static final int MAX_DIST =
       (int) Math.sqrt((MAX_X / 2.0) * (MAX_X / 2.0) + (MAX_Y / 2.0) * (MAX_Y / 2.0));
-  public final static String DEFAULT_CITY = "world";
+  public static final String DEFAULT_CITY = "world";
 
-  /**
-   * Sequence without any holes; starts at zero.
-   */
+  /** Sequence without any holes; starts at zero. */
   public final int nodeId;
 
   /**
@@ -35,6 +34,7 @@ public class Node implements Closeable {
    * isolated. We should have a builder that takes a map as an input.
    */
   public final int x;
+
   public final int y;
 
   /**
@@ -61,9 +61,7 @@ public class Node implements Closeable {
    */
   public final double speedRatio;
 
-  /**
-   * For some model latency we need to know in which town the node is.
-   */
+  /** For some model latency we need to know in which town the node is. */
   public final String cityName;
 
   /**
@@ -72,16 +70,12 @@ public class Node implements Closeable {
    */
   private boolean down;
 
-  /**
-   * The time when the protocol ended for this node 0 if it has not ended yet.
-   */
+  /** The time when the protocol ended for this node 0 if it has not ended yet. */
   public long doneAt = 0;
 
-
-  /**
-   * Some internal statistics.
-   */
+  /** Some internal statistics. */
   protected long msgReceived = 0;
+
   protected long msgSent = 0;
   protected long bytesSent = 0;
   protected long bytesReceived = 0;
@@ -94,7 +88,6 @@ public class Node implements Closeable {
 
   @JsonSerialize(converter = ExternalConverter.class)
   private External external = null;
-
 
   public long getMsgReceived() {
     return msgReceived;
@@ -125,20 +118,15 @@ public class Node implements Closeable {
     return "id=" + nodeId + ", city=" + cityName + ", posX=" + x + ", posY=" + y;
   }
 
-  /**
-   * Called when a node starts or restarts.
-   */
+  /** Called when a node starts or restarts. */
   public void start() {
     down = false;
   }
 
-  /**
-   * Called when a node is stopped.
-   */
+  /** Called when a node is stopped. */
   public void stop() {
     down = true;
   }
-
 
   public boolean isDown() {
     return down;
@@ -152,19 +140,15 @@ public class Node implements Closeable {
     return external;
   }
 
-  /**
-   * If a node uses any extra resource it can free them here.
-   */
+  /** If a node uses any extra resource it can free them here. */
   @Override
   public void close() {}
-
 
   public static class Aspect {
     public Object getObjectValue(Random rd) {
       return null;
     }
   }
-
 
   public static class ExtraLatencyAspect extends Aspect {
     final double ratio;
@@ -177,7 +161,6 @@ public class Node implements Closeable {
       return rd.nextDouble() < ratio ? 500 : 0;
     }
   }
-
 
   public static class SpeedRatioAspect extends Aspect {
     final SpeedModel sm;
@@ -192,7 +175,6 @@ public class Node implements Closeable {
     }
   }
 
-
   /**
    * The SpeedModel allows model slow vs. fast nodes. By default, all the node have the same speed
    * ration (1.0), but it's possible to configure a network with slow (speed ratio > 1.0) or fast
@@ -202,7 +184,6 @@ public class Node implements Closeable {
   public interface SpeedModel {
     double getSpeedRatio(Random rd);
   }
-
 
   public static class ParetoSpeed implements SpeedModel {
     final GeneralizedParetoDistribution gpd;
@@ -224,7 +205,6 @@ public class Node implements Closeable {
     }
   }
 
-
   public static class GaussianSpeed implements SpeedModel {
 
     @Override
@@ -238,8 +218,8 @@ public class Node implements Closeable {
     }
   }
 
-  private static Object getAspectValue(Class<?> aspectClass, List<Aspect> aspects, Random rd,
-      Object defVal) {
+  private static Object getAspectValue(
+      Class<?> aspectClass, List<Aspect> aspects, Random rd, Object defVal) {
     for (Aspect aspect : aspects) {
       if (aspect.getClass().equals(aspectClass)) {
         return aspect.getObjectValue(rd);
@@ -279,10 +259,7 @@ public class Node implements Closeable {
     this(rd, nb, false);
   }
 
-
-  /**
-   * @return the distance with this node, considering a round map.
-   */
+  /** @return the distance with this node, considering a round map. */
   int dist(Node n) {
     int dx = Math.min(Math.abs(x - n.x), MAX_X - Math.abs(x - n.x));
     int dy = Math.min(Math.abs(y - n.y), MAX_Y - Math.abs(y - n.y));

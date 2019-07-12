@@ -3,7 +3,6 @@ package net.consensys.wittgenstein.tools;
 import java.util.*;
 import java.util.stream.Collectors;
 
-
 public class CSVFormatter {
   private class emptyObject {
     @Override

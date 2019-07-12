@@ -1,10 +1,8 @@
 package net.consensys.wittgenstein.protocols;
 
-
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
 
 public class CasperIMDTest {
 
@@ -19,7 +17,6 @@ public class CasperIMDTest {
   public void before() {
     ci.network.time = 100_000;
   }
-
 
   @Test
   public void testInit() {
@@ -55,9 +52,8 @@ public class CasperIMDTest {
     at2.onBlock(b);
 
     a1 = ci.new Attestation(at1, 1);
-    Assert
-        .assertEquals("An attestation of height h contains parents of blocks of height h", 1,
-            a1.hs.size());
+    Assert.assertEquals(
+        "An attestation of height h contains parents of blocks of height h", 1, a1.hs.size());
     Assert.assertTrue(a1.attests(ci.genesis));
     Assert.assertFalse(a1.attests(b));
 
@@ -71,10 +67,9 @@ public class CasperIMDTest {
     Assert.assertEquals(1, bp1.attestationsByHead.get(b.id).size());
     Assert.assertTrue(bp1.attestationsByHead.get(b.id).contains(a1));
     b = bp1.buildBlock(bp1.head, 2);
-    Assert
-        .assertFalse(
-            "We're a block of height 2, we can't contain an attestation of the same height",
-            b.attestationsByHeight.containsKey(2));
+    Assert.assertFalse(
+        "We're a block of height 2, we can't contain an attestation of the same height",
+        b.attestationsByHeight.containsKey(2));
 
     b = bp1.buildBlock(bp1.head, 3);
     Assert.assertTrue(b.attestationsByHeight.containsKey(2));
@@ -279,5 +274,4 @@ public class CasperIMDTest {
       }
     }
   }
-
 }

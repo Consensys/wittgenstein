@@ -1,7 +1,7 @@
 package net.consensys.wittgenstein.core;
 
 @SuppressWarnings("WeakerAccess")
-abstract public class Block<TB extends Block> {
+public abstract class Block<TB extends Block> {
 
   /**
    * To ensure that all blocks id are unique we increment a counter. We suppose it's impossible to
@@ -18,9 +18,7 @@ abstract public class Block<TB extends Block> {
 
   public final boolean valid;
 
-  /**
-   * To create a genesis block...
-   */
+  /** To create a genesis block... */
   public Block(int h) {
     height = h;
     lastTxId = 0;
@@ -31,10 +29,9 @@ abstract public class Block<TB extends Block> {
     valid = true;
   }
 
-  static public long getLastBlockId() {
+  public static long getLastBlockId() {
     return blockId;
   }
-
 
   public Block(BlockChainNode<TB> producer, int height, TB parent, boolean valid, int time) {
     if (height <= 0) {
@@ -56,13 +53,9 @@ abstract public class Block<TB extends Block> {
     this.proposalTime = time;
   }
 
-
-  /**
-   * @return the number of transactions in this block.
-   */
+  /** @return the number of transactions in this block. */
   public long txCount() {
-    if (id == 0)
-      return 0;
+    if (id == 0) return 0;
     assert parent != null;
 
     long res = lastTxId - parent.lastTxId;
@@ -72,11 +65,9 @@ abstract public class Block<TB extends Block> {
     return res;
   }
 
-
   @SuppressWarnings("unused")
   public boolean isAncestor(Block b) {
-    if (this == b)
-      return false;
+    if (this == b) return false;
 
     Block cur = b;
     while (cur.height > this.height) {
@@ -87,14 +78,14 @@ abstract public class Block<TB extends Block> {
     return (cur == this);
   }
 
-  /***
+  /**
+   * *
+   *
    * @return true if b is a direct father or ancestor. false if 'b' is on a different branch
    */
   public boolean hasDirectLink(TB b) {
-    if (b == this)
-      return true;
-    if (b.height == height)
-      return false;
+    if (b == this) return true;
+    if (b.height == height) return false;
 
     Block older = height > b.height ? this : b;
     Block young = height < b.height ? this : b;
@@ -113,9 +104,15 @@ abstract public class Block<TB extends Block> {
       return "genesis";
     }
 
-    return "h:" + height + ", id=" + id + ", creationTime:" + proposalTime + ", producer="
-        + (producer != null ? "" + producer.nodeId : "null") + ", parent:"
+    return "h:"
+        + height
+        + ", id="
+        + id
+        + ", creationTime:"
+        + proposalTime
+        + ", producer="
+        + (producer != null ? "" + producer.nodeId : "null")
+        + ", parent:"
         + (parent != null ? "" + parent.id : "null");
   }
-
 }

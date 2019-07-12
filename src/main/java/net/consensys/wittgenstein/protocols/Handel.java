@@ -1,5 +1,9 @@
 package net.consensys.wittgenstein.protocols;
 
+import java.util.*;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.json.ListNodeConverter;
@@ -8,30 +12,20 @@ import net.consensys.wittgenstein.core.utils.BitSetUtils;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.server.WParameters;
 import net.consensys.wittgenstein.tools.NodeDrawer;
-import java.util.*;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 @SuppressWarnings("WeakerAccess")
 public class Handel implements Protocol {
   private final HandelParameters params;
   private final Network<HNode> network = new Network<>();
 
-
   public static class HandelParameters extends WParameters {
-    /**
-     * The number of nodes in the network
-     */
+    /** The number of nodes in the network */
     final int nodeCount;
 
-    /**
-     * The number of signatures to reach to finish the protocol.
-     */
+    /** The number of signatures to reach to finish the protocol. */
     final int threshold;
 
-    /**
-     * The minimum time it takes to do a pairing for a node.
-     */
+    /** The minimum time it takes to do a pairing for a node. */
     final int pairingTime;
 
     int levelWaitTime;
@@ -51,25 +45,21 @@ public class Handel implements Protocol {
      */
     int desynchronizedStart;
 
-    /**
-     * A Byzantine scenario where all nodes starts
-     */
+    /** A Byzantine scenario where all nodes starts */
     final boolean byzantineSuicide;
+
     final boolean hiddenByzantine;
 
     public String shuffle;
-    final static String SHUFFLE_SQUARE = "SQUARE";
-    final static String SHUFFLE_XOR = "XOR";
+    static final String SHUFFLE_SQUARE = "SQUARE";
+    static final String SHUFFLE_XOR = "XOR";
 
-    /**
-     * parameters related to the window-ing technique - null if not set
-     */
+    /** parameters related to the window-ing technique - null if not set */
     public WindowParameters window;
 
     final String bestLevelFunction;
-    final static String BESTLEVEL_RANDOM = "RANDOM";
-    final static String BESTLEVEL_SCORE = "SCORE";
-
+    static final String BESTLEVEL_RANDOM = "RANDOM";
+    static final String BESTLEVEL_SCORE = "SCORE";
 
     // Used for json / http server
     @SuppressWarnings("unused")
@@ -91,15 +81,29 @@ public class Handel implements Protocol {
       this.badNodes = null;
     }
 
-    public HandelParameters(int nodeCount, int threshold, int pairingTime, int levelWaitTime,
-        int periodDurationMs, int acceleratedCallsCount, int nodesDown, String nodeBuilderName,
-        String networkLatencyName, int desynchronizedStart, boolean byzantineSuicide,
-        boolean hiddenByzantine, String bestLevelFunction, BitSet badNodes) {
+    public HandelParameters(
+        int nodeCount,
+        int threshold,
+        int pairingTime,
+        int levelWaitTime,
+        int periodDurationMs,
+        int acceleratedCallsCount,
+        int nodesDown,
+        String nodeBuilderName,
+        String networkLatencyName,
+        int desynchronizedStart,
+        boolean byzantineSuicide,
+        boolean hiddenByzantine,
+        String bestLevelFunction,
+        BitSet badNodes) {
       this.bestLevelFunction =
-          bestLevelFunction != null && !"".equals(bestLevelFunction) ? bestLevelFunction
+          bestLevelFunction != null && !"".equals(bestLevelFunction)
+              ? bestLevelFunction
               : BESTLEVEL_RANDOM;
 
-      if (nodesDown >= nodeCount || nodesDown < 0 || threshold > nodeCount
+      if (nodesDown >= nodeCount
+          || nodesDown < 0
+          || threshold > nodeCount
           || (nodesDown + threshold > nodeCount)) {
         throw new IllegalArgumentException("nodeCount=" + nodeCount + ", threshold=" + threshold);
       }
@@ -129,17 +133,36 @@ public class Handel implements Protocol {
 
     @Override
     public String toString() {
-      return "HandelParameters{" + "nodeCount=" + nodeCount + ", threshold=" + threshold
-          + ", pairingTime=" + pairingTime + ", levelWaitTime=" + levelWaitTime
-          + ", periodDurationMs=" + periodDurationMs + ", acceleratedCallsCount="
-          + acceleratedCallsCount + ", nodesDown=" + nodesDown + ", nodeBuilderName='"
-          + nodeBuilderName + '\'' + ", networkLatencyName='" + networkLatencyName + '\''
-          + ", desynchronizedStart=" + desynchronizedStart + ", byzantineSuicide="
-          + byzantineSuicide + ", hiddenByzantine=" + hiddenByzantine + '}';
-
+      return "HandelParameters{"
+          + "nodeCount="
+          + nodeCount
+          + ", threshold="
+          + threshold
+          + ", pairingTime="
+          + pairingTime
+          + ", levelWaitTime="
+          + levelWaitTime
+          + ", periodDurationMs="
+          + periodDurationMs
+          + ", acceleratedCallsCount="
+          + acceleratedCallsCount
+          + ", nodesDown="
+          + nodesDown
+          + ", nodeBuilderName='"
+          + nodeBuilderName
+          + '\''
+          + ", networkLatencyName='"
+          + networkLatencyName
+          + '\''
+          + ", desynchronizedStart="
+          + desynchronizedStart
+          + ", byzantineSuicide="
+          + byzantineSuicide
+          + ", hiddenByzantine="
+          + hiddenByzantine
+          + '}';
     }
   }
-
 
   public interface CongestionWindow {
     int newSize(int currentSize, boolean correctVerification);
@@ -148,8 +171,8 @@ public class Handel implements Protocol {
   }
 
   static class WindowParameters {
-    public final static String FIXED = "FIXED";
-    public final static String VARIABLE = "VARIABLE";
+    public static final String FIXED = "FIXED";
+    public static final String VARIABLE = "VARIABLE";
     public final String type;
     // for fixed type
     public final int size;
@@ -160,25 +183,30 @@ public class Handel implements Protocol {
     public final int maximum; // maximum window size at all times
     // what type "congestion" algorithm do we want to us
     public final CongestionWindow congestion;
-    public final boolean moving; // is it a moving window or not -> moving sets the beginning of the window to the lowest-rank unverified signature
+    public final boolean
+        moving; // is it a moving window or not -> moving sets the beginning of the window to the
+    // lowest-rank unverified signature
 
-    /**
-     * WindowParameters for FIXED window
-     */
+    /** WindowParameters for FIXED window */
     public WindowParameters(int size, boolean moving, boolean useScore) {
       this(FIXED, size, useScore, 0, 0, 0, null, moving);
     }
 
-    /**
-     * WindowParameters for VARIABLE window
-     */
-    public WindowParameters(int initial, int minimum, int maximum, CongestionWindow congestion,
-        boolean moving) {
+    /** WindowParameters for VARIABLE window */
+    public WindowParameters(
+        int initial, int minimum, int maximum, CongestionWindow congestion, boolean moving) {
       this(VARIABLE, 0, false, initial, minimum, maximum, congestion, moving);
     }
 
-    private WindowParameters(String type, int size, boolean useScore, int initial, int minimum,
-        int maximum, CongestionWindow congestion, boolean moving) {
+    private WindowParameters(
+        String type,
+        int size,
+        boolean useScore,
+        int initial,
+        int minimum,
+        int maximum,
+        CongestionWindow congestion,
+        boolean moving) {
       this.useScore = useScore;
       this.initial = initial;
       this.minimum = minimum;
@@ -257,20 +285,30 @@ public class Handel implements Protocol {
     }
   }
 
-
   public Handel(HandelParameters params) {
     this.params = params;
-    this.network
-        .setNetworkLatency(RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
+    this.network.setNetworkLatency(
+        RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
   }
-
 
   @Override
   public String toString() {
-    return "Handel, " + "nodes=" + params.nodeCount + ", threshold=" + params.threshold
-        + ", pairing=" + params.pairingTime + "ms, levelWaitTime=" + params.levelWaitTime
-        + "ms, period=" + params.periodDurationMs + "ms, acceleratedCallsCount="
-        + params.acceleratedCallsCount + ", dead nodes=" + params.nodesDown + ", builder="
+    return "Handel, "
+        + "nodes="
+        + params.nodeCount
+        + ", threshold="
+        + params.threshold
+        + ", pairing="
+        + params.pairingTime
+        + "ms, levelWaitTime="
+        + params.levelWaitTime
+        + "ms, period="
+        + params.periodDurationMs
+        + "ms, acceleratedCallsCount="
+        + params.acceleratedCallsCount
+        + ", dead nodes="
+        + params.nodesDown
+        + ", builder="
         + params.nodeBuilderName;
   }
 
@@ -284,7 +322,10 @@ public class Handel implements Protocol {
     public SendSigs(BitSet sigs, HNode.HLevel l) {
       this.sigs = (BitSet) sigs.clone();
       this.level = l.level;
-      this.size = 1 + l.expectedSigs() / 8 + 96 * 2; // Size = level + bit field + the signatures included + our own sig
+      this.size =
+          1
+              + l.expectedSigs() / 8
+              + 96 * 2; // Size = level + bit field + the signatures included + our own sig
       this.levelFinished = l.incomingComplete();
       this.badSig = false;
       if (sigs.isEmpty() || sigs.cardinality() > l.size) {
@@ -299,7 +340,6 @@ public class Handel implements Protocol {
       this.size = 1;
       this.badSig = true;
     }
-
 
     @Override
     public int size() {
@@ -325,7 +365,6 @@ public class Handel implements Protocol {
     }
   }
 
-
   public class HNode extends Node {
 
     final int startAt;
@@ -337,11 +376,11 @@ public class Handel implements Protocol {
 
     final BitSet blacklist = new BitSet();
 
-    /**
-     * Window-related fields
-     */
-    int currWindowSize = params.window == null ? 0 : params.window.initial; // what's the size of the window currently
-
+    /** Window-related fields */
+    int currWindowSize =
+        params.window == null
+            ? 0
+            : params.window.initial; // what's the size of the window currently
 
     boolean suicidalAttackDone;
     final HiddenByzantine hiddenByzantine;
@@ -426,7 +465,6 @@ public class Handel implements Protocol {
       public boolean outgoingFinished = false;
       // all our peers are complete: no need to send anything for this level
 
-
       /**
        * We're going to contact all nodes, one after the other. That's our position in the peers'
        * list.
@@ -446,9 +484,7 @@ public class Handel implements Protocol {
         totalIncoming.set(nodeId);
       }
 
-      /**
-       * Build a level on top of the previous one.
-       */
+      /** Build a level on top of the previous one. */
       HLevel(HLevel previousLevel, BitSet allPreviousNodes) {
         level = previousLevel.level + 1;
 
@@ -461,7 +497,6 @@ public class Handel implements Protocol {
         size = waitedSigs.cardinality();
       }
 
-
       /**
        * That's the number of signatures we have if we have all of them. It's also the number of
        * signatures we're going to send.
@@ -473,16 +508,15 @@ public class Handel implements Protocol {
       public List<HNode> expectedNodes() {
         List<HNode> expected = new ArrayList<>(size);
 
-        for (int pos, cur = waitedSigs.nextSetBit(0); cur >= 0; pos = cur + 1, cur =
-            waitedSigs.nextSetBit(pos)) {
+        for (int pos, cur = waitedSigs.nextSetBit(0);
+            cur >= 0;
+            pos = cur + 1, cur = waitedSigs.nextSetBit(pos)) {
           expected.add(network.getNodeById(cur));
         }
         return expected;
       }
 
-      /**
-       * We start a level if we reached the time out or if we have all the signatures.
-       */
+      /** We start a level if we reached the time out or if we have all the signatures. */
       boolean isOpen() {
         if (outgoingFinished) {
           return false;
@@ -557,7 +591,6 @@ public class Handel implements Protocol {
       public boolean outgoingComplete() {
         return totalOutgoing.cardinality() == size;
       }
-
 
       int sizeIfIncluded(SigToVerify sig) {
         BitSet c = (BitSet) sig.sig.clone();
@@ -696,7 +729,6 @@ public class Handel implements Protocol {
         int curSize = totalIncoming.cardinality();
         boolean removed = false;
 
-
         for (SigToVerify stv : toVerifyAgg) {
           int s = sizeIfIncluded(stv);
           if (!blacklist.get(stv.from) && s > curSize) {
@@ -740,8 +772,11 @@ public class Handel implements Protocol {
      */
     private int evaluateSig(HLevel l, BitSet sig) {
       int newTotal = 0; // The number of signatures in our new best
-      int addedSigs = 0; // The number of sigs we add with our new best compared to the existing one. Can be negative
-      int combineCt = 0; // The number of sigs in our new best that come from combining it with individual sigs
+      int addedSigs =
+          0; // The number of sigs we add with our new best compared to the existing one. Can be
+      // negative
+      int combineCt =
+          0; // The number of sigs in our new best that come from combining it with individual sigs
 
       if (l.lastAggVerified.cardinality() >= l.expectedSigs()) {
         return 0;
@@ -789,9 +824,7 @@ public class Handel implements Protocol {
       return 100000 - l.level * 100 + addedSigs;
     }
 
-    /**
-     * @return all the signatures you should have when this round is finished.
-     */
+    /** @return all the signatures you should have when this round is finished. */
     BitSet allSigsAtLevel(int round) {
       if (round < 1) {
         throw new IllegalArgumentException("round=" + round);
@@ -806,7 +839,6 @@ public class Handel implements Protocol {
 
       return res;
     }
-
 
     /**
      * If the state has changed we send a message to all. If we're done, we update all our peers: it
@@ -826,7 +858,6 @@ public class Handel implements Protocol {
       if (!BitSetUtils.include(vsl.waitedSigs, vs.sig)) {
         throw new IllegalStateException("bad signature received");
       }
-
 
       vsl.toVerifyInd.set(vs.from, false);
       vsl.toVerifyAgg.remove(vs);
@@ -865,7 +896,9 @@ public class Handel implements Protocol {
         if (l.level > vsl.level) {
           l.totalOutgoing.clear();
           l.totalOutgoing.or(cur);
-          if (justCompleted && params.acceleratedCallsCount > 0 && !l.outgoingFinished
+          if (justCompleted
+              && params.acceleratedCallsCount > 0
+              && !l.outgoingFinished
               && l.outgoingComplete()) {
             List<HNode> peers = l.getRemainingPeers(params.acceleratedCallsCount);
             SendSigs sendSigs = new SendSigs(l.totalOutgoing, l);
@@ -880,9 +913,7 @@ public class Handel implements Protocol {
       }
     }
 
-    /**
-     * Nothing much to do when we receive a sig set: we just add it to our toVerify list.
-     */
+    /** Nothing much to do when we receive a sig set: we just add it to our toVerify list. */
     void onNewSig(HNode from, SendSigs ssigs) {
       if (network.time < startAt || blacklist.get(from.nodeId)) {
         return;
@@ -909,9 +940,8 @@ public class Handel implements Protocol {
       }
 
       sigQueueSize++;
-      l.toVerifyAgg
-          .add(
-              new SigToVerify(from.nodeId, l.level, receptionRanks[from.nodeId], cs, ssigs.badSig));
+      l.toVerifyAgg.add(
+          new SigToVerify(from.nodeId, l.level, receptionRanks[from.nodeId], cs, ssigs.badSig));
     }
 
     SigToVerify chooseBestFromLevels(List<SigToVerify> bestByLevels) {
@@ -971,12 +1001,12 @@ public class Handel implements Protocol {
       sigChecked++;
 
       final SigToVerify fBest = best;
-      network
-          .registerTask(() -> HNode.this.updateVerifiedSignatures(fBest),
-              network.time + nodePairingTime, HNode.this);
+      network.registerTask(
+          () -> HNode.this.updateVerifiedSignatures(fBest),
+          network.time + nodePairingTime,
+          HNode.this);
     }
   }
-
 
   class HiddenByzantine {
     HNode firstByzantine = null;
@@ -999,9 +1029,7 @@ public class Handel implements Protocol {
       return best; // can be null if this node has no byzantine peer.
     }
 
-    /**
-     * We're trying to flood the last level with valid but not really useful signatures.
-     */
+    /** We're trying to flood the last level with valid but not really useful signatures. */
     SigToVerify attack(HNode target, SigToVerify currentBest) {
       if (noByzantinePeers) {
         return currentBest;
@@ -1023,7 +1051,8 @@ public class Handel implements Protocol {
       }
       if (last != null) {
         if (l.toVerifyAgg.contains(last)) {
-          // ok, we plugged our low quality sig but we're still in the list. The attack failed... this time.
+          // ok, we plugged our low quality sig but we're still in the list. The attack failed...
+          // this time.
           return currentBest;
         }
         // Our signature has been pruned.
@@ -1051,8 +1080,13 @@ public class Handel implements Protocol {
         return currentBest;
       }
 
-      SigToVerify bad = new SigToVerify(firstByzantine.nodeId, l.level,
-          target.receptionRanks[firstByzantine.nodeId], cur, false);
+      SigToVerify bad =
+          new SigToVerify(
+              firstByzantine.nodeId,
+              l.level,
+              target.receptionRanks[firstByzantine.nodeId],
+              cur,
+              false);
       l.toVerifyAgg.add(bad);
       target.sigQueueSize++;
       SigToVerify newBest = l.bestToVerify();
@@ -1086,9 +1120,7 @@ public class Handel implements Protocol {
 
   @FunctionalInterface
   public interface Shuffler {
-    /**
-     * rank returns the rank of the sender with respect to the receiver.
-     */
+    /** rank returns the rank of the sender with respect to the receiver. */
     int rank(HNode receiver, HNode sender);
   }
 
@@ -1124,8 +1156,7 @@ public class Handel implements Protocol {
         for (HNode.HLevel l : n.levels) {
           sb.append("\tlvl").append(l.level).append(" -> ");
           for (HNode expected : l.expectedNodes()) {
-            sb
-                .append(expected.nodeId)
+            sb.append(expected.nodeId)
                 .append(":")
                 .append(n.receptionRanks[expected.nodeId])
                 .append(" - ");
@@ -1144,7 +1175,7 @@ public class Handel implements Protocol {
 
   private static BitSet chooseBadNodes(Random rd, int nodeCount, int nodesDown) {
     BitSet badNodes = new BitSet();
-    for (int setDown = 0; setDown < nodesDown;) {
+    for (int setDown = 0; setDown < nodesDown; ) {
       int down = rd.nextInt(nodeCount);
       if (down != 1 && !badNodes.get(down)) {
         // We keep the node 1 up to help on debugging
@@ -1160,8 +1191,10 @@ public class Handel implements Protocol {
   public void init() {
     NodeBuilder nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
 
-    BitSet badNodes = params.badNodes != null ? params.badNodes
-        : chooseBadNodes(network.rd, params.nodeCount, params.nodesDown);
+    BitSet badNodes =
+        params.badNodes != null
+            ? params.badNodes
+            : chooseBadNodes(network.rd, params.nodeCount, params.nodesDown);
 
     for (int i = 0; i < params.nodeCount; i++) {
       int startAt =
@@ -1177,9 +1210,8 @@ public class Handel implements Protocol {
       n.initLevel();
       if (!n.isDown()) {
         network.registerPeriodicTask(n::dissemination, n.startAt + 1, params.periodDurationMs, n);
-        network
-            .registerConditionalTask(n::checkSigs, n.startAt + 1, n.nodePairingTime, n,
-                n::hasSigToVerify, () -> !n.done);
+        network.registerConditionalTask(
+            n::checkSigs, n.startAt + 1, n.nodePairingTime, n, n::hasSigToVerify, () -> !n.done);
       }
     }
 
@@ -1197,7 +1229,6 @@ public class Handel implements Protocol {
       default:
         throw new IllegalStateException("unknown shuffler: " + params.shuffle);
     }
-
 
     List<HNode>[][][] emissionList = new List[params.nodeCount][nLevel + 1][];
 
@@ -1225,7 +1256,6 @@ public class Handel implements Protocol {
           }
           rankCheck.set(rank);
 
-
           rank -= receiver.levels.get(level).size;
           if (rank < 0) {
             throw new IllegalStateException("rank=" + rank);
@@ -1241,7 +1271,7 @@ public class Handel implements Protocol {
       }
     }
 
-    //debugEmissionList(nLevel,emissionList);
+    // debugEmissionList(nLevel,emissionList);
 
     for (HNode n : network.allNodes) {
       if (!n.isDown()) {
@@ -1268,12 +1298,10 @@ public class Handel implements Protocol {
     }
   }
 
-
   @Override
   public Network<HNode> network() {
     return network;
   }
-
 
   class HNodeStatus implements NodeDrawer.NodeStatus {
     @Override

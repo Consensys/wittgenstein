@@ -6,10 +6,9 @@ import java.util.*;
 public abstract class BlockChainNode<TB extends Block> extends Node {
   protected final TB genesis;
 
-  /**
-   * We keep some data that should be useful for all implementations
-   */
+  /** We keep some data that should be useful for all implementations */
   protected final Map<Long, TB> blocksReceivedByBlockId = new HashMap<>();
+
   public final Map<Long, Set<TB>> blocksReceivedByFatherId = new HashMap<>();
   public final Map<Integer, Set<TB>> blocksReceivedByHeight = new HashMap<>();
 
@@ -24,7 +23,7 @@ public abstract class BlockChainNode<TB extends Block> extends Node {
 
   /**
    * @return true if it's a new block, false if the block in invalid or if we have already received
-   *         it.
+   *     it.
    */
   public boolean onBlock(TB b) {
     if (!b.valid) {
@@ -43,11 +42,8 @@ public abstract class BlockChainNode<TB extends Block> extends Node {
     return true;
   }
 
-  /**
-   * This describes how to choose the head between two blocks.
-   */
+  /** This describes how to choose the head between two blocks. */
   public abstract TB best(TB cur, TB alt);
-
 
   /**
    * Counts the transactions included in a block created by this node in the chain starting at this
@@ -65,10 +61,7 @@ public abstract class BlockChainNode<TB extends Block> extends Node {
     return txs;
   }
 
-
-  /**
-   * Counts the number of blocks created by this node in the chain starting at this head.
-   */
+  /** Counts the number of blocks created by this node in the chain starting at this head. */
   public int blocksCreatedInChain(Block<?> head) {
     int blocks = 0;
     Block<?> cur = head;

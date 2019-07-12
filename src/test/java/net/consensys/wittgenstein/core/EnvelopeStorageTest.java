@@ -1,12 +1,13 @@
 package net.consensys.wittgenstein.core;
 
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+
 import net.consensys.wittgenstein.core.messages.Message;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import java.util.Random;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class EnvelopeStorageTest {
   private Network<Node> network = new Network<>();
@@ -17,10 +18,11 @@ public class EnvelopeStorageTest {
   private Node n2 = new Node(rd, nb);
   private Node n3 = new Node(rd, nb);
 
-  private Message<Node> dummy = new Message<>() {
-    @Override
-    public void action(Network<Node> network, Node from, Node to) {}
-  };
+  private Message<Node> dummy =
+      new Message<>() {
+        @Override
+        public void action(Network<Node> network, Node from, Node to) {}
+      };
 
   @Before
   public void before() {
@@ -59,12 +61,13 @@ public class EnvelopeStorageTest {
   @Test
   public void testAction() {
     AtomicBoolean ab = new AtomicBoolean(false);
-    Message<Node> act = new Message<>() {
-      @Override
-      public void action(Network<Node> network, Node from, Node to) {
-        ab.set(true);
-      }
-    };
+    Message<Node> act =
+        new Message<>() {
+          @Override
+          public void action(Network<Node> network, Node from, Node to) {
+            ab.set(true);
+          }
+        };
 
     Envelope<Node> m = new Envelope.SingleDestEnvelope<>(act, n0, n1, 1, 7 * 1000 + 1);
     network.msgs.addMsg(m);
@@ -80,16 +83,16 @@ public class EnvelopeStorageTest {
     Assert.assertTrue(ab.get());
   }
 
-
   @Test
   public void testMsgArrival() {
     AtomicLong ab = new AtomicLong(0);
-    Message<Node> act = new Message<>() {
-      @Override
-      public void action(Network<Node> network, Node from, Node to) {
-        ab.set(EnvelopeStorageTest.this.network.time);
-      }
-    };
+    Message<Node> act =
+        new Message<>() {
+          @Override
+          public void action(Network<Node> network, Node from, Node to) {
+            ab.set(EnvelopeStorageTest.this.network.time);
+          }
+        };
 
     Envelope<Node> m = new Envelope.SingleDestEnvelope<>(act, n0, n1, 1, 5);
 
@@ -125,5 +128,4 @@ public class EnvelopeStorageTest {
     Network<Node>.MsgsSlot s = network.msgs.findSlot(59997);
     Assert.assertTrue(59997 > s.startTime);
   }
-
 }

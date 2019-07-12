@@ -30,7 +30,11 @@ dependencies {
 
 spotless {
     java {
-        eclipse().configFile 'eclipse-java-google-style.xml'
+      removeUnusedImports()
+      googleJavaFormat('1.7')
+      importOrder 'tech.pegasys', 'java', ''
+      trimTrailingWhitespace()
+      endWithNewline()
     }
 }
 

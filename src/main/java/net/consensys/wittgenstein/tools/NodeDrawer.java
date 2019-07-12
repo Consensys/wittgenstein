@@ -1,10 +1,5 @@
 package net.consensys.wittgenstein.tools;
 
-import net.consensys.wittgenstein.core.Node;
-import javax.imageio.ImageIO;
-import javax.imageio.ImageWriter;
-import javax.imageio.stream.FileImageOutputStream;
-import javax.imageio.stream.ImageOutputStream;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.Closeable;
@@ -17,35 +12,34 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.FileImageOutputStream;
+import javax.imageio.stream.ImageOutputStream;
+
+import net.consensys.wittgenstein.core.Node;
 
 /**
  * Allows to draw the nodes on the worlds map. Generates an animated gif. This gif is not
  * compressed, so you will want to compress it: ffmpeg -f gif -i handel_anim.gif handel.mp4
  */
 public class NodeDrawer implements Closeable {
-  private final static int SIZE = 5;
-  private final static int MAX_X = Node.MAX_X;
-  private final static int MAX_Y = Node.MAX_Y;
+  private static final int SIZE = 5;
+  private static final int MAX_X = Node.MAX_X;
+  private static final int MAX_Y = Node.MAX_Y;
 
-
-  /**
-   * The interface to implement to plug-in the protocol's status:
-   */
+  /** The interface to implement to plug-in the protocol's status: */
   public interface NodeStatus {
 
-    /**
-     * @return the value associated to this node
-     */
+    /** @return the value associated to this node */
     int getVal(Node n);
 
-    /**
-     * @return if the node is 'special'. This node will be marked with a dot;.
-     */
+    /** @return if the node is 'special'. This node will be marked with a dot;. */
     boolean isSpecial(Node n);
 
     /**
      * @return the maximum value that can be associated to a node. This value will be shown as
-     *         green.
+     *     green.
      */
     int getMax();
 
@@ -54,7 +48,6 @@ public class NodeDrawer implements Closeable {
      */
     int getMin();
   }
-
 
   private static class Pos {
     final int x;
@@ -66,12 +59,12 @@ public class NodeDrawer implements Closeable {
     }
   }
 
-
   /**
    * The writer for the animated image. We write the image frame by frame so we don't fill the
    * memory.
    */
   private GifSequenceWriter writer;
+
   private ImageOutputStream output;
 
   /**
@@ -123,8 +116,6 @@ public class NodeDrawer implements Closeable {
     BufferedImage bi = ImageIO.read(p.toFile());
     return bi;
   }
-
-
 
   private boolean isFree(int x, int y) {
     if (x < 1 || x >= MAX_X - SIZE) {

@@ -1,8 +1,9 @@
 package net.consensys.wittgenstein.core;
 
+import java.util.*;
+
 import net.consensys.wittgenstein.core.utils.GeneralizedParetoDistribution;
 import net.consensys.wittgenstein.tools.CSVLatencyReader;
-import java.util.*;
 
 /**
  * Latency is sometimes the round-trip-time (RTT) sometimes the time for a single trip. Here it's
@@ -10,9 +11,7 @@ import java.util.*;
  */
 @SuppressWarnings("WeakerAccess")
 public abstract class NetworkLatency {
-  /**
-   * @param delta - a random number between 0 & 99. Used to randomize the result
-   */
+  /** @param delta - a random number between 0 & 99. Used to randomize the result */
   protected abstract int getExtendedLatency(Node from, Node to, int delta);
 
   @Override
@@ -37,25 +36,21 @@ public abstract class NetworkLatency {
 
   /**
    * @see <a href="https://pdfs.semanticscholar.org/ff13/5d221678e6b542391c831e87fca56e830a73.pdf"/>
-   *      Latency vs. distance: y = 0.022x + 4.862
-   *      </p>
-   *      It's a roundtrip, so we have to divide by two to get a single packet time.
-   * @see <a href="https://www.jstage.jst.go.jp/article/ipsjjip/22/3/22_435/_pdf"/> variance with
-   *      ARIMA
-   *      </p>
-   * @see <a href="https://core.ac.uk/download/pdf/19439477.pdf"/> generalized Pareto distribution:
-   *      - location μ [ms] = −0,3 - scale σ [ms] = 0.35 - shape ξ [-] = 1.4
-   *      "The constant delays ts and tp has been subtracted"
-   *      "A single model isapplicable to all considered lengths of packets." It's for an ADSLv2+
-   *      system, so they don't take into account the distance. Again it's a roundtrip time.
-   *      <p>
+   *     Latency vs. distance: y = 0.022x + 4.862 It's a roundtrip, so we have to divide by two to
+   *     get a single packet time.
+   * @see <a href="https://www.jstage.jst.go.jp/article/ipsjjip/22/3/22_435/_pdf"/>variance with
+   *     ARIMA
+   * @see <a href="https://core.ac.uk/download/pdf/19439477.pdf"/>generalized Pareto distribution: -
+   *     location μ [ms] = −0,3 - scale σ [ms] = 0.35 - shape ξ [-] = 1.4 "The constant delays ts
+   *     and tp has been subtracted" "A single model isapplicable to all considered lengths of
+   *     packets." It's for an ADSLv2+ system, so they don't take into account the distance. Again
+   *     it's a roundtrip time.
+   *     <p>
    */
   public static class NetworkLatencyByDistance extends NetworkLatency {
     final GeneralizedParetoDistribution gpd = new GeneralizedParetoDistribution(1.4, -0.3, 0.35);
 
-    /**
-     * We consider that the worse case is half of the earth perimeter.
-     */
+    /** We consider that the worse case is half of the earth perimeter. */
     private double distToMile(int dist) {
       final double earthPerimeter = 24_860;
       final double pointValue = (earthPerimeter / 2) / Node.MAX_DIST;
@@ -78,14 +73,14 @@ public abstract class NetworkLatency {
     }
   }
 
-
   /**
    * Latencies observed end of January 2019 between AWS region / nano systems See as well
    * https://www.cloudping.co : this web site gives the latest ping measured. Ping can vary a lot
    * other time. We include the variation from NetworkLatencyByDistance.
+   *
    * <p>
-   * <p>
-   * Some data can be wrong sometimes. We set a minimum value of 1.
+   *
+   * <p>Some data can be wrong sometimes. We set a minimum value of 1.
    *
    * @see NodeBuilder.NodeBuilderWithCity
    */
@@ -114,19 +109,23 @@ public abstract class NetworkLatency {
       return cities;
     }
 
-
     // That's ping time, we will need to divide by two to get the oneway latency.
     private int[][] latencies =
-        new int[][] {new int[] {0, 81, 216, 126, 165, 138, 97, 64, 164, 131, 141}, // Oregon
-            new int[] {0, 0, 182, 181, 232, 195, 167, 13, 88, 80, 75,}, // Virginia
-            new int[] {0, 0, 0, 152, 62, 223, 123, 194, 111, 122, 113}, // Mumbai
-            new int[] {0, 0, 0, 0, 97, 133, 35, 184, 259, 254, 264}, // Seoul
-            new int[] {0, 0, 0, 0, 0, 169, 69, 218, 162, 174, 171}, // Singapore
-            new int[] {0, 0, 0, 0, 0, 0, 105, 210, 282, 269, 271}, // Sydney
-            new int[] {0, 0, 0, 0, 0, 0, 0, 156, 235, 222, 234}, // Tokyo
-            new int[] {0, 0, 0, 0, 0, 0, 0, 0, 101, 78, 87,}, // Canada central
-            new int[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 13}, // Frankfurt
-            new int[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12},// Ireland
+        new int[][] {
+          new int[] {0, 81, 216, 126, 165, 138, 97, 64, 164, 131, 141}, // Oregon
+          new int[] {
+            0, 0, 182, 181, 232, 195, 167, 13, 88, 80, 75,
+          }, // Virginia
+          new int[] {0, 0, 0, 152, 62, 223, 123, 194, 111, 122, 113}, // Mumbai
+          new int[] {0, 0, 0, 0, 97, 133, 35, 184, 259, 254, 264}, // Seoul
+          new int[] {0, 0, 0, 0, 0, 169, 69, 218, 162, 174, 171}, // Singapore
+          new int[] {0, 0, 0, 0, 0, 0, 105, 210, 282, 269, 271}, // Sydney
+          new int[] {0, 0, 0, 0, 0, 0, 0, 156, 235, 222, 234}, // Tokyo
+          new int[] {
+            0, 0, 0, 0, 0, 0, 0, 0, 101, 78, 87,
+          }, // Canada central
+          new int[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 13}, // Frankfurt
+          new int[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12}, // Ireland
         };
 
     private int getLatency(int reg1, int reg2, int delta) {
@@ -151,7 +150,6 @@ public abstract class NetworkLatency {
     }
   }
 
-
   public static class NetworkLatencyByCity extends NetworkLatency {
     private final Map<String, Map<String, Float>> latencyMatrix;
 
@@ -159,7 +157,6 @@ public abstract class NetworkLatency {
       CSVLatencyReader csvLatencyReader = new CSVLatencyReader();
       this.latencyMatrix = csvLatencyReader.getLatencyMatrix();
     }
-
 
     public int getExtendedLatency(Node from, Node to, int delta) {
       if (from.nodeId == to.nodeId) {
@@ -186,7 +183,6 @@ public abstract class NetworkLatency {
     }
   }
 
-
   public static class NetworkFixedLatency extends NetworkLatency {
     final int fixedLatency;
 
@@ -198,12 +194,10 @@ public abstract class NetworkLatency {
       return fixedLatency;
     }
 
-
     public String toString() {
       return "fixedLatency:" + fixedLatency;
     }
   }
-
 
   /**
    * A latency following the uniform law. Will never happen in practice but useful to analyse some
@@ -255,12 +249,9 @@ public abstract class NetworkLatency {
         }
       }
 
-      if (sum != 100)
-        throw new IllegalArgumentException();
-      if (li != 100)
-        throw new IllegalArgumentException();
+      if (sum != 100) throw new IllegalArgumentException();
+      if (li != 100) throw new IllegalArgumentException();
     }
-
 
     public MeasuredNetworkLatency(int[] distribProp, int[] distribVal) {
       setLatency(distribProp, distribVal);
@@ -282,8 +273,10 @@ public abstract class NetworkLatency {
           new StringBuilder("BlockChainNetwork latency: time to receive a message:\n");
 
       int cur = 0;
-      for (int ms : new int[] {20, 40, 60, 80, 100, 150, 200, 300, 400, 500, 1000, 2000, 3000,
-          50000, 10000, 20000}) {
+      for (int ms :
+          new int[] {
+            20, 40, 60, 80, 100, 150, 200, 300, 400, 500, 1000, 2000, 3000, 50000, 10000, 20000
+          }) {
         int size = 0;
         boolean print = false;
         while (cur < longDistrib.length && longDistrib[cur] < ms) {
@@ -303,8 +296,7 @@ public abstract class NetworkLatency {
           size++;
           cur++;
         }
-        sb
-            .append(s)
+        sb.append(s)
             .append(" second")
             .append(s > 1 ? "s: " : ": ")
             .append(size)
@@ -317,18 +309,16 @@ public abstract class NetworkLatency {
     }
   }
 
-
   /**
    * Distribution taken from: https://ethstats.net/ It should be read like this: 16% of the messages
-   * will be received in 250ms or less
-   * </p>
-   * These figures are for blocks, so they represent a worse case. As well, some of the nodes may be
-   * dead.
+   * will be received in 250ms or less These figures are for blocks, so they represent a worse case.
+   * As well, some of the nodes may be dead.
    */
   public static class EthScanNetworkLatency extends NetworkLatency {
     public static final int[] distribProp = {16, 18, 17, 12, 8, 5, 4, 3, 3, 1, 1, 2, 1, 1, 8};
-    public static final int[] distribVal =
-        {250, 500, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750, 4500, 6000, 8500, 9750, 10000};
+    public static final int[] distribVal = {
+      250, 500, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750, 4500, 6000, 8500, 9750, 10000
+    };
     final MeasuredNetworkLatency networkLatency =
         new NetworkLatency.MeasuredNetworkLatency(distribProp, distribVal);
 
@@ -343,30 +333,19 @@ public abstract class NetworkLatency {
     }
   }
 
-
   /**
    * Taken from https://fc18.ifca.ai/preproceedings/75.pdf (Decentralization in Bitcoin and Ethereum
    * Networks) All authors are attached to the Initiative for Cryptocurrencies and Contracts (IC3),
    * hence the name.
-   * <p>
-   * The paper gives these numbers (proportion, milliseconds):
-   * </p>
-   * 10% 92
-   * </p>
-   * 33% 125
-   * </p>
-   * 50% 152
-   * </p>
-   * 67% 200
-   * </p>
-   * 90% 276
-   * </p>
-   * <p>
-   * The paper does not give any number on latency variation. As well it's unclear if it's a RTT or
-   * a single message latency. As they explain they used 'ping' to calculate the time, and as ping
-   * gives the RTT time, we consider that's what they measured.
-   * <p>
-   * This latency should only be used with full random position.
+   *
+   * <p>The paper gives these numbers (proportion, milliseconds): 10% 92 33% 125 50% 152 67% 200 90%
+   * 276
+   *
+   * <p>The paper does not give any number on latency variation. As well it's unclear if it's a RTT
+   * or a single message latency. As they explain they used 'ping' to calculate the time, and as
+   * ping gives the RTT time, we consider that's what they measured.
+   *
+   * <p>This latency should only be used with full random position.
    */
   public static class IC3NetworkLatency extends NetworkLatency {
     protected static final int S10 = 92;
@@ -379,16 +358,11 @@ public abstract class NetworkLatency {
       double totalSurface = Node.MAX_X * Node.MAX_Y;
       int position = (int) ((surface * 100) / totalSurface);
 
-      if (position <= 10)
-        return S10 / 2;
-      if (position <= 33)
-        return 125 / 2;
-      if (position <= 50)
-        return 152 / 2;
-      if (position <= 67)
-        return 200 / 2;
-      if (position <= 90)
-        return 276 / 2;
+      if (position <= 10) return S10 / 2;
+      if (position <= 33) return 125 / 2;
+      if (position <= 50) return 152 / 2;
+      if (position <= 67) return 200 / 2;
+      if (position <= 90) return 276 / 2;
       return SW / 2; // The table in the paper does not show any number
     }
   }
@@ -402,56 +376,54 @@ public abstract class NetworkLatency {
   }
 
   interface PeerGetter {
-    /**
-     * @return a peer of node n that should be used to measure the latency
-     */
+    /** @return a peer of node n that should be used to measure the latency */
     Node peer(Node n);
   }
 
   public static MeasuredNetworkLatency estimateLatency(Network net, final int rounds) {
-    return estimateLatency(net, n -> {
-      Random rd = new Random(0);
-      Node res = n;
-      while (res == n) {
-        res = (Node) net.allNodes.get(rd.nextInt(net.allNodes.size()));
-      }
-      return res;
-    }, rounds);
+    return estimateLatency(
+        net,
+        n -> {
+          Random rd = new Random(0);
+          Node res = n;
+          while (res == n) {
+            res = (Node) net.allNodes.get(rd.nextInt(net.allNodes.size()));
+          }
+          return res;
+        },
+        rounds);
   }
 
-  /**
-   * Estimation for a p2p network, we only look at direct peers
-   */
+  /** Estimation for a p2p network, we only look at direct peers */
   public static MeasuredNetworkLatency estimateP2PLatency(P2PNetwork<?> net, final int rounds) {
-    return estimateLatency(net, n -> {
-      Random rd = new Random(0);
-      P2PNode<?> pn = (P2PNode) n;
-      Node res = n;
-      while (res == n) {
-        res = pn.peers.get(rd.nextInt(pn.peers.size()));
-      }
-      return res;
-    }, rounds);
+    return estimateLatency(
+        net,
+        n -> {
+          Random rd = new Random(0);
+          P2PNode<?> pn = (P2PNode) n;
+          Node res = n;
+          while (res == n) {
+            res = pn.peers.get(rd.nextInt(pn.peers.size()));
+          }
+          return res;
+        },
+        rounds);
   }
-
 
   /**
    * Measure the latency and return the distribution found
    *
    * @param rounds - the number of messages to send, should be more than 100K
    */
-  public static MeasuredNetworkLatency estimateLatency(Network net, PeerGetter pg,
-      final int rounds) {
+  public static MeasuredNetworkLatency estimateLatency(
+      Network net, PeerGetter pg, final int rounds) {
     int[] props = new int[50];
     int[] vals = new int[50];
 
     int pos = 0;
-    for (int i = 10; i <= 200; i += 10)
-      vals[pos++] = i;
-    for (int i = 300; i <= 2000; i += 100)
-      vals[pos++] = i;
-    while (pos < vals.length)
-      vals[pos] = vals[pos++ - 1] + 1000;
+    for (int i = 10; i <= 200; i += 10) vals[pos++] = i;
+    for (int i = 300; i <= 2000; i += 100) vals[pos++] = i;
+    while (pos < vals.length) vals[pos] = vals[pos++ - 1] + 1000;
 
     int nodeCt = net.allNodes.size();
     int roundsCt = rounds;

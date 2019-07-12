@@ -1,8 +1,9 @@
 package net.consensys.wittgenstein.server;
 
+import java.util.List;
+
 import net.consensys.wittgenstein.core.EnvelopeInfo;
 import net.consensys.wittgenstein.core.Node;
-import java.util.List;
 
 public interface IServer {
 

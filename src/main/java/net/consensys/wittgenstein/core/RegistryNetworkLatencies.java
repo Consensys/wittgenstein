@@ -9,7 +9,6 @@ public class RegistryNetworkLatencies {
 
   public static RegistryNetworkLatencies singleton = new RegistryNetworkLatencies();
 
-
   public enum Type {
     FIXED,
     UNIFORM

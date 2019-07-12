@@ -1,22 +1,23 @@
 package net.consensys.wittgenstein.protocols;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.Message;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.server.WParameters;
 import net.consensys.wittgenstein.tools.Graph;
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
 
 /**
  * A p2p protocol for BLS signature aggregation.
- * <p>
- * A node: Sends its states to all its direct peers whenever it changes Keeps the list of the states
- * of its direct peers Sends, every x milliseconds, to one of its peers a set of missing signatures
- * Runs in parallel a task to validate the signatures sets it has received. Send only validated
- * signatures to its peers.
+ *
+ * <p>A node: Sends its states to all its direct peers whenever it changes Keeps the list of the
+ * states of its direct peers Sends, every x milliseconds, to one of its peers a set of missing
+ * signatures Runs in parallel a task to validate the signatures sets it has received. Send only
+ * validated signatures to its peers.
  */
 @SuppressWarnings("WeakerAccess")
 public class P2PSignature implements Protocol {
@@ -25,58 +26,37 @@ public class P2PSignature implements Protocol {
   final NodeBuilder nb;
 
   enum SendSigsStrategy {
-    /**
-     * Send all signatures, not taking the state into account
-     */
+    /** Send all signatures, not taking the state into account */
     all,
-    /**
-     * send just the diff (we need the state of the other nodes for this)
-     */
+    /** send just the diff (we need the state of the other nodes for this) */
     dif,
-    /**
-     * send all the signatures, but compress them
-     */
+    /** send all the signatures, but compress them */
     cmp_all,
-    /**
-     * compress, but sends the compress diff if it's smaller.
-     */
+    /** compress, but sends the compress diff if it's smaller. */
     cmp_diff
   }
+
   public static class P2PSignatureParameters extends WParameters {
 
-    /**
-     * The number of nodes in the network participating in signing
-     */
+    /** The number of nodes in the network participating in signing */
     final int signingNodeCount;
 
-    /**
-     * The number of nodes participating without signing.
-     */
+    /** The number of nodes participating without signing. */
     final int relayingNodeCount;
 
-    /**
-     * The number of signatures to reach to finish the protocol.
-     */
+    /** The number of signatures to reach to finish the protocol. */
     final int threshold;
 
-    /**
-     * The typical number of peers a peer has. At least 3.
-     */
+    /** The typical number of peers a peer has. At least 3. */
     final int connectionCount;
 
-    /**
-     * The time it takes to do a pairing for a node.
-     */
+    /** The time it takes to do a pairing for a node. */
     final int pairingTime;
 
-    /**
-     * The protocol sends a set of sigs every 'sigsSendPeriod' milliseconds
-     */
+    /** The protocol sends a set of sigs every 'sigsSendPeriod' milliseconds */
     final int sigsSendPeriod;
 
-    /**
-     * @see P2PSigNode#sendSigs for the two strategies on aggregation.
-     */
+    /** @see P2PSigNode#sendSigs for the two strategies on aggregation. */
     final boolean doubleAggregateStrategy;
 
     /**
@@ -84,16 +64,12 @@ public class P2PSignature implements Protocol {
      */
     final boolean withState = true;
 
-    /**
-     * Use san fermin in parallel with gossiping.
-     */
+    /** Use san fermin in parallel with gossiping. */
     final boolean sanFermin;
 
-
-    /**
-     * For the compression scheme: we can use log 2 (the default or other values).
-     */
+    /** For the compression scheme: we can use log 2 (the default or other values). */
     final int sigRange;
+
     final String nodeBuilderName;
     final String networkLatencyName;
 
@@ -114,9 +90,18 @@ public class P2PSignature implements Protocol {
       this.networkLatencyName = null;
     }
 
-    public P2PSignatureParameters(int signingNodeCount, int relayingNodeCount, int threshold,
-        int connectionCount, int pairingTime, int sigsSendPeriod, boolean doubleAggregateStrategy,
-        boolean sanFermin, SendSigsStrategy sendSigsStrategy, int sigRange, String nodeBuilderName,
+    public P2PSignatureParameters(
+        int signingNodeCount,
+        int relayingNodeCount,
+        int threshold,
+        int connectionCount,
+        int pairingTime,
+        int sigsSendPeriod,
+        boolean doubleAggregateStrategy,
+        boolean sanFermin,
+        SendSigsStrategy sendSigsStrategy,
+        int sigRange,
+        String nodeBuilderName,
         String networkLatencyName) {
       this.signingNodeCount = signingNodeCount;
       this.relayingNodeCount = relayingNodeCount;
@@ -137,8 +122,8 @@ public class P2PSignature implements Protocol {
     this.params = params;
     this.network = new P2PNetwork<>(params.connectionCount, false);
     this.nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
-    this.network
-        .setNetworkLatency(RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
+    this.network.setNetworkLatency(
+        RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
   }
 
   static class State extends Message<P2PSigNode> {
@@ -169,19 +154,15 @@ public class P2PSignature implements Protocol {
    * Calculate the number of signatures we have to include is we apply a compression strategy
    * Strategy is: - we divide the bitset in ranges of size sigRange - all the signatures at the
    * beginning of a range are aggregated, until one of them is not available.
-   * <p>
-   * Example for a range of size 4:</br>
-   * 1101 0111 => we have 5 sigs instead of 6</br>
-   * 1111 1110 => we have 2 sigs instead of 7</br>
-   * 0111 0111 => we have 6 sigs </br>
-   * <p>
-   * Note that we don't aggregate consecutive ranges, because we would not be able to merge bitsets
-   * later.</br>
-   * For example, still with a range of for, with two nodes:</br>
-   * node 1: 1111 1111 0000 => 2 sigs, and not 1</br>
-   * node 2: 0000 1111 1111 => again, 2 sigs and not 1</br>
-   * <p>
-   * By keeping the two aggregated signatures node 1 & node 2 can exchange aggregated signatures.
+   *
+   * <p>Example for a range of size 4:</br> 1101 0111 => we have 5 sigs instead of 6</br> 1111 1110
+   * => we have 2 sigs instead of 7</br> 0111 0111 => we have 6 sigs </br>
+   *
+   * <p>Note that we don't aggregate consecutive ranges, because we would not be able to merge
+   * bitsets later.</br> For example, still with a range of for, with two nodes:</br> node 1: 1111
+   * 1111 0000 => 2 sigs, and not 1</br> node 2: 0000 1111 1111 => again, 2 sigs and not 1</br>
+   *
+   * <p>By keeping the two aggregated signatures node 1 & node 2 can exchange aggregated signatures.
    * 1111 1111 => 1 0001 1111 1111 0000 => 3 0001 1111 1111 1111 => 2 </>
    *
    * @return the number of signatures to include
@@ -227,8 +208,8 @@ public class P2PSignature implements Protocol {
 
   /**
    * Merging can be combined, so this function is recursive. For example, for a range size of 2, if
-   * we have 11 11 11 11 11 11 11 11 11 11 11 => 11 sigs w/o merge.</br>
-   * This should become 3 after merge: the first 8, then the second set of two blocks
+   * we have 11 11 11 11 11 11 11 11 11 11 11 => 11 sigs w/o merge.</br> This should become 3 after
+   * merge: the first 8, then the second set of two blocks
    */
   private int mergeRanges(int firstOneAt, int pos) {
     if (firstOneAt < 0) {
@@ -271,19 +252,16 @@ public class P2PSignature implements Protocol {
       this.size = Math.max(1, sigs.length() / 8 + sigCount * 48);
     }
 
-
     @Override
     public int size() {
       return size;
     }
-
 
     @Override
     public void action(Network<P2PSigNode> network, P2PSigNode from, P2PSigNode to) {
       to.onNewSig(sigs);
     }
   }
-
 
   public class P2PSigNode extends P2PNode<P2PSigNode> {
     final BitSet verifiedSignatures = new BitSet(params.signingNodeCount);
@@ -316,10 +294,7 @@ public class P2PSignature implements Protocol {
       return res;
     }
 
-
-    /**
-     * Asynchronous, so when we receive a state it can be an old one.
-     */
+    /** Asynchronous, so when we receive a state it can be an old one. */
     void onPeerState(State state) {
       int newCard = state.desc.cardinality();
       State old = peersState.get(state.who.nodeId);
@@ -360,7 +335,7 @@ public class P2PSignature implements Protocol {
                 BitSet nextRound = sanFerminPeers(r + 1);
                 nextRound.andNot(nodesAtRound);
 
-                //We contact two nodes.
+                // We contact two nodes.
                 List<P2PSigNode> dest = randomSubset(nextRound, 2);
 
                 // here we can send:
@@ -370,14 +345,14 @@ public class P2PSignature implements Protocol {
                 // on the early tests sending all results seems more efficient. But
                 // if we suppose that only small messages are supported, then
                 //  we can send only the San Fermin ones to make it fit into a UDP message
-                // SendSigs ss = new SendSigs(verifiedSignatures, compressedSize(verifiedSignatures));
+                // SendSigs ss = new SendSigs(verifiedSignatures,
+                // compressedSize(verifiedSignatures));
                 SendSigs ss = new SendSigs(sanFerminPeers(r), 1);
                 network.send(ss, network.time + 1, this, dest);
               }
             }
             r++;
           }
-
         }
 
         if (!done && verifiedSignatures.cardinality() >= params.threshold) {
@@ -420,14 +395,10 @@ public class P2PSignature implements Protocol {
       network.send(s, this, peers);
     }
 
-
-    /**
-     * Nothing much to do when we receive a sig set: we just add it to our toVerify list.
-     */
+    /** Nothing much to do when we receive a sig set: we just add it to our toVerify list. */
     void onNewSig(BitSet sigs) {
       toVerify.add(sigs);
     }
-
 
     /**
      * We select a peer which needs some signatures we have. We also remove it from out list once we
@@ -453,14 +424,13 @@ public class P2PSignature implements Protocol {
         found = new State(peers.get(network.rd.nextInt(peers.size())));
       }
 
-
       if (found != null) {
         SendSigs ss;
         if (params.sendSigsStrategy == SendSigsStrategy.dif) {
           ss = new SendSigs(toSend);
         } else if (params.sendSigsStrategy == SendSigsStrategy.cmp_all) {
-          ss = new SendSigs((BitSet) verifiedSignatures.clone(),
-              compressedSize(verifiedSignatures));
+          ss =
+              new SendSigs((BitSet) verifiedSignatures.clone(), compressedSize(verifiedSignatures));
         } else if (params.sendSigsStrategy == SendSigsStrategy.cmp_diff) {
           int s1 = compressedSize(verifiedSignatures);
           int s2 = compressedSize(toSend);
@@ -480,7 +450,6 @@ public class P2PSignature implements Protocol {
       return network.time + 1 + sigs.cardinality() / 100;
     }
 
-
     public void checkSigs() {
       if (params.doubleAggregateStrategy) {
         checkSigs2();
@@ -488,7 +457,6 @@ public class P2PSignature implements Protocol {
         checkSigs1();
       }
     }
-
 
     /**
      * Strategy 1: we select the set of signatures which contains the most new signatures. As we
@@ -518,9 +486,10 @@ public class P2PSignature implements Protocol {
       if (best != null) {
         toVerify.remove(best);
         final BitSet tBest = best;
-        network
-            .registerTask(() -> P2PSigNode.this.updateVerifiedSignatures(tBest),
-                network.time + params.pairingTime * 2, P2PSigNode.this);
+        network.registerTask(
+            () -> P2PSigNode.this.updateVerifiedSignatures(tBest),
+            network.time + params.pairingTime * 2,
+            P2PSigNode.this);
       }
     }
 
@@ -548,20 +517,36 @@ public class P2PSignature implements Protocol {
         if (oo1.cardinality() > 0) {
           // There is at least one signature we don't have yet
           final BitSet tBest = agg;
-          network
-              .registerTask(() -> P2PSigNode.this.updateVerifiedSignatures(tBest),
-                  network.time + params.pairingTime * 2, P2PSigNode.this);
+          network.registerTask(
+              () -> P2PSigNode.this.updateVerifiedSignatures(tBest),
+              network.time + params.pairingTime * 2,
+              P2PSigNode.this);
         }
       }
     }
 
     @Override
     public String toString() {
-      return "P2PSigNode{" + "nodeId=" + nodeId + " sendSigsStrategy=" + params.sendSigsStrategy
-          + " sigRange=" + params.sigRange + ", doneAt=" + doneAt + ", sigs="
-          + verifiedSignatures.cardinality() + ", msgReceived=" + msgReceived + ", msgSent="
-          + msgSent + ", KBytesSent=" + bytesSent / 1024 + ", KBytesReceived="
-          + bytesReceived / 1024 + '}';
+      return "P2PSigNode{"
+          + "nodeId="
+          + nodeId
+          + " sendSigsStrategy="
+          + params.sendSigsStrategy
+          + " sigRange="
+          + params.sigRange
+          + ", doneAt="
+          + doneAt
+          + ", sigs="
+          + verifiedSignatures.cardinality()
+          + ", msgReceived="
+          + msgReceived
+          + ", msgSent="
+          + msgSent
+          + ", KBytesSent="
+          + bytesSent / 1024
+          + ", KBytesReceived="
+          + bytesReceived / 1024
+          + '}';
     }
   }
 
@@ -578,12 +563,10 @@ public class P2PSignature implements Protocol {
       if (params.withState && !params.sanFermin) {
         network.registerTask(n::sendStateToPeers, 1, n);
       }
-      network
-          .registerConditionalTask(n::sendSigs, 1, params.sigsSendPeriod, n,
-              () -> !(n.peersState.isEmpty()), () -> !n.done);
-      network
-          .registerConditionalTask(n::checkSigs, 1, params.pairingTime, n,
-              () -> !n.toVerify.isEmpty(), () -> !n.done);
+      network.registerConditionalTask(
+          n::sendSigs, 1, params.sigsSendPeriod, n, () -> !(n.peersState.isEmpty()), () -> !n.done);
+      network.registerConditionalTask(
+          n::checkSigs, 1, params.pairingTime, n, () -> !n.toVerify.isEmpty(), () -> !n.done);
     }
 
     if (params.sanFermin) {
@@ -611,22 +594,45 @@ public class P2PSignature implements Protocol {
     List<Graph.Series> rawResultsMax = new ArrayList<>();
     List<Graph.Series> rawResultsAvg = new ArrayList<>();
 
-    P2PSignature psTemplate = new P2PSignature(new P2PSignatureParameters(nodeCt, nodeCt * 0,
-        nodeCt, 15, 3, 50, true, false, SendSigsStrategy.all, 2, nb, nl));
+    P2PSignature psTemplate =
+        new P2PSignature(
+            new P2PSignatureParameters(
+                nodeCt,
+                nodeCt * 0,
+                nodeCt,
+                15,
+                3,
+                50,
+                true,
+                false,
+                SendSigsStrategy.all,
+                2,
+                nb,
+                nl));
 
-    String desc = "signingNodeCount=" + nodeCt
-        + (psTemplate.params.sanFermin ? ""
-            : ", totalNodes="
-                + (psTemplate.params.signingNodeCount + psTemplate.params.relayingNodeCount))
-        + ", gossip " + (psTemplate.params.sanFermin ? " + San Fermin" : "alone")
-        + ", gossip period=" + psTemplate.params.sigsSendPeriod
-        + (!psTemplate.params.sanFermin ? ", compression=" + psTemplate.params.sendSigsStrategy
-            : "");
+    String desc =
+        "signingNodeCount="
+            + nodeCt
+            + (psTemplate.params.sanFermin
+                ? ""
+                : ", totalNodes="
+                    + (psTemplate.params.signingNodeCount + psTemplate.params.relayingNodeCount))
+            + ", gossip "
+            + (psTemplate.params.sanFermin ? " + San Fermin" : "alone")
+            + ", gossip period="
+            + psTemplate.params.sigsSendPeriod
+            + (!psTemplate.params.sanFermin
+                ? ", compression=" + psTemplate.params.sendSigsStrategy
+                : "");
     System.out.println(nl + " " + desc);
-    Graph graph = new Graph("number of signatures per time (" + desc + ")", "time in ms",
-        "number of signatures");
-    Graph medianGraph = new Graph("average number of signatures per time (" + desc + ")",
-        "time in ms", "number of signatures");
+    Graph graph =
+        new Graph(
+            "number of signatures per time (" + desc + ")", "time in ms", "number of signatures");
+    Graph medianGraph =
+        new Graph(
+            "average number of signatures per time (" + desc + ")",
+            "time in ms",
+            "number of signatures");
 
     int lastSeries = 3;
     StatsHelper.SimpleStats s;
@@ -645,9 +651,9 @@ public class P2PSignature implements Protocol {
 
       do {
         ps1.network.runMs(10);
-        s = StatsHelper
-            .getStatsOn(ps1.network.allNodes,
-                n -> ((P2PSigNode) n).verifiedSignatures.cardinality());
+        s =
+            StatsHelper.getStatsOn(
+                ps1.network.allNodes, n -> ((P2PSigNode) n).verifiedSignatures.cardinality());
         curMin.addLine(new Graph.ReportLine(ps1.network.time, s.min));
         curMax.addLine(new Graph.ReportLine(ps1.network.time, s.max));
         curAvg.addLine(new Graph.ReportLine(ps1.network.time, s.avg));
@@ -656,19 +662,16 @@ public class P2PSignature implements Protocol {
       graph.addSerie(curMax);
       graph.addSerie(curAvg);
 
-      System.out
-          .println(
-              "bytes sent: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getBytesSent));
-      System.out
-          .println("bytes rcvd: "
-              + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getBytesReceived));
-      System.out
-          .println("msg sent: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getMsgSent));
-      System.out
-          .println(
-              "msg rcvd: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getMsgReceived));
-      System.out
-          .println("done at: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getDoneAt));
+      System.out.println(
+          "bytes sent: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getBytesSent));
+      System.out.println(
+          "bytes rcvd: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getBytesReceived));
+      System.out.println(
+          "msg sent: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getMsgSent));
+      System.out.println(
+          "msg rcvd: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getMsgReceived));
+      System.out.println(
+          "done at: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getDoneAt));
     }
 
     try {
@@ -700,12 +703,15 @@ public class P2PSignature implements Protocol {
 
     String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
     String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
-    P2PSignature ps1 = new P2PSignature(new P2PSignatureParameters(nodeCt, 0, nodeCt, 15, 3, 20,
-        true, false, SendSigsStrategy.all, 1, nb, nl));
+    P2PSignature ps1 =
+        new P2PSignature(
+            new P2PSignatureParameters(
+                nodeCt, 0, nodeCt, 15, 3, 20, true, false, SendSigsStrategy.all, 1, nb, nl));
 
-    P2PSignature ps2 = new P2PSignature(new P2PSignatureParameters(nodeCt, 0, nodeCt, 15, 3, 20,
-        false, false, SendSigsStrategy.all, 1, nb, nl));
-
+    P2PSignature ps2 =
+        new P2PSignature(
+            new P2PSignatureParameters(
+                nodeCt, 0, nodeCt, 15, 3, 20, false, false, SendSigsStrategy.all, 1, nb, nl));
 
     Graph graph = new Graph("number of sig per time", "time in ms", "sig count");
     Graph.Series series1avg = new Graph.Series("sig count - full aggregate strategy");
@@ -721,10 +727,12 @@ public class P2PSignature implements Protocol {
     do {
       ps1.network.runMs(10);
       ps2.network.runMs(10);
-      s1 = StatsHelper
-          .getStatsOn(ps1.network.allNodes, n -> ((P2PSigNode) n).verifiedSignatures.cardinality());
-      s2 = StatsHelper
-          .getStatsOn(ps2.network.allNodes, n -> ((P2PSigNode) n).verifiedSignatures.cardinality());
+      s1 =
+          StatsHelper.getStatsOn(
+              ps1.network.allNodes, n -> ((P2PSigNode) n).verifiedSignatures.cardinality());
+      s2 =
+          StatsHelper.getStatsOn(
+              ps2.network.allNodes, n -> ((P2PSigNode) n).verifiedSignatures.cardinality());
       series1avg.addLine(new Graph.ReportLine(ps1.network.time, s1.avg));
       series2avg.addLine(new Graph.ReportLine(ps2.network.time, s2.avg));
     } while (s1.min != nodeCt);

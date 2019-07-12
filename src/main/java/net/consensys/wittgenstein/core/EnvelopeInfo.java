@@ -45,5 +45,4 @@ public class EnvelopeInfo<TN extends Node> implements Comparable<EnvelopeInfo> {
     }
     return Integer.compare(System.identityHashCode(msg), System.identityHashCode(o.msg));
   }
-
 }

@@ -5,13 +5,13 @@ package net.consensys.wittgenstein.core;
  * take into account the overlapping messages.
  */
 public abstract class NetworkThroughput {
-  abstract public int delay(Node from, Node to, int delta, int msgSize);
+  public abstract int delay(Node from, Node to, int delta, int msgSize);
 
   /**
    * Use the equation given by:
    * https://cseweb.ucsd.edu/classes/wi01/cse222/papers/mathis-tcpmodel-ccr97.pdf
-   * <p>
-   * There are more complicated ones but this one is commonly used. See
+   *
+   * <p>There are more complicated ones but this one is commonly used. See
    * https://www.netcraftsmen.com/tcp-performance-and-the-mathis-equation/
    * https://www.slac.stanford.edu/comp/net/wan-mon/thru-vs-loss.html
    */
@@ -26,6 +26,7 @@ public abstract class NetworkThroughput {
      * https://pdfs.semanticscholar.org/297a/0cc3af443542710d69010676918a0271f2e3.pdf
      */
     private final double loss = 0.004;
+
     private double div = Math.sqrt(loss);
 
     public MathisNetworkThroughput(NetworkLatency nl) {
@@ -37,9 +38,7 @@ public abstract class NetworkThroughput {
       this.windowSize = 8 * windowSizeBytes;
     }
 
-    /**
-     * Mathis: rate < (MSS/RTT)*(1/sqrt(Loss))
-     */
+    /** Mathis: rate < (MSS/RTT)*(1/sqrt(Loss)) */
     @Override
     public int delay(Node from, Node to, int delta, int msgSize) {
       int st = nl.getLatency(from, to, delta);

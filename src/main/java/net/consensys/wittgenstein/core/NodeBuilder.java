@@ -1,7 +1,8 @@
 package net.consensys.wittgenstein.core;
 
-import net.consensys.wittgenstein.core.geoinfo.CityInfo;
-import net.consensys.wittgenstein.core.geoinfo.Geo;
+import static net.consensys.wittgenstein.core.Node.MAX_X;
+import static net.consensys.wittgenstein.core.Node.MAX_Y;
+
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -11,27 +12,20 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import static net.consensys.wittgenstein.core.Node.MAX_X;
-import static net.consensys.wittgenstein.core.Node.MAX_Y;
+
+import net.consensys.wittgenstein.core.geoinfo.CityInfo;
+import net.consensys.wittgenstein.core.geoinfo.Geo;
 
 @SuppressWarnings("WeakerAccess")
 public class NodeBuilder implements Cloneable {
-  /**
-   * Last node id allocated.
-   */
+  /** Last node id allocated. */
   private int nodeIds = 0;
-  /**
-   * Used to calculate a hash
-   */
+  /** Used to calculate a hash */
   private final MessageDigest digest;
-  /**
-   * List of the aspects we can add to the node (speed, latency, ...)
-   */
+  /** List of the aspects we can add to the node (speed, latency, ...) */
   public final List<Node.Aspect> aspects = new ArrayList<>();
 
-  /**
-   * Unique reference shared by all nodes when they need to allocate a unique id.
-   */
+  /** Unique reference shared by all nodes when they need to allocate a unique id. */
   private final AtomicInteger uIntId = new AtomicInteger();
 
   public NodeBuilder() {
@@ -72,9 +66,7 @@ public class NodeBuilder implements Cloneable {
     return Node.DEFAULT_CITY;
   }
 
-  /**
-   * Many protocols wants a hash of the node id.
-   */
+  /** Many protocols wants a hash of the node id. */
   protected byte[] getHash(int nodeId) {
     return digest.digest(ByteBuffer.allocate(4).putInt(nodeId).array());
   }
@@ -98,7 +90,6 @@ public class NodeBuilder implements Cloneable {
     }
   }
 
-
   public static class NodeBuilderWithCity extends NodeBuilder {
     final List<String> cities;
     final Map<String, CityInfo> citiesInfo;
@@ -106,12 +97,10 @@ public class NodeBuilder implements Cloneable {
     public NodeBuilderWithCity(List<String> cities, Geo geoInfo) {
       this.cities = cities.stream().map(String::toUpperCase).collect(Collectors.toList());
 
-      citiesInfo = geoInfo
-          .citiesPosition()
-          .entrySet()
-          .stream()
-          .filter(x -> this.cities.contains(x.getKey().toUpperCase()))
-          .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+      citiesInfo =
+          geoInfo.citiesPosition().entrySet().stream()
+              .filter(x -> this.cities.contains(x.getKey().toUpperCase()))
+              .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     @Override
@@ -126,12 +115,11 @@ public class NodeBuilder implements Cloneable {
     int[] getPos(int rdInt) {
       String city = getCityName(rdInt);
       CityInfo cityInfo = citiesInfo.get(city);
-      return Objects
-          .requireNonNullElseGet(new int[] {cityInfo.mercX, cityInfo.mercY},
-              () -> new int[] {1, 1});
+      return Objects.requireNonNullElseGet(
+          new int[] {cityInfo.mercX, cityInfo.mercY}, () -> new int[] {1, 1});
     }
 
-    //Weighted Random Selection algorithm
+    // Weighted Random Selection algorithm
     private String getRandomCityInfo(int rdInt) {
       int size = cities.size();
       int rand = Math.abs(rdInt) % size;

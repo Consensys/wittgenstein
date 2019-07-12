@@ -1,13 +1,14 @@
 package net.consensys.wittgenstein.core;
 
+import java.util.List;
+import java.util.Random;
+
 import net.consensys.wittgenstein.core.messages.FloodMessage;
 import net.consensys.wittgenstein.core.messages.StatusFloodMessage;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import java.util.List;
-import java.util.Random;
 
 public class P2PNetworkTest {
   private int minPeers = 5;
@@ -17,7 +18,6 @@ public class P2PNetworkTest {
   private P2PNodeTest n1 = new P2PNodeTest(network.rd, nb);
   private P2PNodeTest n2 = new P2PNodeTest(network.rd, nb);
   private P2PNodeTest n3 = new P2PNodeTest(network.rd, nb);
-
 
   static class P2PNodeTest extends P2PNode<P2PNodeTest> {
     P2PNodeTest(Random rd, NodeBuilder nb) {
@@ -63,8 +63,9 @@ public class P2PNetworkTest {
       }
     }
 
-    for (int i = 0; i < MoreMath.log2(network.allNodes.size()) + 1
-        && nodeCt < network.allNodes.size(); i++) {
+    for (int i = 0;
+        i < MoreMath.log2(network.allNodes.size()) + 1 && nodeCt < network.allNodes.size();
+        i++) {
       network.runMs(2);
       int nodeCt2 = count(m);
       Assert.assertTrue(nodeCt2 > nodeCt);
@@ -146,7 +147,6 @@ public class P2PNetworkTest {
     Assert.assertEquals(network.allNodes.size(), count(mv2));
     Assert.assertEquals(mv2, n0.getMsgReceived(m.msgId()).iterator().next());
     Assert.assertEquals(mv2, n1.getMsgReceived(m.msgId()).iterator().next());
-
 
     StatusFloodMessage<P2PNodeTest> m2 = new StatusFloodMessage<>(2, 1, 1, 0, 0);
     network.sendPeers(m2, n0);

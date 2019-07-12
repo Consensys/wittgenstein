@@ -1,5 +1,9 @@
 package net.consensys.wittgenstein.tools;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.knowm.xchart.BitmapEncoder;
 import org.knowm.xchart.XYChart;
@@ -7,16 +11,10 @@ import org.knowm.xchart.XYChartBuilder;
 import org.knowm.xchart.XYSeries;
 import org.knowm.xchart.internal.chartpart.Chart;
 import org.knowm.xchart.style.Styler;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
-/**
- * Generate a graph (an image file) from a list of report lines per period.
- */
+/** Generate a graph (an image file) from a list of report lines per period. */
 public class Graph {
-  private final static double EPS = 0.00001;
+  private static final double EPS = 0.00001;
   private final List<Series> series = new ArrayList<>();
 
   private final String graphTitle;
@@ -60,7 +58,6 @@ public class Graph {
       this.description = "no description";
     }
 
-
     public void addLine(ReportLine rl) {
       vals.add(rl);
 
@@ -86,7 +83,6 @@ public class Graph {
       return maxY;
     }
   }
-
 
   public static class ReportLine {
     final double x;
@@ -117,13 +113,14 @@ public class Graph {
       throw new IllegalStateException("no series in this graph");
     }
 
-    final XYChart chart = new XYChartBuilder()
-        .height(getHeight())
-        .title(graphTitle)
-        .xAxisTitle(xName)
-        .yAxisTitle(yName)
-        .width(getLength())
-        .build();
+    final XYChart chart =
+        new XYChartBuilder()
+            .height(getHeight())
+            .title(graphTitle)
+            .xAxisTitle(xName)
+            .yAxisTitle(yName)
+            .width(getLength())
+            .build();
 
     chart.getStyler().setLegendPosition(Styler.LegendPosition.InsideNW);
     chart.getStyler().setDefaultSeriesRenderStyle(XYSeries.XYSeriesRenderStyle.Line);
@@ -156,8 +153,8 @@ public class Graph {
 
   public void save(File dest) throws IOException {
     Chart chart = createChart();
-    BitmapEncoder
-        .saveBitmapWithDPI(chart, dest.getAbsolutePath(), BitmapEncoder.BitmapFormat.PNG, 300);
+    BitmapEncoder.saveBitmapWithDPI(
+        chart, dest.getAbsolutePath(), BitmapEncoder.BitmapFormat.PNG, 300);
   }
 
   public void addSerie(Series s) {
@@ -212,7 +209,7 @@ public class Graph {
    *
    * @param title - the title of the series to be created
    * @param series - all the series must have the same value for 'x' at the same index. We allow
-   *        missing values at the end
+   *     missing values at the end
    * @return the aggregated series
    */
   public static StatSeries statSeries(String title, List<Graph.Series> series) {
@@ -253,5 +250,4 @@ public class Graph {
 
     return new StatSeries(seriesMin, seriesMax, seriesAvg);
   }
-
 }

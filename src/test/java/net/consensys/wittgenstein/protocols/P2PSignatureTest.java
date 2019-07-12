@@ -1,5 +1,7 @@
 package net.consensys.wittgenstein.protocols;
 
+import java.util.BitSet;
+
 import net.consensys.wittgenstein.core.NetworkLatency;
 import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.core.RegistryNodeBuilders;
@@ -7,16 +9,16 @@ import net.consensys.wittgenstein.core.messages.Message;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import java.util.BitSet;
 
 public class P2PSignatureTest {
   private String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
   private String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
-  private P2PSignature ps = new P2PSignature(new P2PSignature.P2PSignatureParameters(100, 0, 60, 10,
-      2, 20, false, false, P2PSignature.SendSigsStrategy.dif, 4, nb, nl));
+  private P2PSignature ps =
+      new P2PSignature(
+          new P2PSignature.P2PSignatureParameters(
+              100, 0, 60, 10, 2, 20, false, false, P2PSignature.SendSigsStrategy.dif, 4, nb, nl));
   private P2PSignature.P2PSigNode n1;
   private P2PSignature.P2PSigNode n2;
-
 
   @Before
   public void before() {
@@ -37,10 +39,14 @@ public class P2PSignatureTest {
 
   @Test
   public void testRepeatability() {
-    P2PSignature p1 = new P2PSignature(new P2PSignature.P2PSignatureParameters(100, 0, 25, 10, 2, 5,
-        false, true, P2PSignature.SendSigsStrategy.dif, 4, nb, nl));
-    P2PSignature p2 = new P2PSignature(new P2PSignature.P2PSignatureParameters(100, 0, 25, 10, 2, 5,
-        false, true, P2PSignature.SendSigsStrategy.dif, 4, nb, nl));
+    P2PSignature p1 =
+        new P2PSignature(
+            new P2PSignature.P2PSignatureParameters(
+                100, 0, 25, 10, 2, 5, false, true, P2PSignature.SendSigsStrategy.dif, 4, nb, nl));
+    P2PSignature p2 =
+        new P2PSignature(
+            new P2PSignature.P2PSignatureParameters(
+                100, 0, 25, 10, 2, 5, false, true, P2PSignature.SendSigsStrategy.dif, 4, nb, nl));
 
     p1.init();
     p1.network.run(10);
@@ -108,27 +114,32 @@ public class P2PSignatureTest {
     Assert.assertEquals(1, ps.compressedSize(fromString("1111 1111")));
     Assert.assertEquals(1, ps.compressedSize(fromString("1111 1111 1111 1111")));
 
-    Assert
-        .assertEquals(3, ps
-            .compressedSize(fromString(
+    Assert.assertEquals(
+        3,
+        ps.compressedSize(
+            fromString(
                 "0000 0000 0000 0000  0000 0000 0000 0000 1111 1111 1111 1111  1111 1111 1111 0000")));
 
-    Assert
-        .assertEquals(1, ps
-            .compressedSize(fromString(
+    Assert.assertEquals(
+        1,
+        ps.compressedSize(
+            fromString(
                 "0000 0000 0000 0000  0000 0000 0000 0000 1111 1111 1111 1111  1111 1111 1111 1111 0000")));
 
-    Assert
-        .assertEquals(2, ps
-            .compressedSize(fromString(
+    Assert.assertEquals(
+        2,
+        ps.compressedSize(
+            fromString(
                 "0000 0000 0000 0000  1111 1111 1111 1111 1111 1111 1111 1111  1111 1111 1111 1111 0000")));
 
-    Assert
-        .assertEquals(3, ps.compressedSize(fromString("1111 1111 1111 1111  1111 1111 1111 0000")));
+    Assert.assertEquals(
+        3, ps.compressedSize(fromString("1111 1111 1111 1111  1111 1111 1111 0000")));
 
     Assert.assertEquals(1, ps.compressedSize(fromString("1111 1111 0000")));
     Assert.assertEquals(3, ps.compressedSize(fromString("0001 1111 1111 0000")));
-    Assert.assertEquals(3, ps.compressedSize(fromString("0001 1111 1111 1111"))); // we could optimize further & have 2
+    Assert.assertEquals(
+        3,
+        ps.compressedSize(fromString("0001 1111 1111 1111"))); // we could optimize further & have 2
 
     Assert.assertEquals(2, ps.compressedSize(fromString("0000 1111 1111 1111  0000")));
 
@@ -194,8 +205,10 @@ public class P2PSignatureTest {
 
   @Test
   public void testCopy() {
-    P2PSignature p1 = new P2PSignature(new P2PSignature.P2PSignatureParameters(500, 2, 60, 10, 2,
-        20, false, false, P2PSignature.SendSigsStrategy.dif, 4, nb, nl));
+    P2PSignature p1 =
+        new P2PSignature(
+            new P2PSignature.P2PSignatureParameters(
+                500, 2, 60, 10, 2, 20, false, false, P2PSignature.SendSigsStrategy.dif, 4, nb, nl));
 
     P2PSignature p2 = p1.copy();
     p1.init();

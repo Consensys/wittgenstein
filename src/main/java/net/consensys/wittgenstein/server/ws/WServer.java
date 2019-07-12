@@ -1,5 +1,7 @@
 package net.consensys.wittgenstein.server.ws;
 
+import java.util.List;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import net.consensys.wittgenstein.core.EnvelopeInfo;
@@ -10,7 +12,6 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
 
 @RestController
 @EnableAutoConfiguration
@@ -43,8 +44,8 @@ public class WServer extends ExternalWS implements IServer, External {
   }
 
   @PostMapping(value = "/network/init/{fullClassName}")
-  public void init(@PathVariable("fullClassName") String fullClassName,
-      @RequestBody WParameters parameters) {
+  public void init(
+      @PathVariable("fullClassName") String fullClassName, @RequestBody WParameters parameters) {
     server.init(fullClassName, parameters);
   }
 
@@ -80,8 +81,8 @@ public class WServer extends ExternalWS implements IServer, External {
 
   @PostMapping(value = "/network/nodes/{nodeId}/external")
   @Override
-  public void setExternal(@PathVariable("nodeId") int nodeId,
-      @RequestBody String externalServiceFullAddress) {
+  public void setExternal(
+      @PathVariable("nodeId") int nodeId, @RequestBody String externalServiceFullAddress) {
     server.setExternal(nodeId, externalServiceFullAddress);
   }
 
@@ -91,9 +92,7 @@ public class WServer extends ExternalWS implements IServer, External {
     server.sendMessage(msg);
   }
 
-  /**
-   * We map all fields in the parameters, not taking into account the getters/setters
-   */
+  /** We map all fields in the parameters, not taking into account the getters/setters */
   @SuppressWarnings("unused")
   @Bean
   @Primary

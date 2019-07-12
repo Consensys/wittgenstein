@@ -47,5 +47,4 @@ public class SnowflakeTest {
         new Snowflake(new Snowflake.SnowflakeParameters(100, 5, 7, 4.0 / 7.0, 3, nb, nl));
     p1.play();
   }
-
 }

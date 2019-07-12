@@ -1,11 +1,11 @@
 package net.consensys.wittgenstein.core.utils;
 
-
-import net.consensys.wittgenstein.core.Node;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+
+import net.consensys.wittgenstein.core.Node;
 
 public class StatsHelper {
   private StatsHelper() {}
@@ -29,9 +29,7 @@ public class StatsHelper {
     Stat createFromValue(Map<String, AtomicLong> vals);
   }
 
-  /**
-   * Calculates the avg of a set of stats, field by field.
-   */
+  /** Calculates the avg of a set of stats, field by field. */
   public static Stat avg(List<Stat> stats) {
     if (stats.isEmpty()) {
       throw new IllegalStateException();
@@ -130,10 +128,8 @@ public class StatsHelper {
       long val = get.get(n);
 
       tot += val;
-      if (val < min)
-        min = val;
-      if (val > max)
-        max = val;
+      if (val < min) min = val;
+      if (val > max) max = val;
     }
     return new SimpleStats(min, max, (tot / nodes.size()));
   }
@@ -152,7 +148,7 @@ public class StatsHelper {
     Stat get(List<? extends Node> liveNodes);
   }
 
-  public static abstract class SimpleStatsGetter implements StatsGetter {
+  public abstract static class SimpleStatsGetter implements StatsGetter {
     private final List<String> fields = new SimpleStats(0, 0, 0).fields();
 
     public List<String> fields() {
@@ -173,6 +169,4 @@ public class StatsHelper {
       return getMsgReceived(liveNodes);
     }
   }
-
-
 }

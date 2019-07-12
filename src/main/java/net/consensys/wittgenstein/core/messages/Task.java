@@ -4,12 +4,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import net.consensys.wittgenstein.core.Network;
 import net.consensys.wittgenstein.core.Node;
 
-/**
- * Some protocols want some tasks to be executed at a given time
- */
+/** Some protocols want some tasks to be executed at a given time */
 public class Task<TN extends Node> extends Message<TN> {
-  @JsonIgnore
-  public final Runnable r;
+  @JsonIgnore public final Runnable r;
 
   public Task(Runnable r) {
     this.r = r;

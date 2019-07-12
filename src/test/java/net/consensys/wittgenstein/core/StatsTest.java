@@ -1,9 +1,10 @@
 package net.consensys.wittgenstein.core;
 
+import java.util.List;
+
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import org.junit.Assert;
 import org.junit.Test;
-import java.util.List;
 
 public class StatsTest {
 

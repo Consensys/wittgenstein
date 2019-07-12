@@ -1,12 +1,13 @@
 package net.consensys.wittgenstein.core;
 
+import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import net.consensys.wittgenstein.core.messages.Message;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class NetworkTest {
   private Network<Node> network = new Network<>();
@@ -16,10 +17,11 @@ public class NetworkTest {
   private Node n2 = new Node(network.rd, nb);
   private Node n3 = new Node(network.rd, nb);
 
-  private Message<Node> m = new Message<>() {
-    @Override
-    public void action(Network<Node> network, Node from, Node to) {}
-  };
+  private Message<Node> m =
+      new Message<>() {
+        @Override
+        public void action(Network<Node> network, Node from, Node to) {}
+      };
 
   @Before
   public void before() {
@@ -35,13 +37,14 @@ public class NetworkTest {
     AtomicInteger a1 = new AtomicInteger(-1);
     AtomicInteger a2 = new AtomicInteger(-1);
 
-    Message<Node> act = new Message<>() {
-      @Override
-      public void action(Network<Node> network, Node from, Node to) {
-        a1.set(from.nodeId);
-        a2.set(to.nodeId);
-      }
-    };
+    Message<Node> act =
+        new Message<>() {
+          @Override
+          public void action(Network<Node> network, Node from, Node to) {
+            a1.set(from.nodeId);
+            a2.set(to.nodeId);
+          }
+        };
 
     network.send(act, 1, n1, n2);
     Assert.assertEquals(1, network.msgs.size());
@@ -70,13 +73,14 @@ public class NetworkTest {
     AtomicInteger a1 = new AtomicInteger(0);
     AtomicInteger a2 = new AtomicInteger(0);
 
-    Message<Node> act = new Message<>() {
-      @Override
-      public void action(Network<Node> network, Node from, Node to) {
-        a1.addAndGet(from.nodeId);
-        a2.addAndGet(to.nodeId);
-      }
-    };
+    Message<Node> act =
+        new Message<>() {
+          @Override
+          public void action(Network<Node> network, Node from, Node to) {
+            a1.addAndGet(from.nodeId);
+            a2.addAndGet(to.nodeId);
+          }
+        };
     List<Node> dests = new ArrayList<>();
     dests.add(n2);
     dests.add(n3);
@@ -93,16 +97,16 @@ public class NetworkTest {
     Assert.assertEquals(14, a2.get());
   }
 
-
   @Test
   public void testMultipleMessage() {
     AtomicInteger ab = new AtomicInteger(0);
-    Message<Node> act = new Message<>() {
-      @Override
-      public void action(Network<Node> network, Node from, Node to) {
-        ab.incrementAndGet();
-      }
-    };
+    Message<Node> act =
+        new Message<>() {
+          @Override
+          public void action(Network<Node> network, Node from, Node to) {
+            ab.incrementAndGet();
+          }
+        };
 
     network.networkLatency = new NetworkLatency.NetworkNoLatency();
     network.send(act, 1, n0, Arrays.asList(n1, n2, n3));
@@ -116,12 +120,13 @@ public class NetworkTest {
   @Test
   public void testMultipleMessageWithDelays() {
     AtomicInteger ab = new AtomicInteger(0);
-    Message<Node> act = new Message<>() {
-      @Override
-      public void action(Network<Node> network, Node from, Node to) {
-        ab.incrementAndGet();
-      }
-    };
+    Message<Node> act =
+        new Message<>() {
+          @Override
+          public void action(Network<Node> network, Node from, Node to) {
+            ab.incrementAndGet();
+          }
+        };
 
     network.networkLatency = new NetworkLatency.NetworkNoLatency();
     network.send(act, 1, n0, Arrays.asList(n1, n2, n3), 10);
@@ -142,12 +147,13 @@ public class NetworkTest {
   @Test
   public void testMultipleMessageWithDelaysAcrossSlots() {
     AtomicInteger ab = new AtomicInteger(0);
-    Message<Node> act = new Message<>() {
-      @Override
-      public void action(Network<Node> network, Node from, Node to) {
-        ab.incrementAndGet();
-      }
-    };
+    Message<Node> act =
+        new Message<>() {
+          @Override
+          public void action(Network<Node> network, Node from, Node to) {
+            ab.incrementAndGet();
+          }
+        };
 
     network.networkLatency = new NetworkLatency.NetworkNoLatency();
     network.send(act, 59000, n0, Arrays.asList(n1, n2, n3), 55000);
@@ -160,12 +166,13 @@ public class NetworkTest {
   @Test
   public void testMultipleMessageWithDelaysEndOfSlot() {
     AtomicInteger ab = new AtomicInteger(0);
-    Message<Node> act = new Message<>() {
-      @Override
-      public void action(Network<Node> network, Node from, Node to) {
-        ab.incrementAndGet();
-      }
-    };
+    Message<Node> act =
+        new Message<>() {
+          @Override
+          public void action(Network<Node> network, Node from, Node to) {
+            ab.incrementAndGet();
+          }
+        };
 
     network.networkLatency = new NetworkLatency.NetworkNoLatency();
     network.send(act, 58998, n0, Arrays.asList(n1, n2, n3), 1000);
@@ -330,7 +337,6 @@ public class NetworkTest {
     Assert.assertTrue(e instanceof Envelope.MultipleDestEnvelope);
     Envelope.MultipleDestEnvelope mm = (Envelope.MultipleDestEnvelope) e;
 
-
     List<Network.MessageArrival> mas =
         network.createMessageArrivals(m, 1, n0, Arrays.asList(n1, n2, n3), mm.randomSeed, 0);
 
@@ -344,12 +350,13 @@ public class NetworkTest {
   public void testPartition() {
     Network<Node> net = new Network<>();
     AtomicInteger ai = new AtomicInteger(0);
-    NodeBuilder nb = new NodeBuilder() {
-      @Override
-      protected int getX(int rdi) {
-        return ai.addAndGet(Node.MAX_X / 10);
-      }
-    };
+    NodeBuilder nb =
+        new NodeBuilder() {
+          @Override
+          protected int getX(int rdi) {
+            return ai.addAndGet(Node.MAX_X / 10);
+          }
+        };
     Node n0 = new Node(network.rd, nb);
     Node n1 = new Node(network.rd, nb);
     Node n2 = new Node(network.rd, nb);
@@ -360,12 +367,13 @@ public class NetworkTest {
     net.addNode(n3);
 
     AtomicInteger ab = new AtomicInteger(0);
-    Message<Node> act = new Message<>() {
-      @Override
-      public void action(Network<Node> network, Node from, Node to) {
-        ab.incrementAndGet();
-      }
-    };
+    Message<Node> act =
+        new Message<>() {
+          @Override
+          public void action(Network<Node> network, Node from, Node to) {
+            ab.incrementAndGet();
+          }
+        };
 
     net.partition(0.25f);
     int bound = (int) (0.25f * Node.MAX_X);
@@ -416,10 +424,11 @@ public class NetworkTest {
 
   @Test
   public void testLongRunning() {
-    Message<Node> act = new Message<>() {
-      @Override
-      public void action(Network<Node> network, Node from, Node to) {}
-    };
+    Message<Node> act =
+        new Message<>() {
+          @Override
+          public void action(Network<Node> network, Node from, Node to) {}
+        };
     while (network.time < 100_000_000) {
       network.runMs(10_000);
       network.send(act, n0, n1);

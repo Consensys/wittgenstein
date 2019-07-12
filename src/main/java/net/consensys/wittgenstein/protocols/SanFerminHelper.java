@@ -1,10 +1,11 @@
 package net.consensys.wittgenstein.protocols;
 
-import net.consensys.wittgenstein.core.Node;
-import net.consensys.wittgenstein.core.utils.MoreMath;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import net.consensys.wittgenstein.core.Node;
+import net.consensys.wittgenstein.core.utils.MoreMath;
 
 /**
  * SanFerminHelper is a helper that computes some useful information needed in San Fermin-like
@@ -16,22 +17,14 @@ import java.util.stream.IntStream;
 public class SanFerminHelper<T extends Node> {
 
   private final T n;
-  /**
-   * The id of the node in binary
-   */
+  /** The id of the node in binary */
   public final String binaryId;
-  /**
-   * List of all nodes
-   */
+  /** List of all nodes */
   private final List<T> allNodes;
-  /**
-   * List of nodes we already selected at different levels
-   */
+  /** List of nodes we already selected at different levels */
   private final HashMap<Integer, BitSet> usedNodes;
 
-  /**
-   * Random instance for reproducible experiments
-   */
+  /** Random instance for reproducible experiments */
   private final Random rd;
   /**
    * currentLevel tracks at which level this SanFerminHelper is. It is useful when using the helper
@@ -63,11 +56,9 @@ public class SanFerminHelper<T extends Node> {
         // reduce interval to the right
         min = m;
       }
-      if (max == min)
-        break;
+      if (max == min) break;
 
-      if (max - 1 == 0 || min == allNodes.size())
-        break;
+      if (max - 1 == 0 || min == allNodes.size()) break;
     }
 
     return allNodes.subList(min, max);
@@ -98,18 +89,14 @@ public class SanFerminHelper<T extends Node> {
           min = m;
         }
       }
-      if (max == min)
-        break;
+      if (max == min) break;
 
-      if (max - 1 == 0 || min == allNodes.size())
-        break;
+      if (max - 1 == 0 || min == allNodes.size()) break;
     }
     return allNodes.subList(min, max);
   }
 
-  /**
-   *
-   */
+  /** */
   public boolean isCandidate(T node, int level) {
     return this.getCandidateSet(level).contains(node);
   }
@@ -121,16 +108,13 @@ public class SanFerminHelper<T extends Node> {
   public T getExactCandidateNode(int level) {
     List<T> own = this.getOwnSet(level);
     int idx = own.indexOf(this.n);
-    if (idx == -1)
-      throw new IllegalStateException();
+    if (idx == -1) throw new IllegalStateException();
 
     List<T> candidates = this.getCandidateSet(level);
-    if (idx >= candidates.size())
-      throw new IllegalStateException();
+    if (idx >= candidates.size()) throw new IllegalStateException();
 
     return candidates.get(idx);
   }
-
 
   /**
    * pickNextNodes returns the nodes that should be contacted at a given level. The difference with
@@ -142,8 +126,7 @@ public class SanFerminHelper<T extends Node> {
 
     List<T> ownSet = getOwnSet(level);
     int idx = ownSet.indexOf(this.n);
-    if (idx == -1 || ownSet.size() < idx)
-      throw new IllegalStateException();
+    if (idx == -1 || ownSet.size() < idx) throw new IllegalStateException();
 
     List<T> newList = new ArrayList<>();
     BitSet set = usedNodes.getOrDefault(level, new BitSet());
@@ -155,18 +138,18 @@ public class SanFerminHelper<T extends Node> {
     }
 
     // add the rest if not taken already
-    newList
-        .addAll(IntStream
-            .range(0, candidateSet.size())
+    newList.addAll(
+        IntStream.range(0, candidateSet.size())
             // only take nodes not seen before
             .filter(node -> !set.get(node))
             // less than howMany
             .limit(howMany)
             // map to the nodes and set them seen
-            .mapToObj(i -> {
-              set.set(i); // register it
-              return candidateSet.get(i);
-            })
+            .mapToObj(
+                i -> {
+                  set.set(i); // register it
+                  return candidateSet.get(i);
+                })
             .collect(Collectors.toList()));
 
     usedNodes.put(level, set);
@@ -174,10 +157,7 @@ public class SanFerminHelper<T extends Node> {
     return newList;
   }
 
-
-  /**
-   * Simply pads the binary string id to the exact length = n where N = 2^n
-   */
+  /** Simply pads the binary string id to the exact length = n where N = 2^n */
   private static String leftPadWithZeroes(String originalString, int length) {
     StringBuilder sb = new StringBuilder();
     for (int i = 0; i < length; i++) {
@@ -191,6 +171,4 @@ public class SanFerminHelper<T extends Node> {
     int log2 = MoreMath.log2(setSize);
     return leftPadWithZeroes(Integer.toBinaryString(node.nodeId), log2);
   }
-
 }
-

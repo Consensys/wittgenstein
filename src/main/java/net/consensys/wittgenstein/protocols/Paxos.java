@@ -1,9 +1,5 @@
 package net.consensys.wittgenstein.protocols;
 
-import net.consensys.wittgenstein.core.*;
-import net.consensys.wittgenstein.core.messages.Message;
-import net.consensys.wittgenstein.core.utils.StatsHelper;
-import net.consensys.wittgenstein.server.WParameters;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -11,15 +7,20 @@ import java.util.Random;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.messages.Message;
+import net.consensys.wittgenstein.core.utils.StatsHelper;
+import net.consensys.wittgenstein.server.WParameters;
+
 /**
  * A simple implementation of the Paxos protocol, using the algorithm described here:
  * https://www.the-paper-trail.org/post/2009-02-03-consensus-protocols-paxos/ or here (in
  * french...): https://www.youtube.com/watch?v=cj9DCYac3dw
- * <p>
- * An important point is the latency, as we have just a few nodes. As a result a proposer close to
- * the acceptors will get most of its proposals accepted, while a proposers further than the other
- * will get its proposals rejected. As there are just a few nodes this effect not limited by a kind
- * a law of the large numbers.
+ *
+ * <p>An important point is the latency, as we have just a few nodes. As a result a proposer close
+ * to the acceptors will get most of its proposals accepted, while a proposers further than the
+ * other will get its proposals rejected. As there are just a few nodes this effect not limited by a
+ * kind a law of the large numbers.
  */
 public class Paxos implements Protocol {
   private static final int MAX_VAL = 1000;
@@ -54,14 +55,9 @@ public class Paxos implements Protocol {
     }
   }
 
-
-  /**
-   * Sent by an acceptor at the first round if it refuses the Proposal.
-   */
+  /** Sent by an acceptor at the first round if it refuses the Proposal. */
   static class Reject extends Message<PaxosNode> {
-    /**
-     * The seq sent by the proposer, and refused by the acceptor.
-     */
+    /** The seq sent by the proposer, and refused by the acceptor. */
     final int seqRejected;
     /**
      * The seq already accepted by the acceptor; eg. the proposer will need to send a seq number
@@ -80,19 +76,13 @@ public class Paxos implements Protocol {
     }
   }
 
-
-  /**
-   * Sent by an acceptor during the first round, as a reply to a proposal.
-   */
+  /** Sent by an acceptor during the first round, as a reply to a proposal. */
   static class Agree extends Message<PaxosNode> {
-    /**
-     * The seq number sent by the proposer, and agreed by the acceptor.
-     */
+    /** The seq number sent by the proposer, and agreed by the acceptor. */
     final int yourSeq;
-    /**
-     * The value previously accepted by this acceptor.
-     */
+    /** The value previously accepted by this acceptor. */
     final Integer acceptedSeq;
+
     final Integer acceptedVal;
 
     Agree(int yourSeq, Integer acceptedSeq, Integer acceptedVal) {
@@ -126,9 +116,7 @@ public class Paxos implements Protocol {
     }
   }
 
-  /**
-   * Sent by the acceptor when it accepts the value at the second round.
-   */
+  /** Sent by the acceptor when it accepts the value at the second round. */
   static class Accept extends Message<PaxosNode> {
     final int yourSeq;
 
@@ -142,10 +130,7 @@ public class Paxos implements Protocol {
     }
   }
 
-
-  /**
-   * Sent by the acceptor when it refuses the value during the second round.
-   */
+  /** Sent by the acceptor when it refuses the value during the second round. */
   static class RejectOnCommit extends Message<PaxosNode> {
     final int seqRejected;
     final int seqAccepted;
@@ -160,7 +145,6 @@ public class Paxos implements Protocol {
       ((ProposerNode) to).onRejectOnCommit(seqRejected, seqAccepted);
     }
   }
-
 
   static class PaxosNode extends Node {
     PaxosNode(Random rd, NodeBuilder nb) {
@@ -211,11 +195,18 @@ public class Paxos implements Protocol {
 
     @Override
     public String toString() {
-      return "AcceptorNode{" + "maxAgreed=" + maxAgreed + ", acceptedSeq=" + acceptedSeq
-          + ", acceptedVal=" + acceptedVal + ", agreedTo=" + agreedTo + '}';
+      return "AcceptorNode{"
+          + "maxAgreed="
+          + maxAgreed
+          + ", acceptedSeq="
+          + acceptedSeq
+          + ", acceptedVal="
+          + acceptedVal
+          + ", agreedTo="
+          + agreedTo
+          + '}';
     }
   }
-
 
   class ProposerNode extends PaxosNode {
     final int rank;
@@ -371,8 +362,8 @@ public class Paxos implements Protocol {
       this(3, 3, 1000, null, null);
     }
 
-    public PaxosParameters(int acceptorCount, int proposerCount, int timeout, String nodeBuilder,
-        String latency) {
+    public PaxosParameters(
+        int acceptorCount, int proposerCount, int timeout, String nodeBuilder, String latency) {
       this.acceptorCount = acceptorCount;
       this.proposerCount = proposerCount;
       this.timeout = timeout;
@@ -404,93 +395,109 @@ public class Paxos implements Protocol {
 
   void play() {
     List<StatsHelper.StatsGetter> statsToGet = new ArrayList<>();
-    statsToGet.add(new StatsHelper.SimpleStatsGetter() {
-      @Override
-      public StatsHelper.Stat get(List<? extends Node> liveNodes) {
-        List<Node> proposers =
-            liveNodes.stream().filter(n -> n instanceof ProposerNode).collect(Collectors.toList());
-        return StatsHelper.getStatsOn(proposers, p -> ((ProposerNode) p).doneAt);
-      }
-
-      @Override
-      public String toString() {
-        return "doneAt";
-      }
-    });
-    statsToGet.add(new StatsHelper.SimpleStatsGetter() {
-      @Override
-      public StatsHelper.Stat get(List<? extends Node> liveNodes) {
-        List<Node> proposers =
-            liveNodes.stream().filter(n -> n instanceof ProposerNode).collect(Collectors.toList());
-        return StatsHelper.getStatsOn(proposers, p -> ((ProposerNode) p).timeoutCount);
-      }
-
-      @Override
-      public String toString() {
-        return "timeoutCount";
-      }
-    });
-    statsToGet.add(new StatsHelper.SimpleStatsGetter() {
-      @Override
-      public StatsHelper.Stat get(List<? extends Node> liveNodes) {
-        List<Node> proposers =
-            liveNodes.stream().filter(n -> n instanceof ProposerNode).collect(Collectors.toList());
-        return StatsHelper.getStatsOn(proposers, p -> ((ProposerNode) p).reject1Count);
-      }
-
-      @Override
-      public String toString() {
-        return "reject1Count";
-      }
-    });
-    statsToGet.add(new StatsHelper.SimpleStatsGetter() {
-      @Override
-      public StatsHelper.Stat get(List<? extends Node> liveNodes) {
-        List<Node> proposers =
-            liveNodes.stream().filter(n -> n instanceof ProposerNode).collect(Collectors.toList());
-        return StatsHelper.getStatsOn(proposers, p -> ((ProposerNode) p).reject2Count);
-      }
-
-      @Override
-      public String toString() {
-        return "reject2Count";
-      }
-    });
-    statsToGet.add(new StatsHelper.SimpleStatsGetter() {
-      @Override
-      public StatsHelper.Stat get(List<? extends Node> liveNodes) {
-        return StatsHelper.getStatsOn(liveNodes, Node::getMsgReceived);
-      }
-
-      @Override
-      public String toString() {
-        return "getMsgReceived";
-      }
-    });
-
-    Predicate<Paxos> finalCheck = paxos -> {
-      Integer val = null;
-      for (ProposerNode pn : paxos.proposers) {
-        if (val == null) {
-          val = pn.valueAccepted;
-        } else {
-          if (!val.equals(pn.valueAccepted)) {
-            return false;
+    statsToGet.add(
+        new StatsHelper.SimpleStatsGetter() {
+          @Override
+          public StatsHelper.Stat get(List<? extends Node> liveNodes) {
+            List<Node> proposers =
+                liveNodes.stream()
+                    .filter(n -> n instanceof ProposerNode)
+                    .collect(Collectors.toList());
+            return StatsHelper.getStatsOn(proposers, p -> ((ProposerNode) p).doneAt);
           }
-        }
-      }
-      return true;
-    };
+
+          @Override
+          public String toString() {
+            return "doneAt";
+          }
+        });
+    statsToGet.add(
+        new StatsHelper.SimpleStatsGetter() {
+          @Override
+          public StatsHelper.Stat get(List<? extends Node> liveNodes) {
+            List<Node> proposers =
+                liveNodes.stream()
+                    .filter(n -> n instanceof ProposerNode)
+                    .collect(Collectors.toList());
+            return StatsHelper.getStatsOn(proposers, p -> ((ProposerNode) p).timeoutCount);
+          }
+
+          @Override
+          public String toString() {
+            return "timeoutCount";
+          }
+        });
+    statsToGet.add(
+        new StatsHelper.SimpleStatsGetter() {
+          @Override
+          public StatsHelper.Stat get(List<? extends Node> liveNodes) {
+            List<Node> proposers =
+                liveNodes.stream()
+                    .filter(n -> n instanceof ProposerNode)
+                    .collect(Collectors.toList());
+            return StatsHelper.getStatsOn(proposers, p -> ((ProposerNode) p).reject1Count);
+          }
+
+          @Override
+          public String toString() {
+            return "reject1Count";
+          }
+        });
+    statsToGet.add(
+        new StatsHelper.SimpleStatsGetter() {
+          @Override
+          public StatsHelper.Stat get(List<? extends Node> liveNodes) {
+            List<Node> proposers =
+                liveNodes.stream()
+                    .filter(n -> n instanceof ProposerNode)
+                    .collect(Collectors.toList());
+            return StatsHelper.getStatsOn(proposers, p -> ((ProposerNode) p).reject2Count);
+          }
+
+          @Override
+          public String toString() {
+            return "reject2Count";
+          }
+        });
+    statsToGet.add(
+        new StatsHelper.SimpleStatsGetter() {
+          @Override
+          public StatsHelper.Stat get(List<? extends Node> liveNodes) {
+            return StatsHelper.getStatsOn(liveNodes, Node::getMsgReceived);
+          }
+
+          @Override
+          public String toString() {
+            return "getMsgReceived";
+          }
+        });
+
+    Predicate<Paxos> finalCheck =
+        paxos -> {
+          Integer val = null;
+          for (ProposerNode pn : paxos.proposers) {
+            if (val == null) {
+              val = pn.valueAccepted;
+            } else {
+              if (!val.equals(pn.valueAccepted)) {
+                return false;
+              }
+            }
+          }
+          return true;
+        };
 
     RunMultipleTimes<Paxos> rmt = new RunMultipleTimes<>(this, 10, 5000, statsToGet, finalCheck);
-    List<StatsHelper.Stat> res = rmt.run(protocol -> {
-      for (Node n : protocol.network().allNodes) {
-        if (n instanceof ProposerNode && n.doneAt == 0) {
-          return true;
-        }
-      }
-      return false;
-    });
+    List<StatsHelper.Stat> res =
+        rmt.run(
+            protocol -> {
+              for (Node n : protocol.network().allNodes) {
+                if (n instanceof ProposerNode && n.doneAt == 0) {
+                  return true;
+                }
+              }
+              return false;
+            });
 
     StatsHelper.SimpleStats da = (StatsHelper.SimpleStats) res.get(0);
     StatsHelper.SimpleStats to = (StatsHelper.SimpleStats) res.get(1);
@@ -498,9 +505,19 @@ public class Paxos implements Protocol {
     StatsHelper.SimpleStats r2 = (StatsHelper.SimpleStats) res.get(3);
     StatsHelper.SimpleStats mr = (StatsHelper.SimpleStats) res.get(4);
 
-    System.out
-        .println(this + ", doneAt=(" + da + "), timeout=(" + to + "), rejectRound1=(" + r1
-            + "), rejectRound2=" + r2 + "), msg received=(" + mr + ")");
+    System.out.println(
+        this
+            + ", doneAt=("
+            + da
+            + "), timeout=("
+            + to
+            + "), rejectRound1=("
+            + r1
+            + "), rejectRound2="
+            + r2
+            + "), msg received=("
+            + mr
+            + ")");
   }
 
   public static void main(String... args) {

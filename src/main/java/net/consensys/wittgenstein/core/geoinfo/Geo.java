@@ -3,8 +3,6 @@ package net.consensys.wittgenstein.core.geoinfo;
 import java.util.HashMap;
 import java.util.Map;
 
-
-
 public abstract class Geo {
 
   public abstract Map<String, CityInfo> citiesPosition();
