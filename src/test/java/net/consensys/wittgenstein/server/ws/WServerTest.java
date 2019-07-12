@@ -53,8 +53,8 @@ public class WServerTest {
   public void testGetProtocols() throws Exception {
     HttpEntity<String> entity = new HttpEntity<>(null, headers);
 
-    ResponseEntity<String> response = restTemplate.exchange(createURLWithPort("/protocols"),
-        HttpMethod.GET, entity, String.class);
+    ResponseEntity<String> response = restTemplate
+        .exchange(createURLWithPort("/protocols"), HttpMethod.GET, entity, String.class);
 
     CollectionType javaType =
         objectMapper.getTypeFactory().constructCollectionType(List.class, String.class);
@@ -67,8 +67,8 @@ public class WServerTest {
   public void testBasicAllProtocols() {
     HttpEntity<String> entity = new HttpEntity<>(null, headers);
 
-    ResponseEntity<String> response = restTemplate.exchange(createURLWithPort("/protocols"),
-        HttpMethod.GET, entity, String.class);
+    ResponseEntity<String> response = restTemplate
+        .exchange(createURLWithPort("/protocols"), HttpMethod.GET, entity, String.class);
 
     CollectionType javaType =
         objectMapper.getTypeFactory().constructCollectionType(List.class, String.class);
@@ -83,8 +83,8 @@ public class WServerTest {
 
     for (String p : ps) {
       entity = new HttpEntity<>(null, headers);
-      response = restTemplate.exchange(createURLWithPort("/protocols/" + p), HttpMethod.GET, entity,
-          String.class);
+      response = restTemplate
+          .exchange(createURLWithPort("/protocols/" + p), HttpMethod.GET, entity, String.class);
 
       String jsonString = "";
       try {
@@ -128,9 +128,9 @@ public class WServerTest {
   public void testGetProtocolParameters() throws Exception {
     HttpEntity<String> entity = new HttpEntity<>(null, headers);
 
-    ResponseEntity<String> response =
-        restTemplate.exchange(createURLWithPort("/protocols/" + PingPong.class.getName()),
-            HttpMethod.GET, entity, String.class);
+    ResponseEntity<String> response = restTemplate
+        .exchange(createURLWithPort("/protocols/" + PingPong.class.getName()), HttpMethod.GET,
+            entity, String.class);
 
     WParameters ps = objectMapper.readValue(response.getBody(), WParameters.class);
     Assert.assertTrue(response.getBody(), ps instanceof PingPong.PingPongParameters);
@@ -139,8 +139,8 @@ public class WServerTest {
   private List<Node> allNodeInfo() throws IOException {
     HttpEntity<String> entity = new HttpEntity<>(null, headers);
 
-    ResponseEntity<String> response = restTemplate.exchange(createURLWithPort("/network/nodes"),
-        HttpMethod.GET, entity, String.class);
+    ResponseEntity<String> response = restTemplate
+        .exchange(createURLWithPort("/network/nodes"), HttpMethod.GET, entity, String.class);
     Assert.assertEquals(HttpStatus.OK, response.getStatusCode());
 
     CollectionType javaType =
@@ -151,8 +151,8 @@ public class WServerTest {
   private List<EnvelopeInfo> allMessagesInfo() throws IOException {
     HttpEntity<String> entity = new HttpEntity<>(null, headers);
 
-    ResponseEntity<String> response = restTemplate.exchange(createURLWithPort("/network/messages"),
-        HttpMethod.GET, entity, String.class);
+    ResponseEntity<String> response = restTemplate
+        .exchange(createURLWithPort("/network/messages"), HttpMethod.GET, entity, String.class);
     Assert.assertEquals(HttpStatus.OK, response.getStatusCode());
 
     CollectionType javaType =

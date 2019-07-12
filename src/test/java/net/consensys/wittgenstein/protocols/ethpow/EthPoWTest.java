@@ -153,8 +153,9 @@ public class EthPoWTest {
     p.network.sendAll(new BlockChainNetwork.SendBlock<>(uncle), m);
     p.network().run(1000);
 
-    Assert.assertTrue(
-        p.network.allNodes.get(1).blocksReceivedByHeight.get(uncle.height).contains(uncle));
+    Assert
+        .assertTrue(
+            p.network.allNodes.get(1).blocksReceivedByHeight.get(uncle.height).contains(uncle));
   }
 
   @Test
@@ -401,10 +402,11 @@ public class EthPoWTest {
   }
 
   private void testBadMiner(Class<?> miner) {
-    final double[] pows = new double[] {0.01, 0.50};
+    final double[] pows = new double[] {0.01, 0.1, 0.2, 0.25, 0.3, 0.35, 0.40, 0.45, 0.50};
     final int runs = 2;
-    final int hours = 2;
-    final String nlName = RegistryNetworkLatencies.name(RegistryNetworkLatencies.Type.FIXED, 1000);
+    final int hours = 5;
+    final String nlName =
+        RegistryNetworkLatencies.name(RegistryNetworkLatencies.Type.UNIFORM, 2000);
     final String bdlName = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
     ETHMiner.tryMiner(bdlName, nlName, miner, pows, hours, runs);
   }

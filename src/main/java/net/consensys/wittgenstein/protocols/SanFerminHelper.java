@@ -155,18 +155,19 @@ public class SanFerminHelper<T extends Node> {
     }
 
     // add the rest if not taken already
-    newList.addAll(IntStream
-        .range(0, candidateSet.size())
-        // only take nodes not seen before
-        .filter(node -> !set.get(node))
-        // less than howMany
-        .limit(howMany)
-        // map to the nodes and set them seen
-        .mapToObj(i -> {
-          set.set(i); // register it
-          return candidateSet.get(i);
-        })
-        .collect(Collectors.toList()));
+    newList
+        .addAll(IntStream
+            .range(0, candidateSet.size())
+            // only take nodes not seen before
+            .filter(node -> !set.get(node))
+            // less than howMany
+            .limit(howMany)
+            // map to the nodes and set them seen
+            .mapToObj(i -> {
+              set.set(i); // register it
+              return candidateSet.get(i);
+            })
+            .collect(Collectors.toList()));
 
     usedNodes.put(level, set);
     Collections.shuffle(newList, rd);

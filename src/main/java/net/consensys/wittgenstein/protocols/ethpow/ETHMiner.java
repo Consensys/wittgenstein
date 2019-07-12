@@ -258,8 +258,9 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
   public static void tryMiner(String builderName, String nlName, Class<?> miner, double[] pows,
       int hours, int runs) {
 
-    System.out.println(
-        "miner, hashrate ratio, revenue ratio, revenue, uncle rate, total revenue, avg difficulty");
+    System.out
+        .println(
+            "miner, hashrate ratio, revenue ratio, revenue, uncle rate, total revenue, avg difficulty");
 
     for (double pow : pows) {
       ETHPoW.ETHPoWParameters params =
@@ -298,8 +299,10 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
       avgDiff /= runs;
 
       final double tot = rewards.values().stream().reduce(0.0, Double::sum);
-      Map<Integer, Double> pc = rewards.entrySet().stream().collect(
-          Collectors.toMap(Map.Entry::getKey, k -> (k.getValue() / tot)));
+      Map<Integer, Double> pc = rewards
+          .entrySet()
+          .stream()
+          .collect(Collectors.toMap(Map.Entry::getKey, k -> (k.getValue() / tot)));
 
       String powS = String.format("%.2f", pow);
       String urS = String.format("%.4f", ur);
@@ -307,8 +310,9 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
       String rewS = String.format("%.0f", rewards.get(1) / runs);
       String totS = String.format("%.0f", tot / runs);
 
-      System.out.println(miner.getSimpleName() + "/" + nlName + "/" + hours + "/" + runs + ", "
-          + powS + ", " + rateS + ", " + rewS + ", " + urS + ", " + totS + ", " + avgDiff);
+      System.out
+          .println(miner.getSimpleName() + "/" + nlName + "/" + hours + "/" + runs + ", " + powS
+              + ", " + rateS + ", " + rewS + ", " + urS + ", " + totS + ", " + avgDiff);
     }
   }
 }

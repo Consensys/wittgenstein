@@ -34,10 +34,11 @@ public class CityPopulationTest {
         new NodeBuilder.NodeBuilderWithCity(lr.cities(), new GeoAllCities());
 
     for (Map.Entry<String, CityInfo> cityInfo : nb.getCitiesInfo().entrySet()) {
-      Assert.assertTrue(
-          "wrong cumulative probability for " + cityInfo.getKey() + ":"
-              + cityInfo.getValue().cumulativeProbability,
-          cityInfo.getValue().cumulativeProbability < 1.00001f);
+      Assert
+          .assertTrue(
+              "wrong cumulative probability for " + cityInfo.getKey() + ":"
+                  + cityInfo.getValue().cumulativeProbability,
+              cityInfo.getValue().cumulativeProbability < 1.00001f);
     }
   }
 
@@ -63,8 +64,8 @@ public class CityPopulationTest {
         bigCityCount++;
       }
     }
-    Assert.assertEquals("Bigger cities should be selected more often than smaller", 6,
-        bigCityCount);
+    Assert
+        .assertEquals("Bigger cities should be selected more often than smaller", 6, bigCityCount);
   }
 }
 

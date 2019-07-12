@@ -498,8 +498,9 @@ public class Paxos implements Protocol {
     StatsHelper.SimpleStats r2 = (StatsHelper.SimpleStats) res.get(3);
     StatsHelper.SimpleStats mr = (StatsHelper.SimpleStats) res.get(4);
 
-    System.out.println(this + ", doneAt=(" + da + "), timeout=(" + to + "), rejectRound1=(" + r1
-        + "), rejectRound2=" + r2 + "), msg received=(" + mr + ")");
+    System.out
+        .println(this + ", doneAt=(" + da + "), timeout=(" + to + "), rejectRound1=(" + r1
+            + "), rejectRound2=" + r2 + "), msg received=(" + mr + ")");
   }
 
   public static void main(String... args) {

@@ -126,8 +126,9 @@ public class NodeBuilder implements Cloneable {
     int[] getPos(int rdInt) {
       String city = getCityName(rdInt);
       CityInfo cityInfo = citiesInfo.get(city);
-      return Objects.requireNonNullElseGet(new int[] {cityInfo.mercX, cityInfo.mercY},
-          () -> new int[] {1, 1});
+      return Objects
+          .requireNonNullElseGet(new int[] {cityInfo.mercX, cityInfo.mercY},
+              () -> new int[] {1, 1});
     }
 
     //Weighted Random Selection algorithm

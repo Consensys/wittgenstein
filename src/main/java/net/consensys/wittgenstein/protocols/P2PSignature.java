@@ -518,8 +518,9 @@ public class P2PSignature implements Protocol {
       if (best != null) {
         toVerify.remove(best);
         final BitSet tBest = best;
-        network.registerTask(() -> P2PSigNode.this.updateVerifiedSignatures(tBest),
-            network.time + params.pairingTime * 2, P2PSigNode.this);
+        network
+            .registerTask(() -> P2PSigNode.this.updateVerifiedSignatures(tBest),
+                network.time + params.pairingTime * 2, P2PSigNode.this);
       }
     }
 
@@ -547,8 +548,9 @@ public class P2PSignature implements Protocol {
         if (oo1.cardinality() > 0) {
           // There is at least one signature we don't have yet
           final BitSet tBest = agg;
-          network.registerTask(() -> P2PSigNode.this.updateVerifiedSignatures(tBest),
-              network.time + params.pairingTime * 2, P2PSigNode.this);
+          network
+              .registerTask(() -> P2PSigNode.this.updateVerifiedSignatures(tBest),
+                  network.time + params.pairingTime * 2, P2PSigNode.this);
         }
       }
     }
@@ -576,10 +578,12 @@ public class P2PSignature implements Protocol {
       if (params.withState && !params.sanFermin) {
         network.registerTask(n::sendStateToPeers, 1, n);
       }
-      network.registerConditionalTask(n::sendSigs, 1, params.sigsSendPeriod, n,
-          () -> !(n.peersState.isEmpty()), () -> !n.done);
-      network.registerConditionalTask(n::checkSigs, 1, params.pairingTime, n,
-          () -> !n.toVerify.isEmpty(), () -> !n.done);
+      network
+          .registerConditionalTask(n::sendSigs, 1, params.sigsSendPeriod, n,
+              () -> !(n.peersState.isEmpty()), () -> !n.done);
+      network
+          .registerConditionalTask(n::checkSigs, 1, params.pairingTime, n,
+              () -> !n.toVerify.isEmpty(), () -> !n.done);
     }
 
     if (params.sanFermin) {
@@ -641,8 +645,9 @@ public class P2PSignature implements Protocol {
 
       do {
         ps1.network.runMs(10);
-        s = StatsHelper.getStatsOn(ps1.network.allNodes,
-            n -> ((P2PSigNode) n).verifiedSignatures.cardinality());
+        s = StatsHelper
+            .getStatsOn(ps1.network.allNodes,
+                n -> ((P2PSigNode) n).verifiedSignatures.cardinality());
         curMin.addLine(new Graph.ReportLine(ps1.network.time, s.min));
         curMax.addLine(new Graph.ReportLine(ps1.network.time, s.max));
         curAvg.addLine(new Graph.ReportLine(ps1.network.time, s.avg));
@@ -651,14 +656,17 @@ public class P2PSignature implements Protocol {
       graph.addSerie(curMax);
       graph.addSerie(curAvg);
 
-      System.out.println(
-          "bytes sent: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getBytesSent));
-      System.out.println(
-          "bytes rcvd: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getBytesReceived));
+      System.out
+          .println(
+              "bytes sent: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getBytesSent));
+      System.out
+          .println("bytes rcvd: "
+              + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getBytesReceived));
       System.out
           .println("msg sent: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getMsgSent));
-      System.out.println(
-          "msg rcvd: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getMsgReceived));
+      System.out
+          .println(
+              "msg rcvd: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getMsgReceived));
       System.out
           .println("done at: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getDoneAt));
     }
@@ -713,10 +721,10 @@ public class P2PSignature implements Protocol {
     do {
       ps1.network.runMs(10);
       ps2.network.runMs(10);
-      s1 = StatsHelper.getStatsOn(ps1.network.allNodes,
-          n -> ((P2PSigNode) n).verifiedSignatures.cardinality());
-      s2 = StatsHelper.getStatsOn(ps2.network.allNodes,
-          n -> ((P2PSigNode) n).verifiedSignatures.cardinality());
+      s1 = StatsHelper
+          .getStatsOn(ps1.network.allNodes, n -> ((P2PSigNode) n).verifiedSignatures.cardinality());
+      s2 = StatsHelper
+          .getStatsOn(ps2.network.allNodes, n -> ((P2PSigNode) n).verifiedSignatures.cardinality());
       series1avg.addLine(new Graph.ReportLine(ps1.network.time, s1.avg));
       series2avg.addLine(new Graph.ReportLine(ps2.network.time, s2.avg));
     } while (s1.min != nodeCt);

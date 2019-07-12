@@ -93,8 +93,10 @@ public class CSVLatencyReader {
     //this logic normalizes the naming convention
     //returns Empty if a city is not present in the csv file
 
-    return cities.stream().filter(c -> cityAndLocation.contains(c.replace('+', ' '))).max(
-        Comparator.comparing(String::length));
+    return cities
+        .stream()
+        .filter(c -> cityAndLocation.contains(c.replace('+', ' ')))
+        .max(Comparator.comparing(String::length));
   }
 
   private Path resolvePath(String city) {
@@ -124,15 +126,17 @@ public class CSVLatencyReader {
           float v = latenciesTo.get(cityTo);
           // System.out.println(cityFrom + " ->  " + cityTo + " = " + v);
           if (v <= 1) {
-            System.err.println(
-                "Strange latency for " + cityTo + ", latency is " + v + ", from " + cityFrom);
+            System.err
+                .println(
+                    "Strange latency for " + cityTo + ", latency is " + v + ", from " + cityFrom);
           }
         } else {
           float v = latencyMatrix.get(cityTo).get(cityFrom);
           //System.out.println(cityFrom + " ->  " + cityTo + " = " + v);
           if (v <= 1) {
-            System.err.println(
-                "Strange latency for " + cityTo + ", latency is " + v + ", from " + cityFrom);
+            System.err
+                .println(
+                    "Strange latency for " + cityTo + ", latency is " + v + ", from " + cityFrom);
           }
         }
       }

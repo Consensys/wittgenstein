@@ -76,8 +76,9 @@ public class BlockChainNetwork<TB extends Block, TN extends BlockChainNode<TB>>
     }
 
     if (!small) {
-      System.out.println("block count:" + blockInChain + " on " + Block.getLastBlockId()
-          + ", all tx: " + observer.head.lastTxId);
+      System.out
+          .println("block count:" + blockInChain + " on " + Block.getLastBlockId() + ", all tx: "
+              + observer.head.lastTxId);
     }
     List<BlockChainNode> bps = new ArrayList<>(blockProducers);
     bps.sort(Comparator.comparingInt(o -> o.nodeId));
@@ -88,8 +89,9 @@ public class BlockChainNetwork<TB extends Block, TN extends BlockChainNode<TB>>
         bpTx += b.txCount();
       }
       if (!small | bp.byzantine) {
-        System.out.println(bp + "; " + productionCount.get(bp.nodeId).size() + "; " + bpTx + "; "
-            + bp.msgSent + "; " + bp.msgReceived);
+        System.out
+            .println(bp + "; " + productionCount.get(bp.nodeId).size() + "; " + bpTx + "; "
+                + bp.msgSent + "; " + bp.msgReceived);
 
       }
     }

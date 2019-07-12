@@ -264,8 +264,9 @@ public class SanFerminSignature implements Protocol {
           print("sending back CACHED signature at level " + request.level + " to node "
               + node.binaryId);
           // OPTIMISTIC REPLY
-          this.sendSwapReply(node, Status.OK, request.level,
-              this.signatureCache.get(request.level));
+          this
+              .sendSwapReply(node, Status.OK, request.level,
+                  this.signatureCache.get(request.level));
         } else {
           this.sendSwapReply(node, Status.NO, 0);
           // it's a value we might want to keep for later!
@@ -370,23 +371,24 @@ public class SanFerminSignature implements Protocol {
       this.sentRequests += candidates.size();
 
       SwapRequest r = new SwapRequest(this.currentPrefixLength, this.aggValue);
-      print(" send SwapRequest to " + String.join(" - ",
-          candidates.stream().map(n -> n.binaryId).collect(Collectors.toList())));
+      print(" send SwapRequest to " + String
+          .join(" - ", candidates.stream().map(n -> n.binaryId).collect(Collectors.toList())));
       network.send(r, this, candidates);
 
       int currLevel = this.currentPrefixLength;
-      network.registerTask(() -> {
-        // If we are still waiting on an answer for this level, we
-        // try a new one.
-        if (!SanFerminNode.this.done && SanFerminNode.this.currentPrefixLength == currLevel) {
-          print("TIMEOUT of SwapRequest at level " + currLevel);
-          // that means we haven't got a successful reply for that
-          // level so we try other nodes
-          List<SanFerminNode> newList =
-              this.candidateTree.pickNextNodes(this.currentPrefixLength, params.candidateCount);
-          sendToNodes(newList);
-        }
-      }, network.time + params.replyTimeout, SanFerminNode.this);
+      network
+          .registerTask(() -> {
+            // If we are still waiting on an answer for this level, we
+            // try a new one.
+            if (!SanFerminNode.this.done && SanFerminNode.this.currentPrefixLength == currLevel) {
+              print("TIMEOUT of SwapRequest at level " + currLevel);
+              // that means we haven't got a successful reply for that
+              // level so we try other nodes
+              List<SanFerminNode> newList =
+                  this.candidateTree.pickNextNodes(this.currentPrefixLength, params.candidateCount);
+              sendToNodes(newList);
+            }
+          }, network.time + params.replyTimeout, SanFerminNode.this);
 
     }
 
@@ -473,8 +475,9 @@ public class SanFerminSignature implements Protocol {
      */
     private void print(String s) {
       if (params.verbose)
-        System.out.println("t=" + network.time + ", id=" + this.nodeId + ", lvl="
-            + this.currentPrefixLength + ", sent=" + this.msgSent + " -> " + s);
+        System.out
+            .println("t=" + network.time + ", id=" + this.nodeId + ", lvl="
+                + this.currentPrefixLength + ", sent=" + this.msgSent + " -> " + s);
     }
 
     @Override

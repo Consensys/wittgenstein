@@ -556,9 +556,10 @@ public class GSFSignature implements Protocol {
         sigChecked++;
         sigQueueSize = toVerify.size();
         final SendSigs tBest = best;
-        network.registerTask(
-            () -> GSFNode.this.updateVerifiedSignatures(tBest.from, tBest.level, tBest.sigs),
-            network.time + nodePairingTime, GSFNode.this);
+        network
+            .registerTask(
+                () -> GSFNode.this.updateVerifiedSignatures(tBest.from, tBest.level, tBest.sigs),
+                network.time + nodePairingTime, GSFNode.this);
       }
     }
 
@@ -597,8 +598,9 @@ public class GSFSignature implements Protocol {
       if (!n.isDown()) {
         n.initLevel();
         network.registerPeriodicTask(n::doCycle, 1, params.periodDurationMs, n);
-        network.registerConditionalTask(n::checkSigs, 1, n.nodePairingTime, n,
-            () -> !n.toVerify.isEmpty(), () -> !n.done);
+        network
+            .registerConditionalTask(n::checkSigs, 1, n.nodePairingTime, n,
+                () -> !n.toVerify.isEmpty(), () -> !n.done);
       }
     }
   }
@@ -703,8 +705,8 @@ public class GSFSignature implements Protocol {
 
       @Override
       public StatsHelper.Stat get(List<? extends Node> liveNodes) {
-        return StatsHelper.getStatsOn(liveNodes,
-            n -> ((GSFNode) n).verifiedSignatures.cardinality());
+        return StatsHelper
+            .getStatsOn(liveNodes, n -> ((GSFNode) n).verifiedSignatures.cardinality());
       }
     };
 
@@ -716,8 +718,9 @@ public class GSFSignature implements Protocol {
       ss = StatsHelper.getStatsOn(p12.network().liveNodes(), n -> ((GSFNode) n).sigChecked);
       System.out.println("min/avg/max sigChecked=" + ss.min + "/" + ss.avg + "/" + ss.max);
 
-      ss = StatsHelper.getStatsOn(p12.network().liveNodes(),
-          n -> ((GSFNode) n).sigQueueSize / ((GSFNode) n).sigChecked);
+      ss = StatsHelper
+          .getStatsOn(p12.network().liveNodes(),
+              n -> ((GSFNode) n).sigQueueSize / ((GSFNode) n).sigChecked);
       System.out.println("min/avg/max queueSize=" + ss.min + "/" + ss.avg + "/" + ss.max);
     };
 

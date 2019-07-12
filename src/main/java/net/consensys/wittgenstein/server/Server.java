@@ -67,8 +67,10 @@ public class Server implements IServer {
     s.scan("net.consensys");
 
     String[] beans = bdr.getBeanDefinitionNames();
-    return Arrays.stream(beans).map(n -> bdr.getBeanDefinition(n).getBeanClassName()).collect(
-        Collectors.toList());
+    return Arrays
+        .stream(beans)
+        .map(n -> bdr.getBeanDefinition(n).getBeanClassName())
+        .collect(Collectors.toList());
   }
 
   @Override
@@ -121,8 +123,10 @@ public class Server implements IServer {
 
     s.scan("net.consensys");
     String[] beans = bdr.getBeanDefinitionNames();
-    return Arrays.stream(beans).map(n -> bdr.getBeanDefinition(n).getBeanClassName()).collect(
-        Collectors.toSet());
+    return Arrays
+        .stream(beans)
+        .map(n -> bdr.getBeanDefinition(n).getBeanClassName())
+        .collect(Collectors.toSet());
   }
 
 

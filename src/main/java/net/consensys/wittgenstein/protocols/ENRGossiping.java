@@ -186,8 +186,8 @@ public class ENRGossiping implements Protocol {
       //System.out.println(i.getKey() + ": " + i.getValue().get());
     }
     // Divided by 2 to aim for the expected value
-    network.registerPeriodicTask(this::addNewNode, 0, params.timeToLeave / 8,
-        network.getNodeById(0));
+    network
+        .registerPeriodicTask(this::addNewNode, 0, params.timeToLeave / 8, network.getNodeById(0));
   }
 
   /**
@@ -224,9 +224,11 @@ public class ENRGossiping implements Protocol {
 
       Multimap<String, ETHNode> sortedNodes = selectNodesByCap(
           network.allNodes.stream().filter(e -> !e.isDown()).collect(Collectors.toList()));// generates table for a multimap with all the capabilities and nodes
-      List<String> capKeys =
-          sortedNodes.keySet().stream().filter(this.capabilities::contains).collect(
-              (Collectors.toList()));
+      List<String> capKeys = sortedNodes
+          .keySet()
+          .stream()
+          .filter(this.capabilities::contains)
+          .collect((Collectors.toList()));
       for (String key : capKeys) {
         List<ETHNode> capSet = new ArrayList<>(sortedNodes.get(key));
         if (isPartOfNetwork(capSet)) {
@@ -276,8 +278,9 @@ public class ENRGossiping implements Protocol {
       int startBroadcast = network.time + network.rd.nextInt(params.capGossipTime) + 1;
       if (startBroadcast < startExit) {
         // If you're very unlucky you will die before having really started.
-        network.registerPeriodicTask(this::broadcastCapabilities, startBroadcast,
-            params.capGossipTime, this);
+        network
+            .registerPeriodicTask(this::broadcastCapabilities, startBroadcast, params.capGossipTime,
+                this);
       }
     }
 
@@ -354,14 +357,16 @@ public class ENRGossiping implements Protocol {
     }
 
     void broadcastCapabilities() {
-      network.send(new Record(this, nodeId, 1, 10, 10, records++, this.capabilities), this,
-          this.peers);
+      network
+          .send(new Record(this, nodeId, 1, 10, 10, records++, this.capabilities), this,
+              this.peers);
     }
 
     void changeCap() {
       capabilities = generateCap();
-      network.send(new Record(this, nodeId, 1, 10, 10, records++, this.capabilities), this,
-          this.peers);
+      network
+          .send(new Record(this, nodeId, 1, 10, 10, records++, this.capabilities), this,
+              this.peers);
     }
 
 
@@ -452,9 +457,10 @@ public class ENRGossiping implements Protocol {
       @Override
       public StatsHelper.Stat get(List<? extends Node> liveNodes) {
 
-        List<Node> nodes =
-            liveNodes.stream().filter(n -> n.nodeId > params.NODES && n.doneAt > 1).collect(
-                Collectors.toList());
+        List<Node> nodes = liveNodes
+            .stream()
+            .filter(n -> n.nodeId > params.NODES && n.doneAt > 1)
+            .collect(Collectors.toList());
         if (nodes.isEmpty()) {
           return new StatsHelper.SimpleStats(0, 0, 0);
         }

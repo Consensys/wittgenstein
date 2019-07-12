@@ -235,8 +235,9 @@ public class Snowflake implements Protocol {
       public StatsHelper.Stat get(List<? extends Node> liveNodes) {
 
         int[] colors = getDominantColor(liveNodes);
-        System.out.println("Colored nodes by the numbers: " + colors[0] + " remain uncolored "
-            + colors[1] + " are red " + colors[2] + " are blue.");
+        System.out
+            .println("Colored nodes by the numbers: " + colors[0] + " remain uncolored " + colors[1]
+                + " are red " + colors[2] + " are blue.");
         return StatsHelper.getStatsOn(liveNodes, n -> colors[((SnowflakeNode) n).myColor]);
       }
     };

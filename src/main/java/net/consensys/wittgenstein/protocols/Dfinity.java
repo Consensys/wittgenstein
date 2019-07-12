@@ -233,8 +233,9 @@ public class Dfinity implements Protocol {
 
       List<DfinityNode> attestersS = new ArrayList<>(params.attesters);
       Collections.shuffle(attestersS, network.rd);
-      network.send(new BlockProposal(newBlock), network.time + params.blockConstructionTime, this,
-          attestersS);
+      network
+          .send(new BlockProposal(newBlock), network.time + params.blockConstructionTime, this,
+              attestersS);
       waitForBlockHeight = -1;
     }
 

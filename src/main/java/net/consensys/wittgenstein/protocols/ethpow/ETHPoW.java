@@ -79,8 +79,8 @@ public class ETHPoW implements Protocol {
         Class<?> clazz;
         try {
           clazz = Class.forName(params.byzClassName);
-          cur = (ETHMiner) clazz.getConstructors()[0].newInstance(network, nb, byzHashPower,
-              this.genesis);
+          cur = (ETHMiner) clazz.getConstructors()[0]
+              .newInstance(network, nb, byzHashPower, this.genesis);
         } catch (Throwable e) {
           throw new IllegalArgumentException(e);
         }
@@ -176,7 +176,7 @@ public class ETHPoW implements Protocol {
     }
 
     protected long onCalculateDifficulty(long all, POWBlock father, long diff, long bomb) {
-      return all;//2586243382184844L;
+      return 2586243382184844L;
     }
 
     /**

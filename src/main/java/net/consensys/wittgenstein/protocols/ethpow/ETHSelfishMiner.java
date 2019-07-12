@@ -84,7 +84,8 @@ public class ETHSelfishMiner extends ETHMiner {
 
         // Most of the time toSend.height wil equal rcv.height but there could some exception
         //  (1) if you receive two blocks for the same height from different other miners
-        // That seems to be a bug in the algo as described in the original paper.
+        // The original paper.doesn't care because the second block will be ignored by a bitcoin node
+        //    but in ethereum it can happen if the second block has a greater total difficulty.
         //  (2) if you receive a block but haven't yet received the parent block.
         toSend = privateMinerBlock;
         while (minedToSend.contains(toSend.parent) && toSend.height > rcv.height) {

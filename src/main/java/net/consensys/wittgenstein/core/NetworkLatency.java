@@ -303,8 +303,12 @@ public abstract class NetworkLatency {
           size++;
           cur++;
         }
-        sb.append(s).append(" second").append(s > 1 ? "s: " : ": ").append(size).append(
-            "%, cumulative ");
+        sb
+            .append(s)
+            .append(" second")
+            .append(s > 1 ? "s: " : ": ")
+            .append(size)
+            .append("%, cumulative ");
 
         sb.append(cur).append("%\n");
       }

@@ -909,8 +909,9 @@ public class Handel implements Protocol {
       }
 
       sigQueueSize++;
-      l.toVerifyAgg.add(
-          new SigToVerify(from.nodeId, l.level, receptionRanks[from.nodeId], cs, ssigs.badSig));
+      l.toVerifyAgg
+          .add(
+              new SigToVerify(from.nodeId, l.level, receptionRanks[from.nodeId], cs, ssigs.badSig));
     }
 
     SigToVerify chooseBestFromLevels(List<SigToVerify> bestByLevels) {
@@ -970,8 +971,9 @@ public class Handel implements Protocol {
       sigChecked++;
 
       final SigToVerify fBest = best;
-      network.registerTask(() -> HNode.this.updateVerifiedSignatures(fBest),
-          network.time + nodePairingTime, HNode.this);
+      network
+          .registerTask(() -> HNode.this.updateVerifiedSignatures(fBest),
+              network.time + nodePairingTime, HNode.this);
     }
   }
 
@@ -1122,8 +1124,11 @@ public class Handel implements Protocol {
         for (HNode.HLevel l : n.levels) {
           sb.append("\tlvl").append(l.level).append(" -> ");
           for (HNode expected : l.expectedNodes()) {
-            sb.append(expected.nodeId).append(":").append(n.receptionRanks[expected.nodeId]).append(
-                " - ");
+            sb
+                .append(expected.nodeId)
+                .append(":")
+                .append(n.receptionRanks[expected.nodeId])
+                .append(" - ");
           }
           sb.append("\n");
         }
@@ -1172,8 +1177,9 @@ public class Handel implements Protocol {
       n.initLevel();
       if (!n.isDown()) {
         network.registerPeriodicTask(n::dissemination, n.startAt + 1, params.periodDurationMs, n);
-        network.registerConditionalTask(n::checkSigs, n.startAt + 1, n.nodePairingTime, n,
-            n::hasSigToVerify, () -> !n.done);
+        network
+            .registerConditionalTask(n::checkSigs, n.startAt + 1, n.nodePairingTime, n,
+                n::hasSigToVerify, () -> !n.done);
       }
     }
 

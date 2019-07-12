@@ -98,8 +98,9 @@ public class NetworkLatencyTest {
         } else if (f.cityName.equals(t.cityName)) {
           Assert.assertTrue(l > 0);
         } else {
-          Assert.assertTrue("l=" + l + ", from=" + f.fullToString() + ", to=" + t.fullToString(),
-              l > 0);
+          Assert
+              .assertTrue("l=" + l + ", from=" + f.fullToString() + ", to=" + t.fullToString(),
+                  l > 0);
         }
       }
     }

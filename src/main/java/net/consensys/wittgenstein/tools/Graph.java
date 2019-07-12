@@ -156,8 +156,8 @@ public class Graph {
 
   public void save(File dest) throws IOException {
     Chart chart = createChart();
-    BitmapEncoder.saveBitmapWithDPI(chart, dest.getAbsolutePath(), BitmapEncoder.BitmapFormat.PNG,
-        300);
+    BitmapEncoder
+        .saveBitmapWithDPI(chart, dest.getAbsolutePath(), BitmapEncoder.BitmapFormat.PNG, 300);
   }
 
   public void addSerie(Series s) {

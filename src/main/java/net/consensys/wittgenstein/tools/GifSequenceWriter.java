@@ -60,8 +60,8 @@ public class GifSequenceWriter {
     graphicsControlExtensionNode.setAttribute("disposalMethod", "none");
     graphicsControlExtensionNode.setAttribute("userInputFlag", "FALSE");
     graphicsControlExtensionNode.setAttribute("transparentColorFlag", "FALSE");
-    graphicsControlExtensionNode.setAttribute("delayTime",
-        Integer.toString(timeBetweenFramesMS / 10));
+    graphicsControlExtensionNode
+        .setAttribute("delayTime", Integer.toString(timeBetweenFramesMS / 10));
     graphicsControlExtensionNode.setAttribute("transparentColorIndex", "0");
 
     IIOMetadataNode commentsNode = getNode(root, "CommentExtensions");

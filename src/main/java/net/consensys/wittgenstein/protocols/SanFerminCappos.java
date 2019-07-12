@@ -229,8 +229,9 @@ public class SanFerminCappos implements Protocol {
         if (wantReply && isValueCached) {
           print(
               "sending back CACHED signature at level " + swap.level + " to node " + from.binaryId);
-          this.sendSwap(Collections.singletonList(from), swap.level,
-              this.getBestCachedSig(swap.level), false);
+          this
+              .sendSwap(Collections.singletonList(from), swap.level,
+                  this.getBestCachedSig(swap.level), false);
         } else {
           // it's a value we might want to keep for later!
           boolean isCandidate = this.helper.isCandidate(from, swap.level);
@@ -244,8 +245,9 @@ public class SanFerminCappos implements Protocol {
       }
 
       if (wantReply) {
-        this.sendSwap(Collections.singletonList(from), swap.level,
-            this.totalNumberOfSigs(swap.level), false);
+        this
+            .sendSwap(Collections.singletonList(from), swap.level,
+                this.totalNumberOfSigs(swap.level), false);
       }
 
 
@@ -279,29 +281,32 @@ public class SanFerminCappos implements Protocol {
         return;
       }
       candidates.stream().filter(n -> !helper.isCandidate(n, currentPrefixLength)).forEach(n -> {
-        System.out.println("currentPrefixlength=" + currentPrefixLength + " vs helper.currentLevel="
-            + helper.currentLevel);
+        System.out
+            .println("currentPrefixlength=" + currentPrefixLength + " vs helper.currentLevel="
+                + helper.currentLevel);
         throw new IllegalStateException();
       });
 
       print(" send Swaps to "
           + candidates.stream().map(n -> n.binaryId).collect(Collectors.joining(" - ")));
-      this.sendSwap(candidates, this.currentPrefixLength,
-          this.totalNumberOfSigs(this.currentPrefixLength + 1), true);
+      this
+          .sendSwap(candidates, this.currentPrefixLength,
+              this.totalNumberOfSigs(this.currentPrefixLength + 1), true);
 
       int currLevel = this.currentPrefixLength;
-      network.registerTask(() -> {
-        // If we are still waiting on an answer for this level, we
-        // try a new one.
-        if (!SanFerminNode.this.done && SanFerminNode.this.currentPrefixLength == currLevel) {
-          print("TIMEOUT of SwapRequest at level " + currLevel);
-          // that means we haven't got a successful reply for that
-          // level so we try another node
-          List<SanFerminNode> nextNodes =
-              this.helper.pickNextNodes(this.currentPrefixLength, params.candidateCount);
-          tryNextNodes(nextNodes);
-        }
-      }, network.time + params.timeout, SanFerminNode.this);
+      network
+          .registerTask(() -> {
+            // If we are still waiting on an answer for this level, we
+            // try a new one.
+            if (!SanFerminNode.this.done && SanFerminNode.this.currentPrefixLength == currLevel) {
+              print("TIMEOUT of SwapRequest at level " + currLevel);
+              // that means we haven't got a successful reply for that
+              // level so we try another node
+              List<SanFerminNode> nextNodes =
+                  this.helper.pickNextNodes(this.currentPrefixLength, params.candidateCount);
+              tryNextNodes(nextNodes);
+            }
+          }, network.time + params.timeout, SanFerminNode.this);
 
     }
 
@@ -407,8 +412,9 @@ public class SanFerminCappos implements Protocol {
      */
     private void print(String s) {
       if (params.verbose)
-        System.out.println("t=" + network.time + ", id=" + this.binaryId + ", lvl="
-            + this.currentPrefixLength + ", sent=" + this.msgSent + " -> " + s);
+        System.out
+            .println("t=" + network.time + ", id=" + this.binaryId + ", lvl="
+                + this.currentPrefixLength + ", sent=" + this.msgSent + " -> " + s);
     }
 
     @Override

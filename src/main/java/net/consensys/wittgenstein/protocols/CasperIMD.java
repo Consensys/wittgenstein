@@ -425,8 +425,9 @@ public class CasperIMD implements Protocol {
 
     void createAndSendBlock(int height) {
       head = buildBlock(head, height);
-      network.sendAll(new BlockChainNetwork.SendBlock<>(head),
-          network.time + params.blockConstructionTime, this);
+      network
+          .sendAll(new BlockChainNetwork.SendBlock<>(head),
+              network.time + params.blockConstructionTime, this);
     }
 
     @Override
@@ -473,25 +474,28 @@ public class CasperIMD implements Protocol {
   void init(CasperIMD.ByzBlockProducer byzantineNode) {
     bps.add(byzantineNode);
     network.addNode(byzantineNode);
-    network.registerPeriodicTask(byzantineNode.periodicTask(),
-        params.SLOT_DURATION + byzantineNode.delay,
-        params.SLOT_DURATION * params.blockProducersCount, byzantineNode);
+    network
+        .registerPeriodicTask(byzantineNode.periodicTask(),
+            params.SLOT_DURATION + byzantineNode.delay,
+            params.SLOT_DURATION * params.blockProducersCount, byzantineNode);
 
     for (int i = 1; i < params.blockProducersCount; i++) {
       BlockProducer n = new BlockProducer(genesis);
       bps.add(n);
       network.addNode(n);
-      network.registerPeriodicTask(n.periodicTask(), params.SLOT_DURATION * (i + 1),
-          params.SLOT_DURATION * params.blockProducersCount, n);
+      network
+          .registerPeriodicTask(n.periodicTask(), params.SLOT_DURATION * (i + 1),
+              params.SLOT_DURATION * params.blockProducersCount, n);
     }
 
     for (int i = 0; i < params.attestersCount; i++) {
       Attester n = new Attester(genesis);
       attesters.add(n);
       network.addNode(n);
-      network.registerPeriodicTask(n.periodicTask(),
-          params.SLOT_DURATION * (1 + i % params.cycleLength) + 4000,
-          params.SLOT_DURATION * params.cycleLength, n);
+      network
+          .registerPeriodicTask(n.periodicTask(),
+              params.SLOT_DURATION * (1 + i % params.cycleLength) + 4000,
+              params.SLOT_DURATION * params.cycleLength, n);
     }
 
   }
@@ -667,8 +671,9 @@ public class CasperIMD implements Protocol {
             @Override
             public void run() {
               head = buildBlock(b, th);
-              network.sendAll(new BlockChainNetwork.SendBlock<>(head),
-                  network.time + params.blockConstructionTime, ByzBlockProducerWF.this);
+              network
+                  .sendAll(new BlockChainNetwork.SendBlock<>(head),
+                      network.time + params.blockConstructionTime, ByzBlockProducerWF.this);
             }
           };
           toSend += params.blockProducersCount;

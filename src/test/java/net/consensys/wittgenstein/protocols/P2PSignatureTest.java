@@ -108,17 +108,23 @@ public class P2PSignatureTest {
     Assert.assertEquals(1, ps.compressedSize(fromString("1111 1111")));
     Assert.assertEquals(1, ps.compressedSize(fromString("1111 1111 1111 1111")));
 
-    Assert.assertEquals(3, ps.compressedSize(fromString(
-        "0000 0000 0000 0000  0000 0000 0000 0000 1111 1111 1111 1111  1111 1111 1111 0000")));
+    Assert
+        .assertEquals(3, ps
+            .compressedSize(fromString(
+                "0000 0000 0000 0000  0000 0000 0000 0000 1111 1111 1111 1111  1111 1111 1111 0000")));
 
-    Assert.assertEquals(1, ps.compressedSize(fromString(
-        "0000 0000 0000 0000  0000 0000 0000 0000 1111 1111 1111 1111  1111 1111 1111 1111 0000")));
+    Assert
+        .assertEquals(1, ps
+            .compressedSize(fromString(
+                "0000 0000 0000 0000  0000 0000 0000 0000 1111 1111 1111 1111  1111 1111 1111 1111 0000")));
 
-    Assert.assertEquals(2, ps.compressedSize(fromString(
-        "0000 0000 0000 0000  1111 1111 1111 1111 1111 1111 1111 1111  1111 1111 1111 1111 0000")));
+    Assert
+        .assertEquals(2, ps
+            .compressedSize(fromString(
+                "0000 0000 0000 0000  1111 1111 1111 1111 1111 1111 1111 1111  1111 1111 1111 1111 0000")));
 
-    Assert.assertEquals(3,
-        ps.compressedSize(fromString("1111 1111 1111 1111  1111 1111 1111 0000")));
+    Assert
+        .assertEquals(3, ps.compressedSize(fromString("1111 1111 1111 1111  1111 1111 1111 0000")));
 
     Assert.assertEquals(1, ps.compressedSize(fromString("1111 1111 0000")));
     Assert.assertEquals(3, ps.compressedSize(fromString("0001 1111 1111 0000")));
