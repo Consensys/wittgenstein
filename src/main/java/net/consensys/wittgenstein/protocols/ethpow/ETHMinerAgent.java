@@ -27,7 +27,7 @@ public class ETHMinerAgent extends ETHMiner {
 
   public static class ETHPowWithAgent extends ETHPoW {
 
-    private ETHPowWithAgent(ETHPoWParameters params) {
+    public ETHPowWithAgent(ETHPoWParameters params) {
       super(params);
     }
 

@@ -136,6 +136,7 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
     if (inMining == null) {
       startNewMining(head);
     }
+    assert inMining != null;
     if (network.rd.nextDouble() < threshold) {
       onFoundNewBlock(inMining);
       return true;

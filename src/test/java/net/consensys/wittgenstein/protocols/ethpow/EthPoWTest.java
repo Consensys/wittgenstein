@@ -402,7 +402,7 @@ public class EthPoWTest {
   }
 
   private void testBadMiner(Class<?> miner) {
-    final double[] pows = new double[] {0.01, 0.1, 0.2, 0.25, 0.3, 0.35, 0.40, 0.45, 0.50};
+    final double[] pows = new double[] {0.01, 0.50};
     final int runs = 2;
     final int hours = 5;
     final String nlName =

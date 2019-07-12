@@ -176,7 +176,7 @@ public class ETHPoW implements Protocol {
     }
 
     protected long onCalculateDifficulty(long all, POWBlock father, long diff, long bomb) {
-      return 2586243382184844L;
+      return all;//2586243382184844L;
     }
 
     /**
