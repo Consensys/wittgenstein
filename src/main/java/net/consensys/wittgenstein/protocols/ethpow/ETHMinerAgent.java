@@ -17,7 +17,7 @@ import net.consensys.wittgenstein.core.RegistryNodeBuilders;
  * 2) Build the package
  * <pre>{@code
  * gradle clean shadowJar
- * }
+ * }</pre>
  *
  * 3) You can now use this code from python, for example with:
  * <pre>{@code
