@@ -69,4 +69,8 @@ public class ETHMinerAgent extends ETHMiner {
 
     return new ETHPowWithAgent(params);
   }
+
+  public static void main(String... args) {
+    create(0.25);
+  }
 }

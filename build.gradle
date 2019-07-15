@@ -1,7 +1,7 @@
 
 plugins {
     id "com.diffplug.gradle.spotless" version "3.23.1"
-    id "com.github.johnrengelman.shadow" version "4.0.1"
+    id "com.github.johnrengelman.shadow" version "4.0.4"
 }
 
 apply plugin: 'java'
@@ -36,6 +36,11 @@ spotless {
       trimTrailingWhitespace()
       endWithNewline()
     }
+}
+
+
+shadowJar {
+   archiveName = "wittgenstein-all.jar"
 }
 
 test {
