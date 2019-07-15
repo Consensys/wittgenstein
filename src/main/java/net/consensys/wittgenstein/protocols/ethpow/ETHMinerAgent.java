@@ -6,22 +6,24 @@ import net.consensys.wittgenstein.core.RegistryNetworkLatencies;
 import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 
 /**
+ * To call this agent from python: 1) Install the right tools:
  *
- * To call this agent from python:
- * 1) Install the right tools:
  * <pre>{@code
  * sudo pip3 install Cython
  * sudo pip3 install pyjnius
  * }</pre>
  *
  * 2) Build the package
+ *
  * <pre>{@code
  * gradle clean shadowJar
  * }</pre>
  *
  * 3) You can now use this code from python, for example with:
+ *
  * <pre>{@code
- * import jnius_config jnius_config.set_classpath('.', './build/libs/wittgenstein-all.jar')
+ * import jnius_config
+ * jnius_config.set_classpath('.', './build/libs/wittgenstein-all.jar')
  * from jnius import autoclass
  * p = autoclass('net.consensys.wittgenstein.protocols.ethpow.ETHMinerAgent').create(0.25)
  * p.init()
