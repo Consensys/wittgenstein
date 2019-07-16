@@ -111,7 +111,7 @@ public class NodeDrawer implements Closeable {
   }
 
   private BufferedImage loadWM() throws IOException {
-    String imgName = "resources/world-map-2000px.png";
+    String imgName = getClass().getClassLoader().getResource("world-map-2000px.png").getFile();
     Path p = Paths.get(imgName);
     BufferedImage bi = ImageIO.read(p.toFile());
     return bi;
