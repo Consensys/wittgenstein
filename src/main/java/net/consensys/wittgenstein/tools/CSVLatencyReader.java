@@ -1,11 +1,9 @@
 package net.consensys.wittgenstein.tools;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.Reader;
+import java.io.*;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 
 import org.apache.commons.csv.CSVFormat;
@@ -13,14 +11,57 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 
 public class CSVLatencyReader {
-  private static final Path DATA_PATH = Paths.get("resources/Data");
+  static final String name = "Data";
   private static final String CSV_FILE_SUFFIX = "Ping.csv";
   private static final float SAME_CITY_LATENCY = 30f;
   private final Map<String, Map<String, Float>> latencyMatrix;
   private List<String> cities;
 
+  private static List<String> getResourceFiles(String path) {
+    List<String> filenames = new ArrayList<>();
+
+    try (InputStream in = getResourceAsStream(path);
+        BufferedReader br = new BufferedReader(new InputStreamReader(in))) {
+      String resource;
+
+      while ((resource = br.readLine()) != null) {
+        filenames.add(resource);
+      }
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+
+    return filenames;
+  }
+
+  private static InputStream getResourceAsStream(String resource) {
+    final InputStream in = getContextClassLoader().getResourceAsStream(resource);
+
+    return in == null ? CSVLatencyReader.class.getResourceAsStream(resource) : in;
+  }
+
+  private static ClassLoader getContextClassLoader() {
+    return Thread.currentThread().getContextClassLoader();
+  }
+
+  private File getExistingResource(String fileName) {
+    URL url = this.getClass().getClassLoader().getResource(fileName);
+    File f;
+    if (url != null) {
+      try {
+        f = new File(url.toURI());
+      } catch (Exception e) {
+        f = new File(url.getPath());
+      }
+    } else {
+      throw new IllegalStateException("url null");
+    }
+
+    return f;
+  }
+
   public CSVLatencyReader() {
-    this.cities = dirNames(DATA_PATH);
+    this.cities = dirNames(getExistingResource(name));
     this.latencyMatrix = makeLatencyMatrix();
     Set<String> citiesWitMissingMeasurements = citiesWithMissingMeasurements(latencyMatrix);
     latencyMatrix.keySet().removeAll(citiesWitMissingMeasurements);
@@ -99,15 +140,12 @@ public class CSVLatencyReader {
   }
 
   private Path resolvePath(String city) {
-    return DATA_PATH.resolve(city).resolve(city + CSV_FILE_SUFFIX);
+    // return DATA_PATH.resolve(city).resolve(city + CSV_FILE_SUFFIX);
+    return getExistingResource(name).toPath().resolve(city).resolve(city + CSV_FILE_SUFFIX);
   }
 
-  private static List<String> dirNames(Path path) {
-    File file = path.toFile();
-    if (file == null || file.list() == null) {
-      throw new IllegalStateException("Can't get file for path=" + path);
-    }
-    List<String> res = Arrays.asList(file.list());
+  private static List<String> dirNames(File path) {
+    List<String> res = new ArrayList<>(getResourceFiles(name));
     Collections.sort(res);
     return res;
   }

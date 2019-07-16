@@ -4,10 +4,8 @@ import static net.consensys.wittgenstein.core.Node.MAX_X;
 import static net.consensys.wittgenstein.core.Node.MAX_Y;
 
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.Reader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -19,7 +17,7 @@ public class GeoAllCities extends Geo {
   private final Map<String, CityInfo> citiesPosition;
   private final double mapWidth;
   private final double mapHeight;
-  private static final Path CITY_PATH = Paths.get("resources/cities.csv");
+  private static final String CITY_PATH = "cities.csv";
 
   public GeoAllCities() {
     this.mapWidth = MAX_X;
@@ -31,11 +29,12 @@ public class GeoAllCities extends Geo {
     return new HashMap<>(citiesPosition);
   }
 
-  private Map<String, CityInfo> readCityInfo(Path path) {
+  private Map<String, CityInfo> readCityInfo(String path) {
     Map<String, int[]> cities = new HashMap<>();
 
     int totalPopulation = 0;
-    try (Reader reader = Files.newBufferedReader(path);
+    try (Reader reader =
+            new InputStreamReader(getClass().getClassLoader().getResourceAsStream(path));
         CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withHeader())) {
 
       for (CSVRecord csvRecord : csvParser) {
