@@ -1,57 +1,47 @@
-
 plugins {
     id "com.diffplug.gradle.spotless" version "3.23.1"
     id "com.github.johnrengelman.shadow" version "4.0.4"
 }
 
-apply plugin: 'java'
-sourceCompatibility = 1.9
-targetCompatibility = 1.9
+subprojects {
+    apply plugin: 'java'
+    sourceCompatibility = 1.9
+    targetCompatibility = 1.9
 
-apply plugin: 'maven'
-apply plugin: 'com.diffplug.gradle.spotless'
+    apply plugin: 'maven'
+    apply plugin: 'com.diffplug.gradle.spotless'
 
-repositories {
-    mavenLocal()
-    maven { url "http://repo.maven.apache.org/maven2" }
-}
-
-dependencies {
-    implementation 'org.knowm.xchart:xchart:3.5.2'
-    implementation "org.apache.commons:commons-csv:1.5"
-    implementation "org.springframework:spring-beans:5.1.4.RELEASE"
-    implementation "org.springframework:spring-context:5.1.4.RELEASE"
-    implementation "org.springframework.boot:spring-boot-starter-web:2.1.2.RELEASE"
-    compile 'com.google.guava:guava:27.1-jre'
-
-    testImplementation "org.springframework.boot:spring-boot-starter-test:2.1.2.RELEASE"
-    testImplementation 'junit:junit:4.12'
-}
-
-spotless {
-    java {
-      removeUnusedImports()
-      googleJavaFormat('1.7')
-      importOrder 'tech.pegasys', 'java', ''
-      trimTrailingWhitespace()
-      endWithNewline()
+    repositories {
+        mavenLocal()
+        maven { url "http://repo.maven.apache.org/maven2" }
     }
-}
 
+    dependencies {
+        implementation "org.springframework.boot:spring-boot-starter-web:2.1.2.RELEASE"
+        implementation 'com.google.guava:guava:27.1-jre'
 
-shadowJar {
-   archiveName = "wittgenstein-all.jar"
-}
+        testImplementation 'junit:junit:4.12'
+    }
 
-test {
-    // We need to limit the memory to be on par with CircleCI
-    maxHeapSize = "2500m"
-    afterSuite { desc, result ->
-        if (!desc.parent)
-            println("${result.resultType} " +
-                    "(${result.testCount} tests, " +
-                    "${result.successfulTestCount} successes, " +
-                    "${result.failedTestCount} failures, " +
-                    "${result.skippedTestCount} skipped)")
+    spotless {
+        java {
+            removeUnusedImports()
+            googleJavaFormat('1.7')
+            trimTrailingWhitespace()
+            endWithNewline()
+        }
+    }
+
+    test {
+        // We need to limit the memory to be on par with CircleCI
+        maxHeapSize = "2500m"
+        afterSuite { desc, result ->
+            if (!desc.parent)
+                println("${result.resultType} " +
+                        "(${result.testCount} tests, " +
+                        "${result.successfulTestCount} successes, " +
+                        "${result.failedTestCount} failures, " +
+                        "${result.skippedTestCount} skipped)")
+        }
     }
 }

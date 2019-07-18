@@ -1,0 +1,10 @@
+plugins {
+    id "com.github.johnrengelman.shadow"}
+
+dependencies {
+    implementation project(':core')
+}
+
+shadowJar {
+    archiveName = "wittgenstein-all.jar"
+}

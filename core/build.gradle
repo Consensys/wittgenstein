@@ -1,0 +1,6 @@
+
+dependencies {
+    implementation 'org.knowm.xchart:xchart:3.5.2'
+    implementation "org.apache.commons:commons-csv:1.5"
+}
+
