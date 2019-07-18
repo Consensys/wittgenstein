@@ -1,13 +1,69 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Hello</title>
+    <title>Wittgenstein</title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+    <script type="text/javascript">
 
-    <a href="w/protocols">get all protocols available</a></br>
-    <a href="w/protocols/net.consensys.wittgenstein.protocols.PingPong">parameters for PingPong</a></br>
+var rootURL = "http://127.0.0.1:8080/w";
+
+function getProtocols() {
+    $.ajax({
+        type: 'GET',
+        url: rootURL + '/protocols',
+        dataType: "json", // data type of response
+        success: renderProtocols
+    });
+}
+
+function getProtocolParameters(proto) {
+    $.ajax({
+        type: 'GET',
+        url: rootURL + '/protocols/' + proto,
+        dataType: "json", // data type of response
+        success: renderProtocolParameters
+    });
+}
+
+function renderProtocols(data) {
+	// JAX-RS serializes an empty list as null, and a 'collection of one' as an object (not an 'array of one')
+	var list = data == null ? [] : data[1];
+
+	$('#protocolsList li').remove();
+	$.each(list, function(index, proto) {
+		$('#protocolsList').append(
+		'<li><a href="#" onClick="getProtocolParameters(\''+proto+'\')">' + proto + '</a></li>');
+	});
+}
+
+
+function renderProtocolParameters(data) {
+    $('#protocolParameters li').remove();
+	for (var key in data) {
+        if (data.hasOwnProperty(key)) {
+            console.log(key + " -> " + data[key]);
+        }
+        $('#protocolParameters').append('<li>'+key+':'+ data[key] + '</li>');
+    }
+}
+
+
+var new_num = 40; // global variable
+jQuery(document).ready(function(){
+    getProtocols();
+});
+</script>
 </head>
 <body>
+
+<div class="leftArea">
+    <ul id="protocolsList"></ul>
+</div>
+
+
+<div class="rightArea">
+    <ul id="protocolParameters"></ul>
+</div>
 
 </body>
 </html>
