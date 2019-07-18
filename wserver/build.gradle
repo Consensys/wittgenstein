@@ -1,3 +1,11 @@
+plugins {
+    id "com.github.johnrengelman.shadow"
+}
+
+shadowJar {
+    archiveName = "wittgenstein-ws.jar"
+}
+
 
 dependencies {
     implementation project(':core')
@@ -8,3 +16,4 @@ dependencies {
 
     testImplementation "org.springframework.boot:spring-boot-starter-test:2.1.2.RELEASE"
 }
+
