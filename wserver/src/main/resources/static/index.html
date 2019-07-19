@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<meta charset="utf-8"/>
 <html lang="en">
 <head>
     <title>Wittgenstein</title>
@@ -8,6 +9,7 @@
 var rootURL = "http://127.0.0.1:8080/w";
 
 function getProtocols() {
+    console.log("getProtocols");
     $.ajax({
         type: 'GET',
         url: rootURL + '/protocols',
@@ -17,16 +19,66 @@ function getProtocols() {
 }
 
 function getProtocolParameters(proto) {
+    console.log("getProtocolParameters");
     $.ajax({
         type: 'GET',
         url: rootURL + '/protocols/' + proto,
         dataType: "json", // data type of response
-        success: renderProtocolParameters
+        success: function (data, textStats, jqXHR) {
+            renderProtocolParameters(proto, data, textStats, jqXHR);
+        }
+
+    });
+}
+
+function initProtocol(proto, params) {
+    console.log("initProtocol(" + proto +", " + params + ")");
+    $.ajax({
+        type: 'POST',
+        contentType: "application/json",
+        url: rootURL + '/network/init/' + proto,
+        data: params,
+        dataType: "json",
+        success: updateNetworkStatus,
+        failure: rendBadNetworkStatus
+    });
+}
+
+function runMs(duration) {
+    console.log("runMs(" + duration + ")");
+    $.ajax({
+        type: 'POST',
+        contentType: 'application/json',
+        url: rootURL + '/network/runMs/' + duration,
+        dataType: "json",
+        success: updateNetworkStatus,
+        failure: rendBadNetworkStatus
+    });
+}
+
+function updateNetworkStatus(data) {
+    console.log("updateNetworkStatus");
+    $.ajax({
+        type: 'GET',
+        url: rootURL + '/network/time',
+        dataType: "json",
+        success: renderNetworkStatus
+    });
+    updateNodeStatus(0)
+}
+
+function updateNodeStatus(nodeId) {
+    console.log("updateNodeStatus("+nodeId+")");
+    $.ajax({
+        type: 'GET',
+        url: rootURL + '/network/nodes/' + nodeId,
+        dataType: "json",
+        success: renderNodeStatus
     });
 }
 
 function renderProtocols(data) {
-	// JAX-RS serializes an empty list as null, and a 'collection of one' as an object (not an 'array of one')
+    console.log("renderProtocols");
 	var list = data == null ? [] : data[1];
 
 	$('#protocolsList li').remove();
@@ -36,33 +88,80 @@ function renderProtocols(data) {
 	});
 }
 
-
-function renderProtocolParameters(data) {
+function renderProtocolParameters(proto, data, textStats, jqXHR) {
+    ps = JSON.stringify(data);
+    console.log("renderProtocolParameters("+proto+", "+ ps+")");
+    onClick = "initProtocol(\'" + proto + "\', \'' + ps + '\')";
     $('#protocolParameters li').remove();
 	for (var key in data) {
-        if (data.hasOwnProperty(key)) {
-            console.log(key + " -> " + data[key]);
-        }
-        $('#protocolParameters').append('<li>'+key+':'+ data[key] + '</li>');
+        $('#protocolParameters').append('<li>'+key+': '+ data[key] + '</li>');
+    }
+    $('#protocolParameters').append('<li><a href="#" onClick="alert(\'Changing these parameters will be possible a day\')">change these parameters</a></li>');
+    $('#protocolParameters').append('<li><a href="#" onClick="' + onClick +'">init</a></li>');
+}
+
+function renderNodeStatus(data) {
+    nodeId = data.nodeId
+    ps = JSON.stringify(data);
+    console.log("renderNodeStatus("+ps+")");
+    onClickP = "updateNodeStatus("+ (nodeId-1)+")";
+    onClickN = "updateNodeStatus("+ (nodeId+1)+")";
+
+    $('#nodeStatus li').remove();
+    if (nodeId > 0) {
+        $('#nodeStatus').append('<li><a href="#" onClick="'+onClickP+'">previous node</a></li>');
+    }
+    $('#nodeStatus').append('<li><a href="#" onClick="'+onClickN+'">next node</a></li>');
+
+	for (var key in data) {
+        $('#nodeStatus').append('<li>'+key+': '+ data[key] + '</li>');
     }
 }
 
+function renderNetworkStatus(data) {
+    console.log("renderNetworkStatus(" + data+ ")");
+    $('#networkStatus li').remove();
+    $('#networkStatus').append('<li>time: ' + data+ 'ms ('+ (data/1000)+'s)</li>');
+    $('#networkStatus').append('<li><a href="#" onClick="runMs(1)">run for 1ms</a></li>');
+    $('#networkStatus').append('<li><a href="#" onClick="runMs(10)">run for 10ms</a></li>');
+    $('#networkStatus').append('<li><a href="#" onClick="runMs(100)">run for 100ms</a></li>');
+    $('#networkStatus').append('<li><a href="#" onClick="runMs(1000)">run for 1s</a></li>');
+    $('#networkStatus').append('<li><a href="#" onClick="runMs(10000)">run for 10s</a></li>');
+    $('#networkStatus').append('<li><a href="#" onClick="runMs(100000)">run for 100s</a></li>');
+}
 
-var new_num = 40; // global variable
+function rendBadNetworkStatus(xhr, status, error) {
+    console.log("rendBadNetworkStatus");
+    renderNetworkStatus("{msg: 'something went wrong'}");
+}
+
 jQuery(document).ready(function(){
     getProtocols();
 });
-</script>
+
+    </script>
 </head>
 <body>
 
+Available protocols<br/>
 <div class="leftArea">
     <ul id="protocolsList"></ul>
 </div>
 
 
+Parameters for the selected protocol<br/>
 <div class="rightArea">
     <ul id="protocolParameters"></ul>
+</div>
+
+Network status<br/>
+<div class="bottomArea">
+    <ul id="networkStatus"></ul>
+</div>
+
+Node status<br/>
+<div class="bottomArea">
+    <ul id="nodeStatus"></ul>
 </div>
 
 </body>
