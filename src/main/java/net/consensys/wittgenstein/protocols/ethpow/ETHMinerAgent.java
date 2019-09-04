@@ -64,10 +64,6 @@ public class ETHMinerAgent extends ETHMiner {
     return false;
   }
 
-  protected boolean includeUncle(ETHPoW.POWBlock uncle) {
-    return true;
-  }
-
   @Override
   protected void onMinedBlock(ETHPoW.POWBlock mined) {
     if (privateMinerBlock != null && mined.height <= privateMinerBlock.height) {
@@ -79,30 +75,13 @@ public class ETHMinerAgent extends ETHMiner {
     int deltaP = privateHeight() - (otherMinersHead.height - 1);
     if (deltaP == 0 && depth(privateMinerBlock) == 2) {
       otherMinersHead = best(otherMinersHead, privateMinerBlock);
+      sendNMined();
+    } else if (depth(privateMinerBlock) == 3) {
       sendAllMined();
     }
-
     startNewMining(privateMinerBlock);
   }
-  // Modified
-  private void onFoundNewBlock(ETHPoW.POWBlock mined) {
-    ETHPoW.POWBlock oldHead = head;
-    inMining = null;
 
-    if (sendMinedBlock(mined)) {
-      sendBlock(mined);
-    } else {
-      minedToSend.add(mined);
-    }
-    if (!super.onBlock(mined)) {
-      throw new IllegalStateException("invalid mined block:" + mined);
-    }
-
-    if (mined == head) {
-      onNewHead(oldHead, mined);
-    }
-    onMinedBlock(mined);
-  }
   /** Helper function: send a mined block. */
   protected void sendBlock(ETHPoW.POWBlock mined) {
     if (mined.producer != this) {
@@ -117,12 +96,12 @@ public class ETHMinerAgent extends ETHMiner {
     minedToSend.remove(mined);
   }
 
-  /** Helper function: send all the blocks mined not yet sent. */
-  protected void sendAllMined() {
+  /** Helper function: send N blocks mined not yet sent. */
+  protected void sendNMined() {
     List<ETHPoW.POWBlock> all = new ArrayList<>(minedToSend);
-    minedToSend.clear();
-    for (ETHPoW.POWBlock b : all) {
-      sendMinedBlock(b);
+    for (int i = 0; i < action; i++) {
+      sendMinedBlock(all.get(i));
+      minedToSend.remove(all.get(i));
     }
   }
 
