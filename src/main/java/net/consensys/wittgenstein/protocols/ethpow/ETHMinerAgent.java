@@ -1,12 +1,12 @@
 package net.consensys.wittgenstein.protocols.ethpow;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import net.consensys.wittgenstein.core.BlockChainNetwork;
 import net.consensys.wittgenstein.core.NodeBuilder;
 import net.consensys.wittgenstein.core.RegistryNetworkLatencies;
 import net.consensys.wittgenstein.core.RegistryNodeBuilders;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * To call this agent from python: 1) Install the right tools:
@@ -39,10 +39,10 @@ public class ETHMinerAgent extends ETHMiner {
   private ETHPoW.POWBlock privateMinerBlock;
   private ETHPoW.POWBlock otherMinersHead = genesis;
   public int action = 0;
+
   public void setAction(int action) {
     this.action = action;
   }
-
 
   public ETHMinerAgent(
       BlockChainNetwork<ETHPoW.POWBlock, ETHMiner> network,
@@ -51,13 +51,14 @@ public class ETHMinerAgent extends ETHMiner {
       ETHPoW.POWBlock genesis) {
     super(network, nb, hashPowerGHs, genesis);
   }
+
   public int privateHeight() {
     return privateMinerBlock == null ? 0 : privateMinerBlock.height;
   }
 
   @Override
   protected boolean sendMinedBlock(ETHPoW.POWBlock mined) {
-    if(action <= 1 && action>=3){
+    if (action <= 1 && action >= 3) {
       return true;
     }
     return false;
@@ -71,7 +72,7 @@ public class ETHMinerAgent extends ETHMiner {
   protected void onMinedBlock(ETHPoW.POWBlock mined) {
     if (privateMinerBlock != null && mined.height <= privateMinerBlock.height) {
       throw new IllegalStateException(
-              "privateMinerBlock=" + privateMinerBlock + ", mined=" + mined);
+          "privateMinerBlock=" + privateMinerBlock + ", mined=" + mined);
     }
     privateMinerBlock = mined;
 
@@ -83,7 +84,7 @@ public class ETHMinerAgent extends ETHMiner {
 
     startNewMining(privateMinerBlock);
   }
-  //Modified
+  // Modified
   private void onFoundNewBlock(ETHPoW.POWBlock mined) {
     ETHPoW.POWBlock oldHead = head;
     inMining = null;
@@ -106,7 +107,7 @@ public class ETHMinerAgent extends ETHMiner {
   protected void sendBlock(ETHPoW.POWBlock mined) {
     if (mined.producer != this) {
       throw new IllegalArgumentException(
-              "logic error: you're not the producer of this block" + mined);
+          "logic error: you're not the producer of this block" + mined);
     }
     int sendTime = network.time + 1 + extraSendDelay(mined);
     if (sendTime < 1) {
@@ -124,6 +125,7 @@ public class ETHMinerAgent extends ETHMiner {
       sendMinedBlock(b);
     }
   }
+
   public static class ETHPowWithAgent extends ETHPoW {
 
     public ETHPowWithAgent(ETHPoWParameters params) {
