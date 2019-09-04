@@ -9,7 +9,7 @@ import net.consensys.wittgenstein.core.NodeBuilder;
 @SuppressWarnings("WeakerAccess")
 public class ETHMiner extends ETHPoW.ETHPoWNode {
   protected int hashPowerGHs; // hash power in GH/s
-  private ETHPoW.POWBlock inMining;
+  protected ETHPoW.POWBlock inMining;
   protected Set<ETHPoW.POWBlock> minedToSend = new HashSet<>();
   private double threshold;
   UncleCmp uncleCmp = new UncleCmp();
@@ -116,7 +116,7 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
   }
 
   /** Mine for 10 milliseconds. */
-  boolean mine10ms() {
+  public boolean mine10ms() {
     if (inMining == null) {
       startNewMining(head);
     }
@@ -191,7 +191,7 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
   }
 
   @Override
-  public final boolean onBlock(ETHPoW.POWBlock b) {
+  public boolean onBlock(ETHPoW.POWBlock b) {
     ETHPoW.POWBlock oldHead = head;
     if (!super.onBlock(b)) {
       return false;
