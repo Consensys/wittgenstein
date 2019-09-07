@@ -162,7 +162,7 @@ public class Handel implements Protocol {
     }
   }
 
-  public interface CongestionWindow {
+  public interface ScoringWindow {
     int newSize(int currentSize, boolean correctVerification);
 
     String name();
@@ -179,10 +179,10 @@ public class Handel implements Protocol {
     public final int initial; // initial window size
     public final int minimum; // minimum window size at all times
     public final int maximum; // maximum window size at all times
-    // what type "congestion" algorithm do we want to us
-    public final CongestionWindow congestion;
-    public final boolean
-        moving; // is it a moving window or not -> moving sets the beginning of the window to the
+    // what type windows change algorithm do we want to us
+    public final ScoringWindow window;
+    public final boolean moving;
+    // is it a moving window or not -> moving sets the beginning of the window to the
     // lowest-rank unverified signature
 
     /** WindowParameters for FIXED window */
@@ -192,8 +192,8 @@ public class Handel implements Protocol {
 
     /** WindowParameters for VARIABLE window */
     public WindowParameters(
-        int initial, int minimum, int maximum, CongestionWindow congestion, boolean moving) {
-      this(VARIABLE, 0, false, initial, minimum, maximum, congestion, moving);
+        int initial, int minimum, int maximum, ScoringWindow window, boolean moving) {
+      this(VARIABLE, 0, false, initial, minimum, maximum, window, moving);
     }
 
     private WindowParameters(
@@ -203,13 +203,13 @@ public class Handel implements Protocol {
         int initial,
         int minimum,
         int maximum,
-        CongestionWindow congestion,
+        ScoringWindow window,
         boolean moving) {
       this.useScore = useScore;
       this.initial = initial;
       this.minimum = minimum;
       this.maximum = maximum;
-      this.congestion = congestion;
+      this.window = window;
       this.moving = moving;
       this.type = type;
       this.size = size;
@@ -219,7 +219,7 @@ public class Handel implements Protocol {
       if (this.type.equals(FIXED)) {
         return currentWindowSize;
       }
-      int updatedSize = congestion.newSize(currentWindowSize, correct);
+      int updatedSize = window.newSize(currentWindowSize, correct);
       if (updatedSize > maximum) {
         return maximum;
       } else if (updatedSize < minimum) {
@@ -229,10 +229,10 @@ public class Handel implements Protocol {
     }
   }
 
-  static class CongestionLinear implements CongestionWindow {
+  static class ScoringLinear implements ScoringWindow {
     public final int delta; // window is increased/decreased by delta
 
-    public CongestionLinear(int delta) {
+    public ScoringLinear(int delta) {
       this.delta = delta;
     }
 
@@ -254,11 +254,11 @@ public class Handel implements Protocol {
     }
   }
 
-  static class CongestionExp implements CongestionWindow {
+  static class ScoringExp implements ScoringWindow {
     public final double increaseFactor;
     public final double decreaseFactor;
 
-    public CongestionExp(double increaseFactor, double decreaseFactor) {
+    public ScoringExp(double increaseFactor, double decreaseFactor) {
       this.increaseFactor = increaseFactor;
       this.decreaseFactor = decreaseFactor;
     }
@@ -313,8 +313,15 @@ public class Handel implements Protocol {
   static class SendSigs extends Message<HNode> {
     final int level;
     final BitSet sigs;
+    /**
+     * A flag to say that you have finished this level and that the receiver should not contact you.
+     * It could also be used to signal that you reached the threshold or you're exiting for any
+     * reason, i.e. the receiver is wasting his time if he tries to contact you
+     */
     final boolean levelFinished;
+
     final int size;
+    /** For simulating a bad signature that will be detected during the verification. */
     final boolean badSig;
 
     public SendSigs(BitSet sigs, HNode.HLevel l) {
@@ -375,10 +382,8 @@ public class Handel implements Protocol {
     final BitSet blacklist = new BitSet();
 
     /** Window-related fields */
-    int currWindowSize =
-        params.window == null
-            ? 0
-            : params.window.initial; // what's the size of the window currently
+    int currWindowSize = params.window == null ? 0 : params.window.initial;
+    // what's the size of the window currently
 
     boolean suicidalAttackDone;
     final HiddenByzantine hiddenByzantine;
@@ -441,7 +446,8 @@ public class Handel implements Protocol {
       final int size;
 
       @JsonSerialize(converter = ListNodeConverter.class)
-      final List<HNode> peers = new ArrayList<>(); // peers, sorted in emission order
+      final List<HNode> peers;
+      // peers, sorted in emission order
 
       // The peers when we have all signatures for this level.
       final BitSet waitedSigs = new BitSet(); // 1 for the signatures we should get at this level
@@ -469,10 +475,7 @@ public class Handel implements Protocol {
        */
       int posInLevel = 0;
 
-      /**
-       * Build a level 0 object. At level 0 need (and have) only our own signature. We have only one
-       * peer to contact.
-       */
+      /** Build a level 0 object. At level 0 we need (and have) only our own signature. */
       HLevel() {
         level = 0;
         size = 1;
@@ -480,6 +483,7 @@ public class Handel implements Protocol {
         lastAggVerified.set(nodeId);
         verifiedIndSignatures.set(nodeId);
         totalIncoming.set(nodeId);
+        peers = Collections.emptyList();
       }
 
       /** Build a level on top of the previous one. */
@@ -493,6 +497,7 @@ public class Handel implements Protocol {
         waitedSigs.andNot(allPreviousNodes);
         totalOutgoing.set(nodeId);
         size = waitedSigs.cardinality();
+        peers = new ArrayList<>(size);
       }
 
       /**
@@ -503,6 +508,7 @@ public class Handel implements Protocol {
         return size;
       }
 
+      /** The list of nodes we're waiting signatures from in this level */
       public List<HNode> expectedNodes() {
         List<HNode> expected = new ArrayList<>(size);
 
@@ -567,12 +573,11 @@ public class Handel implements Protocol {
         return res;
       }
 
-      void buildEmissionList(List<HNode>[][][] emissions) {
-        assert peers.isEmpty();
-        if (emissions[nodeId][level] == null) {
-          return;
+      void buildEmissionList(List<HNode>[] emissions) {
+        if (!peers.isEmpty()) {
+          throw new IllegalStateException();
         }
-        for (List<HNode> ranks : emissions[nodeId][level]) {
+        for (List<HNode> ranks : emissions) {
           if (ranks != null && !ranks.isEmpty()) {
             if (ranks.size() > 1) {
               Collections.shuffle(ranks, network.rd);
@@ -1176,7 +1181,7 @@ public class Handel implements Protocol {
     for (int setDown = 0; setDown < nodesDown; ) {
       int down = rd.nextInt(nodeCount);
       if (down != 1 && !badNodes.get(down)) {
-        // We keep the node 1 up to help on debugging
+        // We always keep the node 1 up to help on debugging
         badNodes.set(down);
         setDown++;
       }
@@ -1216,66 +1221,31 @@ public class Handel implements Protocol {
     List<HNode> an = new ArrayList<>(network.allNodes);
     int nLevel = MoreMath.log2(params.nodeCount);
 
-    Shuffler s;
-    switch (params.shuffle) {
-      case HandelParameters.SHUFFLE_SQUARE:
-        s = new ShufflingSquare(an);
-        break;
-      case HandelParameters.SHUFFLE_XOR:
-        s = (receiver, sender) -> receiver.nodeId ^ sender.nodeId;
-        break;
-      default:
-        throw new IllegalStateException("unknown shuffler: " + params.shuffle);
-    }
+    // The shuffler will give us the reception rank.
+    Shuffler s = new ShufflingSquare(an);
 
-    List<HNode>[][][] emissionList = new List[params.nodeCount][nLevel + 1][];
-
-    for (HNode receiver : an) {
-      BitSet rankCheck = new BitSet();
-      for (HNode sender : an) {
-        if (receiver == sender || sender.isDown()) {
-          continue;
-        }
-
-        int level = receiver.level(sender);
-
-        if (emissionList[sender.nodeId][level] == null) {
-          if (params.shuffle.equals(HandelParameters.SHUFFLE_XOR)) {
-            emissionList[sender.nodeId][level] = new List[receiver.levels.get(level).size];
-          } else {
-            emissionList[sender.nodeId][level] = new List[params.nodeCount];
-          }
-        }
-
-        int rank = s.rank(receiver, sender);
-        if (params.shuffle.equals(HandelParameters.SHUFFLE_XOR)) {
-          if (rankCheck.get(rank)) {
-            throw new IllegalStateException("same rank at " + rank);
-          }
-          rankCheck.set(rank);
-
-          rank -= receiver.levels.get(level).size;
-          if (rank < 0) {
-            throw new IllegalStateException("rank=" + rank);
-          }
-          receiver.receptionRanks[sender.nodeId] = rank;
-        }
-        List<HNode> levelList = emissionList[sender.nodeId][level][rank];
-        if (levelList == null) {
-          levelList = new ArrayList<>();
-          emissionList[sender.nodeId][level][rank] = levelList;
-        }
-        levelList.add(receiver);
+    // Now we can build the emission lists from the emission rank
+    // Rule: you're contacting first the peers that gave you a good reception rank
+    for (HNode sender : network.allNodes) {
+      if (sender.isDown()) {
+        continue; // No need to build an emission for a node that won't emit.
       }
-    }
 
-    // debugEmissionList(nLevel,emissionList);
-
-    for (HNode n : network.allNodes) {
-      if (!n.isDown()) {
-        for (HNode.HLevel l : n.levels) {
-          l.buildEmissionList(emissionList);
+      //
+      for (HNode.HLevel l : sender.levels) {
+        List<HNode>[] emissionList =
+            new List[params.nodeCount]; // ranks are [0..nodeCount], whatever the level
+        for (HNode receiver : l.expectedNodes()) {
+          int recRank = s.rank(receiver, sender);
+          List<HNode> levelList = emissionList[recRank];
+          if (levelList == null) {
+            levelList = new ArrayList<>(1);
+            emissionList[recRank] = levelList;
+          }
+          levelList.add(receiver);
+          receiver.receptionRanks[sender.nodeId] = recRank;
         }
+        l.buildEmissionList(emissionList);
       }
     }
   }

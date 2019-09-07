@@ -1,5 +1,7 @@
 package net.consensys.wittgenstein.protocols.ethpow;
 
+import java.util.Collections;
+import java.util.Comparator;
 import net.consensys.wittgenstein.core.BlockChainNetwork;
 import net.consensys.wittgenstein.core.NodeBuilder;
 import net.consensys.wittgenstein.core.RegistryNetworkLatencies;
@@ -40,6 +42,31 @@ public class ETHMinerAgent extends ETHMiner {
       int hashPowerGHs,
       ETHPoW.POWBlock genesis) {
     super(network, nb, hashPowerGHs, genesis);
+  }
+
+  protected boolean sendMinedBlock(ETHPoW.POWBlock mined) {
+    return false; // C'est depuis Python qu'on décide d'envoyer un block ou non.
+  }
+
+  public int blocksToSend() {
+    return minedToSend.size();
+  }
+
+  public void actionSendOldestBlockMined() {
+    ETHPoW.POWBlock oldest =
+        Collections.min(
+            minedToSend,
+            new Comparator<ETHPoW.POWBlock>() {
+              @Override
+              public int compare(ETHPoW.POWBlock o1, ETHPoW.POWBlock o2) {
+                return Integer.compare(o1.proposalTime, o2.proposalTime);
+              }
+            });
+    sendBlock(oldest);
+  }
+
+  public void actionSwitchToOfficialHead() {
+    startNewMining(head);
   }
 
   public static class ETHPowWithAgent extends ETHPoW {

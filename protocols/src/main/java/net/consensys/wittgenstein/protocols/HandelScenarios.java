@@ -77,17 +77,28 @@ public class HandelScenarios {
                 ? NetworkLatency.NetworkLatencyByCity.class.getSimpleName()
                 : NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
 
-    double treshold = (1.0 - (deadRatio + 0.01));
+    int deadN = (int) (nodes * deadRatio);
+    double tresholdR = (1.0 - deadRatio) * .99; // (1.0 - (deadRatio + 0.01));
+    int treshold = (int) (nodes * tresholdR);
+    if (treshold > nodes - deadN) {
+      treshold = nodes - deadN;
+    } else if (treshold < 2) {
+      treshold = 2;
+    }
+    if (treshold > nodes - deadN) {
+      throw new IllegalArgumentException(
+          "treshold=" + treshold + ", live nodes=" + (nodes - deadN));
+    }
 
     Handel.HandelParameters p =
         new Handel.HandelParameters(
             nodes,
-            (int) (nodes * treshold),
+            treshold,
             4,
             50,
             periodTime,
             10,
-            (int) (nodes * deadRatio),
+            deadN,
             RegistryNodeBuilders.name(loc, false, tor),
             lat,
             desynchronizedStart,
@@ -96,7 +107,7 @@ public class HandelScenarios {
             bestLevelFunction,
             null);
 
-    p.window = new Handel.WindowParameters(16, 1, 128, new Handel.CongestionExp(2, 4), true);
+    p.window = new Handel.WindowParameters(16, 1, 128, new Handel.ScoringExp(2, 4), true);
     return p;
   }
 
@@ -230,7 +241,7 @@ public class HandelScenarios {
               null,
               bads);
 
-      params.window = new Handel.WindowParameters(1, 16, 128, new Handel.CongestionExp(2, 4), true);
+      params.window = new Handel.WindowParameters(1, 16, 128, new Handel.ScoringExp(2, 4), true);
 
       BasicStats bs = run(500, params);
       System.out.println(n + " nodes, " + bads + " byzantines: " + bs);
@@ -327,8 +338,7 @@ public class HandelScenarios {
     int[] maximum = new int[] {4096};
     int[] initials = new int[] {4096};
     boolean[] movings = new boolean[] {false};
-    Handel.CongestionWindow[] congestions =
-        new Handel.CongestionWindow[] {new Handel.CongestionExp(2, 4)};
+    Handel.ScoringWindow[] congestions = new Handel.ScoringWindow[] {new Handel.ScoringExp(2, 4)};
 
     Boolean[][] byzs =
         new Boolean[][] {
@@ -340,7 +350,7 @@ public class HandelScenarios {
           for (int init : initials) {
             for (int min : minimum) {
               for (int max : maximum) {
-                for (Handel.CongestionWindow c : congestions) {
+                for (Handel.ScoringWindow c : congestions) {
                   Handel.HandelParameters params =
                       defaultParams(n, dr, 0.20, null, null, byz[0], byz[1], null, null);
                   Handel.WindowParameters windowParam =
@@ -388,11 +398,11 @@ public class HandelScenarios {
     // boolean[] movings = new boolean[] {false, true};
     boolean[] movings = new boolean[] {false};
 
-    Handel.CongestionWindow[] congestions =
-        new Handel.CongestionWindow[] {
-          new Handel.CongestionLinear(1),
-          // new Handel.CongestionLinear(10),
-          new Handel.CongestionExp(1.5, 2), // new Handel.CongestionExp(2, 2),};
+    Handel.ScoringWindow[] congestions =
+        new Handel.ScoringWindow[] {
+          new Handel.ScoringLinear(1),
+          // new Handel.ScoringLinear(10),
+          new Handel.ScoringExp(1.5, 2), // new Handel.ScoringExp(2, 2),};
         };
     // Boolean[][] byzs = new Boolean[][] {new Boolean[] {false, false}, new Boolean[] {true,
     // false},
@@ -401,7 +411,7 @@ public class HandelScenarios {
     for (int init : initials) {
       for (int min : minimum) {
         for (int max : maximum) {
-          for (Handel.CongestionWindow c : congestions) {
+          for (Handel.ScoringWindow c : congestions) {
             for (double dr : deadRatios) {
               for (boolean moving : movings) {
                 for (Boolean[] byz : byzs) {
@@ -463,11 +473,11 @@ public class HandelScenarios {
     int[] maximums = new int[] {80, 1024};
     int[] initials = new int[] {10};
     boolean[] movings = new boolean[] {false};
-    Handel.CongestionWindow[] congestions =
-        new Handel.CongestionWindow[] {
-          new Handel.CongestionLinear(5),
-          // new Handel.CongestionLinear(10),
-          new Handel.CongestionExp(1.5, 2), // new Handel.CongestionExp(2, 2),};
+    Handel.ScoringWindow[] congestions =
+        new Handel.ScoringWindow[] {
+          new Handel.ScoringLinear(5),
+          // new Handel.ScoringLinear(10),
+          new Handel.ScoringExp(1.5, 2), // new Handel.ScoringExp(2, 2),};
         };
 
     CSVFormatter formatter =
@@ -561,7 +571,7 @@ public class HandelScenarios {
 
     System.out.println("Variable WIndows");
     // 3. variable window
-    for (Handel.CongestionWindow c : congestions) {
+    for (Handel.ScoringWindow c : congestions) {
       for (double tor : tors) {
         for (double dr : deadRatios) {
           for (Boolean[] byz : byzs) {
@@ -595,10 +605,10 @@ public class HandelScenarios {
                               entry("doneMax", bs.doneAtMax));
 
                       row.putAll(staticEntries);
-                      if (c instanceof Handel.CongestionLinear) {
-                        row.put("linear", ((Handel.CongestionLinear) c).delta);
+                      if (c instanceof Handel.ScoringLinear) {
+                        row.put("linear", ((Handel.ScoringLinear) c).delta);
                       } else {
-                        Handel.CongestionExp exp = (Handel.CongestionExp) c;
+                        Handel.ScoringExp exp = (Handel.ScoringExp) c;
                         row.putAll(
                             Map.ofEntries(
                                 entry("exp_inc", exp.increaseFactor),
@@ -681,9 +691,9 @@ public class HandelScenarios {
     Graph.Series mA = new Graph.Series("average number of messages");
     Graph.Series mM = new Graph.Series("maximum number of messages");
 
-    for (int n = 128; n <= 4096; n *= 2) {
+    for (int n = 64; n <= 4096 * 2; n *= 2) {
       Handel.HandelParameters params =
-          defaultParams(n, null, null, null, null, null, null, null, null);
+          defaultParams(n, 0.0, null, null, null, null, null, null, null);
       BasicStats bs = run(5, params);
       System.out.println(n + " nodes: " + bs);
 
@@ -710,6 +720,64 @@ public class HandelScenarios {
             "number of messages");
     graph.addSerie(mA);
     graph.addSerie(mM);
+    graph.save(new File("handel_log_msg.png"));
+  }
+
+  private void logErrors() throws IOException {
+    System.out.println("\nBehavior when the number of nodes increases - " + defaultParams());
+    System.out.println(" We expect log performances and polylog number of messages.");
+
+    double[] errors = new double[] {0, 0.01, 0.25, 0.5, 0.75, .90};
+    Graph.Series[] tAs = new Graph.Series[errors.length];
+    Graph.Series[] mAs = new Graph.Series[errors.length];
+
+    for (int i = 0; i < errors.length; i++) {
+      int e = (int) (errors[i] * 100);
+      tAs[i] = new Graph.Series("average time, errors=" + e + "%");
+      mAs[i] = new Graph.Series("average number of messages, errors=" + e + "%");
+    }
+
+    for (int i = 0; i < errors.length; i++) {
+      double e = errors[i];
+      for (int n = 64; n <= 4096 * 4; n *= 2) {
+        Handel.HandelParameters params =
+            defaultParams(
+                n,
+                errors[i],
+                null,
+                null,
+                100,
+                null,
+                null,
+                null,
+                RegistryNodeBuilders.Location.CITIES);
+        BasicStats bs = run(n > 9000 ? 2 : n < 1000 ? 10 : 5, params);
+        System.out.println(n + " nodes: " + e + bs);
+
+        tAs[i].addLine(new Graph.ReportLine(n, bs.doneAtAvg));
+        mAs[i].addLine(new Graph.ReportLine(n, bs.msgRcvAvg));
+      }
+    }
+
+    Graph graph =
+        new Graph(
+            "time vs. number of nodes" + defaultParams().toString(),
+            "number of nodes",
+            "time in milliseconds");
+
+    for (int i = 0; i < errors.length; i++) {
+      graph.addSerie(tAs[i]);
+    }
+    graph.save(new File("handel_log_time.png"));
+
+    graph =
+        new Graph(
+            "messages vs. number of nodes" + defaultParams().toString(),
+            "number of nodes",
+            "number of messages");
+    for (int i = 0; i < errors.length; i++) {
+      graph.addSerie(mAs[i]);
+    }
     graph.save(new File("handel_log_msg.png"));
   }
 
@@ -856,10 +924,10 @@ public class HandelScenarios {
 
     int n = 4096;
     int r = 5;
-    for (int a : new int[] {0, 5, 10, 20, 40}) {
+    for (int accCallCount : new int[] {0, 5, 10, 20, 40}) {
       Handel.HandelParameters params =
           defaultParams(n, dead, tor, null, null, null, null, null, loc);
-      params.acceleratedCallsCount = a;
+      params.acceleratedCallsCount = accCallCount;
 
       if (!print) {
         print = true;
@@ -868,10 +936,10 @@ public class HandelScenarios {
       }
 
       BasicStats bs = run(r, params);
-      System.out.println(n + " ;" + a + ";" + bs.msgRcvAvg + "; " + bs.doneAtAvg);
+      System.out.println(n + " ;" + accCallCount + ";" + bs.msgRcvAvg + "; " + bs.doneAtAvg);
 
-      tA.addLine(new Graph.ReportLine(a, bs.doneAtAvg));
-      mA.addLine(new Graph.ReportLine(a, bs.msgRcvAvg));
+      tA.addLine(new Graph.ReportLine(accCallCount, bs.doneAtAvg));
+      mA.addLine(new Graph.ReportLine(accCallCount, bs.msgRcvAvg));
     }
 
     Graph graph =
@@ -894,6 +962,7 @@ public class HandelScenarios {
 
   public static void allScenarios() throws IOException {
     HandelScenarios scenario = new HandelScenarios();
+
     scenario.logStartTime(RegistryNodeBuilders.Location.AWS, 0.01, 0.01);
     scenario.logContactedNode(RegistryNodeBuilders.Location.AWS, 0.01, 0.01);
     scenario.logPeriodTime(RegistryNodeBuilders.Location.AWS, 0.01, 0.01);
@@ -916,7 +985,8 @@ public class HandelScenarios {
   }
 
   public static void main(String... args) throws IOException {
+    // allScenarios();
     HandelScenarios scenario = new HandelScenarios();
-    scenario.logDelayedStart(RegistryNodeBuilders.Location.CITIES, 0.2, 0.00);
+    scenario.logErrors();
   }
 }
