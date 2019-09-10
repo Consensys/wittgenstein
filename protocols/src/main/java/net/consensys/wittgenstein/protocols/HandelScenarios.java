@@ -1,10 +1,10 @@
 package net.consensys.wittgenstein.protocols;
 
-import static java.util.Map.entry;
-
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import net.consensys.wittgenstein.core.NetworkLatency;
@@ -12,7 +12,6 @@ import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 import net.consensys.wittgenstein.core.RunMultipleTimes;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
-import net.consensys.wittgenstein.tools.CSVFormatter;
 import net.consensys.wittgenstein.tools.Graph;
 import net.consensys.wittgenstein.tools.NodeDrawer;
 
@@ -107,7 +106,7 @@ public class HandelScenarios {
             bestLevelFunction,
             null);
 
-    p.window = new Handel.WindowParameters(16, 1, 128, new Handel.ScoringExp(2, 4), true);
+    p.window = new Handel.WindowParameters();
     return p;
   }
 
@@ -241,8 +240,7 @@ public class HandelScenarios {
               null,
               bads);
 
-      params.window = new Handel.WindowParameters(1, 16, 128, new Handel.ScoringExp(2, 4), true);
-
+      params.window = new Handel.WindowParameters();
       BasicStats bs = run(500, params);
       System.out.println(n + " nodes, " + bads + " byzantines: " + bs);
     }
@@ -275,357 +273,6 @@ public class HandelScenarios {
       BasicStats bs = run(5, params);
       System.out.println(n + " nodes, " + dr + " byzantines: " + bs);
     }
-  }
-
-  private void byzantineWindowEvaluation() {
-    int n = 2048;
-    System.out.println("\nSEvaluation with FIXED window size, n;" + n);
-
-    double[] deadRatios = new double[] {0.50};
-    // Boolean[][] byzs = new Boolean[][] {new Boolean[] {false, false},
-    //    new Boolean[] {true, false}, new Boolean[] {false, true}};
-    Boolean[][] byzs = new Boolean[][] {new Boolean[] {true, false}};
-    Boolean[] scorings = new Boolean[] {true, false};
-    for (Boolean[] byz : byzs) {
-      for (Boolean score : scorings) {
-        for (int w : new int[] {40, 80, 160}) {
-          for (double dr : deadRatios) {
-            Handel.HandelParameters params =
-                defaultParams(n, dr, null, null, null, byz[0], byz[1], null, null);
-            Handel.WindowParameters windowParam =
-                new Handel.WindowParameters(w, false, score); // no moving window
-            params.window = windowParam;
-            BasicStats bs = run(3, params);
-            System.out.println(
-                "WindowEvaluation: Window: "
-                    + w
-                    + ", DeadRatio: "
-                    + dr
-                    + " suicideBiz="
-                    + byz[0]
-                    + ", hiddenByz="
-                    + byz[1]
-                    + " => "
-                    + bs);
-          }
-        }
-      }
-
-      System.out.println("\nSEvaluation with using ranking in the list *only*");
-      for (double dr : deadRatios) {
-        Handel.HandelParameters params =
-            defaultParams(n, dr, null, null, null, byz[0], byz[1], null, null);
-        BasicStats bs = run(3, params);
-        System.out.println(
-            "ByzantineSuicide: DeadRatio: "
-                + dr
-                + " suicideBiz="
-                + byz[0]
-                + ", hiddenByz="
-                + byz[1]
-                + " => "
-                + bs);
-      }
-    }
-  }
-
-  private void byzantineWithVariableWindow2() {
-    int n = 4096;
-    System.out.println("\nSEvaluation with priority list of variable size; with n=" + n);
-
-    double[] deadRatios = new double[] {0.01, 0.10, 0.20, 0.5};
-    int[] minimum = new int[] {4096};
-    int[] maximum = new int[] {4096};
-    int[] initials = new int[] {4096};
-    boolean[] movings = new boolean[] {false};
-    Handel.ScoringWindow[] congestions = new Handel.ScoringWindow[] {new Handel.ScoringExp(2, 4)};
-
-    Boolean[][] byzs =
-        new Boolean[][] {
-          new Boolean[] {false, false}, new Boolean[] {false, true}, new Boolean[] {true, false}
-        };
-    for (Boolean[] byz : byzs) {
-      for (double dr : deadRatios) {
-        for (boolean moving : movings) {
-          for (int init : initials) {
-            for (int min : minimum) {
-              for (int max : maximum) {
-                for (Handel.ScoringWindow c : congestions) {
-                  Handel.HandelParameters params =
-                      defaultParams(n, dr, 0.20, null, null, byz[0], byz[1], null, null);
-                  Handel.WindowParameters windowParam =
-                      new Handel.WindowParameters(init, min, max, c, moving);
-                  params.window = windowParam;
-                  BasicStats bs = run(5, params);
-
-                  String attack = ", att=no";
-                  attack = params.byzantineSuicide ? ", att=suicide" : attack;
-                  attack = params.hiddenByzantine ? ", att=hidden" : attack;
-
-                  System.out.println(
-                      "WindowEvaluation: initial="
-                          + init
-                          + ",min="
-                          + min
-                          + ",max="
-                          + max
-                          + ",cong="
-                          + c
-                          + ",movingWindow="
-                          + moving
-                          + ", deadRatio="
-                          + dr
-                          + attack
-                          + "   "
-                          + bs);
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  private void byzantineWithVariableWindow() {
-    int n = 2048;
-    System.out.println("\nSEvaluation with priority list of variable size; with n=" + n);
-
-    double[] deadRatios = new double[] {0, 0.50};
-    int[] minimum = new int[] {1};
-    int[] maximum = new int[] {64};
-    int[] initials = new int[] {10};
-    // boolean[] movings = new boolean[] {false, true};
-    boolean[] movings = new boolean[] {false};
-
-    Handel.ScoringWindow[] congestions =
-        new Handel.ScoringWindow[] {
-          new Handel.ScoringLinear(1),
-          // new Handel.ScoringLinear(10),
-          new Handel.ScoringExp(1.5, 2), // new Handel.ScoringExp(2, 2),};
-        };
-    // Boolean[][] byzs = new Boolean[][] {new Boolean[] {false, false}, new Boolean[] {true,
-    // false},
-    //   new Boolean[] {false, true}};
-    Boolean[][] byzs = new Boolean[][] {new Boolean[] {true, false}};
-    for (int init : initials) {
-      for (int min : minimum) {
-        for (int max : maximum) {
-          for (Handel.ScoringWindow c : congestions) {
-            for (double dr : deadRatios) {
-              for (boolean moving : movings) {
-                for (Boolean[] byz : byzs) {
-                  Handel.HandelParameters params =
-                      defaultParams(n, dr, null, null, null, byz[0], byz[1], null, null);
-                  Handel.WindowParameters windowParam =
-                      new Handel.WindowParameters(init, min, max, c, moving);
-                  params.window = windowParam;
-                  BasicStats bs = run(2, params);
-
-                  System.out.println(
-                      "initial="
-                          + init
-                          + ",min="
-                          + min
-                          + ",max="
-                          + max
-                          + ",cong="
-                          + c
-                          + ",movingWindow="
-                          + moving
-                          + ", deadRatio="
-                          + dr
-                          + ",suicide="
-                          + byz[0]
-                          + ",hidden="
-                          + byz[1]
-                          + "\t=>\t "
-                          + bs);
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  private void fullComparison() {
-    int n = 4;
-    int nbRounds = 2;
-    double[] deadRatios = new double[] {0, 0.50};
-    double[] tors = new double[] {0.20};
-    Boolean[][] byzs =
-        new Boolean[][] {
-          new Boolean[] {false, false}, new Boolean[] {true, false}, new Boolean[] {false, true}
-        };
-    String[] chooseLevels =
-        new String[] {
-          Handel.HandelParameters.BESTLEVEL_RANDOM, Handel.HandelParameters.BESTLEVEL_SCORE
-        };
-
-    // fixed-length window
-    int[] windows = new int[] {64, 1024};
-    boolean[] useScore = new boolean[] {true};
-
-    // variable-length window
-    int[] minimums = new int[] {1};
-    int[] maximums = new int[] {80, 1024};
-    int[] initials = new int[] {10};
-    boolean[] movings = new boolean[] {false};
-    Handel.ScoringWindow[] congestions =
-        new Handel.ScoringWindow[] {
-          new Handel.ScoringLinear(5),
-          // new Handel.ScoringLinear(10),
-          new Handel.ScoringExp(1.5, 2), // new Handel.ScoringExp(2, 2),};
-        };
-
-    CSVFormatter formatter =
-        new CSVFormatter(
-            Arrays.asList(
-                "n",
-                "technique",
-                "tor",
-                "deadRatio",
-                "byLevels",
-                "suicide",
-                "hidden",
-                "window",
-                "useScore", // constant length window
-                "minimum",
-                "maximum",
-                "initial",
-                "moving",
-                "linear",
-                "exp_inc",
-                "exp_dec",
-                // variable-length window
-                "doneMin",
-                "doneAvg",
-                "doneMax")); // general stats
-
-    Handel.HandelParameters params = null;
-    BasicStats bs;
-    System.out.println(" Naive Runs");
-    for (double tor : tors) {
-      for (double dr : deadRatios) {
-        for (Boolean[] byz : byzs) {
-
-          for (String byLevels : chooseLevels) {
-            // 1. naive run
-            params = defaultParams(n, null, tor, null, 0, byz[0], byz[1], byLevels, null);
-            bs = run(nbRounds, params);
-            formatter.add(
-                Map.ofEntries(
-                    entry("n", n),
-                    entry("tor", tor),
-                    entry("deadRatio", dr),
-                    entry("byLevels", byLevels),
-                    entry("suicide", byz[0]),
-                    entry("hidden", byz[1]),
-                    entry("technique", "ranking"),
-                    entry("doneMin", bs.doneAtMin),
-                    entry("doneAvg", bs.doneAtAvg),
-                    entry("doneMax", bs.doneAtMax)));
-          }
-        }
-      }
-    }
-
-    System.out.println(" Fixed Windows ");
-
-    // 2. fixed window
-    for (double tor : tors) {
-      for (double dr : deadRatios) {
-        for (Boolean[] byz : byzs) {
-
-          for (String byLevels : chooseLevels) {
-            for (int window : windows) {
-              for (boolean score : useScore) {
-
-                params = defaultParams(n, null, tor, null, 0, byz[0], byz[1], byLevels, null);
-                Handel.WindowParameters windowParam =
-                    new Handel.WindowParameters(window, false, score); // no moving window
-                params.window = windowParam;
-                bs = run(nbRounds, params);
-                formatter.add(
-                    Map.ofEntries(
-                        entry("n", n),
-                        entry("tor", tor),
-                        entry("deadRatio", dr),
-                        entry("byLevels", byLevels),
-                        entry("suicide", byz[0]),
-                        entry("hidden", byz[1]),
-                        entry("technique", "fixed"),
-                        entry("window", window),
-                        entry("useScore", score),
-                        entry("doneMin", bs.doneAtMin),
-                        entry("doneAvg", bs.doneAtAvg),
-                        entry("doneMax", bs.doneAtMax)));
-              }
-            }
-          }
-        }
-      }
-    }
-
-    System.out.println("Variable WIndows");
-    // 3. variable window
-    for (Handel.ScoringWindow c : congestions) {
-      for (double tor : tors) {
-        for (double dr : deadRatios) {
-          for (Boolean[] byz : byzs) {
-            for (String byLevels : chooseLevels) {
-              for (int minimum : minimums) {
-                for (int maximum : maximums) {
-                  for (int initial : initials) {
-                    for (boolean moving : movings) {
-
-                      params = defaultParams(n, null, tor, null, 0, byz[0], byz[1], byLevels, null);
-                      Handel.WindowParameters windowParam =
-                          new Handel.WindowParameters(initial, minimum, maximum, c, moving);
-                      params.window = windowParam;
-                      bs = run(nbRounds, params);
-                      Map<String, Object> row = new HashMap<>();
-                      Map<String, Object> staticEntries =
-                          Map.ofEntries(
-                              entry("n", n),
-                              entry("tor", tor),
-                              entry("deadRatio", dr),
-                              entry("byLevels", byLevels),
-                              entry("suicide", byz[0]),
-                              entry("hidden", byz[1]),
-                              entry("technique", c.name()),
-                              entry("minimum", minimum),
-                              entry("maximum", maximum),
-                              entry("initial", initial),
-                              entry("moving", moving),
-                              entry("doneMin", bs.doneAtMin),
-                              entry("doneAvg", bs.doneAtAvg),
-                              entry("doneMax", bs.doneAtMax));
-
-                      row.putAll(staticEntries);
-                      if (c instanceof Handel.ScoringLinear) {
-                        row.put("linear", ((Handel.ScoringLinear) c).delta);
-                      } else {
-                        Handel.ScoringExp exp = (Handel.ScoringExp) c;
-                        row.putAll(
-                            Map.ofEntries(
-                                entry("exp_inc", exp.increaseFactor),
-                                entry("exp_dec", exp.decreaseFactor)));
-                      }
-                      formatter.add(row);
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-
-    System.out.println(formatter.toString());
   }
 
   void shuffleTimeTest() {
@@ -725,9 +372,8 @@ public class HandelScenarios {
 
   private void logErrors() throws IOException {
     System.out.println("\nBehavior when the number of nodes increases - " + defaultParams());
-    System.out.println(" We expect log performances and polylog number of messages.");
 
-    double[] errors = new double[] {0, 0.01, 0.25, 0.5, 0.75, .90};
+    double[] errors = new double[] {0.01, 0.25, 0.5, 0.75, .90};
     Graph.Series[] tAs = new Graph.Series[errors.length];
     Graph.Series[] mAs = new Graph.Series[errors.length];
 
@@ -739,7 +385,7 @@ public class HandelScenarios {
 
     for (int i = 0; i < errors.length; i++) {
       double e = errors[i];
-      for (int n = 64; n <= 4096 * 4; n *= 2) {
+      for (int n = 128; n <= 4096 * 4; n *= 2) {
         Handel.HandelParameters params =
             defaultParams(
                 n,
@@ -747,8 +393,8 @@ public class HandelScenarios {
                 null,
                 null,
                 100,
-                null,
-                null,
+                true,
+                false,
                 null,
                 RegistryNodeBuilders.Location.CITIES);
         BasicStats bs = run(n > 9000 ? 2 : n < 1000 ? 10 : 5, params);

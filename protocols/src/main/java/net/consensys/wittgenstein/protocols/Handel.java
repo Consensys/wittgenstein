@@ -3,7 +3,6 @@ package net.consensys.wittgenstein.protocols;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import java.util.*;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.json.ListNodeConverter;
 import net.consensys.wittgenstein.core.messages.Message;
@@ -43,7 +42,12 @@ public class Handel implements Protocol {
      */
     int desynchronizedStart;
 
-    /** A Byzantine scenario where all nodes starts */
+    /**
+     * A Byzantine scenario where byzantine nodes sends invalid signatures. The strategy is: if an
+     * honest node can verify a signature of another node, the adversary checks if there is a
+     * byzantine node with a better rank. If so it generates an invalid signature from this node.
+     * This signature will be checked instead of the honest one.
+     */
     final boolean byzantineSuicide;
 
     final boolean hiddenByzantine;
@@ -77,6 +81,7 @@ public class Handel implements Protocol {
       this.hiddenByzantine = false;
       this.shuffle = SHUFFLE_XOR;
       this.badNodes = null;
+      this.window = new WindowParameters();
     }
 
     public HandelParameters(
@@ -127,6 +132,7 @@ public class Handel implements Protocol {
       this.hiddenByzantine = hiddenByzantine;
       this.shuffle = SHUFFLE_XOR;
       this.badNodes = badNodes;
+      this.window = new WindowParameters();
     }
 
     @Override
@@ -168,57 +174,25 @@ public class Handel implements Protocol {
     String name();
   }
 
-  static class WindowParameters {
-    public static final String FIXED = "FIXED";
-    public static final String VARIABLE = "VARIABLE";
-    public final String type;
-    // for fixed type
-    public final int size;
-    public final boolean useScore;
-    // for variable type
+  public static class WindowParameters {
     public final int initial; // initial window size
     public final int minimum; // minimum window size at all times
     public final int maximum; // maximum window size at all times
     // what type windows change algorithm do we want to us
     public final ScoringWindow window;
-    public final boolean moving;
-    // is it a moving window or not -> moving sets the beginning of the window to the
-    // lowest-rank unverified signature
 
-    /** WindowParameters for FIXED window */
-    public WindowParameters(int size, boolean moving, boolean useScore) {
-      this(FIXED, size, useScore, 0, 0, 0, null, moving);
+    public WindowParameters() {
+      this(16, 1, 128, new ScoringExp());
     }
 
-    /** WindowParameters for VARIABLE window */
-    public WindowParameters(
-        int initial, int minimum, int maximum, ScoringWindow window, boolean moving) {
-      this(VARIABLE, 0, false, initial, minimum, maximum, window, moving);
-    }
-
-    private WindowParameters(
-        String type,
-        int size,
-        boolean useScore,
-        int initial,
-        int minimum,
-        int maximum,
-        ScoringWindow window,
-        boolean moving) {
-      this.useScore = useScore;
+    private WindowParameters(int initial, int minimum, int maximum, ScoringWindow window) {
       this.initial = initial;
       this.minimum = minimum;
       this.maximum = maximum;
       this.window = window;
-      this.moving = moving;
-      this.type = type;
-      this.size = size;
     }
 
     public int newSize(int currentWindowSize, boolean correct) {
-      if (this.type.equals(FIXED)) {
-        return currentWindowSize;
-      }
       int updatedSize = window.newSize(currentWindowSize, correct);
       if (updatedSize > maximum) {
         return maximum;
@@ -229,38 +203,17 @@ public class Handel implements Protocol {
     }
   }
 
-  static class ScoringLinear implements ScoringWindow {
-    public final int delta; // window is increased/decreased by delta
-
-    public ScoringLinear(int delta) {
-      this.delta = delta;
-    }
-
-    public int newSize(int curr, boolean correct) {
-      if (correct) {
-        return curr + delta;
-      } else {
-        return curr - delta;
-      }
-    }
-
-    @Override
-    public String toString() {
-      return "Linear{" + "delta=" + delta + "}\t";
-    }
-
-    public String name() {
-      return "var-linear";
-    }
-  }
-
-  static class ScoringExp implements ScoringWindow {
+  public static class ScoringExp implements ScoringWindow {
     public final double increaseFactor;
     public final double decreaseFactor;
 
     public ScoringExp(double increaseFactor, double decreaseFactor) {
       this.increaseFactor = increaseFactor;
       this.decreaseFactor = decreaseFactor;
+    }
+
+    public ScoringExp() {
+      this(2, 4);
     }
 
     public int newSize(int curr, boolean correct) {
@@ -353,20 +306,7 @@ public class Handel implements Protocol {
 
     @Override
     public void action(Network<HNode> network, HNode from, HNode to) {
-      if (!to.suicidalAttackDone) {
-        fillWithFalseSigs(network, to);
-        to.suicidalAttackDone = true;
-      }
-
       to.onNewSig(from, this);
-    }
-
-    public void fillWithFalseSigs(Network<HNode> network, HNode honest) {
-      List<HNode> byz = network.allNodes.stream().filter(Node::isDown).collect(Collectors.toList());
-      for (HNode b : byz) {
-        SendSigs ss = new SendSigs(b, honest);
-        honest.onNewSig(b, ss);
-      }
     }
   }
 
@@ -381,22 +321,18 @@ public class Handel implements Protocol {
 
     final BitSet blacklist = new BitSet();
 
-    /** Window-related fields */
-    int currWindowSize = params.window == null ? 0 : params.window.initial;
-    // what's the size of the window currently
+    int currWindowSize = params.window.initial;
 
-    boolean suicidalAttackDone;
     final HiddenByzantine hiddenByzantine;
 
     boolean done = false;
     int sigChecked = 0;
     int sigQueueSize = 0;
 
-    HNode(int startAt, NodeBuilder nb) {
-      super(network.rd, nb);
+    HNode(int startAt, NodeBuilder nb, boolean byzantine) {
+      super(network.rd, nb, byzantine);
       this.startAt = startAt;
-      this.suicidalAttackDone = !params.byzantineSuicide;
-      this.hiddenByzantine = params.hiddenByzantine ? new HiddenByzantine() : null;
+      this.hiddenByzantine = params.hiddenByzantine && !byzantine ? new HiddenByzantine() : null;
     }
 
     @Override
@@ -445,35 +381,45 @@ public class Handel implements Protocol {
       final int level;
       final int size;
 
+      // peers, sorted in emission order
       @JsonSerialize(converter = ListNodeConverter.class)
       final List<HNode> peers;
-      // peers, sorted in emission order
 
       // The peers when we have all signatures for this level.
       final BitSet waitedSigs = new BitSet(); // 1 for the signatures we should get at this level
 
-      final BitSet lastAggVerified = new BitSet();
       // The aggregate signatures verified in this level
-      final BitSet totalIncoming = new BitSet();
+      final BitSet lastAggVerified = new BitSet();
+
       // The merge of the individual & the last agg verified
-      final BitSet verifiedIndSignatures = new BitSet();
+      final BitSet totalIncoming = new BitSet();
+
       // The individual signatures verified in this level
+      final BitSet verifiedIndSignatures = new BitSet();
 
+      // The aggregate signatures to verify in this level
       final List<SigToVerify> toVerifyAgg = new ArrayList<>();
-      final BitSet toVerifyInd = new BitSet(); // The individual signatures received
 
-      public BitSet finishedPeers = new BitSet();
+      // The individual signatures received
+      final BitSet toVerifyInd = new BitSet();
+
       // The list of peers who told us they had finished this level.
+      public BitSet finishedPeers = new BitSet();
 
-      final BitSet totalOutgoing = new BitSet(); // The signatures we're sending for this level
-      public boolean outgoingFinished = false;
+      // The signatures we're sending for this level
+      final BitSet totalOutgoing = new BitSet();
+
       // all our peers are complete: no need to send anything for this level
+      public boolean outgoingFinished = false;
 
       /**
        * We're going to contact all nodes, one after the other. That's our position in the peers'
        * list.
        */
       int posInLevel = 0;
+
+      // A cache for the first suicidal byz node in our list (if any)
+      int suicideBizAfter = params.byzantineSuicide ? 0 : -1;
 
       /** Build a level 0 object. At level 0 we need (and have) only our own signature. */
       HLevel() {
@@ -597,49 +543,34 @@ public class Handel implements Protocol {
 
       int sizeIfIncluded(SigToVerify sig) {
         BitSet c = (BitSet) sig.sig.clone();
+        if (!c.intersects(totalIncoming)) {
+          c.or(totalIncoming);
+        }
         c.or(verifiedIndSignatures);
+
         return c.cardinality();
       }
 
-      public SigToVerify bestToVerify() {
-        if (toVerifyAgg.size() == 0) {
-          return null;
-        }
-        if (Handel.this.params.window != null) {
-          return bestToVerifyWithWindow();
-        }
-        List<SigToVerify> curatedList = new ArrayList<>();
-        int curSize = totalIncoming.cardinality();
-        SigToVerify best = null;
-        boolean removed = false;
-        for (SigToVerify stv : toVerifyAgg) {
-          int s = sizeIfIncluded(stv);
-          if (!blacklist.get(stv.from) && s > curSize) {
-            // only add signatures that can result in a better aggregate signature
-            curatedList.add(stv);
-            if (best == null || stv.rank < best.rank) {
-              // take the signature with the highest rank in the reception list
-              best = stv;
+      SigToVerify createSuicideByzantineSig(int maxRank) {
+        boolean reset = false;
+        for (int i = suicideBizAfter; i < peers.size(); i++) {
+          HNode p = peers.get(i);
+          if (p.isDown() && !blacklist.get(p.nodeId)) {
+            if (!reset) {
+              suicideBizAfter = i;
+              reset = true;
             }
-          } else {
-            removed = true;
+            if (receptionRanks[p.nodeId] < maxRank) {
+              return new SigToVerify(p.nodeId, level, receptionRanks[p.nodeId], waitedSigs, true);
+            }
           }
         }
-        if (removed) {
-          replaceToVerifyAgg(curatedList);
+
+        if (!reset) {
+          // No byzantine nodes left in this level
+          suicideBizAfter = -1;
         }
 
-        return best;
-      }
-
-      public SigToVerify bestToVerifyWithWindow() {
-        WindowParameters window = Handel.this.params.window;
-        switch (window.type) {
-          case WindowParameters.FIXED:
-            return bestToVerifyWithWindowFIXED();
-          case WindowParameters.VARIABLE:
-            return bestToVerifyWithWindowVARIABLE();
-        }
         return null;
       }
 
@@ -648,19 +579,26 @@ public class Handel implements Protocol {
        * received invalid contributions or not. Within the window, it evaluates with a scoring
        * function. Outside it evaluates with the rank.
        */
-      public SigToVerify bestToVerifyWithWindowVARIABLE() {
-        HandelParameters global = Handel.this.params;
-        WindowParameters params = global.window;
+      public SigToVerify bestToVerify() {
+        if (toVerifyAgg.isEmpty()) {
+          return null;
+        }
         if (currWindowSize < 1) {
           throw new IllegalStateException();
         }
 
-        int windowIndex = 0;
-        if (params.moving) {
-          // we set the window index to the rank of the first unverified signature
-          windowIndex =
-              Collections.min(toVerifyAgg, Comparator.comparingInt(SigToVerify::getRank)).rank;
+        int windowIndex =
+            Collections.min(toVerifyAgg, Comparator.comparingInt(SigToVerify::getRank)).rank;
+
+        if (suicideBizAfter >= 0) {
+          SigToVerify bSig = createSuicideByzantineSig(windowIndex + currWindowSize);
+          if (bSig != null) {
+            toVerifyAgg.add(bSig);
+            sigQueueSize++;
+            return bSig;
+          }
         }
+
         int curSignatureSize = totalIncoming.cardinality();
         SigToVerify bestOutside = null; // best signature outside the window - rank based decision
         SigToVerify bestInside = null; // best signature inside the window - ranking
@@ -717,55 +655,6 @@ public class Handel implements Protocol {
         if (sigQueueSize < 0) {
           throw new IllegalStateException("sigQueueSize=" + sigQueueSize);
         }
-      }
-
-      /**
-       * This method uses a simple fixed window of given length in the window paramters. Within the
-       * window, it evaluates randomly.
-       */
-      public SigToVerify bestToVerifyWithWindowFIXED() {
-        List<SigToVerify> lowPriority = new ArrayList<>();
-        List<SigToVerify> highPriority = new ArrayList<>();
-        int window = Handel.this.params.window.size;
-        SigToVerify best = null;
-
-        int curSize = totalIncoming.cardinality();
-        boolean removed = false;
-
-        for (SigToVerify stv : toVerifyAgg) {
-          int s = sizeIfIncluded(stv);
-          if (!blacklist.get(stv.from) && s > curSize) {
-            // only add signatures that can result in a better aggregate signature
-            // select the high priority one from the low priority one
-            if (stv.rank <= window) {
-              highPriority.add(stv);
-            } else {
-              lowPriority.add(stv);
-              if (best == null || best.rank > stv.rank) {
-                best = stv;
-              }
-            }
-          } else {
-            removed = true;
-          }
-        }
-        if (removed) {
-          List<SigToVerify> all = new ArrayList<>(highPriority);
-          all.addAll(lowPriority);
-          replaceToVerifyAgg(all);
-        }
-
-        // take highest priority signatures
-        if (highPriority.size() > 0) {
-          int idx = network.rd.nextInt(highPriority.size());
-          return highPriority.get(idx);
-        }
-        if (lowPriority.size() > 0) {
-          // take the lowest rank from the rest of the stream
-          return best;
-        }
-
-        return null;
       }
     }
 
@@ -851,7 +740,7 @@ public class Handel implements Protocol {
       if (vs.badSig) {
         blacklist.set(vs.from);
 
-        if (params.hiddenByzantine) {
+        if (!params.byzantineSuicide) {
           throw new IllegalStateException("We should not have invalid signatures in this scenario");
         }
         return;
@@ -971,12 +860,14 @@ public class Handel implements Protocol {
 
       for (HLevel l : levels) {
         SigToVerify ss = l.bestToVerify();
-        if (ss != null) {
-          byLevels.add(ss);
+        if (ss == null) {
+          continue;
         }
+
+        byLevels.add(ss);
       }
 
-      if (byLevels.isEmpty()) {
+      if (byLevels.isEmpty()) { // Nothing to check.
         return;
       }
 
@@ -986,21 +877,22 @@ public class Handel implements Protocol {
       }
 
       if (hiddenByzantine != null && best.level == levels.size() - 1) {
+        // We're trying to add a nearly useless signature in the list so that signatures
+        //  with a lower rank are not retained.
         best = hiddenByzantine.attack(this, best);
       }
 
-      if (params.window != null) {
-        HLevel l = levels.get(best.level);
+      HLevel l = levels.get(best.level);
 
-        int newSize = params.window.newSize(currWindowSize, !best.badSig);
-        currWindowSize = newSize > l.size ? l.size : newSize;
+      int newSize = params.window.newSize(currWindowSize, !best.badSig);
+      currWindowSize = Math.min(newSize, l.size);
 
-        // simply put it at the end of the ranking
-        receptionRanks[best.from] += l.peers.size();
-        if (receptionRanks[best.from] < 0) {
-          receptionRanks[best.from] = Integer.MAX_VALUE;
-        }
+      // simply put it at the end of the ranking
+      receptionRanks[best.from] += l.peers.size();
+      if (receptionRanks[best.from] < 0) {
+        receptionRanks[best.from] = Integer.MAX_VALUE;
       }
+
       sigChecked++;
 
       final SigToVerify fBest = best;
@@ -1012,7 +904,6 @@ public class Handel implements Protocol {
   }
 
   class HiddenByzantine {
-    HNode firstByzantine = null;
     boolean noByzantinePeers = false;
     SigToVerify last = null;
 
@@ -1021,7 +912,7 @@ public class Handel implements Protocol {
       int bestRank = Integer.MAX_VALUE;
 
       for (HNode p : l.peers) {
-        if (p.isDown() && t.receptionRanks[p.nodeId] < bestRank) {
+        if (p.isDown() && t.receptionRanks[p.nodeId] < bestRank && !l.totalIncoming.get(p.nodeId)) {
           bestRank = t.receptionRanks[p.nodeId];
           best = p;
           if (bestRank == 0) {
@@ -1038,50 +929,40 @@ public class Handel implements Protocol {
         return currentBest;
       }
 
-      HNode.HLevel l = target.levels.get(currentBest.level);
-      if (firstByzantine == null) {
-        firstByzantine = firstByzantine(target, l);
-        if (firstByzantine == null) {
-          noByzantinePeers = true;
-          return currentBest;
-        }
-      }
-
       if (last == currentBest) {
         // A previous attack finally worked. Good.
         last = null;
         return currentBest;
       }
+
+      HNode.HLevel l = target.levels.get(currentBest.level);
       if (last != null) {
         if (l.toVerifyAgg.contains(last)) {
           // ok, we plugged our low quality sig but we're still in the list. The attack failed...
           // this time.
           return currentBest;
         }
-        // Our signature has been pruned.
+        // Our signature was actually tested and included
+        if (!l.totalIncoming.get(last.from)) {
+          throw new IllegalStateException("byz signature pruned!");
+        }
         last = null;
       }
 
+      HNode firstByzantine = firstByzantine(target, l);
+      if (firstByzantine == null) {
+        noByzantinePeers = true;
+        return currentBest;
+      }
+
+      if (target.receptionRanks[firstByzantine.nodeId] >= currentBest.rank) {
+        // We can't improve it, we're too far.
+        return currentBest;
+      }
+
       // Ok, we're going to push a bad signature and check if we can trick the score function
-      BitSet cur = (BitSet) l.totalIncoming.clone();
-      boolean found = !cur.get(firstByzantine.nodeId);
+      BitSet cur = new BitSet();
       cur.set(firstByzantine.nodeId);
-
-      if (found && cur.cardinality() >= currentBest.sig.cardinality()) {
-        return currentBest;
-      }
-
-      for (int i = 0; !found && i < l.peers.size(); i++) {
-        HNode p = l.peers.get(i);
-        if (!cur.get(p.nodeId)) {
-          cur.set(p.nodeId);
-          found = true;
-        }
-      }
-
-      if (!found) {
-        return currentBest;
-      }
 
       SigToVerify bad =
           new SigToVerify(
@@ -1092,6 +973,7 @@ public class Handel implements Protocol {
               false);
       l.toVerifyAgg.add(bad);
       target.sigQueueSize++;
+
       SigToVerify newBest = l.bestToVerify();
       if (newBest != bad) {
         last = bad;
@@ -1191,6 +1073,7 @@ public class Handel implements Protocol {
   }
 
   @SuppressWarnings("unchecked")
+  @Override
   public void init() {
     NodeBuilder nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
 
@@ -1202,7 +1085,8 @@ public class Handel implements Protocol {
     for (int i = 0; i < params.nodeCount; i++) {
       int startAt =
           params.desynchronizedStart == 0 ? 0 : network.rd.nextInt(params.desynchronizedStart);
-      final HNode n = new HNode(startAt, nb);
+      boolean byz = (params.byzantineSuicide | params.hiddenByzantine) && badNodes.get(i);
+      final HNode n = new HNode(startAt, nb, byz);
       if (badNodes.get(i)) {
         n.stop();
       }
@@ -1228,7 +1112,9 @@ public class Handel implements Protocol {
     // Rule: you're contacting first the peers that gave you a good reception rank
     for (HNode sender : network.allNodes) {
       if (sender.isDown()) {
-        continue; // No need to build an emission for a node that won't emit.
+        // No need to build an emission for a node that won't emit
+        // This include byzantine nodes.
+        continue;
       }
 
       //
@@ -1246,22 +1132,6 @@ public class Handel implements Protocol {
           receiver.receptionRanks[sender.nodeId] = recRank;
         }
         l.buildEmissionList(emissionList);
-      }
-    }
-  }
-
-  private static void debugEmissionList(int levels, List<HNode>[][][] emissionList) {
-    for (int n = 0; n < emissionList.length; n++) {
-      System.out.println("node " + n + ":");
-      for (int level = 1; level < levels; level++) {
-        int size = (int) Math.pow(2, level - 1);
-        System.out.println("\t level " + level + " (size=" + size + ") :");
-        for (int n2 = 0; n2 < emissionList.length; n2++) {
-          List<HNode> list = emissionList[n][level][n2];
-          if (list != null) {
-            System.out.println("\t\tposition-rank " + n2 + " => " + list);
-          }
-        }
       }
     }
   }
