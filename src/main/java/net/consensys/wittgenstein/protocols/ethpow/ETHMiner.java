@@ -11,7 +11,7 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
   protected int hashPowerGHs; // hash power in GH/s
   protected ETHPoW.POWBlock inMining;
   protected Set<ETHPoW.POWBlock> minedToSend = new HashSet<>();
-  private double threshold;
+  protected double threshold;
   UncleCmp uncleCmp = new UncleCmp();
 
   public ETHMiner(

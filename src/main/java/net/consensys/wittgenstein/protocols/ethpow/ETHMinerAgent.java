@@ -95,6 +95,52 @@ public class ETHMinerAgent extends ETHMiner {
     network.sendAll(new BlockChainNetwork.SendBlock<>(mined), sendTime, this);
     minedToSend.remove(mined);
   }
+  // Force to mine a block
+  public boolean makeDecision() {
+    boolean mined = mine10ms();
+    while (!mined) {
+      if (mined) {
+        return true;
+      } else {
+        mined = mine10ms();
+      }
+    }
+    return false;
+  }
+
+  private ETHPoW.POWBlock mined;
+
+  @Override
+  public boolean mine10ms() {
+    if (inMining == null) {
+      startNewMining(head);
+    }
+    assert inMining != null;
+    if (network.rd.nextDouble() < super.threshold) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  private void onFoundNewBlock() {
+    ETHPoW.POWBlock mined = inMining;
+    ETHPoW.POWBlock oldHead = head;
+    inMining = null;
+    minedToSend.add(mined);
+    if (action >= 1 && action <= 3) {
+
+      sendNMined();
+    }
+    if (!super.onBlock(mined)) {
+      throw new IllegalStateException("invalid mined block:" + mined);
+    }
+
+    if (mined == head) {
+      onNewHead(oldHead, mined);
+    }
+    onMinedBlock(mined);
+  }
 
   /** Helper function: send N blocks mined not yet sent. */
   protected void sendNMined() {
@@ -115,6 +161,10 @@ public class ETHMinerAgent extends ETHMiner {
       while (network.rd.nextBoolean()) {
         network.runMs(10);
       }
+    }
+
+    public double getTimeInSeconds() {
+      return this.network().time / 1000;
     }
 
     public ETHMinerAgent getByzNode() {
@@ -162,6 +212,14 @@ public class ETHMinerAgent extends ETHMiner {
             bdlName, nlName, 10, ETHMinerAgent.class.getName(), byzHashPowerShare);
 
     return new ETHPowWithAgent(params);
+  }
+
+  public double getReward() {
+    /*this.blocksReceivedByHeight.
+      if (privateMinerBlock)
+        privateMinerBlock.;
+    */
+    return 0;
   }
 
   public static void main(String... args) {
