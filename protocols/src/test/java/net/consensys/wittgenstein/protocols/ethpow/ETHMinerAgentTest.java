@@ -13,6 +13,9 @@ public class ETHMinerAgentTest {
 
     ETHMinerAgent n = p.getByzNode();
 
+    Assert.assertTrue(n.head.height > p.genesis.height);
+    Assert.assertTrue(n.otherHead.height > p.genesis.height);
+    Assert.assertNotSame(n.otherHead.producer, n);
     Assert.assertTrue(n.actionNeeded);
 
     int size = n.minedToSend.size();

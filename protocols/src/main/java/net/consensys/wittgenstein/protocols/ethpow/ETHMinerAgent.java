@@ -36,6 +36,7 @@ import net.consensys.wittgenstein.core.RegistryNodeBuilders;
  */
 public class ETHMinerAgent extends ETHMiner {
   boolean actionNeeded = false;
+  ETHPoW.POWBlock otherHead = genesis;
 
   public ETHMinerAgent(
       BlockChainNetwork<ETHPoW.POWBlock, ETHMiner> network,
@@ -73,28 +74,12 @@ public class ETHMinerAgent extends ETHMiner {
   }
 
   public int getAdvance() {
-    if (minedToSend.isEmpty()) {
-      return 0;
-    }
-
-    ETHPoW.POWBlock privHead =
-        Collections.max(minedToSend, Comparator.comparingInt(o -> o.proposalTime));
-
-    int diff = privHead.height - head.height;
+    int diff = head.height - otherHead.height;
     return Math.max(diff, 0);
   }
 
   public double getReward() {
-    ETHPoW.POWBlock best = head;
-    ETHPoW.POWBlock privHead =
-        minedToSend.isEmpty()
-            ? null
-            : Collections.max(minedToSend, Comparator.comparingInt(o -> o.proposalTime));
-    if (privHead != null && privHead.height > head.height) {
-      best = privHead;
-    }
-
-    return best.allRewards().getOrDefault(this, 0.0);
+    return head.allRewards().getOrDefault(this, 0.0);
   }
 
   public static class ETHPowWithAgent extends ETHPoW {
@@ -114,12 +99,20 @@ public class ETHMinerAgent extends ETHMiner {
 
   /** Called when the head changes. */
   protected void onNewHead(ETHPoW.POWBlock oldHead, ETHPoW.POWBlock newHead) {
-    actionNeeded = true;
+    if (newHead.producer != this) {
+      actionNeeded = true;
+      if (newHead.height > otherHead.height) {
+        otherHead = newHead;
+      }
+    }
   }
 
   private void actionSendOldestBlockMined() {
     ETHPoW.POWBlock oldest =
         Collections.min(minedToSend, Comparator.comparingInt(o -> o.proposalTime));
+    if (oldest.height > otherHead.height) {
+      otherHead = oldest;
+    }
     sendBlock(oldest);
   }
 
