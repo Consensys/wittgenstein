@@ -39,6 +39,7 @@ public class ETHMinerAgent extends ETHMiner {
   private ETHPoW.POWBlock privateMinerBlock;
   private ETHPoW.POWBlock otherMinersHead = genesis;
   public int action = 0;
+  private double rewards = 0;
 
   public void setAction(int action) {
     this.action = action;
@@ -53,12 +54,12 @@ public class ETHMinerAgent extends ETHMiner {
   }
 
   public int privateHeight() {
-    return privateMinerBlock == null ? 0 : privateMinerBlock.height;
+    return minedToSend == null ? 0 : minedToSend.size();
   }
 
   @Override
   protected boolean sendMinedBlock(ETHPoW.POWBlock mined) {
-    if (action <= 1 && action >= 3) {
+    if (action <= 0 && action >= 2) {
       return true;
     }
     return false;
@@ -75,7 +76,7 @@ public class ETHMinerAgent extends ETHMiner {
     int deltaP = privateHeight() - (otherMinersHead.height - 1);
     if (deltaP == 0 && depth(privateMinerBlock) == 2) {
       otherMinersHead = best(otherMinersHead, privateMinerBlock);
-      sendNMined();
+      rewards = sendNMined();
     } else if (depth(privateMinerBlock) == 3) {
       sendAllMined();
     }
@@ -125,7 +126,11 @@ public class ETHMinerAgent extends ETHMiner {
     double rewards = 0;
     inMining = null;
     minedToSend.add(mined);
-    if (action >= 1 && action <= 3) {
+    // Send 1 send 2 or send 3
+    if (action == 0) {
+      sendBlock(mined);
+      rewards = getRewardByBlock(mined);
+    } else if (action == 1 || action == 2) {
       rewards = sendNMined();
     }
     if (!super.onBlock(mined)) {
@@ -135,7 +140,10 @@ public class ETHMinerAgent extends ETHMiner {
     if (mined == head) {
       onNewHead(oldHead, mined);
     }
-    onMinedBlock(mined);
+    if (action == 3) {
+      onMinedBlock(mined);
+      return this.rewards;
+    }
     return rewards;
   }
 
@@ -143,10 +151,11 @@ public class ETHMinerAgent extends ETHMiner {
   protected double sendNMined() {
     double totRewardsofSentBlocks = 0;
     List<ETHPoW.POWBlock> all = new ArrayList<>(minedToSend);
-    for (int i = 0; i < action; i++) {
-      sendMinedBlock(all.get(i));
-      totRewardsofSentBlocks += getRewardByBlock(all.get(i));
-      minedToSend.remove(all.get(i));
+    for (ETHPoW.POWBlock b : all) {
+      // sendMinedBlock(all.get(i));
+      sendBlock(b);
+      totRewardsofSentBlocks += getRewardByBlock(b);
+      minedToSend.remove(b);
     }
     return totRewardsofSentBlocks;
   }
@@ -221,14 +230,6 @@ public class ETHMinerAgent extends ETHMiner {
             bdlName, nlName, 10, ETHMinerAgent.class.getName(), byzHashPowerShare);
 
     return new ETHPowWithAgent(params);
-  }
-
-  public double getReward() {
-    /*this.blocksReceivedByHeight.
-      if (privateMinerBlock)
-        privateMinerBlock.;
-    */
-    return 0;
   }
 
   public static void main(String... args) {
