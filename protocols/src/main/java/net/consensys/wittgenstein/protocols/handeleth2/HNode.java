@@ -7,7 +7,7 @@ import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.core.NodeBuilder;
 
 public class HNode extends Node {
-  final HandelEth2 handelEth2;
+  final transient HandelEth2 handelEth2;
   final int startAt;
   final List<HLevel> levels = new ArrayList<>();
   final int nodePairingTime;

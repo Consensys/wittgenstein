@@ -32,8 +32,6 @@ import net.consensys.wittgenstein.core.*;
  * }</pre>
  */
 public class ETHMinerAgent extends ETHMiner {
-  private ETHPoW.POWBlock privateMinerBlock;
-  private ETHPoW.POWBlock otherMinersHead = genesis;
 
   private boolean actionNeeded = false;
 
@@ -63,15 +61,19 @@ public class ETHMinerAgent extends ETHMiner {
   public boolean goNextStep() {
     actionNeeded = false;
     while (!actionNeeded) {
-      network.runMs(10);
+      network.runMs(1);
     }
     return true;
   }
 
   public double getReward() {
     ETHPoW.POWBlock best = head;
-    if (privateMinerBlock != null && privateMinerBlock.height > head.height) {
-      best = privateMinerBlock;
+    ETHPoW.POWBlock privHead =
+        minedToSend.isEmpty()
+            ? null
+            : Collections.max(minedToSend, Comparator.comparingInt(o -> o.proposalTime));
+    if (privHead != null && privHead.height > head.height) {
+      best = privHead;
     }
 
     return best.allRewards().getOrDefault(this, 0.0);

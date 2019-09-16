@@ -5,7 +5,7 @@ import java.util.*;
 import net.consensys.wittgenstein.core.json.ListNodeConverter;
 
 public class HLevel {
-  private final HNode hNode;
+  private final transient HNode hNode;
 
   final int level;
   final int size;
@@ -52,10 +52,15 @@ public class HLevel {
     level = 0;
     size = 1;
     outgoingFinished = true;
-    lastAggVerified.set(hNode.nodeId);
-    verifiedIndSignatures.set(hNode.nodeId);
-    totalIncoming.set(hNode.nodeId);
+    lastAggVerified.set(hNode == null ? 0 : hNode.nodeId);
+    verifiedIndSignatures.set(hNode == null ? 0 : hNode.nodeId);
+    totalIncoming.set(hNode == null ? 0 : hNode.nodeId);
     peers = Collections.emptyList();
+  }
+
+  // For json
+  HLevel() {
+    this(null);
   }
 
   /** Build a level on top of the previous one. */
