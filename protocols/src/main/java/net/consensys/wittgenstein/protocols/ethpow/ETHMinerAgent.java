@@ -2,7 +2,10 @@ package net.consensys.wittgenstein.protocols.ethpow;
 
 import java.util.Collections;
 import java.util.Comparator;
-import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.BlockChainNetwork;
+import net.consensys.wittgenstein.core.NodeBuilder;
+import net.consensys.wittgenstein.core.RegistryNetworkLatencies;
+import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 
 /**
  * To call this agent from python: 1) Install the right tools:
@@ -12,13 +15,13 @@ import net.consensys.wittgenstein.core.*;
  * sudo pip3 install pyjnius
  * }</pre>
  *
- * 2) Build the package
+ * <p>2) Build the package
  *
  * <pre>{@code
  * gradle clean shadowJar
  * }</pre>
  *
- * 3) You can now use this code from python, for example with:
+ * <p>3) You can now use this code from python, for example with:
  *
  * <pre>{@code
  * import jnius_config
@@ -32,8 +35,7 @@ import net.consensys.wittgenstein.core.*;
  * }</pre>
  */
 public class ETHMinerAgent extends ETHMiner {
-
-  private boolean actionNeeded = false;
+  boolean actionNeeded = false;
 
   public ETHMinerAgent(
       BlockChainNetwork<ETHPoW.POWBlock, ETHMiner> network,
@@ -64,6 +66,10 @@ public class ETHMinerAgent extends ETHMiner {
       network.runMs(1);
     }
     return true;
+  }
+
+  public int getSecretBlockSize() {
+    return minedToSend.size();
   }
 
   public double getReward() {
