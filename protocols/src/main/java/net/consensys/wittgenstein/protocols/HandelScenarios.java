@@ -370,10 +370,14 @@ public class HandelScenarios {
     graph.save(new File("handel_log_msg.png"));
   }
 
-  private void logErrors() throws IOException {
-    System.out.println("\nBehavior when the number of nodes increases - " + defaultParams());
+  private void logErrors(Double errorRate) throws IOException {
+    boolean printed = false;
 
-    double[] errors = new double[] {0.01, 0.25, 0.5, 0.75, .90};
+    double[] errors = new double[] {0.01, 0.25, 0.5, 0.75, .90, 0};
+    if (errorRate != null) {
+      errors = new double[] {errorRate};
+    }
+
     Graph.Series[] tAs = new Graph.Series[errors.length];
     Graph.Series[] mAs = new Graph.Series[errors.length];
 
@@ -385,7 +389,7 @@ public class HandelScenarios {
 
     for (int i = 0; i < errors.length; i++) {
       double e = errors[i];
-      for (int n = 128; n <= 4096 * 4; n *= 2) {
+      for (int n = 4096 * 16; n <= 4096 * 16; n *= 2) {
         Handel.HandelParameters params =
             defaultParams(
                 n,
@@ -397,8 +401,15 @@ public class HandelScenarios {
                 false,
                 null,
                 RegistryNodeBuilders.Location.CITIES);
+
+        if (!printed) {
+          System.out.println("\nBehavior when the number of nodes increases - " + params);
+          printed = true;
+        }
+
         BasicStats bs = run(n > 9000 ? 2 : n < 1000 ? 10 : 5, params);
         System.out.println(n + " nodes: " + e + bs);
+        System.out.flush();
 
         tAs[i].addLine(new Graph.ReportLine(n, bs.doneAtAvg));
         mAs[i].addLine(new Graph.ReportLine(n, bs.msgRcvAvg));
@@ -630,9 +641,9 @@ public class HandelScenarios {
     scenario.logPeriodTime(RegistryNodeBuilders.Location.CITIES, 0.2, 0.2);
   }
 
-  public static void main(String... args) throws IOException {
+  public static void main(String[] args) throws IOException {
     // allScenarios();
     HandelScenarios scenario = new HandelScenarios();
-    scenario.logErrors();
+    scenario.logErrors(args.length == 0 ? null : Double.valueOf(args[0]));
   }
 }
