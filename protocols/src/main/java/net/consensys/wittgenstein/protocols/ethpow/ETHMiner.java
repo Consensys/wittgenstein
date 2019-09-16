@@ -8,9 +8,9 @@ import net.consensys.wittgenstein.core.NodeBuilder;
 @SuppressWarnings("WeakerAccess")
 public class ETHMiner extends ETHPoW.ETHPoWNode {
   protected int hashPowerGHs; // hash power in GH/s
-  private ETHPoW.POWBlock inMining;
+  protected ETHPoW.POWBlock inMining;
   protected Set<ETHPoW.POWBlock> minedToSend = new HashSet<>();
-  private double threshold;
+  protected double threshold;
   UncleCmp uncleCmp = new UncleCmp();
 
   public ETHMiner(
@@ -115,7 +115,7 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
   }
 
   /** Mine for 10 milliseconds. */
-  boolean mine10ms() {
+  public final boolean mine10ms() {
     if (inMining == null) {
       startNewMining(head);
     }
@@ -189,8 +189,12 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
     onMinedBlock(mined);
   }
 
+  public int getMinedToSend() {
+    return minedToSend.size();
+  }
+
   @Override
-  public final boolean onBlock(ETHPoW.POWBlock b) {
+  public boolean onBlock(ETHPoW.POWBlock b) {
     ETHPoW.POWBlock oldHead = head;
     if (!super.onBlock(b)) {
       return false;
@@ -268,7 +272,7 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
 
       ur /= runs;
       avgDiff /= runs;
-
+      // take this pass the agent miner id and get reward by height get function to return value
       final double tot = rewards.values().stream().reduce(0.0, Double::sum);
       Map<Integer, Double> pc =
           rewards.entrySet().stream()
