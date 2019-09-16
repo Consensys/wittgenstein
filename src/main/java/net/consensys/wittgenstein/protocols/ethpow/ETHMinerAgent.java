@@ -119,13 +119,14 @@ public class ETHMinerAgent extends ETHMiner {
     }
   }
 
-  public void onFoundNewBlock() {
+  public double onFoundNewBlock() {
     ETHPoW.POWBlock mined = inMining;
     ETHPoW.POWBlock oldHead = head;
+    double rewards = 0;
     inMining = null;
     minedToSend.add(mined);
     if (action >= 1 && action <= 3) {
-      sendNMined();
+      rewards = sendNMined();
     }
     if (!super.onBlock(mined)) {
       throw new IllegalStateException("invalid mined block:" + mined);
@@ -135,6 +136,7 @@ public class ETHMinerAgent extends ETHMiner {
       onNewHead(oldHead, mined);
     }
     onMinedBlock(mined);
+    return rewards;
   }
 
   /** Helper function: send N blocks mined not yet sent. */
