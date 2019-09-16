@@ -72,6 +72,18 @@ public class ETHMinerAgent extends ETHMiner {
     return minedToSend.size();
   }
 
+  public int getAdvance() {
+    if (minedToSend.isEmpty()) {
+      return 0;
+    }
+
+    ETHPoW.POWBlock privHead =
+        Collections.max(minedToSend, Comparator.comparingInt(o -> o.proposalTime));
+
+    int diff = privHead.height - head.height;
+    return Math.max(diff, 0);
+  }
+
   public double getReward() {
     ETHPoW.POWBlock best = head;
     ETHPoW.POWBlock privHead =
