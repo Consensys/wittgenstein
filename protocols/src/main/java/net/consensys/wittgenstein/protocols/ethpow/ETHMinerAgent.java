@@ -1,11 +1,8 @@
 package net.consensys.wittgenstein.protocols.ethpow;
 
-import java.util.ArrayList;
-import java.util.List;
-import net.consensys.wittgenstein.core.BlockChainNetwork;
-import net.consensys.wittgenstein.core.NodeBuilder;
-import net.consensys.wittgenstein.core.RegistryNetworkLatencies;
-import net.consensys.wittgenstein.core.RegistryNodeBuilders;
+import java.util.Collections;
+import java.util.Comparator;
+import net.consensys.wittgenstein.core.*;
 
 /**
  * To call this agent from python: 1) Install the right tools:
@@ -37,19 +34,8 @@ import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 public class ETHMinerAgent extends ETHMiner {
   private ETHPoW.POWBlock privateMinerBlock;
   private ETHPoW.POWBlock otherMinersHead = genesis;
-  /** Action is set by the python program by calling the setter. */
-  private int action = 0;
 
   private boolean actionNeeded = false;
-  private double rewards = 0;
-
-  public static final int ACTION_KEEP_BLOCK = 0;
-  public static final int ACTION_SEND_1 = 1;
-  public static final int ACTION_SEND_2 = 2;
-
-  public void setAction(int action) {
-    this.action = action;
-  }
 
   public ETHMinerAgent(
       BlockChainNetwork<ETHPoW.POWBlock, ETHMiner> network,
@@ -59,115 +45,42 @@ public class ETHMinerAgent extends ETHMiner {
     super(network, nb, hashPowerGHs, genesis);
   }
 
-  public int privateHeight() {
-    return minedToSend == null ? 0 : minedToSend.size();
-  }
-
   @Override
   protected boolean sendMinedBlock(ETHPoW.POWBlock mined) {
     return false;
   }
 
-  @Override
-  protected void onMinedBlock(ETHPoW.POWBlock mined) {
-    if (privateMinerBlock != null && mined.height <= privateMinerBlock.height) {
-      throw new IllegalStateException(
-          "privateMinerBlock=" + privateMinerBlock + ", mined=" + mined);
+  public void sendMinedBlocks(int howMany) {
+    if (!actionNeeded) {
+      throw new IllegalStateException("no action needed");
     }
-    privateMinerBlock = mined;
 
-    int deltaP = privateHeight() - (otherMinersHead.height - 1);
-    if (deltaP == 0 && depth(privateMinerBlock) == 2) {
-      otherMinersHead = best(otherMinersHead, privateMinerBlock);
-      rewards = sendNMined();
-    } else if (depth(privateMinerBlock) == 3) {
-      sendAllMined();
+    while (howMany-- > 0 && !minedToSend.isEmpty()) {
+      actionSendOldestBlockMined();
     }
-    startNewMining(privateMinerBlock);
   }
 
-  /** Helper function: send a mined block. */
-  protected void sendBlock(ETHPoW.POWBlock mined) {
-    if (mined.producer != this) {
-      throw new IllegalArgumentException(
-          "logic error: you're not the producer of this block" + mined);
+  public boolean goNextStep() {
+    actionNeeded = false;
+    while (!actionNeeded) {
+      network.runMs(10);
     }
-    int sendTime = network.time + 1 + extraSendDelay(mined);
-    if (sendTime < 1) {
-      throw new IllegalArgumentException("extraSendDelay(" + mined + ") sent a negative time");
-    }
-    network.sendAll(new BlockChainNetwork.SendBlock<>(mined), sendTime, this);
-    minedToSend.remove(mined);
-  }
-
-  // Force to mine a block
-  public boolean makeDecision() {
-    boolean mined = mine10ms();
-    do {
-      mined = mine10ms();
-    } while (!mined);
     return true;
   }
 
-  public double onFoundNewBlock() {
-    ETHPoW.POWBlock mined = inMining;
-    ETHPoW.POWBlock oldHead = head;
-    double rewards = 0;
-    inMining = null;
-    minedToSend.add(mined);
-    // Send 1 send 2 or send 3
-    if (action == 0) {
-      sendBlock(mined);
-      rewards = getRewardByBlock(mined);
-    } else if (action == 1 || action == 2) {
-      rewards = sendNMined();
-    }
-    if (!super.onBlock(mined)) {
-      throw new IllegalStateException("invalid mined block:" + mined);
+  public double getReward() {
+    ETHPoW.POWBlock best = head;
+    if (privateMinerBlock != null && privateMinerBlock.height > head.height) {
+      best = privateMinerBlock;
     }
 
-    if (mined == head) {
-      onNewHead(oldHead, mined);
-    }
-    if (action == 3) {
-      onMinedBlock(mined);
-      return this.rewards;
-    }
-    return rewards;
-  }
-
-  /** Helper function: send N blocks mined not yet sent. */
-  protected double sendNMined() {
-    double totRewardsofSentBlocks = 0;
-    List<ETHPoW.POWBlock> all = new ArrayList<>(minedToSend);
-    for (ETHPoW.POWBlock b : all) {
-      // sendMinedBlock(all.get(i));
-      sendBlock(b);
-      totRewardsofSentBlocks += getRewardByBlock(b);
-      minedToSend.remove(b);
-    }
-    return totRewardsofSentBlocks;
-  }
-
-  public double getRewardByBlock(ETHPoW.POWBlock block) {
-    double cR = 0;
-
-    for (ETHPoW.Reward r : block.rewards()) {
-      cR += r.amount;
-    }
-    return cR;
+    return best.allRewards().getOrDefault(this, 0.0);
   }
 
   public static class ETHPowWithAgent extends ETHPoW {
 
     public ETHPowWithAgent(ETHPoWParameters params) {
       super(params);
-    }
-
-    public void goNextStep() {
-      while (network.rd.nextBoolean()) {
-        network.runMs(10);
-      }
     }
 
     public long getTimeInSeconds() {
@@ -179,36 +92,16 @@ public class ETHMinerAgent extends ETHMiner {
     }
   }
 
-  @Override
-  public final boolean onBlock(ETHPoW.POWBlock b) {
-    ETHPoW.POWBlock oldHead = head;
-    if (!super.onBlock(b)) {
-      return false;
-    }
-
-    if (b == head) {
-      onNewHead(oldHead, b);
-      // Someone sent us a new head, so we're going to switch
-      //  our mining to it
-      if (switchMining(b)) {
-        inMining = null;
-      }
-    } else if (inMining != null) {
-      // May be 'b' is not better than our current head but we
-      //  can still use it as an uncle for the block we're mining?
-      if (inMining.isPossibleUncle(b)) {
-        if (switchMining(b)) {
-          inMining = null;
-        }
-      }
-    }
-
-    onReceivedBlock(b);
-    return true;
+  /** Called when the head changes. */
+  protected void onNewHead(ETHPoW.POWBlock oldHead, ETHPoW.POWBlock newHead) {
+    actionNeeded = true;
   }
 
-  /** Called when the head changes. */
-  protected void onNewHead(ETHPoW.POWBlock oldHead, ETHPoW.POWBlock newHead) {}
+  private void actionSendOldestBlockMined() {
+    ETHPoW.POWBlock oldest =
+        Collections.min(minedToSend, Comparator.comparingInt(o -> o.proposalTime));
+    sendBlock(oldest);
+  }
 
   public static ETHPowWithAgent create(double byzHashPowerShare) {
     final String bdlName = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
