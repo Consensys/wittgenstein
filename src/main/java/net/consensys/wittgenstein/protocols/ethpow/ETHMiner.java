@@ -190,6 +190,9 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
     onMinedBlock(mined);
   }
 
+  public int getMinedToSend(){
+    return minedToSend.size();
+  }
   @Override
   public boolean onBlock(ETHPoW.POWBlock b) {
     ETHPoW.POWBlock oldHead = head;
@@ -269,7 +272,7 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
 
       ur /= runs;
       avgDiff /= runs;
-
+      // take this pass the agent miner id and get reward by height get function to return value
       final double tot = rewards.values().stream().reduce(0.0, Double::sum);
       Map<Integer, Double> pc =
           rewards.entrySet().stream()

@@ -98,14 +98,10 @@ public class ETHMinerAgent extends ETHMiner {
   // Force to mine a block
   public boolean makeDecision() {
     boolean mined = mine10ms();
-    while (!mined) {
-      if (mined) {
-        return true;
-      } else {
-        mined = mine10ms();
-      }
-    }
-    return false;
+    do {
+      mined = mine10ms();
+    } while (!mined);
+    return true;
   }
 
   private ETHPoW.POWBlock mined;
@@ -123,13 +119,12 @@ public class ETHMinerAgent extends ETHMiner {
     }
   }
 
-  private void onFoundNewBlock() {
+  public void onFoundNewBlock() {
     ETHPoW.POWBlock mined = inMining;
     ETHPoW.POWBlock oldHead = head;
     inMining = null;
     minedToSend.add(mined);
     if (action >= 1 && action <= 3) {
-
       sendNMined();
     }
     if (!super.onBlock(mined)) {
@@ -143,12 +138,24 @@ public class ETHMinerAgent extends ETHMiner {
   }
 
   /** Helper function: send N blocks mined not yet sent. */
-  protected void sendNMined() {
+  protected double sendNMined() {
+    double totRewardsofSentBlocks = 0;
     List<ETHPoW.POWBlock> all = new ArrayList<>(minedToSend);
     for (int i = 0; i < action; i++) {
       sendMinedBlock(all.get(i));
+      totRewardsofSentBlocks += getRewardByBlock(all.get(i));
       minedToSend.remove(all.get(i));
     }
+    return totRewardsofSentBlocks;
+  }
+
+  public double getRewardByBlock(ETHPoW.POWBlock block) {
+    double cR = 0;
+
+    for (ETHPoW.Reward r : block.rewards()) {
+      cR += r.amount;
+    }
+    return cR;
   }
 
   public static class ETHPowWithAgent extends ETHPoW {
