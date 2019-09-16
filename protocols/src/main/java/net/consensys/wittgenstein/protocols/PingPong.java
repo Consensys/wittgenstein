@@ -4,7 +4,6 @@ import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.Message;
 
 /** A simulation of a trivial protocol to be used as a sample. */
-@SuppressWarnings("WeakerAccess")
 public class PingPong implements Protocol {
   final PingPongParameters params;
 
@@ -32,7 +31,6 @@ public class PingPong implements Protocol {
     }
   }
 
-  @SuppressWarnings("WeakerAccess")
   public static class PingPongParameters extends WParameters {
     final int nodeCt;
     final String nodeBuilderName;
