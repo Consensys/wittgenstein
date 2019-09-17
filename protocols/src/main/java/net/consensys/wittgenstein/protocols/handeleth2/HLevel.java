@@ -14,29 +14,15 @@ public class HLevel {
   @JsonSerialize(converter = ListNodeConverter.class)
   final List<HNode> peers;
 
-  // The peers when we have all signatures for this level.
-  final BitSet waitedSigs = new BitSet(); // 1 for the signatures we should get at this level
+  private final Map<Integer, Attestation> incoming;
+  private final Map<Integer, BitSet> indIncoming;
+  private final Map<Integer, Attestation> outgoing;
 
-  // The aggregate signatures verified in this level
-  final BitSet lastAggVerified = new BitSet();
-
-  // The merge of the individual & the last agg verified
-  final BitSet totalIncoming = new BitSet();
-
-  // The individual signatures verified in this level
-  final BitSet verifiedIndSignatures = new BitSet();
+  private int incomingCardinality = 0;
+  private int outgoingCardinality = 0;
 
   // The aggregate signatures to verify in this level
-  // final List<HandelEth2.SigToVerify> toVerifyAgg = new ArrayList<>();
-
-  // The individual signatures received
-  final BitSet toVerifyInd = new BitSet();
-
-  // The list of peers who told us they had finished this level.
-  public BitSet finishedPeers = new BitSet();
-
-  // The signatures we're sending for this level
-  final BitSet totalOutgoing = new BitSet();
+  final List<AggToVerify> toVerifyAgg = new ArrayList<>();
 
   // all our peers are complete: no need to send anything for this level
   public boolean outgoingFinished = false;
@@ -44,41 +30,49 @@ public class HLevel {
   /**
    * We're going to contact all nodes, one after the other. That's our position in the peers' list.
    */
-  int posInLevel = 0;
+  private int posInLevel = 0;
 
   /** Build a level 0 object. At level 0 we need (and have) only our own signature. */
-  HLevel(HNode hNode) {
+  HLevel(HNode hNode, Attestation l0) {
     this.hNode = hNode;
     level = 0;
-    size = 1;
-    outgoingFinished = true;
-    lastAggVerified.set(hNode == null ? 0 : hNode.nodeId);
-    verifiedIndSignatures.set(hNode == null ? 0 : hNode.nodeId);
-    totalIncoming.set(hNode == null ? 0 : hNode.nodeId);
-    peers = Collections.emptyList();
-  }
-
-  // For json
-  HLevel() {
-    this(null);
+    peers = Collections.emptyList(); // no peers at level 0
+    size = 1; // only our own sig;
+    incoming = Collections.singletonMap(l0.hash, l0);
+    outgoing = Collections.emptyMap();
+    outgoingFinished = true; // nothing to send.
+    indIncoming = Collections.singletonMap(l0.hash, new BitSet());
+    indIncoming.get(l0.hash).set(hNode.nodeId);
   }
 
   /** Build a level on top of the previous one. */
-  /*
-    HLevel(HLevel previousLevel, BitSet allPreviousNodes) {
-      this.hNode = previousLevel.hNode;
-      level = previousLevel.level + 1;
-
-      // Signatures needed to finish the current level are:
-      //  sigs of the previous level + peers of the previous level.
-      //  If we have all this we have finished this level
-      waitedSigs.or(allSigsAtLevel(this.level));
-      waitedSigs.andNot(allPreviousNodes);
-      totalOutgoing.set(hNode.nodeId);
-      size = waitedSigs.cardinality();
-      peers = new ArrayList<>(size);
+  HLevel(HLevel previousLevel, List<HNode> peers) {
+    this.hNode = previousLevel.hNode;
+    this.level = previousLevel.level + 1;
+    this.size = 1 << (level - 1);
+    this.peers = peers;
+    if (peers.size() != size) {
+      throw new IllegalStateException("size=" + size + ", peers.size()=" + peers.size());
     }
-  */
+
+    this.incoming = new HashMap<>();
+    this.outgoing = new HashMap<>();
+    this.indIncoming = new HashMap<>();
+  }
+
+  void doCycle(int ownhash, BitSet finishedPeers) {
+    if (!isOpen()) {
+      return;
+    }
+
+    List<HNode> dest = getRemainingPeers(finishedPeers, 1);
+    if (!dest.isEmpty()) {
+      SendAggregation ss =
+          new SendAggregation(level, ownhash, isIncomingComplete(), outgoing.values());
+      this.hNode.handelEth2.network().send(ss, this.hNode, dest.get(0));
+    }
+  }
+
   /**
    * That's the number of signatures we have if we have all of them. It's also the number of
    * signatures we're going to send.
@@ -87,60 +81,55 @@ public class HLevel {
     return size;
   }
 
-  /** The list of nodes we're waiting signatures from in this level */
-  /*
-    public List<HNode> expectedNodes() {
-      List<Handel.HNode> expected = new ArrayList<>(size);
-
-      for (int pos, cur = waitedSigs.nextSetBit(0);
-           cur >= 0;
-           pos = cur + 1, cur = waitedSigs.nextSetBit(pos)) {
-        expected.add(hNode.handelEth2.network() .getNodeById(cur));
-      }
-      return expected;
+  /** @return all the signatures you should have when this round is finished. */
+  BitSet allSigsAtLevel(int nodeCount, int nodeId, int level) {
+    if (level < 1) {
+      throw new IllegalArgumentException("level=" + level);
     }
-  */
+    BitSet res = new BitSet(nodeCount);
+    int cMask = (1 << level) - 1;
+    int start = (cMask | nodeId) ^ cMask;
+    int end = nodeId | cMask;
+    end = Math.min(end, nodeCount - 1);
+    res.set(start, end + 1);
+    res.set(nodeId, false);
+
+    return res;
+  }
+
   /** We start a level if we reached the time out or if we have all the signatures. */
-  /*  boolean isOpen() {
+  boolean isOpen() {
     if (outgoingFinished) {
       return false;
     }
 
-    if (hNode.handelEth2.network() .time >= (level - 1) * handelEth2.params.levelWaitTime) {
+    if (hNode.handelEth2.network().time >= (level - 1) * hNode.handelEth2.params.levelWaitTime) {
       return true;
     }
 
-    if (outgoingComplete()) {
+    if (isOutgoingComplete()) {
       return true;
     }
 
     return false;
   }
 
-  void doCycle() {
-    if (!isOpen()) {
-      return;
-    }
-
-    List<Handel.HNode> dest = getRemainingPeers(1);
-    if (!dest.isEmpty()) {
-      Handel.SendSigs ss = new Handel.SendSigs(totalOutgoing, this);
-      network.send(ss, Handel.HNode.this, dest.get(0));
-    }
-  }
-
-  List<Handel.HNode> getRemainingPeers(int peersCt) {
-    List<Handel.HNode> res = new ArrayList<>(peersCt);
+  /**
+   * @return the next 'peersCt' peers to contact. Skips the nodes blacklisted or already full for
+   *     this level. If there are no peers left, sets 'outgoingFinished' to true.
+   */
+  List<HNode> getRemainingPeers(BitSet finishedPeers, int peersCt) {
+    List<HNode> res = new ArrayList<>(peersCt);
 
     int start = posInLevel;
     while (peersCt > 0 && !outgoingFinished) {
 
-      Handel.HNode p = peers.get(posInLevel++);
+      HNode p = peers.get(posInLevel++);
       if (posInLevel >= peers.size()) {
         posInLevel = 0;
       }
 
-      if (!finishedPeers.get(p.nodeId) && !hNode. blacklist.get(p.nodeId)) {
+      if (!finishedPeers.get(p.nodeId) && !hNode.blacklist.get(p.nodeId)) {
         res.add(p);
         peersCt--;
       } else {
@@ -152,104 +141,122 @@ public class HLevel {
 
     return res;
   }
-
-  void buildEmissionList(List<Handel.HNode>[] emissions) {
-    if (!peers.isEmpty()) {
-      throw new IllegalStateException();
-    }
-    for (List<Handel.HNode> ranks : emissions) {
-      if (ranks != null && !ranks.isEmpty()) {
-        if (ranks.size() > 1) {
-          Collections.shuffle(ranks, network.rd);
-        }
-        peers.addAll(ranks);
+  /*
+    void buildEmissionList(List<Handel.HNode>[] emissions) {
+      if (!peers.isEmpty()) {
+        throw new IllegalStateException();
       }
-    }
-  }
-
-  public boolean incomingComplete() {
-    return waitedSigs.equals(totalIncoming);
-  }
-
-  public boolean outgoingComplete() {
-    return totalOutgoing.cardinality() == size;
-  }
-
-  int sizeIfIncluded(Handel.SigToVerify sig) {
-    BitSet c = (BitSet) sig.sig.clone();
-    if (!c.intersects(totalIncoming)) {
-      c.or(totalIncoming);
-    }
-    c.or(verifiedIndSignatures);
-
-    return c.cardinality();
-  }
-
-  Handel.SigToVerify createSuicideByzantineSig(int maxRank) {
-    boolean reset = false;
-    for (int i = suicideBizAfter; i < peers.size(); i++) {
-      Handel.HNode p = peers.get(i);
-      if (p.isDown() && !blacklist.get(p.nodeId)) {
-        if (!reset) {
-          suicideBizAfter = i;
-          reset = true;
-        }
-        if (receptionRanks[p.nodeId] < maxRank) {
-          return new Handel.SigToVerify(p.nodeId, level, receptionRanks[p.nodeId], waitedSigs, true);
+      for (List<Handel.HNode> ranks : emissions) {
+        if (ranks != null && !ranks.isEmpty()) {
+          if (ranks.size() > 1) {
+            Collections.shuffle(ranks, network.rd);
+          }
+          peers.addAll(ranks);
         }
       }
     }
 
-    if (!reset) {
-      // No byzantine nodes left in this level
-      suicideBizAfter = -1;
+    public boolean incomingComplete() {
+      return waitedSigs.equals(totalIncoming);
+    }
+  */
+
+  /** @return the size the resulting aggregation if we merge the signature to our current best. */
+  private int sizeIfMerged(AggToVerify sig) {
+    Map<Integer, Attestation> aggMap = new HashMap<>(incoming);
+
+    int size = 0;
+    for (Attestation av : sig.attestations) {
+      Attestation our = aggMap.remove(av.hash);
+      if (our == null) {
+        size += av.who.cardinality();
+      } else if (!our.who.intersects(av.who)) {
+        size += av.who.cardinality();
+      } else {
+        BitSet merged = (BitSet) indIncoming.get(our.hash).clone();
+        merged.or(av.who);
+        size += Math.max(merged.cardinality(), our.who.cardinality());
+      }
     }
 
-    return null;
-  }*/
+    for (Attestation our : aggMap.values()) {
+      size += our.who.cardinality();
+    }
+
+    return size;
+  }
+
+  /**
+   * Merged the incoming aggregation into our current best, and update the 'incomingCardinality'
+   * field accordingly.
+   */
+  void mergeIncoming(AggToVerify aggv) {
+    // Add the individual contributions to the list
+    BitSet indivs = indIncoming.computeIfAbsent(aggv.ownHash, x -> new BitSet());
+    indivs.set(aggv.from);
+
+    incomingCardinality = 0;
+
+    // Merge the aggregate contributions when possible. Take the best one when it's not possible
+    for (Attestation av : aggv.attestations) {
+      Attestation our = incoming.get(av.hash);
+      if (our == null) {
+        incoming.put(av.hash, av);
+        incomingCardinality += av.who.cardinality();
+      } else if (!our.who.intersects(av.who)) {
+        our = new Attestation(our, av.who);
+        incoming.replace(our.hash, our);
+        incomingCardinality += our.who.cardinality();
+      } else if (av.who.cardinality() > our.who.cardinality()) {
+        our = new Attestation(our, av.who);
+        our.who.or(indIncoming.get(our.hash));
+        incoming.replace(our.hash, our);
+        incomingCardinality += our.who.cardinality();
+      }
+    }
+  }
+
+  boolean isIncomingComplete() {
+    return incomingCardinality == size;
+  }
+
+  /** @return true if we have all the signatures we're supposed to send for this level. */
+  public boolean isOutgoingComplete() {
+    return outgoingCardinality == size;
+  }
 
   /**
    * This method uses a window that has a variable size depending on whether the node has received
    * invalid contributions or not. Within the window, it evaluates with a scoring function. Outside
    * it evaluates with the rank.
    */
-  /*
-  public Handel.SigToVerify bestToVerify() {
-    if (toVerifyAgg.isEmpty()) {
-      return null;
-    }
+  public AggToVerify bestToVerify(int currWindowSize, BitSet blacklist) {
     if (currWindowSize < 1) {
       throw new IllegalStateException();
     }
 
-    int windowIndex =
-      Collections.min(toVerifyAgg, Comparator.comparingInt(Handel.SigToVerify::getRank)).rank;
-
-    if (suicideBizAfter >= 0) {
-      Handel.SigToVerify bSig = createSuicideByzantineSig(windowIndex + currWindowSize);
-      if (bSig != null) {
-        toVerifyAgg.add(bSig);
-        sigQueueSize++;
-        return bSig;
-      }
+    if (toVerifyAgg.isEmpty()) {
+      return null;
     }
 
-    int curSignatureSize = totalIncoming.cardinality();
-    Handel.SigToVerify bestOutside = null; // best signature outside the window - rank based decision
-    Handel.SigToVerify bestInside = null; // best signature inside the window - ranking
+    int windowIndex =
+        Collections.min(toVerifyAgg, Comparator.comparingInt(AggToVerify::getRank)).rank;
+
+    AggToVerify bestOutside = null; // best signature outside the window - rank based decision
+    AggToVerify bestInside = null; // best signature inside the window - ranking
     int bestScoreInside = 0; // score associated to the best sig. inside the window
 
-    int removed = 0;
-    List<Handel.SigToVerify> curatedList = new ArrayList<>();
-    for (Handel.SigToVerify stv : toVerifyAgg) {
-      int s = sizeIfIncluded(stv);
-      if (!blacklist.get(stv.from) && s > curSignatureSize) {
+    List<AggToVerify> curatedList = new ArrayList<>();
+
+    for (AggToVerify stv : toVerifyAgg) {
+      int s = sizeIfMerged(stv);
+      if (blacklist.get(stv.from) && s > incomingCardinality) {
         // only add signatures that can result in a better aggregate signature
         // select the high priority one from the low priority on
         curatedList.add(stv);
         if (stv.rank <= windowIndex + currWindowSize) {
 
-          int score = evaluateSig(this, stv.sig);
+          int score = s;
           if (score > bestScoreInside) {
             bestScoreInside = score;
             bestInside = stv;
@@ -259,16 +266,14 @@ public class HLevel {
             bestOutside = stv;
           }
         }
-      } else {
-        removed++;
       }
     }
 
-    if (removed > 0) {
+    if (curatedList.size() != toVerifyAgg.size()) {
       replaceToVerifyAgg(curatedList);
     }
 
-    Handel.SigToVerify toVerify;
+    AggToVerify toVerify;
     if (bestInside != null) {
       toVerify = bestInside;
     } else if (bestOutside != null) {
@@ -280,15 +285,8 @@ public class HLevel {
     return toVerify;
   }
 
-  private void replaceToVerifyAgg(List<Handel.SigToVerify> curatedList) {
-    int oldSize = toVerifyAgg.size();
+  private void replaceToVerifyAgg(List<AggToVerify> curatedList) {
     toVerifyAgg.clear();
     toVerifyAgg.addAll(curatedList);
-    int newSize = toVerifyAgg.size();
-    sigQueueSize -= oldSize;
-    sigQueueSize += newSize;
-    if (sigQueueSize < 0) {
-      throw new IllegalStateException("sigQueueSize=" + sigQueueSize);
-    }
-  }*/
+  }
 }

@@ -4,6 +4,8 @@ import java.util.BitSet;
 import net.consensys.wittgenstein.core.WParameters;
 
 public class HandelEth2Parameters extends WParameters {
+  static final int TIME_BETWEEN_ATTESTATION = 6000;
+
   /** The number of nodes in the network */
   final int nodeCount;
 
@@ -21,6 +23,9 @@ public class HandelEth2Parameters extends WParameters {
 
   final String nodeBuilderName;
   final String networkLatencyName;
+
+  // The list of peers who told us they had finished the level they have in common with us.
+  public BitSet finishedPeers = new BitSet();
 
   /**
    * Allows to test what happens when all the nodes are not starting at the same time. If the value

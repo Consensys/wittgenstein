@@ -1,12 +1,14 @@
 package net.consensys.wittgenstein.protocols.handeleth2;
 
-import java.util.List;
+import java.util.Collection;
 import net.consensys.wittgenstein.core.Network;
 import net.consensys.wittgenstein.core.messages.Message;
 
 class SendAggregation extends Message<HNode> {
   final int level;
-  final List<Attestation> attestations;
+  final int ownHash; // the hash of our own attestation
+  /** We send all the attestations we received for a given height. */
+  final Collection<Attestation> attestations;
 
   /**
    * A flag to say that you have finished this level and that the receiver should not contact you.
@@ -15,10 +17,12 @@ class SendAggregation extends Message<HNode> {
    */
   final boolean levelFinished;
 
-  public SendAggregation(HLevel l, List<Attestation> attestations) {
+  public SendAggregation(
+      int level, int ownHash, boolean levelFinished, Collection<Attestation> attestations) {
     this.attestations = attestations;
-    this.level = l.level;
-    this.levelFinished = true; // l.incomingComplete();
+    this.level = level;
+    this.ownHash = ownHash;
+    this.levelFinished = levelFinished;
   }
 
   @Override

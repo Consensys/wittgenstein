@@ -14,4 +14,10 @@ public class Attestation {
     this.who = new BitSet();
     this.who.set(who);
   }
+
+  public Attestation(Attestation base, BitSet whoToCopy) {
+    this.height = base.height;
+    this.hash = base.hash;
+    this.who = (BitSet) whoToCopy.clone();
+  }
 }
