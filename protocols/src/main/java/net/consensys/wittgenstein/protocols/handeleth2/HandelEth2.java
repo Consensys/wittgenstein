@@ -113,7 +113,6 @@ public class HandelEth2 implements Protocol {
       }
 
       // We now build the peers' list that will be used by all AggregationProcess
-
       // We start by initializing the peers list.
       assert sender.peersPerLevel.isEmpty();
       sender.peersPerLevel.add(Collections.emptyList()); // level 0:

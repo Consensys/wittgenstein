@@ -1,8 +1,6 @@
 package net.consensys.wittgenstein.protocols.handeleth2;
 
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.List;
+import java.util.*;
 import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.core.NodeBuilder;
 import net.consensys.wittgenstein.core.utils.MoreMath;
@@ -29,7 +27,7 @@ public class HNode extends Node {
    */
   final int[] receptionRanks;
 
-  final transient ArrayList<AggregationProcess> runningAggs = new ArrayList<>();
+  final transient Map<Integer, AggregationProcess> runningAggs = new HashMap<>();
 
   /**
    * The list of all nodes who sent bad signatures. This list is global as we keep it between
@@ -109,6 +107,9 @@ public class HNode extends Node {
     // The list of peers who told us they had finished the level they have in common with us.
     final BitSet finishedPeers = new BitSet();
 
+    // The list of peers for which we have already received a message.
+    final BitSet receivedPeers = new BitSet();
+
     final List<HLevel> levels = new ArrayList<>();
     int lastLevelVerified = 0;
 
@@ -118,7 +119,9 @@ public class HNode extends Node {
       this.ownHash = l0.hash;
       this.startAt = startAt;
       this.endAt = startAt + HandelEth2Parameters.PERIOD_TIME;
+      assert levels.isEmpty();
       initLevel(handelEth2.params.nodeCount, l0);
+      assert levels.size() == handelEth2.levelCount();
     }
 
     private void initLevel(int nodeCount, Attestation l0) {
@@ -157,8 +160,13 @@ public class HNode extends Node {
     void updateVerifiedSignatures(AggToVerify vs) {
       HLevel hl = levels.get(vs.level);
 
+      if (vs.height != height) {
+        throw new IllegalStateException("wrong heights, vs:" + vs + ", ap=" + this);
+      }
+
       if (hl.isIncomingComplete()) {
-        throw new IllegalStateException();
+        throw new IllegalStateException(
+            "No need to verify a contribution for a complete level. vs:" + vs);
       }
 
       hl.mergeIncoming(vs);
@@ -166,14 +174,40 @@ public class HNode extends Node {
 
       // todo: we need to add the fast path here
     }
+
+    void updateAllOutgoing() {
+      Map<Integer, Attestation> atts = new HashMap<>();
+      int size = 0;
+      for (HLevel hl : levels) {
+
+        if (hl.isOpen()) {
+          hl.outgoing.clear();
+          hl.outgoing.putAll(atts);
+          hl.outgoingCardinality = size;
+        }
+
+        for (Attestation a : hl.incoming.values()) {
+          Attestation existing = atts.get(a.hash);
+          size += a.who.cardinality();
+          if (existing == null) {
+            atts.put(a.hash, a);
+          } else {
+            Attestation merged = new Attestation(existing, existing.who);
+            merged.who.or(a.who);
+            atts.replace(merged.hash, merged);
+          }
+        }
+      }
+    }
   }
 
   /**
-   * Every 'DP' milliseconds, a node sends its currrent aggregation to a set of his peers. This
-   * method is called every 'DP' by Wittgenstein.
+   * Every 'DP' milliseconds, a node sends its current aggregation to a set of his peers. This
+   * method is called every dissemination period by Wittgenstein.
    */
   void dissemination() {
-    for (AggregationProcess ap : runningAggs) {
+    for (AggregationProcess ap : runningAggs.values()) {
+      ap.updateAllOutgoing();
       for (HLevel sfl : ap.levels) {
         sfl.doCycle(ap.ownHash, ap.finishedPeers);
       }
@@ -184,23 +218,26 @@ public class HNode extends Node {
    * We consider that delegate a single core to the verification of the received messages. This
    * method is called every 'pairingTime' by Wittgenstein.
    */
-  int lastProcessVerified = 0;
+  int lastProcessVerified = height;
 
   public void verify() {
-    int start = lastProcessVerified;
+    int start = lastProcessVerified + 1;
     for (int i = 0; i < runningAggs.size(); i++) {
-      if (++start >= runningAggs.size()) {
-        start = 0;
+      final AggregationProcess ap = runningAggs.get(start);
+      if (ap == null) {
+        start = Collections.min(runningAggs.keySet());
+        continue;
       }
-      AggregationProcess ap = runningAggs.get(start);
       AggToVerify sa = ap.bestToVerify();
 
       if (sa != null) {
+        // We want to update the signature before the verification loop runs again, if
+        //  not we will check twice the same sig. Hence the -1
         handelEth2
             .network()
             .registerTask(
                 () -> ap.updateVerifiedSignatures(sa),
-                handelEth2.network().time + nodePairingTime,
+                handelEth2.network().time + nodePairingTime - 1,
                 HNode.this);
       }
     }
@@ -213,6 +250,45 @@ public class HNode extends Node {
     int startAt = handelEth2.network().time;
     int endAt = startAt + HandelEth2Parameters.PERIOD_TIME;
     AggregationProcess ap = new AggregationProcess(a, startAt, receptionRanks);
-    ap.initLevel(handelEth2.params.nodeCount, a);
+
+    Object past = runningAggs.put(ap.height, ap);
+    if (past != null) {
+      throw new IllegalStateException();
+    }
+  }
+
+  /** Called when we receive a new aggregate contribution */
+  public void onNewAgg(HNode from, SendAggregation agg) {
+    AggregationProcess ap = runningAggs.get(agg.height);
+    if (ap == null) {
+      // message received too early or too late
+      return;
+    }
+
+    if (agg.levelFinished) {
+      // In production we need to be sure that the message is legit before
+      //  doing this (ie.: we checked the sig).
+      ap.finishedPeers.set(from.nodeId);
+    }
+
+    if (ap.receivedPeers.get(from.nodeId)) {
+      // We have already a message from this node.
+      return;
+    }
+    ap.receivedPeers.set(from.nodeId);
+
+    HLevel hl = ap.levels.get(agg.level);
+
+    // Get and update the reception rank
+    int rank = ap.receptionRanks[from.nodeId];
+    ap.receptionRanks[from.nodeId] += handelEth2.params.nodeCount;
+    if (receptionRanks[from.nodeId] <= 0) {
+      receptionRanks[from.nodeId] = Integer.MAX_VALUE;
+    }
+
+    if (!hl.isIncomingComplete()) {
+      hl.toVerifyAgg.add(
+          new AggToVerify(from.nodeId, hl.level, agg.ownHash, rank, agg.attestations));
+    }
   }
 }

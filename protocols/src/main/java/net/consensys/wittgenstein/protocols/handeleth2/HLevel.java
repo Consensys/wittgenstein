@@ -4,25 +4,25 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import java.util.*;
 import net.consensys.wittgenstein.core.json.ListNodeConverter;
 
-public class HLevel {
+class HLevel {
   private final transient HNode hNode;
 
   final int level;
-  final int size;
+  private final int size;
 
   // peers, sorted in emission order
   @JsonSerialize(converter = ListNodeConverter.class)
-  final List<HNode> peers;
+  private final List<HNode> peers;
 
-  private final Map<Integer, Attestation> incoming;
+  final Map<Integer, Attestation> incoming;
   private final Map<Integer, BitSet> indIncoming;
-  private final Map<Integer, Attestation> outgoing;
+  final Map<Integer, Attestation> outgoing;
 
   private int incomingCardinality = 0;
-  private int outgoingCardinality = 0;
+  int outgoingCardinality = 0;
 
   // The aggregate signatures to verify in this level
-  final List<AggToVerify> toVerifyAgg = new ArrayList<>();
+  final List<AggToVerify> toVerifyAgg = new LinkedList<>();
 
   // all our peers are complete: no need to send anything for this level
   public boolean outgoingFinished = false;
@@ -38,6 +38,7 @@ public class HLevel {
     level = 0;
     peers = Collections.emptyList(); // no peers at level 0
     size = 1; // only our own sig;
+    incomingCardinality = 1;
     incoming = Collections.singletonMap(l0.hash, l0);
     outgoing = Collections.emptyMap();
     outgoingFinished = true; // nothing to send.
@@ -68,7 +69,8 @@ public class HLevel {
     List<HNode> dest = getRemainingPeers(finishedPeers, 1);
     if (!dest.isEmpty()) {
       SendAggregation ss =
-          new SendAggregation(level, ownhash, isIncomingComplete(), outgoing.values());
+          new SendAggregation(
+              level, ownhash, isIncomingComplete(), new ArrayList<>(outgoing.values()));
       this.hNode.handelEth2.network().send(ss, this.hNode, dest.get(0));
     }
   }
@@ -117,22 +119,6 @@ public class HLevel {
 
     return res;
   }
-  /*
-    void buildEmissionList(List<Handel.HNode>[] emissions) {
-      if (!peers.isEmpty()) {
-        throw new IllegalStateException();
-      }
-      for (List<Handel.HNode> ranks : emissions) {
-        if (ranks != null && !ranks.isEmpty()) {
-          if (ranks.size() > 1) {
-            Collections.shuffle(ranks, network.rd);
-          }
-          peers.addAll(ranks);
-        }
-      }
-    }
-
-  */
 
   /** @return the size the resulting aggregation if we merge the signature to our current best. */
   private int sizeIfMerged(AggToVerify sig) {
@@ -142,18 +128,31 @@ public class HLevel {
     for (Attestation av : sig.attestations) {
       Attestation our = aggMap.remove(av.hash);
       if (our == null) {
+        // We did not have an attestation for this hash. We will be able
+        //  to integrate directly the aggregate sig.
         size += av.who.cardinality();
       } else if (!our.who.intersects(av.who)) {
+        // We had it, but it does not intersect. We can add it as well.
         size += av.who.cardinality();
       } else {
-        BitSet merged = (BitSet) indIncoming.get(our.hash).clone();
-        merged.or(av.who);
+        // It overlaps. We need to choose the best option. Existing, or
+        //  new if we merge with the individual contributions kept.
+        BitSet indivs = indIncoming.get(our.hash);
+        BitSet merged = av.who;
+        if (indivs != null) {
+          merged = (BitSet) indivs.clone();
+          merged.or(av.who);
+        }
         size += Math.max(merged.cardinality(), our.who.cardinality());
       }
     }
 
     for (Attestation our : aggMap.values()) {
       size += our.who.cardinality();
+    }
+
+    if (size > this.size) {
+      throw new IllegalStateException("bad size: " + size + ", level=" + this);
     }
 
     return size;
@@ -168,8 +167,6 @@ public class HLevel {
     BitSet indivs = indIncoming.computeIfAbsent(aggv.ownHash, x -> new BitSet());
     indivs.set(aggv.from);
 
-    incomingCardinality = 0;
-
     // Merge the aggregate contributions when possible. Take the best one when it's not possible
     for (Attestation av : aggv.attestations) {
       Attestation our = incoming.get(av.hash);
@@ -177,15 +174,29 @@ public class HLevel {
         incoming.put(av.hash, av);
         incomingCardinality += av.who.cardinality();
       } else if (!our.who.intersects(av.who)) {
-        our = new Attestation(our, av.who);
-        incoming.replace(our.hash, our);
-        incomingCardinality += our.who.cardinality();
-      } else if (av.who.cardinality() > our.who.cardinality()) {
-        our = new Attestation(our, av.who);
-        our.who.or(indIncoming.get(our.hash));
-        incoming.replace(our.hash, our);
-        incomingCardinality += our.who.cardinality();
+        Attestation both = new Attestation(our, our.who);
+        both.who.or(av.who);
+        incoming.replace(both.hash, both);
+        incomingCardinality += av.who.cardinality();
+      } else {
+        BitSet indivsH = indIncoming.get(our.hash);
+        BitSet merged = av.who;
+        if (indivsH != null) {
+          merged = (BitSet) indivsH.clone();
+          merged.or(av.who);
+        }
+        if (merged.cardinality() > our.who.cardinality()) {
+          incomingCardinality -= our.who.cardinality();
+          Attestation both = new Attestation(our, merged);
+          incoming.replace(both.hash, both);
+          incomingCardinality += our.who.cardinality();
+        }
       }
+    }
+
+    if (incomingCardinality > this.size) {
+      throw new IllegalStateException(
+          "bad incomingCardinality: " + incomingCardinality + ", level=" + this);
     }
   }
 
@@ -194,7 +205,7 @@ public class HLevel {
   }
 
   /** @return true if we have all the signatures we're supposed to send for this level. */
-  public boolean isOutgoingComplete() {
+  boolean isOutgoingComplete() {
     return outgoingCardinality == size;
   }
 
@@ -203,7 +214,7 @@ public class HLevel {
    * invalid contributions or not. Within the window, it evaluates with a scoring function. Outside
    * it evaluates with the rank.
    */
-  public AggToVerify bestToVerify(int currWindowSize, BitSet blacklist) {
+  AggToVerify bestToVerify(int currWindowSize, BitSet blacklist) {
     if (currWindowSize < 1) {
       throw new IllegalStateException();
     }
@@ -212,39 +223,40 @@ public class HLevel {
       return null;
     }
 
-    int windowIndex =
-        Collections.min(toVerifyAgg, Comparator.comparingInt(AggToVerify::getRank)).rank;
+    if (isIncomingComplete()) {
+      toVerifyAgg.clear();
+      return null;
+    }
 
+    int windowIndex = hNode.handelEth2.params.nodeCount;
     AggToVerify bestOutside = null; // best signature outside the window - rank based decision
     AggToVerify bestInside = null; // best signature inside the window - ranking
+    int bestScoreOutside = 0; // score associated to the best sig. inside the window
     int bestScoreInside = 0; // score associated to the best sig. inside the window
 
-    List<AggToVerify> curatedList = new ArrayList<>();
+    Iterator<AggToVerify> it = toVerifyAgg.iterator();
+    while (it.hasNext()) {
+      AggToVerify atv = it.next();
+      int s = sizeIfMerged(atv);
 
-    for (AggToVerify stv : toVerifyAgg) {
-      int s = sizeIfMerged(stv);
-      if (blacklist.get(stv.from) && s > incomingCardinality) {
-        // only add signatures that can result in a better aggregate signature
-        // select the high priority one from the low priority on
-        curatedList.add(stv);
-        if (stv.rank <= windowIndex + currWindowSize) {
+      // only add signatures that can result in a better aggregate signature
+      // select the high priority one from the low priority on
+      if (blacklist.get(atv.from) || s <= incomingCardinality) {
+        it.remove();
+        continue;
+      }
 
-          int score = s;
-          if (score > bestScoreInside) {
-            bestScoreInside = score;
-            bestInside = stv;
-          }
-        } else {
-          if (bestOutside == null || stv.rank < bestOutside.rank) {
-            bestOutside = stv;
-          }
-        }
+      if (atv.rank < windowIndex) {
+        windowIndex = atv.rank;
+      }
+
+      if (s > bestScoreOutside) {
+        bestScoreOutside = s;
+        bestOutside = atv;
       }
     }
 
-    if (curatedList.size() != toVerifyAgg.size()) {
-      replaceToVerifyAgg(curatedList);
-    }
+    // todo: we're not respecting the windows limit
 
     AggToVerify toVerify;
     if (bestInside != null) {
@@ -258,8 +270,17 @@ public class HLevel {
     return toVerify;
   }
 
-  private void replaceToVerifyAgg(List<AggToVerify> curatedList) {
-    toVerifyAgg.clear();
-    toVerifyAgg.addAll(curatedList);
+  @Override
+  public String toString() {
+    return "level:"
+        + level
+        + ", ic:"
+        + isIncomingComplete()
+        + ", oc:"
+        + isOutgoingComplete()
+        + ", is:"
+        + incomingCardinality
+        + ", os:"
+        + outgoingCardinality;
   }
 }

@@ -30,10 +30,10 @@ public class HandelEth2Parameters extends WParameters {
   // Used for json / http server
   @SuppressWarnings("unused")
   public HandelEth2Parameters() {
-    this.nodeCount = 32768 / 512;
+    this.nodeCount = 64;
     this.pairingTime = 3;
-    this.levelWaitTime = 50;
-    this.periodDurationMs = 10;
+    this.levelWaitTime = 100;
+    this.periodDurationMs = 50;
     this.acceleratedCallsCount = 10;
     this.nodesDown = 0;
     this.nodeBuilderName = null;
