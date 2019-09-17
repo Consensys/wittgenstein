@@ -14,11 +14,14 @@ public class HNode extends Node {
 
   final int nodePairingTime;
 
+  /** The current height for this node. Increase every PERIOD_TIME seconds */
+  int height = 1000;
+
   /**
    * Our peers, sorted by emission rank inside a level. The emission ranks do not change during an
    * aggregation, so these list can be shared between aggregation process.
    */
-  final List<List<HNode>> peersPerLevel = new ArrayList<>();
+  final transient List<List<HNode>> peersPerLevel = new ArrayList<>();
 
   /**
    * The reception ranks. These rank change during the process, so this array must be copied by the
@@ -26,7 +29,7 @@ public class HNode extends Node {
    */
   final int[] receptionRanks;
 
-  final ArrayList<AggregationProcess> runningAggs = new ArrayList<>();
+  final transient ArrayList<AggregationProcess> runningAggs = new ArrayList<>();
 
   /**
    * The list of all nodes who sent bad signatures. This list is global as we keep it between
@@ -60,6 +63,42 @@ public class HNode extends Node {
     return new Attestation(height, h, nodeId);
   }
 
+  /** @return all the signatures you should have when this round is finished. */
+  BitSet peersUpToLevel(int level) {
+    if (level < 1) {
+      throw new IllegalArgumentException("round=" + level);
+    }
+    BitSet res = new BitSet(handelEth2.params.nodeCount);
+    int cMask = (1 << level) - 1;
+    int start = (cMask | nodeId) ^ cMask;
+    int end = nodeId | cMask;
+    end = Math.min(end, handelEth2.params.nodeCount - 1);
+    res.set(start, end + 1);
+    res.set(nodeId, false);
+
+    return res;
+  }
+
+  /** @return the level at which we communicate with 'n' */
+  int communicationLevel(HNode n) {
+    if (nodeId == n.nodeId) {
+      throw new IllegalArgumentException("same id: " + n.nodeId);
+    }
+
+    int n1 = nodeId;
+    int n2 = n.nodeId;
+    for (int l = 1; l <= handelEth2.levelCount(); l++) {
+      n1 >>= 1;
+      n2 >>= 1;
+
+      if (n1 == n2) {
+        return l;
+      }
+    }
+
+    throw new IllegalStateException("Can't communicate with " + n);
+  }
+
   class AggregationProcess {
     final int height;
     final int ownHash;
@@ -67,7 +106,7 @@ public class HNode extends Node {
     final int endAt;
     final int[] receptionRanks;
 
-    // The
+    // The list of peers who told us they had finished the level they have in common with us.
     final BitSet finishedPeers = new BitSet();
 
     final List<HLevel> levels = new ArrayList<>();
@@ -78,13 +117,12 @@ public class HNode extends Node {
       this.height = l0.height;
       this.ownHash = l0.hash;
       this.startAt = startAt;
-      this.endAt = startAt + HandelEth2Parameters.TIME_BETWEEN_ATTESTATION;
+      this.endAt = startAt + HandelEth2Parameters.PERIOD_TIME;
       initLevel(handelEth2.params.nodeCount, l0);
     }
 
-    public void initLevel(int nodeCount, Attestation l0) {
+    private void initLevel(int nodeCount, Attestation l0) {
       int roundedPow2NodeCount = MoreMath.roundPow2(nodeCount);
-      BitSet allPreviousNodes = new BitSet(nodeCount);
       HLevel last = new HLevel(HNode.this, l0);
       levels.add(last);
       for (int l = 1; Math.pow(2, l) <= roundedPow2NodeCount; l++) {
@@ -148,7 +186,7 @@ public class HNode extends Node {
    */
   int lastProcessVerified = 0;
 
-  void verify() {
+  public void verify() {
     int start = lastProcessVerified;
     for (int i = 0; i < runningAggs.size(); i++) {
       if (++start >= runningAggs.size()) {
@@ -166,5 +204,15 @@ public class HNode extends Node {
                 HNode.this);
       }
     }
+  }
+
+  /** Called every 'PERIOD_TIME' seconds by Wittgenstein. */
+  public void startNewAggregation() {
+    height++;
+    Attestation a = create(height);
+    int startAt = handelEth2.network().time;
+    int endAt = startAt + HandelEth2Parameters.PERIOD_TIME;
+    AggregationProcess ap = new AggregationProcess(a, startAt, receptionRanks);
+    ap.initLevel(handelEth2.params.nodeCount, a);
   }
 }

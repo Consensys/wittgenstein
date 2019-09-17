@@ -353,7 +353,7 @@ public class Handel implements Protocol {
       }
     }
 
-    void dissemination() {
+    public void dissemination() {
       for (HLevel sfl : levels) {
         sfl.doCycle();
       }
@@ -888,7 +888,7 @@ public class Handel implements Protocol {
       currWindowSize = Math.min(newSize, l.size);
 
       // simply put it at the end of the ranking
-      receptionRanks[best.from] += l.peers.size();
+      receptionRanks[best.from] += params.nodeCount;
       if (receptionRanks[best.from] < 0) {
         receptionRanks[best.from] = Integer.MAX_VALUE;
       }
@@ -1103,7 +1103,6 @@ public class Handel implements Protocol {
     }
 
     List<HNode> an = new ArrayList<>(network.allNodes);
-    int nLevel = MoreMath.log2(params.nodeCount);
 
     // The shuffler will give us the reception rank.
     Shuffler s = new ShufflingSquare(an);

@@ -73,30 +73,6 @@ public class HLevel {
     }
   }
 
-  /**
-   * That's the number of signatures we have if we have all of them. It's also the number of
-   * signatures we're going to send.
-   */
-  public int expectedSigs() {
-    return size;
-  }
-
-  /** @return all the signatures you should have when this round is finished. */
-  BitSet allSigsAtLevel(int nodeCount, int nodeId, int level) {
-    if (level < 1) {
-      throw new IllegalArgumentException("level=" + level);
-    }
-    BitSet res = new BitSet(nodeCount);
-    int cMask = (1 << level) - 1;
-    int start = (cMask | nodeId) ^ cMask;
-    int end = nodeId | cMask;
-    end = Math.min(end, nodeCount - 1);
-    res.set(start, end + 1);
-    res.set(nodeId, false);
-
-    return res;
-  }
-
   /** We start a level if we reached the time out or if we have all the signatures. */
   boolean isOpen() {
     if (outgoingFinished) {
@@ -156,9 +132,6 @@ public class HLevel {
       }
     }
 
-    public boolean incomingComplete() {
-      return waitedSigs.equals(totalIncoming);
-    }
   */
 
   /** @return the size the resulting aggregation if we merge the signature to our current best. */
