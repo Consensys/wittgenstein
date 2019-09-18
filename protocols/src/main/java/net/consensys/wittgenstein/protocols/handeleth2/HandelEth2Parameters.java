@@ -14,7 +14,7 @@ public class HandelEth2Parameters extends WParameters {
 
   int levelWaitTime;
   final int periodDurationMs;
-  int acceleratedCallsCount;
+  int fastPath;
 
   final int nodesDown;
 
@@ -35,7 +35,7 @@ public class HandelEth2Parameters extends WParameters {
     this.pairingTime = 3;
     this.levelWaitTime = 100;
     this.periodDurationMs = 50;
-    this.acceleratedCallsCount = 10;
+    this.fastPath = 10;
     this.nodesDown = 0;
     this.nodeBuilderName = null;
     this.networkLatencyName = null;
@@ -47,7 +47,7 @@ public class HandelEth2Parameters extends WParameters {
       int pairingTime,
       int levelWaitTime,
       int periodDurationMs,
-      int acceleratedCallsCount,
+      int fastPath,
       int nodesDown,
       String nodeBuilderName,
       String networkLatencyName,
@@ -64,7 +64,7 @@ public class HandelEth2Parameters extends WParameters {
     this.pairingTime = pairingTime;
     this.levelWaitTime = levelWaitTime;
     this.periodDurationMs = periodDurationMs;
-    this.acceleratedCallsCount = acceleratedCallsCount;
+    this.fastPath = fastPath;
     this.nodesDown = nodesDown;
     this.nodeBuilderName = nodeBuilderName;
     this.networkLatencyName = networkLatencyName;

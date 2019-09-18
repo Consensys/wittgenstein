@@ -92,14 +92,14 @@ class HLevel {
     return false;
   }
 
-  /**
-   * @return the next 'peersCt' peers to contact. Skips the nodes blacklisted or already full for
-   *     this level. If there are no peers left, sets 'outgoingFinished' to true.
-   */
   private int lastMessageCardinality = 0;
 
   private int lastNode = 0;
 
+  /**
+   * @return the next 'peersCt' peers to contact. Skips the nodes blacklisted or already full for
+   *     this level. If there are no peers left, sets 'outgoingFinished' to true.
+   */
   List<HNode> getRemainingPeers(BitSet finishedPeers, int peersCt) {
     List<HNode> res = new ArrayList<>(peersCt);
 

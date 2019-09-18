@@ -180,7 +180,24 @@ public class HNode extends Node {
       hl.mergeIncoming(vs);
       successfulVerification();
 
-      // todo: we need to add the fast path here
+      if (hl.isIncomingComplete() && hl.level < handelEth2.levelCount()) {
+        // If incoming is complete it means we may be complete for the upper levers
+        // That would trigger the fast path.
+        updateAllOutgoing();
+        for (int l = hl.level + 1; l < handelEth2.levelCount(); l++) {
+          HLevel hu = levels.get(l);
+          if (hu.isOutgoingComplete()) {
+            List<HNode> d = hu.getRemainingPeers(finishedPeers, handelEth2.params.fastPath);
+            SendAggregation sa =
+                new SendAggregation(
+                    hu.level,
+                    ownHash,
+                    hu.isIncomingComplete(),
+                    new ArrayList<>(hu.outgoing.values()));
+            handelEth2.network().send(sa, HNode.this, d);
+          }
+        }
+      }
     }
 
     void updateAllOutgoing() {
