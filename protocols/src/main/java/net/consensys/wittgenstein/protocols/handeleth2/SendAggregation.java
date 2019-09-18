@@ -1,5 +1,6 @@
 package net.consensys.wittgenstein.protocols.handeleth2;
 
+import java.util.Collections;
 import java.util.List;
 import net.consensys.wittgenstein.core.Network;
 import net.consensys.wittgenstein.core.messages.Message;
@@ -23,10 +24,28 @@ class SendAggregation extends Message<HNode> {
       throw new IllegalArgumentException("attestations should not be empty");
     }
     this.attestations = attestations;
-    this.height = attestations.iterator().next().height;
+    this.height = attestations.get(0).height;
     this.level = level;
     this.ownHash = ownHash;
     this.levelFinished = levelFinished;
+
+    boolean foundHash = false;
+    for (Attestation a : attestations) {
+      if (a.height != height) {
+        throw new IllegalStateException("bad height:" + attestations);
+      }
+      if (a.hash == ownHash) {
+        foundHash = true;
+      }
+    }
+    if (!foundHash) {
+      throw new IllegalStateException("no attestation with you own hash?");
+    }
+  }
+
+  // For tests
+  SendAggregation(int level, int ownHash, boolean levelFinished, Attestation attestation) {
+    this(level, ownHash, levelFinished, Collections.singletonList(attestation));
   }
 
   @Override

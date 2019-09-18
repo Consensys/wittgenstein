@@ -24,4 +24,9 @@ public class Attestation {
     this.hash = base.hash;
     this.who = (BitSet) whoToCopy.clone();
   }
+
+  @Override
+  public String toString() {
+    return "{" + "height=" + height + ", hash=" + hash + ", who=" + who + '}';
+  }
 }

@@ -53,6 +53,12 @@ public class HNode extends Node {
     this.receptionRanks = new int[handelEth2.params.nodeCount];
   }
 
+  /**
+   * Creation of a level 0 attestation, ie. the individual attestation. We choose randomly the hash
+   * we're going to attest. To replicate real world logic (where most nodes should have the same
+   * hashes), 80% of the time we choose 0 as ahas value. Then 20%.80% 1, then 20%.20%.80% 2 and so
+   * on.
+   */
   Attestation create(int height) {
     int h = 0;
     while (handelEth2.network().rd.nextDouble() < 0.2) {
@@ -119,9 +125,8 @@ public class HNode extends Node {
       this.ownHash = l0.hash;
       this.startAt = startAt;
       this.endAt = startAt + HandelEth2Parameters.PERIOD_TIME;
-      assert levels.isEmpty();
       initLevel(handelEth2.params.nodeCount, l0);
-      assert levels.size() == handelEth2.levelCount();
+      assert levels.size() == handelEth2.levelCount() + 1; // for level 0
     }
 
     private void initLevel(int nodeCount, Attestation l0) {
@@ -218,47 +223,64 @@ public class HNode extends Node {
    * We consider that delegate a single core to the verification of the received messages. This
    * method is called every 'pairingTime' by Wittgenstein.
    */
-  int lastProcessVerified = height;
+  AggregationProcess lastVerified = null;
 
   public void verify() {
-    int start = lastProcessVerified + 1;
+    if (runningAggs.isEmpty()) {
+      return;
+    }
+    if (lastVerified == null) {
+      lastVerified = runningAggs.values().iterator().next();
+    }
+
     for (int i = 0; i < runningAggs.size(); i++) {
-      final AggregationProcess ap = runningAggs.get(start);
+      AggregationProcess ap = runningAggs.get(lastVerified.height + 1);
       if (ap == null) {
-        start = Collections.min(runningAggs.keySet());
-        continue;
+        int min = Collections.min(runningAggs.keySet());
+        ap = runningAggs.get(min);
       }
       AggToVerify sa = ap.bestToVerify();
 
       if (sa != null) {
-        // We want to update the signature before the verification loop runs again, if
-        //  not we will check twice the same sig. Hence the -1
+        lastVerified = ap;
+        AggregationProcess tv = ap;
         handelEth2
             .network()
             .registerTask(
-                () -> ap.updateVerifiedSignatures(sa),
+                () -> tv.updateVerifiedSignatures(sa),
+                // We want to update the signature before the verification loop runs again, if
+                //  not we will check twice the same sig. Hence the -1
                 handelEth2.network().time + nodePairingTime - 1,
                 HNode.this);
+        break;
       }
     }
   }
 
   /** Called every 'PERIOD_TIME' seconds by Wittgenstein. */
   public void startNewAggregation() {
-    height++;
-    Attestation a = create(height);
+    // We're creating our level 0 attestation. We
+    Attestation base = create(height + 1);
+    startNewAggregation(base);
+  }
+
+  void startNewAggregation(Attestation base) {
+    height = base.height;
     int startAt = handelEth2.network().time;
-    int endAt = startAt + HandelEth2Parameters.PERIOD_TIME;
-    AggregationProcess ap = new AggregationProcess(a, startAt, receptionRanks);
+    int endAt = startAt + HandelEth2Parameters.PERIOD_AGG_TIME;
+    AggregationProcess ap = new AggregationProcess(base, startAt, receptionRanks);
 
     Object past = runningAggs.put(ap.height, ap);
     if (past != null) {
       throw new IllegalStateException();
     }
+
+    handelEth2.network().registerTask(() -> runningAggs.remove(base.height), endAt, this);
   }
 
   /** Called when we receive a new aggregate contribution */
   public void onNewAgg(HNode from, SendAggregation agg) {
+
     AggregationProcess ap = runningAggs.get(agg.height);
     if (ap == null) {
       // message received too early or too late
@@ -271,20 +293,17 @@ public class HNode extends Node {
       ap.finishedPeers.set(from.nodeId);
     }
 
-    if (ap.receivedPeers.get(from.nodeId)) {
-      // We have already a message from this node.
-      return;
-    }
-    ap.receivedPeers.set(from.nodeId);
-
     HLevel hl = ap.levels.get(agg.level);
 
-    // Get and update the reception rank
+    // Get and update the reception ranks
     int rank = ap.receptionRanks[from.nodeId];
     ap.receptionRanks[from.nodeId] += handelEth2.params.nodeCount;
     if (receptionRanks[from.nodeId] <= 0) {
       receptionRanks[from.nodeId] = Integer.MAX_VALUE;
     }
+
+    // todo: we should check if we have already a message from this node
+    //  and replace it by this new one if it's the case.
 
     if (!hl.isIncomingComplete()) {
       hl.toVerifyAgg.add(

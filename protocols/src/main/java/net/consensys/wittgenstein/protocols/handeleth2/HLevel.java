@@ -8,7 +8,7 @@ class HLevel {
   private final transient HNode hNode;
 
   final int level;
-  private final int size;
+  final int peersCount;
 
   // peers, sorted in emission order
   @JsonSerialize(converter = ListNodeConverter.class)
@@ -18,7 +18,7 @@ class HLevel {
   private final Map<Integer, BitSet> indIncoming;
   final Map<Integer, Attestation> outgoing;
 
-  private int incomingCardinality = 0;
+  int incomingCardinality = 0;
   int outgoingCardinality = 0;
 
   // The aggregate signatures to verify in this level
@@ -37,7 +37,7 @@ class HLevel {
     this.hNode = hNode;
     level = 0;
     peers = Collections.emptyList(); // no peers at level 0
-    size = 1; // only our own sig;
+    peersCount = 1; // only our own sig;
     incomingCardinality = 1;
     incoming = Collections.singletonMap(l0.hash, l0);
     outgoing = Collections.emptyMap();
@@ -50,10 +50,10 @@ class HLevel {
   HLevel(HLevel previousLevel, List<HNode> peers) {
     this.hNode = previousLevel.hNode;
     this.level = previousLevel.level + 1;
-    this.size = 1 << (level - 1);
+    this.peersCount = 1 << (level - 1);
     this.peers = peers;
-    if (peers.size() != size) {
-      throw new IllegalStateException("size=" + size + ", peers.size()=" + peers.size());
+    if (peers.size() != peersCount) {
+      throw new IllegalStateException("size=" + peersCount + ", peers.size()=" + peers.size());
     }
 
     this.incoming = new HashMap<>();
@@ -75,7 +75,7 @@ class HLevel {
     }
   }
 
-  /** We start a level if we reached the time out or if we have all the signatures. */
+  /** We start a level if we reached the time out or if we have all the contributions. */
   boolean isOpen() {
     if (outgoingFinished) {
       return false;
@@ -96,6 +96,10 @@ class HLevel {
    * @return the next 'peersCt' peers to contact. Skips the nodes blacklisted or already full for
    *     this level. If there are no peers left, sets 'outgoingFinished' to true.
    */
+  private int lastMessageCardinality = 0;
+
+  private int lastNode = 0;
+
   List<HNode> getRemainingPeers(BitSet finishedPeers, int peersCt) {
     List<HNode> res = new ArrayList<>(peersCt);
 
@@ -115,6 +119,19 @@ class HLevel {
           outgoingFinished = true;
         }
       }
+
+      if (lastMessageCardinality == outgoingCardinality && p.nodeId == lastNode) {
+        return res;
+      }
+    }
+
+    // todo this is an attempt to limit the number of message we send
+    //  for the first levels: don't send twice the same message to the same node.
+    if (!res.isEmpty()) {
+      if (outgoingCardinality > lastMessageCardinality) {
+        lastMessageCardinality = outgoingCardinality;
+        lastNode = res.get(0).nodeId;
+      }
     }
 
     return res;
@@ -133,7 +150,7 @@ class HLevel {
         size += av.who.cardinality();
       } else if (!our.who.intersects(av.who)) {
         // We had it, but it does not intersect. We can add it as well.
-        size += av.who.cardinality();
+        size += our.who.cardinality() + av.who.cardinality();
       } else {
         // It overlaps. We need to choose the best option. Existing, or
         //  new if we merge with the individual contributions kept.
@@ -151,7 +168,7 @@ class HLevel {
       size += our.who.cardinality();
     }
 
-    if (size > this.size) {
+    if (size > this.peersCount) {
       throw new IllegalStateException("bad size: " + size + ", level=" + this);
     }
 
@@ -159,7 +176,7 @@ class HLevel {
   }
 
   /**
-   * Merged the incoming aggregation into our current best, and update the 'incomingCardinality'
+   * Merge the incoming aggregation into our current best, and update the 'incomingCardinality'
    * field accordingly.
    */
   void mergeIncoming(AggToVerify aggv) {
@@ -189,24 +206,25 @@ class HLevel {
           incomingCardinality -= our.who.cardinality();
           Attestation both = new Attestation(our, merged);
           incoming.replace(both.hash, both);
-          incomingCardinality += our.who.cardinality();
+          incomingCardinality += both.who.cardinality();
         }
       }
     }
 
-    if (incomingCardinality > this.size) {
+    if (incomingCardinality > this.peersCount) {
       throw new IllegalStateException(
           "bad incomingCardinality: " + incomingCardinality + ", level=" + this);
     }
   }
 
+  /** @return true if we have received all the contributions we need for this level. */
   boolean isIncomingComplete() {
-    return incomingCardinality == size;
+    return incomingCardinality == peersCount;
   }
 
-  /** @return true if we have all the signatures we're supposed to send for this level. */
+  /** @return true if we have all the contributions we're supposed to send for this level. */
   boolean isOutgoingComplete() {
-    return outgoingCardinality == size;
+    return outgoingCardinality == peersCount;
   }
 
   /**
@@ -256,7 +274,7 @@ class HLevel {
       }
     }
 
-    // todo: we're not respecting the windows limit
+    // todo: we're not respecting the window's limits
 
     AggToVerify toVerify;
     if (bestInside != null) {
