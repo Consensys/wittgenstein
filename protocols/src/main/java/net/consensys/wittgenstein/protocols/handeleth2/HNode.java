@@ -12,6 +12,9 @@ public class HNode extends Node {
 
   final int nodePairingTime;
 
+  int aggDone = 0;
+  long contributionsTotal = 0;
+
   /** The current height for this node. Increase every PERIOD_TIME seconds */
   int height = 1000;
 
@@ -204,6 +207,20 @@ public class HNode extends Node {
         }
       }
     }
+
+    /**
+     * @return the best attestations we got, i.e. the merge of the last level's incoming and
+     *     outgoing contributions
+     */
+    Map<Integer, Attestation> getBestResult() {
+      HLevel last = levels.get(levels.size() - 1);
+      return HLevel.merge(last.incoming, last.outgoing);
+    }
+
+    int getBestResultSize() {
+      HLevel last = levels.get(levels.size() - 1);
+      return last.incomingCardinality + last.outgoingCardinality;
+    }
   }
 
   /**
@@ -275,7 +292,16 @@ public class HNode extends Node {
       throw new IllegalStateException();
     }
 
-    handelEth2.network().registerTask(() -> runningAggs.remove(base.height), endAt, this);
+    handelEth2.network().registerTask(() -> stopAggregation(base.height), endAt, this);
+  }
+
+  /** All the tasks related to stopping an aggregation. */
+  void stopAggregation(int height) {
+    // Some stats...
+    contributionsTotal += runningAggs.get(height).getBestResultSize();
+    aggDone++;
+
+    runningAggs.remove(height);
   }
 
   /** Called when we receive a new aggregate contribution */
@@ -310,4 +336,6 @@ public class HNode extends Node {
           new AggToVerify(from.nodeId, hl.level, agg.ownHash, rank, agg.attestations));
     }
   }
+
+  static class AggToVerifyStore {}
 }

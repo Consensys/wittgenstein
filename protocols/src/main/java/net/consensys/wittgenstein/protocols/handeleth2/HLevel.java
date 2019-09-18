@@ -175,6 +175,32 @@ class HLevel {
     return size;
   }
 
+  /** Merge two contributions that don't overlap (eg. incoming + outgoing at the same level) */
+  static Map<Integer, Attestation> merge(
+      Map<Integer, Attestation> e1, Map<Integer, Attestation> e2) {
+    Map<Integer, Attestation> res = new HashMap<>();
+
+    Set<Integer> keys = new HashSet<>(e1.keySet());
+    keys.addAll(e2.keySet());
+
+    for (Integer k : keys) {
+      Attestation a1 = e1.get(k);
+      Attestation a2 = e2.get(k);
+
+      if (a1 == null) {
+        res.put(k, a2);
+      } else if (a2 == null) {
+        res.put(k, a1);
+      } else {
+        assert !a1.who.intersects(a2.who);
+        Attestation both = new Attestation(a1, a1.who);
+        both.who.or(a2.who);
+        res.put(k, both);
+      }
+    }
+    return res;
+  }
+
   /**
    * Merge the incoming aggregation into our current best, and update the 'incomingCardinality'
    * field accordingly.
