@@ -52,8 +52,32 @@ public class Network<TN extends Node> {
    */
   public int time = 0;
 
+  /** An helper function to choose a set of Byzantine/dead nodes. */
+  public static BitSet chooseBadNodes(Random rd, int nodeCount, int nodesDown) {
+    BitSet badNodes = new BitSet();
+    for (int setDown = 0; setDown < nodesDown; ) {
+      int down = rd.nextInt(nodeCount);
+      if (down != 1 && !badNodes.get(down)) {
+        // We always keep the node 1 up to help on debugging
+        badNodes.set(down);
+        setDown++;
+      }
+    }
+
+    return badNodes;
+  }
+
   public TN getNodeById(int id) {
     return allNodes.get(id);
+  }
+
+  public TN getFirstLiveNode() {
+    for (TN n : allNodes) {
+      if (!n.isDown()) {
+        return n;
+      }
+    }
+    return null;
   }
 
   @SuppressWarnings("UnusedReturnValue")

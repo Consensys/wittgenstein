@@ -1058,20 +1058,6 @@ public class Handel implements Protocol {
     return new Handel(params);
   }
 
-  private static BitSet chooseBadNodes(Random rd, int nodeCount, int nodesDown) {
-    BitSet badNodes = new BitSet();
-    for (int setDown = 0; setDown < nodesDown; ) {
-      int down = rd.nextInt(nodeCount);
-      if (down != 1 && !badNodes.get(down)) {
-        // We always keep the node 1 up to help on debugging
-        badNodes.set(down);
-        setDown++;
-      }
-    }
-
-    return badNodes;
-  }
-
   @SuppressWarnings("unchecked")
   @Override
   public void init() {
@@ -1080,7 +1066,7 @@ public class Handel implements Protocol {
     BitSet badNodes =
         params.badNodes != null
             ? params.badNodes
-            : chooseBadNodes(network.rd, params.nodeCount, params.nodesDown);
+            : Network.chooseBadNodes(network.rd, params.nodeCount, params.nodesDown);
 
     for (int i = 0; i < params.nodeCount; i++) {
       int startAt =

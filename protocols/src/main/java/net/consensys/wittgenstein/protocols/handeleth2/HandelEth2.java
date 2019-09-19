@@ -1,5 +1,7 @@
 package net.consensys.wittgenstein.protocols.handeleth2;
 
+import static net.consensys.wittgenstein.core.Network.chooseBadNodes;
+
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
@@ -33,10 +35,16 @@ public class HandelEth2 implements Protocol {
   public void init() {
     NodeBuilder nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
 
+    BitSet badNodes = chooseBadNodes(network.rd, params.nodeCount, params.nodesDown);
+
     for (int i = 0; i < params.nodeCount; i++) {
       int startAt =
           params.desynchronizedStart == 0 ? 0 : network.rd.nextInt(params.desynchronizedStart);
-      network.addNode(new HNode(this, startAt, nb));
+      final HNode n = new HNode(this, startAt, nb);
+      if (badNodes.get(i)) {
+        n.stop();
+      }
+      network.addNode(n);
     }
 
     setReceptionRanks();

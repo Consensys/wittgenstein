@@ -158,4 +158,25 @@ public class HandelEth2Test {
       Assert.assertTrue("n0, " + hl, hl.isIncomingComplete());
     }
   }
+
+  @Test
+  public void testRunWithDeadNodes() {
+    HandelEth2Parameters params = new HandelEth2Parameters(32, 10, 100, 100, 10, 5, null, null, 0);
+    HandelEth2 p = new HandelEth2(params);
+    p.init();
+    HNode n = p.network().getFirstLiveNode();
+
+    p.network().runMs(HandelEth2Parameters.PERIOD_AGG_TIME * 10);
+
+    int minRunning = Collections.min(n.runningAggs.keySet());
+    HNode.AggregationProcess ap = n.runningAggs.get(minRunning);
+    Assert.assertNotNull(ap);
+    HLevel hl = ap.levels.get(ap.levels.size() - 1);
+
+    // As we have dead nodes the last level can't be complete
+    Assert.assertFalse("n0, " + hl, hl.isIncomingComplete());
+
+    // We have enough time to get all the contributions from the live nodes.
+    Assert.assertEquals(params.nodeCount - params.nodesDown, ap.getBestResultSize());
+  }
 }
