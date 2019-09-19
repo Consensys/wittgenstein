@@ -35,8 +35,15 @@ import net.consensys.wittgenstein.core.RegistryNodeBuilders;
  * }</pre>
  */
 public class ETHMinerAgent extends ETHMiner {
-  boolean actionNeeded = false;
-  ETHPoW.POWBlock otherHead = genesis;
+
+  /**
+   * We allow the agent to decide if it publishes the block. So our head may differ from the other
+   * miners' head. We keep track of the two information.
+   */
+  ETHPoW.POWBlock otherMinersHead = genesis;
+
+  /** A boolean we use to decide if we want the agent to take a decision. */
+  boolean decisionNeeded = false;
 
   public ETHMinerAgent(
       BlockChainNetwork<ETHPoW.POWBlock, ETHMiner> network,
@@ -52,7 +59,7 @@ public class ETHMinerAgent extends ETHMiner {
   }
 
   public void sendMinedBlocks(int howMany) {
-    if (!actionNeeded) {
+    if (!decisionNeeded) {
       throw new IllegalStateException("no action needed");
     }
 
@@ -62,8 +69,8 @@ public class ETHMinerAgent extends ETHMiner {
   }
 
   public boolean goNextStep() {
-    actionNeeded = false;
-    while (!actionNeeded) {
+    decisionNeeded = false;
+    while (!decisionNeeded) {
       network.runMs(1);
     }
     return true;
@@ -74,7 +81,7 @@ public class ETHMinerAgent extends ETHMiner {
   }
 
   public int getAdvance() {
-    int diff = head.height - otherHead.height;
+    int diff = head.height - otherMinersHead.height;
     return Math.max(diff, 0);
   }
 
@@ -97,21 +104,28 @@ public class ETHMinerAgent extends ETHMiner {
     }
   }
 
-  /** Called when the head changes. */
+  /**
+   * In this agent we don't try to mine on old blocks nor we ask the agent to take the decision: we
+   * always mine on the head (but it can be our private head).
+   */
+  @Override
   protected void onNewHead(ETHPoW.POWBlock oldHead, ETHPoW.POWBlock newHead) {
-    if (newHead.producer != this) {
-      actionNeeded = true;
-      if (newHead.height > otherHead.height) {
-        otherHead = newHead;
-      }
+    startNewMining(newHead);
+  }
+
+  @Override
+  protected void onReceivedBlock(ETHPoW.POWBlock rcv) {
+    otherMinersHead = best(otherMinersHead, rcv);
+    if (otherMinersHead == rcv) {
+      decisionNeeded = true;
     }
   }
 
   private void actionSendOldestBlockMined() {
     ETHPoW.POWBlock oldest =
         Collections.min(minedToSend, Comparator.comparingInt(o -> o.proposalTime));
-    if (oldest.height > otherHead.height) {
-      otherHead = oldest;
+    if (oldest.height > otherMinersHead.height) {
+      otherMinersHead = oldest;
     }
     sendBlock(oldest);
   }

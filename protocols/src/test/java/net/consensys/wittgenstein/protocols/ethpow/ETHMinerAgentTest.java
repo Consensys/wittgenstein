@@ -14,9 +14,9 @@ public class ETHMinerAgentTest {
     ETHMinerAgent n = p.getByzNode();
 
     Assert.assertTrue(n.head.height > p.genesis.height);
-    Assert.assertTrue(n.otherHead.height > p.genesis.height);
-    Assert.assertNotSame(n.otherHead.producer, n);
-    Assert.assertTrue(n.actionNeeded);
+    Assert.assertTrue(n.otherMinersHead.height > p.genesis.height);
+    Assert.assertNotSame(n.otherMinersHead.producer, n);
+    Assert.assertTrue(n.decisionNeeded);
 
     int size = n.minedToSend.size();
     Assert.assertTrue(size > 2);
