@@ -4,9 +4,7 @@ import net.consensys.wittgenstein.core.WParameters;
 
 public class HandelEth2Parameters extends WParameters {
   public static final int PERIOD_TIME = 6000;
-  public static final int PERIOD_AGG_TIME = 15000;
-
-  public static final int[][] expDelay = new int[][] {{1, 1, 1, 1}};
+  public static final int PERIOD_AGG_TIME = PERIOD_TIME * 3;
 
   /** The number of nodes in the network */
   final int nodeCount;
@@ -16,7 +14,6 @@ public class HandelEth2Parameters extends WParameters {
 
   int levelWaitTime;
   final int periodDurationMs;
-  int fastPath;
 
   final int nodesDown;
 
@@ -37,7 +34,6 @@ public class HandelEth2Parameters extends WParameters {
     this.pairingTime = 3;
     this.levelWaitTime = 100;
     this.periodDurationMs = 50;
-    this.fastPath = 10;
     this.nodesDown = 0;
     this.nodeBuilderName = null;
     this.networkLatencyName = null;
@@ -49,7 +45,6 @@ public class HandelEth2Parameters extends WParameters {
       int pairingTime,
       int levelWaitTime,
       int periodDurationMs,
-      int fastPath,
       int nodesDown,
       String nodeBuilderName,
       String networkLatencyName,
@@ -66,7 +61,6 @@ public class HandelEth2Parameters extends WParameters {
     this.pairingTime = pairingTime;
     this.levelWaitTime = levelWaitTime;
     this.periodDurationMs = periodDurationMs;
-    this.fastPath = fastPath;
     this.nodesDown = nodesDown;
     this.nodeBuilderName = nodeBuilderName;
     this.networkLatencyName = networkLatencyName;

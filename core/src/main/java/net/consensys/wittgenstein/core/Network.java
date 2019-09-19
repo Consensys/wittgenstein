@@ -345,7 +345,11 @@ public class Network<TN extends Node> {
     if (dests == null || dests.isEmpty()) {
       return;
     }
-    send(m, time + 1, fromNode, dests);
+    if (dests.size() == 1) {
+      send(m, time + 1, fromNode, dests.get(0));
+    } else {
+      send(m, time + 1, fromNode, dests);
+    }
   }
 
   public void send(Message<? extends TN> m, TN fromNode, TN toNode) {

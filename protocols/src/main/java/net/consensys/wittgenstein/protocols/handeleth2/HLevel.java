@@ -32,6 +32,10 @@ class HLevel {
   private int lastCardinalitySent = 0;
   private int firstNodeWithBestCard = 0;
 
+  private int contactedNodes = 0;
+  private int cycleCount = 0;
+  private int lastActiveCycle = Integer.MIN_VALUE;
+
   /**
    * We're going to contact all nodes, one after the other. That's our position in the peers' list.
    */
@@ -66,35 +70,44 @@ class HLevel {
     this.indIncoming = new HashMap<>();
   }
 
-  void doCycle(int ownhash, BitSet finishedPeers) {
-    if (!isOpen()) {
+  void doCycle(int ownhash, BitSet finishedPeers, int aggStartTime) {
+    if (!isOpen(aggStartTime)) {
       return;
     }
 
-    List<HNode> dest = getRemainingPeers(finishedPeers, 1);
-    if (!dest.isEmpty()) {
-      SendAggregation ss =
-          new SendAggregation(
-              level, ownhash, isIncomingComplete(), new ArrayList<>(outgoing.values()));
-      this.hNode.handelEth2.network().send(ss, this.hNode, dest.get(0));
+    cycleCount++;
+    if (activeCycle()) {
+      send(ownhash, finishedPeers, 1);
     }
   }
 
-  void fastPath(BitSet finishedPeers, int ownhash) {
-    List<HNode> d = getRemainingPeers(finishedPeers, this.hNode.handelEth2.params.fastPath);
+  private boolean activeCycle() {
+    int m = contactedNodes / hNode.handelEth2.levelCount();
+    return (cycleCount % Math.pow(3, m)) == 0;
+  }
+
+  /** When we have completed a full contribution, we send it to log(nodeCount) nodes immediately. */
+  void fastPath(int ownhash, BitSet finishedPeers) {
+    send(ownhash, finishedPeers, hNode.handelEth2.levelCount());
+  }
+
+  void send(int ownhash, BitSet finishedPeers, int destCount) {
+    List<HNode> d = getRemainingPeers(finishedPeers, destCount);
     SendAggregation sa =
         new SendAggregation(
             level, ownhash, isIncomingComplete(), new ArrayList<>(outgoing.values()));
     this.hNode.handelEth2.network().send(sa, hNode, d);
+    contactedNodes += d.size();
   }
 
   /** We start a level if we reached the time out or if we have all the contributions. */
-  boolean isOpen() {
+  boolean isOpen(int aggStartTime) {
     if (outgoingFinished) {
       return false;
     }
 
-    if (hNode.handelEth2.network().time >= (level - 1) * hNode.handelEth2.params.levelWaitTime) {
+    if (hNode.handelEth2.network().time - aggStartTime
+        >= (level - 1) * hNode.handelEth2.params.levelWaitTime) {
       return true;
     }
 

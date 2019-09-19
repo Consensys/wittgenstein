@@ -141,8 +141,16 @@ public class HNode extends Node {
 
     /** @return the best signature to verify for this process; null if there are none. */
     public AggToVerify bestToVerify() {
+
+      // Level 1 sigs are specific, because we receive them only once, so we can
+      //  verify them first.
+      AggToVerify res1 = levels.get(1).bestToVerify(curWindowsSize, blacklist);
+      if (res1 != null) {
+        return res1;
+      }
+
       int start = lastLevelVerified;
-      for (int i = 0; i < levels.size(); i++) {
+      for (int i = 2; i <= levels.size(); i++) {
         HLevel hl = levels.get(start);
         AggToVerify res = hl.bestToVerify(curWindowsSize, blacklist);
         if (res != null) {
@@ -151,7 +159,7 @@ public class HNode extends Node {
         } else {
           start++;
           if (start >= levels.size()) {
-            start = 0;
+            start = 2;
           }
         }
       }
@@ -184,7 +192,7 @@ public class HNode extends Node {
         for (int l = hl.level + 1; l < handelEth2.levelCount(); l++) {
           HLevel hu = levels.get(l);
           if (hu.isOutgoingComplete()) {
-            hu.fastPath(finishedPeers, ownHash);
+            hu.fastPath(ownHash, finishedPeers);
           }
         }
       }
@@ -196,7 +204,7 @@ public class HNode extends Node {
       int size = 0;
       for (HLevel hl : levels) {
 
-        if (hl.isOpen()) {
+        if (hl.isOpen(startAt)) {
           hl.outgoing.clear();
           hl.outgoing.putAll(atts);
           hl.outgoingCardinality = size;
@@ -239,7 +247,7 @@ public class HNode extends Node {
     for (AggregationProcess ap : runningAggs.values()) {
       ap.updateAllOutgoing();
       for (HLevel sfl : ap.levels) {
-        sfl.doCycle(ap.ownHash, ap.finishedPeers);
+        sfl.doCycle(ap.ownHash, ap.finishedPeers, ap.startAt);
       }
     }
   }

@@ -32,7 +32,7 @@ public class HandelEth2Test {
 
   @Test
   public void testMerge() {
-    HandelEth2Parameters params = new HandelEth2Parameters(4, 10, 0, 10, 10, 0, null, null, 0);
+    HandelEth2Parameters params = new HandelEth2Parameters(4, 10, 0, 10, 0, null, null, 0);
     HandelEth2 p = new HandelEth2(params);
     p.init();
     HNode n0 = p.network().getNodeById(0);
@@ -56,7 +56,7 @@ public class HandelEth2Test {
 
     HLevel h11 = ap1.levels.get(1);
     Assert.assertEquals(1, h11.peersCount);
-    Assert.assertTrue(h11.isOpen());
+    Assert.assertTrue(h11.isOpen(0));
     Assert.assertFalse(h11.isIncomingComplete());
     Assert.assertTrue(h11.isOutgoingComplete());
     Assert.assertEquals(1, h11.outgoingCardinality);
@@ -65,7 +65,7 @@ public class HandelEth2Test {
 
     HLevel h12 = ap1.levels.get(2);
     Assert.assertEquals(2, h12.peersCount);
-    Assert.assertTrue(h12.isOpen());
+    Assert.assertTrue(h12.isOpen(0));
     Assert.assertFalse(h12.isIncomingComplete());
     Assert.assertFalse(h12.isOutgoingComplete());
     Assert.assertEquals(1, h12.outgoingCardinality);
@@ -93,7 +93,7 @@ public class HandelEth2Test {
     ap0.updateAllOutgoing();
 
     Assert.assertEquals(1, h01.peersCount);
-    Assert.assertTrue(h01.isOpen());
+    Assert.assertTrue(h01.isOpen(0));
     Assert.assertTrue(h01.isIncomingComplete());
     Assert.assertTrue(h01.isOutgoingComplete());
     Assert.assertEquals(1, h01.outgoingCardinality);
@@ -102,7 +102,7 @@ public class HandelEth2Test {
 
     HLevel h02 = ap0.levels.get(2);
     Assert.assertEquals(2, h02.peersCount);
-    Assert.assertTrue(h02.isOpen());
+    Assert.assertTrue(h02.isOpen(0));
     Assert.assertFalse(h02.isIncomingComplete());
     Assert.assertTrue(h02.isOutgoingComplete());
     Assert.assertEquals(2, h02.outgoingCardinality);
@@ -119,7 +119,7 @@ public class HandelEth2Test {
 
   @Test
   public void testRunSimple() {
-    HandelEth2Parameters params = new HandelEth2Parameters(32, 10, 100, 100, 10, 0, null, null, 0);
+    HandelEth2Parameters params = new HandelEth2Parameters(64, 10, 100, 40, 0, null, null, 0);
     HandelEth2 p = new HandelEth2(params);
     p.init();
     HNode n = p.network().getNodeById(0);
@@ -133,6 +133,7 @@ public class HandelEth2Test {
 
     HNode.AggregationProcess ap = n.runningAggs.get(1001);
     Assert.assertNotNull(ap);
+
     for (HLevel hl : ap.levels) {
       Assert.assertTrue("n0, " + hl, hl.isIncomingComplete());
     }
@@ -140,21 +141,19 @@ public class HandelEth2Test {
 
   @Test
   public void testRun() {
-    HandelEth2Parameters params = new HandelEth2Parameters(64, 10, 100, 100, 10, 0, null, null, 0);
+    HandelEth2Parameters params = new HandelEth2Parameters(64, 10, 100, 40, 0, null, null, 0);
     HandelEth2 p = new HandelEth2(params);
     p.init();
     HNode n = p.network().getNodeById(0);
 
-    Assert.assertEquals(16, n.curWindowsSize);
-
     p.network().runMs(HandelEth2Parameters.PERIOD_AGG_TIME * 10);
 
-    Assert.assertEquals(128, n.curWindowsSize);
-    Assert.assertEquals(2, n.runningAggs.size());
+    Assert.assertEquals(3, n.runningAggs.size());
 
     int minRunning = Collections.min(n.runningAggs.keySet());
     HNode.AggregationProcess ap = n.runningAggs.get(minRunning);
     Assert.assertNotNull(ap);
+
     for (HLevel hl : ap.levels) {
       Assert.assertTrue("n0, " + hl, hl.isIncomingComplete());
     }
@@ -162,12 +161,14 @@ public class HandelEth2Test {
 
   @Test
   public void testRunWithDeadNodes() {
-    HandelEth2Parameters params = new HandelEth2Parameters(32, 10, 100, 100, 10, 5, null, null, 0);
+    HandelEth2Parameters params = new HandelEth2Parameters(128, 5, 200, 40, 5, null, null, 0);
     HandelEth2 p = new HandelEth2(params);
     p.init();
     HNode n = p.network().getFirstLiveNode();
 
     p.network().runMs(HandelEth2Parameters.PERIOD_AGG_TIME * 10);
+
+    System.out.println("sent: " + n.getMsgSent());
 
     int minRunning = Collections.min(n.runningAggs.keySet());
     HNode.AggregationProcess ap = n.runningAggs.get(minRunning);
