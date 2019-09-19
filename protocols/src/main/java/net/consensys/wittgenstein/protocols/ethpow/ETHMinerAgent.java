@@ -37,6 +37,10 @@ import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 public class ETHMinerAgent extends ETHMiner {
   boolean actionNeeded = false;
   ETHPoW.POWBlock otherHead = genesis;
+  private ETHPoW.POWBlock privateMinerBlock;
+  private int privateHeight() {
+    return privateMinerBlock == null ? 0 : privateMinerBlock.height;
+  }
 
   public ETHMinerAgent(
       BlockChainNetwork<ETHPoW.POWBlock, ETHMiner> network,
@@ -105,7 +109,11 @@ public class ETHMinerAgent extends ETHMiner {
         otherHead = newHead;
       }
     }
+    if (minedToSend.size() >= 5) {
+      sendAllMined();
+    }
   }
+  //blocksReceivedByBlockId collection to add
 
   private void actionSendOldestBlockMined() {
     ETHPoW.POWBlock oldest =
