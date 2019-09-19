@@ -91,7 +91,7 @@ class HLevel {
     send(ownhash, finishedPeers, hNode.handelEth2.levelCount());
   }
 
-  void send(int ownhash, BitSet finishedPeers, int destCount) {
+  private void send(int ownhash, BitSet finishedPeers, int destCount) {
     List<HNode> d = getRemainingPeers(finishedPeers, destCount);
     SendAggregation sa =
         new SendAggregation(

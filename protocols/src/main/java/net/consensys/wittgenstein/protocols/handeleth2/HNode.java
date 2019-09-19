@@ -40,10 +40,16 @@ public class HNode extends Node {
 
   int curWindowsSize = 16;
 
+  /**
+   * Called after a successful verification.
+   */
   void successfulVerification() {
     curWindowsSize = Math.min(128, curWindowsSize * 2);
   }
 
+  /**
+   * Called after a verification failure.
+   */
   void failedVerification() {
     curWindowsSize = Math.max(1, curWindowsSize / 4);
   }
@@ -106,6 +112,9 @@ public class HNode extends Node {
     throw new IllegalStateException("Can't communicate with " + n);
   }
 
+  /**
+   * Represents an ongoing aggregation. Eth2 starts a new aggregation every 6 seconds.
+   */
   class AggregationProcess {
     final int height;
     final int ownHash;
@@ -297,7 +306,7 @@ public class HNode extends Node {
     startNewAggregation(base);
   }
 
-  void startNewAggregation(Attestation base) {
+   void startNewAggregation(Attestation base) {
     height = base.height;
     int startAt = handelEth2.network().time;
     int endAt = startAt + HandelEth2Parameters.PERIOD_AGG_TIME;

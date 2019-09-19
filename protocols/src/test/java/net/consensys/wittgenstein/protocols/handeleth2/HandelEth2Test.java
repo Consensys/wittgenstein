@@ -168,8 +168,6 @@ public class HandelEth2Test {
 
     p.network().runMs(HandelEth2Parameters.PERIOD_AGG_TIME * 10);
 
-    System.out.println("sent: " + n.getMsgSent());
-
     int minRunning = Collections.min(n.runningAggs.keySet());
     HNode.AggregationProcess ap = n.runningAggs.get(minRunning);
     Assert.assertNotNull(ap);
