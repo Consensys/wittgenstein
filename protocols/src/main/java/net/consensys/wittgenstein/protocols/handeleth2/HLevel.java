@@ -75,6 +75,14 @@ class HLevel {
     }
   }
 
+  void fastPath(BitSet finishedPeers, int ownhash) {
+    List<HNode> d = getRemainingPeers(finishedPeers, this.hNode.handelEth2.params.fastPath);
+    SendAggregation sa =
+        new SendAggregation(
+            level, ownhash, isIncomingComplete(), new ArrayList<>(outgoing.values()));
+    this.hNode.handelEth2.network().send(sa, hNode, d);
+  }
+
   /** We start a level if we reached the time out or if we have all the contributions. */
   boolean isOpen() {
     if (outgoingFinished) {
@@ -91,10 +99,6 @@ class HLevel {
 
     return false;
   }
-
-  private int lastMessageCardinality = 0;
-
-  private int lastNode = 0;
 
   /**
    * @return the next 'peersCt' peers to contact. Skips the nodes blacklisted or already full for
@@ -118,19 +122,6 @@ class HLevel {
         if (posInLevel == start) {
           outgoingFinished = true;
         }
-      }
-
-      if (lastMessageCardinality == outgoingCardinality && p.nodeId == lastNode) {
-        return res;
-      }
-    }
-
-    // todo this is an attempt to limit the number of message we send
-    //  for the first levels: don't send twice the same message to the same node.
-    if (!res.isEmpty()) {
-      if (outgoingCardinality > lastMessageCardinality) {
-        lastMessageCardinality = outgoingCardinality;
-        lastNode = res.get(0).nodeId;
       }
     }
 

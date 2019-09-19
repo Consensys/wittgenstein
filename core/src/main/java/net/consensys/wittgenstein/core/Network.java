@@ -67,6 +67,16 @@ public class Network<TN extends Node> {
     return badNodes;
   }
 
+  public BitSet getDeadNodes() {
+    BitSet res = new BitSet(allNodes.size());
+    for (TN n : allNodes) {
+      if (n.isDown()) {
+        res.set(n.nodeId, false);
+      }
+    }
+    return res;
+  }
+
   public TN getNodeById(int id) {
     return allNodes.get(id);
   }

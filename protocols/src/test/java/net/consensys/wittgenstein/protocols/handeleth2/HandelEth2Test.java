@@ -1,5 +1,6 @@
 package net.consensys.wittgenstein.protocols.handeleth2;
 
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.Random;
 import org.junit.Assert;
@@ -178,5 +179,13 @@ public class HandelEth2Test {
 
     // We have enough time to get all the contributions from the live nodes.
     Assert.assertEquals(params.nodeCount - params.nodesDown, ap.getBestResultSize());
+
+    BitSet allAttestations = new BitSet();
+    for (Attestation a : ap.getBestResult().values()) {
+      allAttestations.or(a.who);
+    }
+    Assert.assertEquals(params.nodeCount - params.nodesDown, allAttestations.cardinality());
+    // We should not have attestations from dead nodes.
+    Assert.assertFalse(allAttestations.intersects(p.network().getDeadNodes()));
   }
 }

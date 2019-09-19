@@ -12,7 +12,15 @@ import net.consensys.wittgenstein.core.Protocol;
 import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 
-/** Using the Handel protocol on Eth2. */
+/**
+ * Using the Handel protocol on Eth2. Some differences with the Handel protocol: (1) We ran multiple
+ * aggregations at the same time in the same committee, but we run a single verification at a time.
+ * (2) For an aggregation, we actually aggregate multiple different values, because different nodes
+ * have different view on the current head. (3) Wee don't try to reach a threshold but we run the
+ * aggregation for a few seconds to try to get all data. (4) because of this, the aggregation runs
+ * longer, but the messages at the end are not adding much value. Hence instead of a fixed period
+ * time we use an exponential period time.
+ */
 public class HandelEth2 implements Protocol {
   final HandelEth2Parameters params;
   private final Network<HNode> network = new Network<>();
@@ -94,7 +102,6 @@ public class HandelEth2 implements Protocol {
     for (HNode sender : network.allNodes) {
       if (sender.isDown()) {
         // No need to build an emission list for a node that won't emit
-        // This include byzantine nodes.
         continue;
       }
 
@@ -104,9 +111,8 @@ public class HandelEth2 implements Protocol {
       for (HNode receiver : network.allNodes) {
         int recRank = receiver.receptionRanks[sender.nodeId];
 
-        // That's all the emission
-        // We need an array of lists because we can have have multiple senders at the same rank.
-        // But we expect that most of the time the size of the list will be one.
+        // We need an array of lists because we can have have multiple senders at the same rank,
+        // even if we expect that most of the time the size of the list will be one.
         // As well, the rank can be [0..nodeCount], eg. there will be some holes as inside
         //  a level there are more ranks than peers. That's not a problem as the important point
         //  is the order, not the value itself.
@@ -121,7 +127,6 @@ public class HandelEth2 implements Protocol {
       }
 
       // We now build the peers' list that will be used by all AggregationProcess
-      // We start by initializing the peers list.
       assert sender.peersPerLevel.isEmpty();
       sender.peersPerLevel.add(Collections.emptyList()); // level 0:
       for (int l = 1; l <= levelCount(); l++) {

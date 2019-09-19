@@ -2,7 +2,7 @@ package net.consensys.wittgenstein.protocols.handeleth2;
 
 import java.util.BitSet;
 
-/** An attestion is for a given height and a given block hash. */
+/** An attestation is for a given height and a given block hash. */
 public class Attestation {
   // The height for this attestation
   final int height;

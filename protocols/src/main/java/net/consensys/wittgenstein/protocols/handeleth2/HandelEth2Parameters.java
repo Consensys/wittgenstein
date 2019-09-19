@@ -6,6 +6,8 @@ public class HandelEth2Parameters extends WParameters {
   public static final int PERIOD_TIME = 6000;
   public static final int PERIOD_AGG_TIME = 15000;
 
+  public static final int[][] expDelay = new int[][] {{1, 1, 1, 1}};
+
   /** The number of nodes in the network */
   final int nodeCount;
 

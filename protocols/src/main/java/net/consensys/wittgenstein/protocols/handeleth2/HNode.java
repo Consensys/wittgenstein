@@ -116,9 +116,6 @@ public class HNode extends Node {
     // The list of peers who told us they had finished the level they have in common with us.
     final BitSet finishedPeers = new BitSet();
 
-    // The list of peers for which we have already received a message.
-    final BitSet receivedPeers = new BitSet();
-
     final List<HLevel> levels = new ArrayList<>();
     int lastLevelVerified = 0;
 
@@ -187,19 +184,13 @@ public class HNode extends Node {
         for (int l = hl.level + 1; l < handelEth2.levelCount(); l++) {
           HLevel hu = levels.get(l);
           if (hu.isOutgoingComplete()) {
-            List<HNode> d = hu.getRemainingPeers(finishedPeers, handelEth2.params.fastPath);
-            SendAggregation sa =
-                new SendAggregation(
-                    hu.level,
-                    ownHash,
-                    hu.isIncomingComplete(),
-                    new ArrayList<>(hu.outgoing.values()));
-            handelEth2.network().send(sa, HNode.this, d);
+            hu.fastPath(finishedPeers, ownHash);
           }
         }
       }
     }
 
+    /** Update all the outgoing attestations. */
     void updateAllOutgoing() {
       Map<Integer, Attestation> atts = new HashMap<>();
       int size = 0;
