@@ -25,7 +25,12 @@ class HLevel {
   final List<AggToVerify> toVerifyAgg = new LinkedList<>();
 
   // all our peers are complete: no need to send anything for this level
-  public boolean outgoingFinished = false;
+  private boolean outgoingFinished = false;
+
+  // We don't send twice the same message tp the same dest.
+  //  So we keep track of what we sent previously
+  private int lastCardinalitySent = 0;
+  private int firstNodeWithBestCard = 0;
 
   /**
    * We're going to contact all nodes, one after the other. That's our position in the peers' list.
@@ -93,25 +98,28 @@ class HLevel {
       return true;
     }
 
-    if (isOutgoingComplete()) {
-      return true;
-    }
-
-    return false;
+    return isOutgoingComplete();
   }
 
   /**
    * @return the next 'peersCt' peers to contact. Skips the nodes blacklisted or already full for
    *     this level. If there are no peers left, sets 'outgoingFinished' to true.
    */
-  List<HNode> getRemainingPeers(BitSet finishedPeers, int peersCt) {
+  private List<HNode> getRemainingPeers(BitSet finishedPeers, int peersCt) {
     List<HNode> res = new ArrayList<>(peersCt);
 
     int start = posInLevel;
     while (peersCt > 0 && !outgoingFinished) {
 
-      HNode p = peers.get(posInLevel++);
-      if (posInLevel >= peers.size()) {
+      HNode p = peers.get(posInLevel);
+
+      if (outgoingCardinality == lastCardinalitySent && p.nodeId == firstNodeWithBestCard) {
+        // We looped: we've already sent this message to this node.
+        // No need to go further.
+        return res;
+      }
+
+      if (++posInLevel >= peers.size()) {
         posInLevel = 0;
       }
 
@@ -123,6 +131,11 @@ class HLevel {
           outgoingFinished = true;
         }
       }
+    }
+
+    if (outgoingCardinality > lastCardinalitySent && !res.isEmpty()) {
+      this.firstNodeWithBestCard = res.get(0).nodeId;
+      lastCardinalitySent = outgoingCardinality;
     }
 
     return res;
