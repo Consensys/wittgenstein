@@ -138,7 +138,9 @@ public class ETHMinerAgent extends ETHMiner {
         new ETHPoW.ETHPoWParameters(
             bdlName, nlName, 10, ETHMinerAgent.class.getName(), byzHashPowerShare);
 
-    return new ETHPowWithAgent(params);
+    ETHPowWithAgent res = new ETHPowWithAgent(params);
+    res.network.rd.setSeed(System.currentTimeMillis());
+    return res;
   }
 
   public static void main(String... args) {

@@ -5,8 +5,8 @@ import net.consensys.wittgenstein.core.utils.GeneralizedParetoDistribution;
 import net.consensys.wittgenstein.tools.CSVLatencyReader;
 
 /**
- * Latency is sometimes the round-trip-time (RTT) sometimes the time for a single trip. Here it's
- * the time for a single packet.
+ * Latency is sometimes the round-trip-time (RTT) sometimes the time for a one-way trip. Here it's
+ * the time for a one-way.
  */
 @SuppressWarnings("WeakerAccess")
 public abstract class NetworkLatency {
@@ -46,7 +46,7 @@ public abstract class NetworkLatency {
    *     it's a roundtrip time.
    *     <p>
    */
-  public static class NetworkLatencyByDistance extends NetworkLatency {
+  public static class NetworkLatencyByDistanceWJitter extends NetworkLatency {
     final GeneralizedParetoDistribution gpd = new GeneralizedParetoDistribution(1.4, -0.3, 0.35);
 
     /** We consider that the worse case is half of the earth perimeter. */
@@ -56,7 +56,7 @@ public abstract class NetworkLatency {
       return pointValue * dist;
     }
 
-    public double getVariableLatency(int delta) {
+    public double getJitter(int delta) {
       return gpd.inverseF(delta / 100.0);
     }
 
@@ -67,7 +67,7 @@ public abstract class NetworkLatency {
     @Override
     public int getExtendedLatency(Node from, Node to, int delta) {
       checkDelta(delta);
-      double raw = getFixedLatency(from.dist(to)) + getVariableLatency(delta);
+      double raw = getFixedLatency(from.dist(to)) + getJitter(delta);
       return (int) (raw / 2);
     }
   }
@@ -85,7 +85,7 @@ public abstract class NetworkLatency {
    */
   public static class AwsRegionNetworkLatency extends NetworkLatency {
     private static HashMap<String, Integer> regionPerCity = new HashMap<>();
-    private NetworkLatencyByDistance var = new NetworkLatencyByDistance();
+    private NetworkLatencyByDistanceWJitter var = new NetworkLatencyByDistanceWJitter();
 
     static {
       regionPerCity.put("Oregon", 0);
@@ -129,12 +129,14 @@ public abstract class NetworkLatency {
 
     private int getLatency(int reg1, int reg2, int delta) {
       if (reg1 == reg2) {
+        // It's the same datacenter. 1 is pessimistic actually (0.5 would be better)
+        //  but we can't do less.
         return 1;
       }
       int minReg = Math.min(reg1, reg2);
       int maxReg = Math.max(reg1, reg2);
 
-      return Math.max(1, latencies[minReg][maxReg] / 2 + (int) var.getVariableLatency(delta));
+      return Math.max(1, latencies[minReg][maxReg] / 2 + (int) var.getJitter(delta));
     }
 
     public int getExtendedLatency(Node from, Node to, int delta) {
@@ -149,6 +151,11 @@ public abstract class NetworkLatency {
     }
   }
 
+  /**
+   * Network latency depending on this city, taken from https://wondernetwork.com/ Latency between
+   * two nodes in the same city is considered to be 1 (that's a little bit more than what you have
+   * if you're in the same datacenter)
+   */
   public static class NetworkLatencyByCity extends NetworkLatency {
     private final Map<String, Map<String, Float>> latencyMatrix;
 
@@ -173,16 +180,55 @@ public abstract class NetworkLatency {
       return Math.max(1, Math.round(0.5f * getLatency(cityFrom, cityTo)));
     }
 
-    private float getLatency(String cityFrom, String cityTo) {
+    protected float getLatency(String cityFrom, String cityTo) {
       Map<String, Float> from = latencyMatrix.get(cityFrom);
       if (from == null) {
         throw new IllegalArgumentException("Can't find latencies for " + cityFrom);
       }
-      if (from.containsKey(cityTo)) {
-        return latencyMatrix.get(cityFrom).get(cityTo);
-      } else {
-        return latencyMatrix.get(cityTo).get(cityFrom);
+      Float res = from.get(cityTo);
+      if (res == null) {
+        res = latencyMatrix.get(cityTo).get(cityFrom);
       }
+      return res;
+    }
+  }
+
+  /**
+   * Takes into account this cities from wondernetwork but as well add the link dependency
+   * Round-trip inside a city is approximated to 10ms.
+   */
+  public static class NetworkLatencyByCityWJitter extends NetworkLatencyByCity {
+    final GeneralizedParetoDistribution gpd = new GeneralizedParetoDistribution(1.4, -0.3, 0.35);
+
+    public NetworkLatencyByCityWJitter() {}
+
+    private double getJitter(int delta) {
+      return gpd.inverseF(delta / 100.0);
+    }
+
+    @Override
+    public int getExtendedLatency(Node from, Node to, int delta) {
+      if (from.nodeId == to.nodeId) {
+        return 1;
+      }
+
+      String cityFrom = from.cityName;
+      String cityTo = to.cityName;
+      if (cityFrom.equals(Node.DEFAULT_CITY) || cityTo.equals(Node.DEFAULT_CITY)) {
+        throw new IllegalStateException(
+            "Can't use NetworkLatencyByCity model with default city location");
+      }
+
+      double raw = getJitter(delta);
+      if (cityFrom.equals(cityTo)) {
+        // Latency inside a city depends on many factor. This is a reasonable approximation,
+        //  maybe on the pessimistic side.
+        raw += 10;
+      } else {
+        raw += getLatency(cityFrom, cityTo);
+      }
+
+      return Math.max(1, (int) Math.round(0.5 * raw));
     }
   }
 

@@ -166,10 +166,10 @@ public class P2PFlood implements Protocol {
   }
 
   private static void floodTime() {
-    int liveNodes = 4200;
+    int liveNodes = 64 * 128;
     final int threshold = (int) (0.99 * liveNodes);
     P2PFloodParameters params =
-        new P2PFloodParameters(liveNodes, 4000, 1, 1, threshold, 15, 1, null, null);
+        new P2PFloodParameters(liveNodes, 0, 1, 1, threshold, 15, 1, null, null);
     P2PFlood p = new P2PFlood(params);
 
     Predicate<Protocol> contIf =

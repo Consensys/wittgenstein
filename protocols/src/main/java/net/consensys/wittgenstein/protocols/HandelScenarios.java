@@ -81,8 +81,8 @@ public class HandelScenarios {
         loc == RegistryNodeBuilders.Location.AWS
             ? NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName()
             : loc == RegistryNodeBuilders.Location.CITIES
-                ? NetworkLatency.NetworkLatencyByCity.class.getSimpleName()
-                : NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
+                ? NetworkLatency.NetworkLatencyByCityWJitter.class.getSimpleName()
+                : NetworkLatency.NetworkLatencyByDistanceWJitter.class.getSimpleName();
 
     int deadN = (int) (nodes * deadRatio);
     int eCy = extraCycle == null ? 10 : extraCycle;
