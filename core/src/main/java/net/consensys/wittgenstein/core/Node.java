@@ -207,7 +207,7 @@ public class Node implements Closeable {
 
     @Override
     public double getSpeedRatio(Random rd) {
-      return Math.max(0.001, 3 * rd.nextGaussian() + 1);
+      return Math.max(0.33, rd.nextGaussian() + 1);
     }
 
     @Override
