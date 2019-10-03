@@ -16,8 +16,8 @@ public class P2PHandelTest {
       new P2PHandel(
           new P2PHandel.P2PHandelParameters(
               100, 0, 60, 10, 2, 20, false, P2PHandel.SendSigsStrategy.dif, 4, nb, nl));
-  private P2PHandel.P2PSigNode n1;
-  private P2PHandel.P2PSigNode n2;
+  private P2PHandel.P2PHandelNode n1;
+  private P2PHandel.P2PHandelNode n2;
 
   @Before
   public void before() {
@@ -140,9 +140,9 @@ public class P2PHandelTest {
 
     Assert.assertEquals(2, ps.compressedSize(fromString("0000 1111 1111 1111  0000")));
 
-    Assert.assertEquals(5, ps.compressedSize(fromString("1101 0111")));
-    Assert.assertEquals(2, ps.compressedSize(fromString("1111 1110")));
-    Assert.assertEquals(6, ps.compressedSize(fromString("0111 0111")));
+    Assert.assertEquals(4, ps.compressedSize(fromString("1101 0111")));
+    Assert.assertEquals(3, ps.compressedSize(fromString("1111 1110")));
+    Assert.assertEquals(4, ps.compressedSize(fromString("0111 0111")));
     Assert.assertEquals(0, ps.compressedSize(fromString("0000 0000")));
     Assert.assertEquals(2, ps.compressedSize(fromString("1111 1111 1111")));
   }
@@ -160,8 +160,8 @@ public class P2PHandelTest {
     p2.init();
     p2.network().runMs(500);
 
-    for (P2PHandel.P2PSigNode n1 : p1.network().allNodes) {
-      P2PHandel.P2PSigNode n2 = p2.network().getNodeById(n1.nodeId);
+    for (P2PHandel.P2PHandelNode n1 : p1.network().allNodes) {
+      P2PHandel.P2PHandelNode n2 = p2.network().getNodeById(n1.nodeId);
       Assert.assertNotNull(n2);
       Assert.assertEquals(n1.doneAt, n2.doneAt);
       Assert.assertEquals(n1.verifiedSignatures, n2.verifiedSignatures);

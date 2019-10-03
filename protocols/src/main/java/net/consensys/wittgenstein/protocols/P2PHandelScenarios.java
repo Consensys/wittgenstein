@@ -1,5 +1,7 @@
 package net.consensys.wittgenstein.protocols;
 
+import static net.consensys.wittgenstein.core.utils.StatsHelper.getStatsOn;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -22,30 +24,45 @@ public class P2PHandelScenarios {
     final int msgRcvAvg;
     final int msgRcvMax;
 
+    final int sigsSent;
+
     BasicStats(
         long doneAtMin,
         long doneAtAvg,
         long doneAtMax,
         long msgRcvMin,
         long msgRcvAvg,
-        long msgRcvMax) {
+        long msgRcvMax,
+        long sigsSent) {
       this.doneAtMin = (int) doneAtMin;
       this.doneAtAvg = (int) doneAtAvg;
       this.doneAtMax = (int) doneAtMax;
       this.msgRcvMin = (int) msgRcvMin;
       this.msgRcvAvg = (int) msgRcvAvg;
       this.msgRcvMax = (int) msgRcvMax;
+      this.sigsSent = (int) sigsSent;
     }
 
     @Override
     public String toString() {
-      return "; doneAtAvg=" + doneAtAvg + "; msgRcvAvg=" + msgRcvAvg;
+      return "; doneAtAvg=" + doneAtAvg + "; msgRcvAvg=" + msgRcvAvg + ", sigsSent=" + sigsSent;
+    }
+  }
+
+  private static class SigsSentGetter extends StatsHelper.SimpleStatsGetter {
+
+    @Override
+    public StatsHelper.Stat get(List<? extends Node> liveNodes) {
+      return getStatsOn(liveNodes, Node::getBytesReceived);
     }
   }
 
   private BasicStats run(int rounds, P2PHandel.P2PHandelParameters params) {
     List<StatsHelper.StatsGetter> stats =
-        List.of(new StatsHelper.DoneAtStatGetter(), new StatsHelper.MsgReceivedStatGetter());
+        List.of(
+            new StatsHelper.DoneAtStatGetter(),
+            new StatsHelper.MsgReceivedStatGetter(),
+            new SigsSentGetter());
     RunMultipleTimes<P2PHandel> rmt =
         new RunMultipleTimes<>(new P2PHandel(params), rounds, 0, stats, null);
     List<StatsHelper.Stat> res = rmt.run(RunMultipleTimes.contUntilDone());
@@ -56,13 +73,14 @@ public class P2PHandelScenarios {
         res.get(0).get("max"),
         res.get(1).get("min"),
         res.get(1).get("avg"),
-        res.get(1).get("max"));
+        res.get(1).get("max"),
+        res.get(2).get("avg"));
   }
 
   private void logErrors(Double errorRate) {
     boolean printed = false;
 
-    double[] errors = new double[] {00};
+    double[] errors = new double[] {0};
     if (errorRate != null) {
       errors = new double[] {errorRate};
     }
@@ -73,15 +91,15 @@ public class P2PHandelScenarios {
 
     for (int i = 0; i < errors.length; i++) {
       double e = errors[i];
-      for (int n = 1024; n <= 1024 * 8; n *= 2) {
-        P2PHandel.P2PHandelParameters params = defaultParams(n, errors[i], null, null, null);
+      for (int n = 128; n <= 1024 * 32; n *= 2) {
+        P2PHandel.P2PHandelParameters params = defaultParams(n, errors[i], 15, null, null);
 
         if (!printed) {
           System.out.println("\nBehavior when the number of nodes increases - " + params);
           printed = true;
         }
 
-        BasicStats bs = run(n > 9000 ? 2 : n < 1000 ? 1 : 1, params);
+        BasicStats bs = run(5, params);
         System.out.println(n + " nodes: " + e + bs);
         System.out.flush();
       }
@@ -149,9 +167,9 @@ public class P2PHandelScenarios {
       do {
         ps1.network.runMs(10);
         s =
-            StatsHelper.getStatsOn(
+            getStatsOn(
                 ps1.network.allNodes,
-                n -> ((P2PHandel.P2PSigNode) n).verifiedSignatures.cardinality());
+                n -> ((P2PHandel.P2PHandelNode) n).verifiedSignatures.cardinality());
         curMin.addLine(new Graph.ReportLine(ps1.network.time, s.min));
         curMax.addLine(new Graph.ReportLine(ps1.network.time, s.max));
         curAvg.addLine(new Graph.ReportLine(ps1.network.time, s.avg));
@@ -160,16 +178,11 @@ public class P2PHandelScenarios {
       graph.addSerie(curMax);
       graph.addSerie(curAvg);
 
-      System.out.println(
-          "bytes sent: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getBytesSent));
-      System.out.println(
-          "bytes rcvd: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getBytesReceived));
-      System.out.println(
-          "msg sent: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getMsgSent));
-      System.out.println(
-          "msg rcvd: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getMsgReceived));
-      System.out.println(
-          "done at: " + StatsHelper.getStatsOn(ps1.network.allNodes, Node::getDoneAt));
+      System.out.println("bytes sent: " + getStatsOn(ps1.network.allNodes, Node::getBytesSent));
+      System.out.println("bytes rcvd: " + getStatsOn(ps1.network.allNodes, Node::getBytesReceived));
+      System.out.println("msg sent: " + getStatsOn(ps1.network.allNodes, Node::getMsgSent));
+      System.out.println("msg rcvd: " + getStatsOn(ps1.network.allNodes, Node::getMsgReceived));
+      System.out.println("done at: " + getStatsOn(ps1.network.allNodes, Node::getDoneAt));
     }
 
     try {
@@ -222,13 +235,13 @@ public class P2PHandelScenarios {
       ps1.network.runMs(10);
       ps2.network.runMs(10);
       s1 =
-          StatsHelper.getStatsOn(
+          getStatsOn(
               ps1.network.allNodes,
-              n -> ((P2PHandel.P2PSigNode) n).verifiedSignatures.cardinality());
+              n -> ((P2PHandel.P2PHandelNode) n).verifiedSignatures.cardinality());
       s2 =
-          StatsHelper.getStatsOn(
+          getStatsOn(
               ps2.network.allNodes,
-              n -> ((P2PHandel.P2PSigNode) n).verifiedSignatures.cardinality());
+              n -> ((P2PHandel.P2PHandelNode) n).verifiedSignatures.cardinality());
       series1avg.addLine(new Graph.ReportLine(ps1.network.time, s1.avg));
       series2avg.addLine(new Graph.ReportLine(ps2.network.time, s2.avg));
     } while (s1.min != nodeCt);
@@ -255,17 +268,7 @@ public class P2PHandelScenarios {
     int connectionCount = connectionCount_ == null ? 13 : connectionCount_;
 
     return new P2PHandel.P2PHandelParameters(
-        nodes,
-        0,
-        ts,
-        connectionCount,
-        4,
-        20,
-        false,
-        P2PHandel.SendSigsStrategy.cmp_diff,
-        2,
-        nb,
-        nl);
+        nodes, 0, ts, connectionCount, 4, 20, true, P2PHandel.SendSigsStrategy.cmp_diff, 2, nb, nl);
   }
 
   public static void main(String... args) {

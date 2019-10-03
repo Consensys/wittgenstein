@@ -18,7 +18,7 @@ import net.consensys.wittgenstein.core.utils.MoreMath;
 @SuppressWarnings("WeakerAccess")
 public class P2PHandel implements Protocol {
   P2PHandelParameters params;
-  final P2PNetwork<P2PSigNode> network;
+  final P2PNetwork<P2PHandelNode> network;
   final NodeBuilder nb;
 
   public enum SendSigsStrategy {
@@ -52,22 +52,20 @@ public class P2PHandel implements Protocol {
     /** The protocol sends a set of sigs every 'sigsSendPeriod' milliseconds */
     final int sigsSendPeriod;
 
-    /** @see P2PSigNode#checkSigs1 for the two strategies on aggregation. */
+    /** @see P2PHandelNode#checkSigs1 for the two strategies on aggregation. */
     final boolean doubleAggregateStrategy;
 
     /**
      * If true the nodes send their state to the peers they are connected with. If false they don't.
      */
-    final boolean withState = true;
-
-    /** For the compression scheme: we can use log 2 (the default or other values). */
-    final int sigRange;
+    final boolean withState = false;
 
     final String nodeBuilderName;
     final String networkLatencyName;
 
     final SendSigsStrategy sendSigsStrategy;
 
+    @SuppressWarnings("unused")
     public P2PHandelParameters() {
       this.signingNodeCount = 100;
       this.relayingNodeCount = 20;
@@ -77,7 +75,6 @@ public class P2PHandel implements Protocol {
       this.sigsSendPeriod = 1000;
       this.doubleAggregateStrategy = true;
       this.sendSigsStrategy = SendSigsStrategy.dif;
-      this.sigRange = 20;
       this.nodeBuilderName = null;
       this.networkLatencyName = null;
     }
@@ -102,7 +99,6 @@ public class P2PHandel implements Protocol {
       this.sigsSendPeriod = sigsSendPeriod;
       this.doubleAggregateStrategy = doubleAggregateStrategy;
       this.sendSigsStrategy = sendSigsStrategy;
-      this.sigRange = sigRange;
       this.nodeBuilderName = nodeBuilderName;
       this.networkLatencyName = networkLatencyName;
     }
@@ -116,11 +112,11 @@ public class P2PHandel implements Protocol {
         RegistryNetworkLatencies.singleton.getByName(params.networkLatencyName));
   }
 
-  static class State extends Message<P2PSigNode> {
+  static class State extends Message<P2PHandelNode> {
     final BitSet desc;
-    final P2PSigNode who;
+    final P2PHandelNode who;
 
-    public State(P2PSigNode who) {
+    public State(P2PHandelNode who) {
       this.desc = (BitSet) who.verifiedSignatures.clone();
       this.who = who;
     }
@@ -135,7 +131,7 @@ public class P2PHandel implements Protocol {
     }
 
     @Override
-    public void action(Network<P2PSigNode> network, P2PSigNode from, P2PSigNode to) {
+    public void action(Network<P2PHandelNode> network, P2PHandelNode from, P2PHandelNode to) {
       to.onPeerState(this);
     }
   }
@@ -175,14 +171,14 @@ public class P2PHandel implements Protocol {
         sigCt -= mergeRanges(firstOneAt, pos);
         firstOneAt = -1;
       } else if (compressing) {
-        if ((pos + 1) % params.sigRange == 0) {
+        if ((pos + 1) % 2 == 0) {
           // We compressed the whole range, but now we're starting a new one...
           compressing = false;
           wasCompressing = true;
         }
       } else {
         sigCt++;
-        if (pos % params.sigRange == 0) {
+        if (pos % 2 == 0) {
           compressing = true;
           if (!wasCompressing) {
             firstOneAt = pos;
@@ -206,11 +202,11 @@ public class P2PHandel implements Protocol {
       return 0;
     }
     // We start only at the beginning of a range
-    if (firstOneAt % (params.sigRange * 2) != 0) {
-      firstOneAt += (params.sigRange * 2) - (firstOneAt % (params.sigRange * 2));
+    if (firstOneAt % (2 * 2) != 0) {
+      firstOneAt += (2 * 2) - (firstOneAt % (2 * 2));
     }
 
-    int rangeCt = (pos - firstOneAt) / params.sigRange;
+    int rangeCt = (pos - firstOneAt) / 2;
     if (rangeCt < 2) {
       return 0;
     }
@@ -218,7 +214,7 @@ public class P2PHandel implements Protocol {
     int max = MoreMath.log2(rangeCt);
     while (max > 0) {
       int sizeInBlocks = (int) Math.pow(2, max);
-      int size = sizeInBlocks * params.sigRange;
+      int size = sizeInBlocks * 2;
       if (firstOneAt % size == 0) {
         return (sizeInBlocks - 1) + mergeRanges(firstOneAt + size, pos);
       }
@@ -228,7 +224,7 @@ public class P2PHandel implements Protocol {
     return 0;
   }
 
-  static class SendSigs extends Message<P2PSigNode> {
+  static class SendSigs extends Message<P2PHandelNode> {
     final BitSet sigs;
     final int size;
 
@@ -238,8 +234,7 @@ public class P2PHandel implements Protocol {
 
     public SendSigs(BitSet sigs, int sigCount) {
       this.sigs = (BitSet) sigs.clone();
-      // Size = bit field + the signatures included
-      this.size = Math.max(1, sigs.length() / 8 + sigCount * 48);
+      this.size = Math.max(1, sigCount);
     }
 
     @Override
@@ -248,20 +243,18 @@ public class P2PHandel implements Protocol {
     }
 
     @Override
-    public void action(Network<P2PSigNode> network, P2PSigNode from, P2PSigNode to) {
+    public void action(Network<P2PHandelNode> network, P2PHandelNode from, P2PHandelNode to) {
       to.onNewSig(sigs);
     }
   }
 
-  public class P2PSigNode extends P2PNode<P2PSigNode> {
+  public class P2PHandelNode extends P2PNode<P2PHandelNode> {
     final BitSet verifiedSignatures = new BitSet(params.signingNodeCount);
     final Set<BitSet> toVerify = new HashSet<>();
     final Map<Integer, State> peersState = new HashMap<>();
     final boolean justRelay;
 
-    boolean done = false;
-
-    P2PSigNode(boolean justRelay) {
+    P2PHandelNode(boolean justRelay) {
       super(network.rd, nb);
       this.justRelay = justRelay;
       if (!justRelay) {
@@ -293,9 +286,8 @@ public class P2PHandel implements Protocol {
           sendStateToPeers();
         }
 
-        if (!done && verifiedSignatures.cardinality() >= params.threshold) {
+        if (doneAt == 0 && verifiedSignatures.cardinality() >= params.threshold) {
           doneAt = network.time;
-          done = true;
           while (!peersState.isEmpty()) {
             sendSigs();
           }
@@ -351,16 +343,8 @@ public class P2PHandel implements Protocol {
         } else {
           ss = new SendSigs((BitSet) verifiedSignatures.clone());
         }
-        network.send(ss, delayToSend(ss.sigs), this, found.who);
+        network.send(ss, this, found.who);
       }
-    }
-
-    /**
-     * We add a small delay to take into account the message size. This should likely be moved to
-     * the framework.
-     */
-    int delayToSend(BitSet sigs) {
-      return network.time + 1 + sigs.cardinality() / 100;
     }
 
     public void checkSigs() {
@@ -400,9 +384,9 @@ public class P2PHandel implements Protocol {
         toVerify.remove(best);
         final BitSet tBest = best;
         network.registerTask(
-            () -> P2PSigNode.this.updateVerifiedSignatures(tBest),
+            () -> P2PHandelNode.this.updateVerifiedSignatures(tBest),
             network.time + params.pairingTime * 2,
-            P2PSigNode.this);
+            P2PHandelNode.this);
       }
     }
 
@@ -431,35 +415,11 @@ public class P2PHandel implements Protocol {
           // There is at least one signature we don't have yet
           final BitSet tBest = agg;
           network.registerTask(
-              () -> P2PSigNode.this.updateVerifiedSignatures(tBest),
+              () -> P2PHandelNode.this.updateVerifiedSignatures(tBest),
               network.time + params.pairingTime * 2,
-              P2PSigNode.this);
+              P2PHandelNode.this);
         }
       }
-    }
-
-    @Override
-    public String toString() {
-      return "P2PSigNode{"
-          + "nodeId="
-          + nodeId
-          + " sendSigsStrategy="
-          + params.sendSigsStrategy
-          + " sigRange="
-          + params.sigRange
-          + ", doneAt="
-          + doneAt
-          + ", sigs="
-          + verifiedSignatures.cardinality()
-          + ", msgReceived="
-          + msgReceived
-          + ", msgSent="
-          + msgSent
-          + ", KBytesSent="
-          + bytesSent / 1024
-          + ", KBytesReceived="
-          + bytesReceived / 1024
-          + '}';
     }
   }
 
@@ -471,22 +431,31 @@ public class P2PHandel implements Protocol {
     }
 
     for (int i = 0; i < params.signingNodeCount + params.relayingNodeCount; i++) {
-      final P2PSigNode n = new P2PSigNode(justRelay.contains(i));
+      final P2PHandelNode n = new P2PHandelNode(justRelay.contains(i));
       network.addNode(n);
       if (params.withState) {
         network.registerTask(n::sendStateToPeers, 1, n);
       }
       network.registerConditionalTask(
-          n::sendSigs, 1, params.sigsSendPeriod, n, () -> !(n.peersState.isEmpty()), () -> !n.done);
+          n::sendSigs,
+          1,
+          params.sigsSendPeriod,
+          n,
+          () -> !(n.peersState.isEmpty()),
+          () -> n.doneAt == 0 || true);
+
+      // We stop sending sigs when we have finished. Technically it could be an issue because
+      //  we could own signatures we haven't distributed.
+
       network.registerConditionalTask(
-          n::checkSigs, 1, params.pairingTime, n, () -> !n.toVerify.isEmpty(), () -> !n.done);
+          n::checkSigs, 1, params.pairingTime, n, () -> !n.toVerify.isEmpty(), () -> n.doneAt == 0);
     }
 
     network.setPeers();
   }
 
   @Override
-  public Network<P2PSigNode> network() {
+  public Network<P2PHandelNode> network() {
     return network;
   }
 

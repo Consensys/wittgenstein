@@ -120,7 +120,7 @@ public class HandelScenarios {
     return p;
   }
 
-  private class MsgFilteredGetter extends StatsHelper.SimpleStatsGetter {
+  private static class MsgFilteredGetter extends StatsHelper.SimpleStatsGetter {
 
     @Override
     public StatsHelper.Stat get(List<? extends Node> liveNodes) {
