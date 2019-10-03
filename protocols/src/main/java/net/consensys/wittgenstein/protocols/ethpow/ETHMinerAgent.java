@@ -40,6 +40,8 @@ public class ETHMinerAgent extends ETHMiner {
    * We allow the agent to decide if it publishes the block. So our head may differ from the other
    * miners' head. We keep track of the two information.
    */
+  private ETHPoW.POWBlock privateMinerBlock;
+
   ETHPoW.POWBlock otherMinersHead = genesis;
 
   /** A boolean we use to decide if we want the agent to take a decision. */
@@ -66,6 +68,12 @@ public class ETHMinerAgent extends ETHMiner {
     while (howMany-- > 0 && !minedToSend.isEmpty()) {
       actionSendOldestBlockMined();
     }
+    if (minedToSend.isEmpty()) {
+      privateMinerBlock = null;
+    }
+    if (howMany == 0 && this.inMining != null) {
+      startNewMining(privateMinerBlock);
+    }
   }
 
   public boolean goNextStep() {
@@ -81,7 +89,8 @@ public class ETHMinerAgent extends ETHMiner {
   }
 
   public int getAdvance() {
-    int diff = head.height - otherMinersHead.height;
+    int priv = privateMinerBlock == null ? 0 : privateMinerBlock.height;
+    int diff = priv - otherMinersHead.height;
     return Math.max(diff, 0);
   }
 
@@ -116,12 +125,35 @@ public class ETHMinerAgent extends ETHMiner {
   @Override
   protected void onReceivedBlock(ETHPoW.POWBlock rcv) {
     otherMinersHead = best(otherMinersHead, rcv);
-    if (otherMinersHead == rcv) {
+    if (head == rcv) {
       decisionNeeded = true;
+    }
+    if (best(head, rcv) == head) {
+      decisionNeeded = true;
+    }
+    if (!minedToSend.isEmpty()) {
+      ETHPoW.POWBlock youngest =
+          Collections.max(minedToSend, Comparator.comparingInt(o -> o.proposalTime));
+      if (youngest.height - otherMinersHead.height < 0) {
+        sendAllMined();
+        startNewMining(otherMinersHead);
+      }
     }
   }
 
-  private void actionSendOldestBlockMined() {
+  @Override
+  protected void onMinedBlock(ETHPoW.POWBlock mined) {
+    decisionNeeded = true;
+    if (privateMinerBlock != null && mined.height <= privateMinerBlock.height) {
+      throw new IllegalStateException(
+          "privateMinerBlock=" + privateMinerBlock + ", mined=" + mined);
+    }
+    privateMinerBlock = mined;
+
+    startNewMining(privateMinerBlock);
+  }
+
+  public void actionSendOldestBlockMined() {
     ETHPoW.POWBlock oldest =
         Collections.min(minedToSend, Comparator.comparingInt(o -> o.proposalTime));
     if (oldest.height > otherMinersHead.height) {
