@@ -71,6 +71,10 @@ public class ETHMinerAgent extends ETHMiner {
     if(minedToSend.isEmpty()){
       privateMinerBlock = null;
     }
+    if(howMany==0 && this.inMining !=null){
+      startNewMining(privateMinerBlock);
+    }
+
   }
 
   public boolean goNextStep() {
