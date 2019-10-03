@@ -168,7 +168,6 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
     for (ETHPoW.POWBlock b : all) {
       sendMinedBlock(b);
     }
-
   }
 
   private void onFoundNewBlock(ETHPoW.POWBlock mined) {
