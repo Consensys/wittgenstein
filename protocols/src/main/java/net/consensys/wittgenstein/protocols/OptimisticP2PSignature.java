@@ -3,6 +3,7 @@ package net.consensys.wittgenstein.protocols;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
+import java.util.function.Predicate;
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.Message;
 
@@ -167,27 +168,36 @@ public class OptimisticP2PSignature implements Protocol {
     return network;
   }
 
+  public static Predicate<OptimisticP2PSignature> newContIf() {
+    return p -> {
+      for (P2PSigNode n : p.network().liveNodes()) {
+        if (n.doneAt == 0) {
+          return true;
+        }
+      }
+      return false;
+    };
+  }
+
   public static void main(String... args) {
     String nl = NetworkLatency.NetworkLatencyByDistanceWJitter.class.getSimpleName();
     String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
     System.out.println("" + nl);
     boolean printLat = false;
 
-    for (int i = 1000; i < 2000; i += 1000) {
-      OptimisticP2PSignature p2ps =
-          new OptimisticP2PSignature(
-              new OptimisticP2PSignatureParameters(i, i / 2 + 1, 13, 3, nb, nl));
-      p2ps.init();
-      P2PSigNode observer = p2ps.network.getNodeById(0);
+    OptimisticP2PSignature p2ps =
+        new OptimisticP2PSignature(
+            new OptimisticP2PSignatureParameters(1000, 1000 / 2 + 1, 13, 3, nb, nl));
+    p2ps.init();
+    P2PSigNode observer = p2ps.network.getNodeById(0);
 
-      if (!printLat) {
-        System.out.println("NON P2P " + NetworkLatency.estimateLatency(p2ps.network, 100000));
-        System.out.println("\nP2P " + NetworkLatency.estimateP2PLatency(p2ps.network, 100000));
-        printLat = true;
-      }
-
-      p2ps.network.run(5);
-      System.out.println(observer);
+    if (!printLat) {
+      System.out.println("NON P2P " + NetworkLatency.estimateLatency(p2ps.network, 100000));
+      System.out.println("\nP2P " + NetworkLatency.estimateP2PLatency(p2ps.network, 100000));
+      printLat = true;
     }
+
+    p2ps.network.run(5);
+    System.out.println(observer);
   }
 }

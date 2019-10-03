@@ -11,7 +11,7 @@ import net.consensys.wittgenstein.core.utils.StatsHelper;
 
 /**
  * A simple flood protocol. When a node receives a message it has not yet received, it sends it to
- * all its peer. That's the "Flood routing" protocol documented here:
+ * all its peers. That's the "Flood routing" protocol documented here:
  * https://github.com/libp2p/specs/tree/master/pubsub/gossipsub
  */
 @SuppressWarnings("WeakerAccess")

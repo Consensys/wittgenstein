@@ -6,7 +6,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
-import net.consensys.wittgenstein.core.*;
+import net.consensys.wittgenstein.core.Network;
+import net.consensys.wittgenstein.core.Node;
+import net.consensys.wittgenstein.core.NodeBuilder;
+import net.consensys.wittgenstein.core.Protocol;
 import org.junit.Assert;
 import org.junit.Test;
 

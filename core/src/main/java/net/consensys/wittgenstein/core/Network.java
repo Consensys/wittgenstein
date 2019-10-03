@@ -2,11 +2,7 @@ package net.consensys.wittgenstein.core;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import net.consensys.wittgenstein.core.messages.ConditionalTask;
-import net.consensys.wittgenstein.core.messages.Message;
-import net.consensys.wittgenstein.core.messages.PeriodicTask;
-import net.consensys.wittgenstein.core.messages.SendMessage;
-import net.consensys.wittgenstein.core.messages.Task;
+import net.consensys.wittgenstein.core.messages.*;
 
 /**
  * There is a single network for a simulation.
