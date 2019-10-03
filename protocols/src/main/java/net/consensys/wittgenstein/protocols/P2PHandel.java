@@ -1,6 +1,6 @@
 package net.consensys.wittgenstein.protocols;
 
-import static net.consensys.wittgenstein.protocols.P2PSignatureScenarios.sigsPerTime;
+import static net.consensys.wittgenstein.protocols.P2PHandelScenarios.sigsPerTime;
 
 import java.util.*;
 import net.consensys.wittgenstein.core.*;
@@ -16,8 +16,8 @@ import net.consensys.wittgenstein.core.utils.MoreMath;
  * validated signatures to its peers.
  */
 @SuppressWarnings("WeakerAccess")
-public class P2PSignature implements Protocol {
-  P2PSignatureParameters params;
+public class P2PHandel implements Protocol {
+  P2PHandelParameters params;
   final P2PNetwork<P2PSigNode> network;
   final NodeBuilder nb;
 
@@ -32,7 +32,7 @@ public class P2PSignature implements Protocol {
     cmp_diff
   }
 
-  public static class P2PSignatureParameters extends WParameters {
+  public static class P2PHandelParameters extends WParameters {
 
     /** The number of nodes in the network participating in signing */
     final int signingNodeCount;
@@ -60,9 +60,6 @@ public class P2PSignature implements Protocol {
      */
     final boolean withState = true;
 
-    /** Use san fermin in parallel with gossiping. */
-    final boolean sanFermin;
-
     /** For the compression scheme: we can use log 2 (the default or other values). */
     final int sigRange;
 
@@ -71,7 +68,7 @@ public class P2PSignature implements Protocol {
 
     final SendSigsStrategy sendSigsStrategy;
 
-    public P2PSignatureParameters() {
+    public P2PHandelParameters() {
       this.signingNodeCount = 100;
       this.relayingNodeCount = 20;
       this.threshold = 99;
@@ -79,14 +76,13 @@ public class P2PSignature implements Protocol {
       this.pairingTime = 100;
       this.sigsSendPeriod = 1000;
       this.doubleAggregateStrategy = true;
-      this.sanFermin = true;
-      this.sendSigsStrategy = this.sanFermin ? SendSigsStrategy.cmp_all : SendSigsStrategy.dif;
+      this.sendSigsStrategy = SendSigsStrategy.dif;
       this.sigRange = 20;
       this.nodeBuilderName = null;
       this.networkLatencyName = null;
     }
 
-    public P2PSignatureParameters(
+    public P2PHandelParameters(
         int signingNodeCount,
         int relayingNodeCount,
         int threshold,
@@ -94,7 +90,6 @@ public class P2PSignature implements Protocol {
         int pairingTime,
         int sigsSendPeriod,
         boolean doubleAggregateStrategy,
-        boolean sanFermin,
         SendSigsStrategy sendSigsStrategy,
         int sigRange,
         String nodeBuilderName,
@@ -106,15 +101,14 @@ public class P2PSignature implements Protocol {
       this.pairingTime = pairingTime;
       this.sigsSendPeriod = sigsSendPeriod;
       this.doubleAggregateStrategy = doubleAggregateStrategy;
-      this.sanFermin = sanFermin;
-      this.sendSigsStrategy = this.sanFermin ? SendSigsStrategy.cmp_all : sendSigsStrategy;
+      this.sendSigsStrategy = sendSigsStrategy;
       this.sigRange = sigRange;
       this.nodeBuilderName = nodeBuilderName;
       this.networkLatencyName = networkLatencyName;
     }
   }
 
-  public P2PSignature(P2PSignatureParameters params) {
+  public P2PHandel(P2PHandelParameters params) {
     this.params = params;
     this.network = new P2PNetwork<>(params.connectionCount, false);
     this.nb = RegistryNodeBuilders.singleton.getByName(params.nodeBuilderName);
@@ -275,21 +269,6 @@ public class P2PSignature implements Protocol {
       }
     }
 
-    public BitSet sanFerminPeers(int round) {
-      if (round < 1) {
-        throw new IllegalArgumentException("round=" + round);
-      }
-      BitSet res = new BitSet(params.signingNodeCount);
-      int cMask = (1 << round) - 1;
-      int start = (cMask | nodeId) ^ cMask;
-      int end = nodeId | cMask;
-      end = Math.min(end, params.signingNodeCount - 1);
-      res.set(start, end + 1);
-      res.set(nodeId, false);
-
-      return res;
-    }
-
     /** Asynchronous, so when we receive a state it can be an old one. */
     void onPeerState(State state) {
       int newCard = state.desc.cardinality();
@@ -314,43 +293,6 @@ public class P2PSignature implements Protocol {
           sendStateToPeers();
         }
 
-        if (params.sanFermin) {
-          int r = 2;
-          while (r < 30 && r < MoreMath.log2(params.signingNodeCount)) {
-            BitSet nodesAtRound = sanFerminPeers(r);
-            nodesAtRound.and(sigs);
-            if (nodesAtRound.length() != 0) {
-              // In the sigs we've just verified we have one or more of the sigs of this round
-              // We now need to check if we completed the set.
-              nodesAtRound = sanFerminPeers(r);
-              nodesAtRound.and(verifiedSignatures);
-              if (nodesAtRound.equals(sanFerminPeers(r))) {
-                // Ok, we're going to contact some of the nodes of the upper level
-                //  We're going to select these nodes randomly
-
-                BitSet nextRound = sanFerminPeers(r + 1);
-                nextRound.andNot(nodesAtRound);
-
-                // We contact two nodes.
-                List<P2PSigNode> dest = randomSubset(nextRound, 2);
-
-                // here we can send:
-                // - all the signatures -- good for fault tolerance, bad for message size
-                // - only the aggregated signature for this san fermin range
-                // - all the signatures we can add on top of this aggregated san fermin sig
-                // on the early tests sending all results seems more efficient. But
-                // if we suppose that only small messages are supported, then
-                //  we can send only the San Fermin ones to make it fit into a UDP message
-                // SendSigs ss = new SendSigs(verifiedSignatures,
-                // compressedSize(verifiedSignatures));
-                SendSigs ss = new SendSigs(sanFerminPeers(r), 1);
-                network.send(ss, network.time + 1, this, dest);
-              }
-            }
-            r++;
-          }
-        }
-
         if (!done && verifiedSignatures.cardinality() >= params.threshold) {
           doneAt = network.time;
           done = true;
@@ -358,31 +300,6 @@ public class P2PSignature implements Protocol {
             sendSigs();
           }
         }
-      }
-    }
-
-    private List<P2PSigNode> randomSubset(BitSet nodes, int nodeCt) {
-      List<P2PSigNode> res = new ArrayList<>();
-      int pos = 0;
-      do {
-        int cur = nodes.nextSetBit(pos);
-        if (cur >= 0) {
-          res.add(network.getNodeById(cur));
-          pos = cur + 1;
-        } else {
-          break;
-        }
-      } while (true);
-
-      for (P2PSigNode n : peers) {
-        res.remove(n);
-      }
-
-      if (res.size() > nodeCt) {
-        Collections.shuffle(res, network.rd);
-        return res.subList(0, nodeCt);
-      } else {
-        return res;
       }
     }
 
@@ -556,22 +473,13 @@ public class P2PSignature implements Protocol {
     for (int i = 0; i < params.signingNodeCount + params.relayingNodeCount; i++) {
       final P2PSigNode n = new P2PSigNode(justRelay.contains(i));
       network.addNode(n);
-      if (params.withState && !params.sanFermin) {
+      if (params.withState) {
         network.registerTask(n::sendStateToPeers, 1, n);
       }
       network.registerConditionalTask(
           n::sendSigs, 1, params.sigsSendPeriod, n, () -> !(n.peersState.isEmpty()), () -> !n.done);
       network.registerConditionalTask(
           n::checkSigs, 1, params.pairingTime, n, () -> !n.toVerify.isEmpty(), () -> !n.done);
-    }
-
-    if (params.sanFermin) {
-      for (int i = 0; i < params.signingNodeCount; i++) {
-        final P2PSigNode n = network.getNodeById(i);
-        SendSigs sigs = new SendSigs(n.verifiedSignatures);
-        int peerId = n.sanFerminPeers(1).length() - 1;
-        network.send(sigs, 1, n, network.getNodeById(peerId));
-      }
     }
 
     network.setPeers();
@@ -582,8 +490,8 @@ public class P2PSignature implements Protocol {
     return network;
   }
 
-  public P2PSignature copy() {
-    return new P2PSignature(params);
+  public P2PHandel copy() {
+    return new P2PHandel(params);
   }
 
   public static void main(String... args) {

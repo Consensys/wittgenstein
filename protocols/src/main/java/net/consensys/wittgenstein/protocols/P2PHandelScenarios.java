@@ -11,7 +11,7 @@ import net.consensys.wittgenstein.core.RunMultipleTimes;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.tools.Graph;
 
-public class P2PSignatureScenarios {
+public class P2PHandelScenarios {
 
   static class BasicStats {
     final int doneAtMin;
@@ -43,11 +43,11 @@ public class P2PSignatureScenarios {
     }
   }
 
-  private BasicStats run(int rounds, P2PSignature.P2PSignatureParameters params) {
+  private BasicStats run(int rounds, P2PHandel.P2PHandelParameters params) {
     List<StatsHelper.StatsGetter> stats =
         List.of(new StatsHelper.DoneAtStatGetter(), new StatsHelper.MsgReceivedStatGetter());
-    RunMultipleTimes<P2PSignature> rmt =
-        new RunMultipleTimes<>(new P2PSignature(params), rounds, 0, stats, null);
+    RunMultipleTimes<P2PHandel> rmt =
+        new RunMultipleTimes<>(new P2PHandel(params), rounds, 0, stats, null);
     List<StatsHelper.Stat> res = rmt.run(RunMultipleTimes.contUntilDone());
 
     return new BasicStats(
@@ -74,7 +74,7 @@ public class P2PSignatureScenarios {
     for (int i = 0; i < errors.length; i++) {
       double e = errors[i];
       for (int n = 1024; n <= 1024 * 8; n *= 2) {
-        P2PSignature.P2PSignatureParameters params = defaultParams(n, errors[i], null, null, null);
+        P2PHandel.P2PHandelParameters params = defaultParams(n, errors[i], null, null, null);
 
         if (!printed) {
           System.out.println("\nBehavior when the number of nodes increases - " + params);
@@ -96,9 +96,9 @@ public class P2PSignatureScenarios {
     List<Graph.Series> rawResultsMax = new ArrayList<>();
     List<Graph.Series> rawResultsAvg = new ArrayList<>();
 
-    P2PSignature psTemplate =
-        new P2PSignature(
-            new P2PSignature.P2PSignatureParameters(
+    P2PHandel psTemplate =
+        new P2PHandel(
+            new P2PHandel.P2PHandelParameters(
                 nodeCt,
                 nodeCt * 0,
                 nodeCt,
@@ -106,8 +106,7 @@ public class P2PSignatureScenarios {
                 3,
                 50,
                 true,
-                false,
-                P2PSignature.SendSigsStrategy.all,
+                P2PHandel.SendSigsStrategy.all,
                 2,
                 nb,
                 nl));
@@ -115,17 +114,13 @@ public class P2PSignatureScenarios {
     String desc =
         "signingNodeCount="
             + nodeCt
-            + (psTemplate.params.sanFermin
-                ? ""
-                : ", totalNodes="
-                    + (psTemplate.params.signingNodeCount + psTemplate.params.relayingNodeCount))
+            + ", totalNodes="
+            + (psTemplate.params.signingNodeCount + psTemplate.params.relayingNodeCount)
             + ", gossip "
-            + (psTemplate.params.sanFermin ? " + San Fermin" : "alone")
             + ", gossip period="
             + psTemplate.params.sigsSendPeriod
-            + (!psTemplate.params.sanFermin
-                ? ", compression=" + psTemplate.params.sendSigsStrategy
-                : "");
+            + ", compression="
+            + psTemplate.params.sendSigsStrategy;
     System.out.println(nl + " " + desc);
     Graph graph =
         new Graph(
@@ -147,7 +142,7 @@ public class P2PSignatureScenarios {
       rawResultsMin.add(curMin);
       rawResultsMax.add(curMax);
 
-      P2PSignature ps1 = psTemplate.copy();
+      P2PHandel ps1 = psTemplate.copy();
       ps1.network.rd.setSeed(i);
       ps1.init();
 
@@ -156,7 +151,7 @@ public class P2PSignatureScenarios {
         s =
             StatsHelper.getStatsOn(
                 ps1.network.allNodes,
-                n -> ((P2PSignature.P2PSigNode) n).verifiedSignatures.cardinality());
+                n -> ((P2PHandel.P2PSigNode) n).verifiedSignatures.cardinality());
         curMin.addLine(new Graph.ReportLine(ps1.network.time, s.min));
         curMax.addLine(new Graph.ReportLine(ps1.network.time, s.max));
         curAvg.addLine(new Graph.ReportLine(ps1.network.time, s.avg));
@@ -202,37 +197,15 @@ public class P2PSignatureScenarios {
 
     String nl = NetworkLatency.NetworkLatencyByDistanceWJitter.class.getSimpleName();
     String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
-    P2PSignature ps1 =
-        new P2PSignature(
-            new P2PSignature.P2PSignatureParameters(
-                nodeCt,
-                0,
-                nodeCt,
-                15,
-                3,
-                20,
-                true,
-                false,
-                P2PSignature.SendSigsStrategy.all,
-                1,
-                nb,
-                nl));
+    P2PHandel ps1 =
+        new P2PHandel(
+            new P2PHandel.P2PHandelParameters(
+                nodeCt, 0, nodeCt, 15, 3, 20, true, P2PHandel.SendSigsStrategy.all, 1, nb, nl));
 
-    P2PSignature ps2 =
-        new P2PSignature(
-            new P2PSignature.P2PSignatureParameters(
-                nodeCt,
-                0,
-                nodeCt,
-                15,
-                3,
-                20,
-                false,
-                false,
-                P2PSignature.SendSigsStrategy.all,
-                1,
-                nb,
-                nl));
+    P2PHandel ps2 =
+        new P2PHandel(
+            new P2PHandel.P2PHandelParameters(
+                nodeCt, 0, nodeCt, 15, 3, 20, false, P2PHandel.SendSigsStrategy.all, 1, nb, nl));
 
     Graph graph = new Graph("number of sig per time", "time in ms", "sig count");
     Graph.Series series1avg = new Graph.Series("sig count - full aggregate strategy");
@@ -251,11 +224,11 @@ public class P2PSignatureScenarios {
       s1 =
           StatsHelper.getStatsOn(
               ps1.network.allNodes,
-              n -> ((P2PSignature.P2PSigNode) n).verifiedSignatures.cardinality());
+              n -> ((P2PHandel.P2PSigNode) n).verifiedSignatures.cardinality());
       s2 =
           StatsHelper.getStatsOn(
               ps2.network.allNodes,
-              n -> ((P2PSignature.P2PSigNode) n).verifiedSignatures.cardinality());
+              n -> ((P2PHandel.P2PSigNode) n).verifiedSignatures.cardinality());
       series1avg.addLine(new Graph.ReportLine(ps1.network.time, s1.avg));
       series2avg.addLine(new Graph.ReportLine(ps2.network.time, s2.avg));
     } while (s1.min != nodeCt);
@@ -267,7 +240,7 @@ public class P2PSignatureScenarios {
     }
   }
 
-  private static P2PSignature.P2PSignatureParameters defaultParams(
+  private static P2PHandel.P2PHandelParameters defaultParams(
       int nodes,
       Double deadRatio,
       Integer connectionCount_,
@@ -281,7 +254,7 @@ public class P2PSignatureScenarios {
 
     int connectionCount = connectionCount_ == null ? 13 : connectionCount_;
 
-    return new P2PSignature.P2PSignatureParameters(
+    return new P2PHandel.P2PHandelParameters(
         nodes,
         0,
         ts,
@@ -289,15 +262,14 @@ public class P2PSignatureScenarios {
         4,
         20,
         false,
-        false,
-        P2PSignature.SendSigsStrategy.cmp_diff,
+        P2PHandel.SendSigsStrategy.cmp_diff,
         2,
         nb,
         nl);
   }
 
   public static void main(String... args) {
-    P2PSignatureScenarios scenario = new P2PSignatureScenarios();
+    P2PHandelScenarios scenario = new P2PHandelScenarios();
     scenario.logErrors(null);
   }
 }
