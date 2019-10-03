@@ -129,7 +129,7 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
   }
 
   /** Start to mine a new block as a son of 'father' */
-  protected void startNewMining(ETHPoW.POWBlock father) {
+  public void startNewMining(ETHPoW.POWBlock father) {
     List<ETHPoW.POWBlock> us = possibleUncles(father);
     Set<ETHPoW.POWBlock> uss =
         us.isEmpty()
@@ -168,6 +168,7 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
     for (ETHPoW.POWBlock b : all) {
       sendMinedBlock(b);
     }
+
   }
 
   private void onFoundNewBlock(ETHPoW.POWBlock mined) {
