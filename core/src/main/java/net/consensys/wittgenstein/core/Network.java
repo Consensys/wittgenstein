@@ -90,6 +90,19 @@ public class Network<TN extends Node> {
     return null;
   }
 
+  public void printSpeedDistribution(int segmentCt) {
+    double[] sr = new double[allNodes.size()];
+
+    for (int i = 0; i < allNodes.size(); i++) {
+      sr[i] = allNodes.get(i).speedRatio;
+    }
+
+    Arrays.sort(sr);
+    for (int i = 0; i < allNodes.size(); i += allNodes.size() / segmentCt) {
+      System.out.println(i + ":" + sr[i]);
+    }
+  }
+
   @SuppressWarnings("UnusedReturnValue")
   public Network<TN> setMsgDiscardTime(int l) {
     this.msgDiscardTime = l;

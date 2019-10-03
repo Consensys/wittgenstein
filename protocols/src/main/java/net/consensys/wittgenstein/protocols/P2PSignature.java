@@ -585,7 +585,7 @@ public class P2PSignature implements Protocol {
   }
 
   public static void sigsPerTime() {
-    String nl = new NetworkLatency.NetworkLatencyByDistance().getClass().getSimpleName();
+    String nl = new NetworkLatency.NetworkLatencyByDistanceWJitter().getClass().getSimpleName();
     String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
     int nodeCt = 300;
     List<Graph.Series> rawResultsMin = new ArrayList<>();
@@ -699,7 +699,7 @@ public class P2PSignature implements Protocol {
   public static void sigsPerStrategy() {
     int nodeCt = 1000;
 
-    String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
+    String nl = NetworkLatency.NetworkLatencyByDistanceWJitter.class.getSimpleName();
     String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
     P2PSignature ps1 =
         new P2PSignature(

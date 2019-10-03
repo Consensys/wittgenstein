@@ -1,5 +1,7 @@
 package net.consensys.wittgenstein.protocols;
 
+import static net.consensys.wittgenstein.core.utils.StatsHelper.getStatsOn;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -8,6 +10,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import net.consensys.wittgenstein.core.NetworkLatency;
+import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.core.RegistryNodeBuilders;
 import net.consensys.wittgenstein.core.RunMultipleTimes;
 import net.consensys.wittgenstein.core.utils.MoreMath;
@@ -26,19 +29,23 @@ public class HandelScenarios {
     final int msgRcvAvg;
     final int msgRcvMax;
 
+    final int msgFilteredAvg;
+
     BasicStats(
         long doneAtMin,
         long doneAtAvg,
         long doneAtMax,
         long msgRcvMin,
         long msgRcvAvg,
-        long msgRcvMax) {
+        long msgRcvMax,
+        long msgFilteredAvg) {
       this.doneAtMin = (int) doneAtMin;
       this.doneAtAvg = (int) doneAtAvg;
       this.doneAtMax = (int) doneAtMax;
       this.msgRcvMin = (int) msgRcvMin;
       this.msgRcvAvg = (int) msgRcvAvg;
       this.msgRcvMax = (int) msgRcvMax;
+      this.msgFilteredAvg = (int) msgFilteredAvg;
     }
 
     @Override
@@ -47,15 +54,16 @@ public class HandelScenarios {
     }
   }
 
-  private Handel.HandelParameters defaultParams() {
-    return defaultParams(null, null, null, null, null, null, null, null, null);
+  private static Handel.HandelParameters defaultParams() {
+    return defaultParams(null, null, null, null, null, null, null, null, null, null);
   }
 
-  private Handel.HandelParameters defaultParams(
+  private static Handel.HandelParameters defaultParams(
       Integer nodes,
       Double deadRatio,
       Double tor,
       Integer periodTime,
+      Integer extraCycle,
       Integer desynchronizedStart,
       Boolean byzantineSuicide,
       Boolean hiddenByzantine,
@@ -73,10 +81,11 @@ public class HandelScenarios {
         loc == RegistryNodeBuilders.Location.AWS
             ? NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName()
             : loc == RegistryNodeBuilders.Location.CITIES
-                ? NetworkLatency.NetworkLatencyByCity.class.getSimpleName()
-                : NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
+                ? NetworkLatency.NetworkLatencyByCityWJitter.class.getSimpleName()
+                : NetworkLatency.NetworkLatencyByDistanceWJitter.class.getSimpleName();
 
     int deadN = (int) (nodes * deadRatio);
+    int eCy = extraCycle == null ? 10 : extraCycle;
     double tresholdR = (1.0 - deadRatio) * .99; // (1.0 - (deadRatio + 0.01));
     int treshold = (int) (nodes * tresholdR);
     if (treshold > nodes - deadN) {
@@ -95,6 +104,7 @@ public class HandelScenarios {
             treshold,
             4,
             50,
+            eCy,
             periodTime,
             10,
             deadN,
@@ -110,9 +120,20 @@ public class HandelScenarios {
     return p;
   }
 
+  private class MsgFilteredGetter extends StatsHelper.SimpleStatsGetter {
+
+    @Override
+    public StatsHelper.Stat get(List<? extends Node> liveNodes) {
+      return getStatsOn(liveNodes, n -> ((Handel.HNode) n).getMsgFiltered());
+    }
+  }
+
   private BasicStats run(int rounds, Handel.HandelParameters params) {
     List<StatsHelper.StatsGetter> stats =
-        List.of(new StatsHelper.DoneAtStatGetter(), new StatsHelper.MsgReceivedStatGetter());
+        List.of(
+            new StatsHelper.DoneAtStatGetter(),
+            new StatsHelper.MsgReceivedStatGetter(),
+            new MsgFilteredGetter());
     RunMultipleTimes<Handel> rmt =
         new RunMultipleTimes<>(new Handel(params), rounds, 0, stats, null);
     List<StatsHelper.Stat> res = rmt.run(Handel.newContIf());
@@ -123,7 +144,8 @@ public class HandelScenarios {
         res.get(0).get("max"),
         res.get(1).get("min"),
         res.get(1).get("avg"),
-        res.get(1).get("max"));
+        res.get(1).get("max"),
+        res.get(2).get("avg"));
   }
 
   private void runOnce(Handel.HandelParameters params, String fileName) {
@@ -144,11 +166,11 @@ public class HandelScenarios {
     int n = 8;
     System.out.println(
         "\nImpact of the ratio of nodes behind tor - "
-            + defaultParams(n, null, null, null, null, null, null, null, null));
+            + defaultParams(n, null, null, null, null, null, null, null, null, null));
 
     for (double tor : RegistryNodeBuilders.tor()) {
       Handel.HandelParameters params =
-          defaultParams(n, null, tor, null, null, null, null, null, null);
+          defaultParams(n, null, tor, null, null, null, null, null, null, null);
       BasicStats bs = run(5, params);
       System.out.println(tor + " tor: " + bs);
     }
@@ -159,7 +181,7 @@ public class HandelScenarios {
 
     for (int s : new int[] {0, 50, 100, 200, 400, 800}) {
       Handel.HandelParameters params =
-          defaultParams(2048, null, 0.0, s, null, null, null, null, null);
+          defaultParams(2048, null, 0.0, s, null, null, null, null, null, null);
       BasicStats bs = run(10, params);
       System.out.println(s + " delay: " + bs);
     }
@@ -170,11 +192,11 @@ public class HandelScenarios {
 
     System.out.println(
         "\nByzantine nodes are filling honest node's queues with bad signatures - "
-            + defaultParams(n, null, null, null, null, true, null, null, null));
+            + defaultParams(n, null, null, null, null, null, true, null, null, null));
 
     for (int ni = 128; ni <= 2048; ni *= 2) {
       Handel.HandelParameters params =
-          defaultParams(ni, null, null, null, null, true, null, null, null);
+          defaultParams(ni, null, null, null, null, null, true, null, null, null);
       BasicStats bs = run(5, params);
       System.out.println(ni + " nodes, " + params.nodesDown + " byzantines: " + bs);
     }
@@ -183,12 +205,12 @@ public class HandelScenarios {
       Handel.HandelParameters params;
 
       if (dr > 0) {
-        params = defaultParams(n, dr, null, null, null, false, null, null, null);
+        params = defaultParams(n, dr, null, null, null, null, false, null, null, null);
         BasicStats bs = run(2, params);
         System.out.println(n + " nodes, " + dr + " fail-silent: " + bs);
       }
 
-      params = defaultParams(n, dr, null, null, null, true, null, null, null);
+      params = defaultParams(n, dr, null, null, null, null, true, null, null, null);
       BasicStats bs = run(2, params);
       System.out.println(n + " nodes, " + dr + " byzantines: " + bs);
     }
@@ -216,46 +238,16 @@ public class HandelScenarios {
     allCombine(res, cur, total, pos + 1, remaining);
   }
 
-  private void allBadNodePos() {
-    int n = 16;
-
-    List<BitSet> ac = allCombine(16, 7);
-    System.out.println("\nallBadNodePos: " + ac.size());
-
-    for (BitSet bads : ac) {
-      Handel.HandelParameters params =
-          new Handel.HandelParameters(
-              n,
-              9,
-              4,
-              10,
-              20,
-              10,
-              7,
-              RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0),
-              NetworkLatency.NetworkNoLatency.class.getSimpleName(),
-              0,
-              false,
-              false,
-              null,
-              bads);
-
-      params.window = new Handel.WindowParameters();
-      BasicStats bs = run(500, params);
-      System.out.println(n + " nodes, " + bads + " byzantines: " + bs);
-    }
-  }
-
   private void hiddenByzantine() {
     int n = 4096;
 
     System.out.println(
         "\nByzantine nodes are creating nearly useless signatures"
-            + defaultParams(n, null, null, null, null, true, null, null, null));
+            + defaultParams(n, null, null, null, null, null, true, null, null, null));
 
     for (int ni = 128; ni < n; ni *= 2) {
       Handel.HandelParameters params =
-          defaultParams(ni, null, null, null, null, false, true, null, null);
+          defaultParams(ni, null, null, null, null, null, false, true, null, null);
       BasicStats bs = run(2, params);
       System.out.println(ni + " nodes, " + params.nodesDown + " byzantines: " + bs);
     }
@@ -264,12 +256,12 @@ public class HandelScenarios {
       Handel.HandelParameters params;
 
       if (dr > 0) {
-        params = defaultParams(n, dr, null, null, null, false, false, null, null);
+        params = defaultParams(n, dr, null, null, null, null, false, false, null, null);
         BasicStats bs = run(5, params);
         System.out.println(n + " nodes, " + dr + " fail-silent: " + bs);
       }
 
-      params = defaultParams(n, dr, null, null, null, false, true, null, null);
+      params = defaultParams(n, dr, null, null, null, null, false, true, null, null);
       BasicStats bs = run(5, params);
       System.out.println(n + " nodes, " + dr + " byzantines: " + bs);
     }
@@ -279,7 +271,7 @@ public class HandelScenarios {
     int n = 1024;
     int nbRounds = 5;
     Handel.HandelParameters params =
-        defaultParams(n, null, 0.0, null, null, null, null, null, null);
+        defaultParams(n, null, 0.0, null, null, null, null, null, null, null);
     String[] shuffle =
         new String[] {Handel.HandelParameters.SHUFFLE_SQUARE, Handel.HandelParameters.SHUFFLE_XOR};
     // new String[] {Handel.HandelParameters.SHUFFLE_XOR};
@@ -301,7 +293,7 @@ public class HandelScenarios {
     // runOnce(defaultParams(n, null, null, 200, null, null), "unsync.gif");
     runOnce(
         defaultParams(
-            n, null, 0.0, null, null, null, null, null, RegistryNodeBuilders.Location.CITIES),
+            n, null, 0.0, null, null, null, null, null, null, RegistryNodeBuilders.Location.CITIES),
         "tor.gif");
   }
 
@@ -340,7 +332,7 @@ public class HandelScenarios {
 
     for (int n = 64; n <= 4096 * 2; n *= 2) {
       Handel.HandelParameters params =
-          defaultParams(n, 0.0, null, null, null, null, null, null, null);
+          defaultParams(n, 0.0, null, null, null, null, null, null, null, null);
       BasicStats bs = run(5, params);
       System.out.println(n + " nodes: " + bs);
 
@@ -373,7 +365,7 @@ public class HandelScenarios {
   private void logErrors(Double errorRate) throws IOException {
     boolean printed = false;
 
-    double[] errors = new double[] {0.01, 0.25, 0.5, 0.75, .90, 0};
+    double[] errors = new double[] {0.2};
     if (errorRate != null) {
       errors = new double[] {errorRate};
     }
@@ -389,11 +381,12 @@ public class HandelScenarios {
 
     for (int i = 0; i < errors.length; i++) {
       double e = errors[i];
-      for (int n = 4096 * 16; n <= 4096 * 16; n *= 2) {
+      for (int n = 1024; n <= 1024 * 8; n *= 2) {
         Handel.HandelParameters params =
             defaultParams(
                 n,
                 errors[i],
+                null,
                 null,
                 null,
                 100,
@@ -407,7 +400,7 @@ public class HandelScenarios {
           printed = true;
         }
 
-        BasicStats bs = run(n > 9000 ? 2 : n < 1000 ? 10 : 5, params);
+        BasicStats bs = run(n > 9000 ? 2 : n < 1000 ? 10 : 1, params);
         System.out.println(n + " nodes: " + e + bs);
         System.out.flush();
 
@@ -438,7 +431,7 @@ public class HandelScenarios {
     graph.save(new File("handel_log_msg.png"));
   }
 
-  private void logPeriodTime(RegistryNodeBuilders.Location loc, double dead, double tor)
+  private void logPeriodTime(RegistryNodeBuilders.Location loc, double dead, double tor, String id)
       throws IOException {
     boolean print = false;
 
@@ -448,7 +441,8 @@ public class HandelScenarios {
     int n = 4096;
     int r = 5;
     for (int p : new int[] {1, 5, 10, 15, 20, 40, 80}) {
-      Handel.HandelParameters params = defaultParams(n, dead, tor, p, null, null, null, null, loc);
+      Handel.HandelParameters params =
+          defaultParams(n, dead, tor, p, null, 100, null, null, null, loc);
       if (!print) {
         print = true;
         System.out.println("Changing period time");
@@ -456,7 +450,18 @@ public class HandelScenarios {
       }
 
       BasicStats bs = run(r, params);
-      System.out.println(n + " ;" + p + ";" + bs.msgRcvAvg + "; " + bs.doneAtAvg);
+      System.out.println(
+          id
+              + ", "
+              + n
+              + ", "
+              + p
+              + ", "
+              + bs.msgRcvAvg
+              + ", "
+              + bs.msgFilteredAvg
+              + ", "
+              + bs.doneAtAvg);
 
       tA.addLine(new Graph.ReportLine(p, bs.doneAtAvg));
       mA.addLine(new Graph.ReportLine(p, bs.msgRcvAvg));
@@ -491,7 +496,7 @@ public class HandelScenarios {
     int r = 10;
     for (int s : new int[] {0, 10, 20, 30, 50, 70, 100}) {
       Handel.HandelParameters params =
-          defaultParams(n, dead, tor, null, null, null, null, null, loc);
+          defaultParams(n, dead, tor, null, null, null, null, null, null, loc);
       params.desynchronizedStart = s;
 
       if (!print) {
@@ -527,7 +532,7 @@ public class HandelScenarios {
     graph.save(new File("handel_delayedStart_msg.png"));
   }
 
-  private void logStartTime(RegistryNodeBuilders.Location loc, double dead, double tor)
+  private void logStartTime(RegistryNodeBuilders.Location loc, double dead, double tor, String id)
       throws IOException {
     boolean print = false;
 
@@ -538,7 +543,7 @@ public class HandelScenarios {
     int r = 5;
     for (int s : new int[] {0, 25, 50, 75, 100}) {
       Handel.HandelParameters params =
-          defaultParams(n, dead, tor, null, null, null, null, null, loc);
+          defaultParams(n, dead, tor, null, null, 100, null, null, null, loc);
       params.levelWaitTime = s;
 
       if (!print) {
@@ -548,7 +553,18 @@ public class HandelScenarios {
       }
 
       BasicStats bs = run(r, params);
-      System.out.println(n + " ;" + s + ";" + bs.msgRcvAvg + "; " + bs.doneAtAvg);
+      System.out.println(
+          id
+              + ", "
+              + n
+              + ", "
+              + s
+              + ", "
+              + bs.msgRcvAvg
+              + ", "
+              + bs.msgFilteredAvg
+              + ", "
+              + bs.doneAtAvg);
 
       tA.addLine(new Graph.ReportLine(s, bs.doneAtAvg));
       mA.addLine(new Graph.ReportLine(s, bs.msgRcvAvg));
@@ -572,8 +588,40 @@ public class HandelScenarios {
     graph.save(new File("handel_startTime_msg.png"));
   }
 
-  private void logContactedNode(RegistryNodeBuilders.Location loc, double dead, double tor)
-      throws IOException {
+  private void logExtraCycle(
+      RegistryNodeBuilders.Location loc, double dead, double tor, String id) {
+    boolean print = false;
+
+    int n = 4096;
+    int r = 5;
+    for (int ec : new int[] {10, 15, 20, 30, 40, 50}) {
+      Handel.HandelParameters params =
+          defaultParams(n, dead, tor, null, ec, 100, null, null, null, loc);
+
+      if (!print) {
+        print = true;
+        System.out.println("Changing extra cycles");
+        System.out.println("params: " + params);
+      }
+
+      BasicStats bs = run(r, params);
+      System.out.println(
+          id
+              + ", "
+              + n
+              + ", "
+              + ec
+              + ", "
+              + bs.msgRcvAvg
+              + ", "
+              + bs.msgFilteredAvg
+              + ", "
+              + bs.doneAtAvg);
+    }
+  }
+
+  private void logContactedNode(
+      RegistryNodeBuilders.Location loc, double dead, double tor, String id) throws IOException {
     boolean print = false;
 
     Graph.Series tA = new Graph.Series("average time");
@@ -583,7 +631,7 @@ public class HandelScenarios {
     int r = 5;
     for (int accCallCount : new int[] {0, 5, 10, 20, 40}) {
       Handel.HandelParameters params =
-          defaultParams(n, dead, tor, null, null, null, null, null, loc);
+          defaultParams(n, dead, tor, null, null, 100, null, null, null, loc);
       params.acceleratedCallsCount = accCallCount;
 
       if (!print) {
@@ -593,7 +641,18 @@ public class HandelScenarios {
       }
 
       BasicStats bs = run(r, params);
-      System.out.println(n + " ;" + accCallCount + ";" + bs.msgRcvAvg + "; " + bs.doneAtAvg);
+      System.out.println(
+          id
+              + ", "
+              + n
+              + ", "
+              + accCallCount
+              + ", "
+              + bs.msgRcvAvg
+              + ", "
+              + bs.msgFilteredAvg
+              + ", "
+              + bs.doneAtAvg);
 
       tA.addLine(new Graph.ReportLine(accCallCount, bs.doneAtAvg));
       mA.addLine(new Graph.ReportLine(accCallCount, bs.msgRcvAvg));
@@ -620,30 +679,27 @@ public class HandelScenarios {
   public static void allScenarios() throws IOException {
     HandelScenarios scenario = new HandelScenarios();
 
-    scenario.logStartTime(RegistryNodeBuilders.Location.AWS, 0.01, 0.01);
-    scenario.logContactedNode(RegistryNodeBuilders.Location.AWS, 0.01, 0.01);
-    scenario.logPeriodTime(RegistryNodeBuilders.Location.AWS, 0.01, 0.01);
+    System.out.println("type, node, analyzed, msg, msgFiltered, time, info");
+    scenario.logExtraCycle(RegistryNodeBuilders.Location.CITIES, 0, 0, "40");
+    scenario.logExtraCycle(RegistryNodeBuilders.Location.CITIES, .2, 0, "401");
 
-    scenario.logStartTime(RegistryNodeBuilders.Location.CITIES, 0.01, 0.01);
-    scenario.logContactedNode(RegistryNodeBuilders.Location.CITIES, 0.01, 0.01);
-    scenario.logPeriodTime(RegistryNodeBuilders.Location.CITIES, 0.01, 0.01);
+    scenario.logStartTime(RegistryNodeBuilders.Location.CITIES, 0.0, 0.0, "10");
+    scenario.logStartTime(RegistryNodeBuilders.Location.CITIES, 0.2, 0.0, "101");
 
-    scenario.logStartTime(RegistryNodeBuilders.Location.CITIES, 0.2, 0.01);
-    scenario.logContactedNode(RegistryNodeBuilders.Location.CITIES, 0.2, 0.01);
-    scenario.logPeriodTime(RegistryNodeBuilders.Location.CITIES, 0.2, 0.01);
+    scenario.logContactedNode(RegistryNodeBuilders.Location.CITIES, 0.0, 0.0, "20");
+    scenario.logContactedNode(RegistryNodeBuilders.Location.CITIES, 0.2, 0.0, "201");
 
-    scenario.logStartTime(RegistryNodeBuilders.Location.AWS, 0.2, 0.01);
-    scenario.logContactedNode(RegistryNodeBuilders.Location.AWS, 0.2, 0.01);
-    scenario.logPeriodTime(RegistryNodeBuilders.Location.AWS, 0.2, 0.01);
+    scenario.logPeriodTime(RegistryNodeBuilders.Location.CITIES, 0.2, 0.0, "30");
+    scenario.logPeriodTime(RegistryNodeBuilders.Location.CITIES, 0.0, 0.0, "301");
 
-    scenario.logStartTime(RegistryNodeBuilders.Location.CITIES, 0.2, 0.2);
-    scenario.logContactedNode(RegistryNodeBuilders.Location.CITIES, 0.2, 0.2);
-    scenario.logPeriodTime(RegistryNodeBuilders.Location.CITIES, 0.2, 0.2);
+    scenario.logExtraCycle(RegistryNodeBuilders.Location.CITIES, .2, 0.2, "41");
+    scenario.logStartTime(RegistryNodeBuilders.Location.CITIES, 0.2, 0.2, "111");
+    scenario.logContactedNode(RegistryNodeBuilders.Location.CITIES, 0.2, 0.2, "211");
+    scenario.logPeriodTime(RegistryNodeBuilders.Location.CITIES, 0.2, 0.2, "311");
   }
 
   public static void main(String[] args) throws IOException {
-    // allScenarios();
     HandelScenarios scenario = new HandelScenarios();
-    scenario.logErrors(args.length == 0 ? null : Double.valueOf(args[0]));
+    allScenarios();
   }
 }

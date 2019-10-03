@@ -463,7 +463,7 @@ public class SanFerminCappos implements Protocol {
   }
 
   public static void sigsPerTime() {
-    String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
+    String nl = NetworkLatency.NetworkLatencyByDistanceWJitter.class.getSimpleName();
     String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
     int nodeCt = 32768 / 2;
 

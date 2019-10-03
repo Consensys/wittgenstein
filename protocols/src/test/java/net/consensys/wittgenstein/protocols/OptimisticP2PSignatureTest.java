@@ -7,7 +7,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class OptimisticP2PSignatureTest {
-  private String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
+  private String nl = NetworkLatency.NetworkLatencyByDistanceWJitter.class.getSimpleName();
   private String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
 
   @Test

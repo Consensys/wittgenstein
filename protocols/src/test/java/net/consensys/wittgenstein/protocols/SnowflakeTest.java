@@ -8,7 +8,7 @@ import org.junit.Test;
 public class SnowflakeTest {
   private final String nb =
       RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
-  private final String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
+  private final String nl = NetworkLatency.NetworkLatencyByDistanceWJitter.class.getSimpleName();
 
   @Test
   public void testSimple() {

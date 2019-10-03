@@ -214,13 +214,13 @@ public class NetworkTest {
     Node n1 = new Node(network.rd, nb);
     Node n2 = new Node(network.rd, nb);
     Node n3 = new Node(network.rd, nb);
-    network.setNetworkLatency(new NetworkLatency.NetworkLatencyByDistance());
+    network.setNetworkLatency(new NetworkLatency.NetworkLatencyByDistanceWJitter());
     network.addNode(n0);
     network.addNode(n1);
     network.addNode(n2);
     network.addNode(n3);
 
-    network.networkLatency = new NetworkLatency.NetworkLatencyByDistance();
+    network.networkLatency = new NetworkLatency.NetworkLatencyByDistanceWJitter();
     List<Network.MessageArrival> mas =
         network.createMessageArrivals(m, 1, n0, List.of(n1, n2, n3), 2, 0);
     Assert.assertEquals(3, mas.size());
@@ -246,13 +246,13 @@ public class NetworkTest {
     Node n1 = new Node(network.rd, nb);
     Node n2 = new Node(network.rd, nb);
     Node n3 = new Node(network.rd, nb);
-    network.setNetworkLatency(new NetworkLatency.NetworkLatencyByDistance());
+    network.setNetworkLatency(new NetworkLatency.NetworkLatencyByDistanceWJitter());
     network.addNode(n0);
     network.addNode(n1);
     network.addNode(n2);
     network.addNode(n3);
 
-    network.networkLatency = new NetworkLatency.NetworkLatencyByDistance();
+    network.networkLatency = new NetworkLatency.NetworkLatencyByDistanceWJitter();
     List<Network.MessageArrival> mas =
         network.createMessageArrivals(m, 1, n0, List.of(n1, n2, n3), 1, 20);
     Assert.assertEquals(3, mas.size());

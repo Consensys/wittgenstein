@@ -6,7 +6,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class HandelTest {
-  private String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
+  private String nl = NetworkLatency.NetworkLatencyByDistanceWJitter.class.getSimpleName();
   private String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
 
   @Test
@@ -14,7 +14,7 @@ public class HandelTest {
     Handel p1 =
         new Handel(
             new Handel.HandelParameters(
-                64, 60, 6, 10, 5, 10, 2, nb, nl, 100, false, false, null, null));
+                64, 60, 6, 10, 5, 5, 10, 2, nb, nl, 100, false, false, null, null));
     Handel p2 = p1.copy();
     p1.init();
     p2.init();

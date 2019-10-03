@@ -57,7 +57,7 @@ public class P2PFloodTest {
   @Test
   public void testCopy() {
     String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
-    String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
+    String nl = NetworkLatency.NetworkLatencyByDistanceWJitter.class.getSimpleName();
     P2PFlood p1 = new P2PFlood(new P2PFlood.P2PFloodParameters(2000, 10, 50, 1, 1, 10, 30, nb, nl));
     P2PFlood p2 = p1.copy();
     p1.init();

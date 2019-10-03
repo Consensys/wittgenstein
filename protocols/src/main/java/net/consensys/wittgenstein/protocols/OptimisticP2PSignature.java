@@ -168,7 +168,7 @@ public class OptimisticP2PSignature implements Protocol {
   }
 
   public static void main(String... args) {
-    String nl = NetworkLatency.NetworkLatencyByDistance.class.getSimpleName();
+    String nl = NetworkLatency.NetworkLatencyByDistanceWJitter.class.getSimpleName();
     String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
     System.out.println("" + nl);
     boolean printLat = false;

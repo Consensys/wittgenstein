@@ -28,6 +28,7 @@ public class Handel implements Protocol {
     int levelWaitTime;
     final int periodDurationMs;
     int acceleratedCallsCount;
+    int extraCycle;
 
     final int nodesDown;
     final BitSet badNodes;
@@ -71,6 +72,7 @@ public class Handel implements Protocol {
       this.threshold = (int) (nodeCount * (0.99));
       this.pairingTime = 3;
       this.levelWaitTime = 50;
+      this.extraCycle = 10;
       this.periodDurationMs = 10;
       this.acceleratedCallsCount = 10;
       this.nodesDown = 0;
@@ -89,6 +91,7 @@ public class Handel implements Protocol {
         int threshold,
         int pairingTime,
         int levelWaitTime,
+        int extraCycle,
         int periodDurationMs,
         int acceleratedCallsCount,
         int nodesDown,
@@ -123,6 +126,7 @@ public class Handel implements Protocol {
       this.pairingTime = pairingTime;
       this.levelWaitTime = levelWaitTime;
       this.periodDurationMs = periodDurationMs;
+      this.extraCycle = extraCycle;
       this.acceleratedCallsCount = acceleratedCallsCount;
       this.nodesDown = nodesDown;
       this.nodeBuilderName = nodeBuilderName;
@@ -133,38 +137,6 @@ public class Handel implements Protocol {
       this.shuffle = SHUFFLE_XOR;
       this.badNodes = badNodes;
       this.window = new WindowParameters();
-    }
-
-    @Override
-    public String toString() {
-      return "HandelParameters{"
-          + "nodeCount="
-          + nodeCount
-          + ", threshold="
-          + threshold
-          + ", pairingTime="
-          + pairingTime
-          + ", levelWaitTime="
-          + levelWaitTime
-          + ", periodDurationMs="
-          + periodDurationMs
-          + ", acceleratedCallsCount="
-          + acceleratedCallsCount
-          + ", nodesDown="
-          + nodesDown
-          + ", nodeBuilderName='"
-          + nodeBuilderName
-          + '\''
-          + ", networkLatencyName='"
-          + networkLatencyName
-          + '\''
-          + ", desynchronizedStart="
-          + desynchronizedStart
-          + ", byzantineSuicide="
-          + byzantineSuicide
-          + ", hiddenByzantine="
-          + hiddenByzantine
-          + '}';
     }
   }
 
@@ -323,11 +295,14 @@ public class Handel implements Protocol {
 
     int currWindowSize = params.window.initial;
 
+    int addedCycle = params.extraCycle;
+
     final HiddenByzantine hiddenByzantine;
 
     boolean done = false;
     int sigChecked = 0;
     int sigQueueSize = 0;
+    int msgFiltered = 0;
 
     HNode(int startAt, NodeBuilder nb, boolean byzantine) {
       super(network.rd, nb, byzantine);
@@ -339,6 +314,10 @@ public class Handel implements Protocol {
     public String toString() {
       String s = "HNode{" + nodeId + "}";
       return s;
+    }
+
+    public long getMsgFiltered() {
+      return msgFiltered;
     }
 
     public void initLevel() {
@@ -354,6 +333,14 @@ public class Handel implements Protocol {
     }
 
     public void dissemination() {
+      if (doneAt > 0) {
+        if (addedCycle > 0) {
+          addedCycle--;
+        } else {
+          return;
+        }
+      }
+
       for (HLevel sfl : levels) {
         sfl.doCycle();
       }
@@ -807,6 +794,11 @@ public class Handel implements Protocol {
 
     /** Nothing much to do when we receive a sig set: we just add it to our toVerify list. */
     void onNewSig(HNode from, SendSigs ssigs) {
+      if (doneAt > 0) {
+        msgFiltered++;
+        return;
+      }
+
       if (network.time < startAt || blacklist.get(from.nodeId)) {
         return;
       }
@@ -1151,7 +1143,7 @@ public class Handel implements Protocol {
   public static Predicate<Handel> newContIf() {
     return p -> {
       for (HNode n : p.network().liveNodes()) {
-        if (n.doneAt == 0) {
+        if (n.doneAt == 0 || n.addedCycle != 0) {
           return true;
         }
       }

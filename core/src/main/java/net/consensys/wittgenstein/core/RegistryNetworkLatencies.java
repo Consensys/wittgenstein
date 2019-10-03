@@ -17,9 +17,9 @@ public class RegistryNetworkLatencies {
   public static String name(Type t, int fixed) {
     switch (t) {
       case FIXED:
-        return "NetworkFixedLatency(" + fixed + ")";
+        return NetworkLatency.NetworkFixedLatency.class.getSimpleName() + "(" + fixed + ")";
       case UNIFORM:
-        return "NetworkUniformLatency(" + fixed + ")";
+        return NetworkLatency.NetworkUniformLatency.class.getSimpleName() + "(" + fixed + ")";
     }
     throw new IllegalStateException();
   }
@@ -33,7 +33,7 @@ public class RegistryNetworkLatencies {
 
   public NetworkLatency getByName(String name) {
     if (name == null) {
-      name = "NetworkLatencyByDistance";
+      name = NetworkLatency.NetworkLatencyByDistanceWJitter.class.getSimpleName();
     }
 
     NetworkLatency nl = registry.get(name);
@@ -41,8 +41,12 @@ public class RegistryNetworkLatencies {
       return nl;
     }
 
-    String ref = NetworkLatency.NetworkLatencyByDistance.class.getName();
-    String cut = ref.substring(0, ref.length() - "NetworkLatencyByDistance".length());
+    String ref = NetworkLatency.NetworkLatencyByDistanceWJitter.class.getName();
+    String cut =
+        ref.substring(
+            0,
+            ref.length()
+                - NetworkLatency.NetworkLatencyByDistanceWJitter.class.getSimpleName().length());
     String full = cut + name;
     try {
       Class<?> cn = Class.forName(full);
