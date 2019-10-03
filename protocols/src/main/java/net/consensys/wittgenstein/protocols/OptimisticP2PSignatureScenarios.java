@@ -7,7 +7,7 @@ import net.consensys.wittgenstein.core.RunMultipleTimes;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.protocols.OptimisticP2PSignature.OptimisticP2PSignatureParameters;
 
-public class OptimisticP2PSignatureScenario {
+public class OptimisticP2PSignatureScenarios {
 
   static class BasicStats {
     final int doneAtMin;
@@ -44,7 +44,7 @@ public class OptimisticP2PSignatureScenario {
         List.of(new StatsHelper.DoneAtStatGetter(), new StatsHelper.MsgReceivedStatGetter());
     RunMultipleTimes<OptimisticP2PSignature> rmt =
         new RunMultipleTimes<>(new OptimisticP2PSignature(params), rounds, 0, stats, null);
-    List<StatsHelper.Stat> res = rmt.run(OptimisticP2PSignature.newContIf());
+    List<StatsHelper.Stat> res = rmt.run(RunMultipleTimes.contUntilDone());
 
     return new BasicStats(
         res.get(0).get("min"),
@@ -100,7 +100,7 @@ public class OptimisticP2PSignatureScenario {
   }
 
   public static void main(String... args) {
-    OptimisticP2PSignatureScenario scenario = new OptimisticP2PSignatureScenario();
+    OptimisticP2PSignatureScenarios scenario = new OptimisticP2PSignatureScenarios();
     scenario.logErrors(null);
   }
 }

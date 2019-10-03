@@ -700,6 +700,6 @@ public class HandelScenarios {
 
   public static void main(String[] args) throws IOException {
     HandelScenarios scenario = new HandelScenarios();
-    allScenarios();
+    scenario.logErrors(0.0);
   }
 }

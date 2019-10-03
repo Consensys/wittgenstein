@@ -3,7 +3,6 @@ package net.consensys.wittgenstein.protocols;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
-import java.util.function.Predicate;
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.Message;
 
@@ -166,17 +165,6 @@ public class OptimisticP2PSignature implements Protocol {
   @Override
   public Network<P2PSigNode> network() {
     return network;
-  }
-
-  public static Predicate<OptimisticP2PSignature> newContIf() {
-    return p -> {
-      for (P2PSigNode n : p.network().liveNodes()) {
-        if (n.doneAt == 0) {
-          return true;
-        }
-      }
-      return false;
-    };
   }
 
   public static void main(String... args) {
