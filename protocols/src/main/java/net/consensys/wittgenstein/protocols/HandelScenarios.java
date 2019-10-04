@@ -55,7 +55,7 @@ public class HandelScenarios {
   }
 
   private static Handel.HandelParameters defaultParams() {
-    return defaultParams(null, null, null, null, null, null, null, null, null, null);
+    return defaultParams(null, null, null, null, null, null, null, null, null);
   }
 
   private static Handel.HandelParameters defaultParams(
@@ -67,7 +67,6 @@ public class HandelScenarios {
       Integer desynchronizedStart,
       Boolean byzantineSuicide,
       Boolean hiddenByzantine,
-      String bestLevelFunction,
       RegistryNodeBuilders.Location loc) {
     nodes = nodes != null ? nodes : 2048;
     deadRatio = deadRatio != null ? deadRatio : 0.10;
@@ -113,7 +112,6 @@ public class HandelScenarios {
             desynchronizedStart,
             byzantineSuicide,
             hiddenByzantine,
-            bestLevelFunction,
             null);
 
     p.window = new Handel.WindowParameters();
@@ -166,11 +164,11 @@ public class HandelScenarios {
     int n = 8;
     System.out.println(
         "\nImpact of the ratio of nodes behind tor - "
-            + defaultParams(n, null, null, null, null, null, null, null, null, null));
+            + defaultParams(n, null, null, null, null, null, null, null, null));
 
     for (double tor : RegistryNodeBuilders.tor()) {
       Handel.HandelParameters params =
-          defaultParams(n, null, tor, null, null, null, null, null, null, null);
+          defaultParams(n, null, tor, null, null, null, null, null, null);
       BasicStats bs = run(5, params);
       System.out.println(tor + " tor: " + bs);
     }
@@ -181,7 +179,7 @@ public class HandelScenarios {
 
     for (int s : new int[] {0, 50, 100, 200, 400, 800}) {
       Handel.HandelParameters params =
-          defaultParams(2048, null, 0.0, s, null, null, null, null, null, null);
+          defaultParams(2048, null, 0.0, s, null, null, null, null, null);
       BasicStats bs = run(10, params);
       System.out.println(s + " delay: " + bs);
     }
@@ -192,11 +190,11 @@ public class HandelScenarios {
 
     System.out.println(
         "\nByzantine nodes are filling honest node's queues with bad signatures - "
-            + defaultParams(n, null, null, null, null, null, true, null, null, null));
+            + defaultParams(n, null, null, null, null, null, true, null, null));
 
     for (int ni = 128; ni <= 2048; ni *= 2) {
       Handel.HandelParameters params =
-          defaultParams(ni, null, null, null, null, null, true, null, null, null);
+          defaultParams(ni, null, null, null, null, null, true, null, null);
       BasicStats bs = run(5, params);
       System.out.println(ni + " nodes, " + params.nodesDown + " byzantines: " + bs);
     }
@@ -205,12 +203,12 @@ public class HandelScenarios {
       Handel.HandelParameters params;
 
       if (dr > 0) {
-        params = defaultParams(n, dr, null, null, null, null, false, null, null, null);
+        params = defaultParams(n, dr, null, null, null, null, false, null, null);
         BasicStats bs = run(2, params);
         System.out.println(n + " nodes, " + dr + " fail-silent: " + bs);
       }
 
-      params = defaultParams(n, dr, null, null, null, null, true, null, null, null);
+      params = defaultParams(n, dr, null, null, null, null, true, null, null);
       BasicStats bs = run(2, params);
       System.out.println(n + " nodes, " + dr + " byzantines: " + bs);
     }
@@ -243,11 +241,11 @@ public class HandelScenarios {
 
     System.out.println(
         "\nByzantine nodes are creating nearly useless signatures"
-            + defaultParams(n, null, null, null, null, null, true, null, null, null));
+            + defaultParams(n, null, null, null, null, null, true, null, null));
 
     for (int ni = 128; ni < n; ni *= 2) {
       Handel.HandelParameters params =
-          defaultParams(ni, null, null, null, null, null, false, true, null, null);
+          defaultParams(ni, null, null, null, null, null, false, true, null);
       BasicStats bs = run(2, params);
       System.out.println(ni + " nodes, " + params.nodesDown + " byzantines: " + bs);
     }
@@ -256,12 +254,12 @@ public class HandelScenarios {
       Handel.HandelParameters params;
 
       if (dr > 0) {
-        params = defaultParams(n, dr, null, null, null, null, false, false, null, null);
+        params = defaultParams(n, dr, null, null, null, null, false, false, null);
         BasicStats bs = run(5, params);
         System.out.println(n + " nodes, " + dr + " fail-silent: " + bs);
       }
 
-      params = defaultParams(n, dr, null, null, null, null, false, true, null, null);
+      params = defaultParams(n, dr, null, null, null, null, false, true, null);
       BasicStats bs = run(5, params);
       System.out.println(n + " nodes, " + dr + " byzantines: " + bs);
     }
@@ -272,7 +270,7 @@ public class HandelScenarios {
     // runOnce(defaultParams(n, null, null, 200, null, null), "unsync.gif");
     runOnce(
         defaultParams(
-            n, null, 0.0, null, null, null, null, null, null, RegistryNodeBuilders.Location.CITIES),
+            n, null, 0.0, null, null, null, null, null, RegistryNodeBuilders.Location.CITIES),
         "tor.gif");
   }
 
@@ -311,7 +309,7 @@ public class HandelScenarios {
 
     for (int n = 64; n <= 4096 * 2; n *= 2) {
       Handel.HandelParameters params =
-          defaultParams(n, 0.0, null, null, null, null, null, null, null, null);
+          defaultParams(n, 0.0, null, null, null, null, null, null, null);
       BasicStats bs = run(5, params);
       System.out.println(n + " nodes: " + bs);
 
@@ -371,7 +369,6 @@ public class HandelScenarios {
                 100,
                 true,
                 false,
-                null,
                 RegistryNodeBuilders.Location.CITIES);
 
         if (!printed) {
@@ -420,8 +417,7 @@ public class HandelScenarios {
     int n = 4096;
     int r = 5;
     for (int p : new int[] {50, 100, 200, 1, 5, 10, 15, 20, 40, 80, 160}) {
-      Handel.HandelParameters params =
-          defaultParams(n, dead, tor, p, 5, 100, null, null, null, loc);
+      Handel.HandelParameters params = defaultParams(n, dead, tor, p, 5, 100, null, null, loc);
       if (!print) {
         print = true;
         System.out.println("Changing period time");
@@ -475,7 +471,7 @@ public class HandelScenarios {
     int r = 10;
     for (int s : new int[] {0, 10, 20, 30, 50, 70, 100}) {
       Handel.HandelParameters params =
-          defaultParams(n, dead, tor, null, null, null, null, null, null, loc);
+          defaultParams(n, dead, tor, null, null, null, null, null, loc);
       params.desynchronizedStart = s;
 
       if (!print) {
@@ -522,7 +518,7 @@ public class HandelScenarios {
     int r = 5;
     for (int s : new int[] {0, 25, 50, 75, 100}) {
       Handel.HandelParameters params =
-          defaultParams(n, dead, tor, null, null, 100, null, null, null, loc);
+          defaultParams(n, dead, tor, null, null, 100, null, null, loc);
       params.levelWaitTime = s;
 
       if (!print) {
@@ -574,8 +570,7 @@ public class HandelScenarios {
     int n = 4096;
     int r = 5;
     for (int ec : new int[] {10, 15, 20, 30, 40, 50}) {
-      Handel.HandelParameters params =
-          defaultParams(n, dead, tor, null, ec, 100, null, null, null, loc);
+      Handel.HandelParameters params = defaultParams(n, dead, tor, null, ec, 100, null, null, loc);
 
       if (!print) {
         print = true;
@@ -610,7 +605,7 @@ public class HandelScenarios {
     int r = 5;
     for (int accCallCount : new int[] {0, 5, 10, 20, 40}) {
       Handel.HandelParameters params =
-          defaultParams(n, dead, tor, null, null, 100, null, null, null, loc);
+          defaultParams(n, dead, tor, null, null, 100, null, null, loc);
       params.fastPath = accCallCount;
 
       if (!print) {
