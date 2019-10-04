@@ -292,7 +292,7 @@ public class Handel implements Protocol {
     final HiddenByzantine hiddenByzantine;
 
     boolean done = false;
-    int sigChecked = 0;
+    int sigsChecked = 0;
     int sigQueueSize = 0;
     int msgFiltered = 0;
 
@@ -310,6 +310,10 @@ public class Handel implements Protocol {
 
     public long getMsgFiltered() {
       return msgFiltered;
+    }
+
+    public long getSigsChecked() {
+      return sigsChecked;
     }
 
     public void initLevel() {
@@ -859,7 +863,7 @@ public class Handel implements Protocol {
         receptionRanks[best.from] = Integer.MAX_VALUE;
       }
 
-      sigChecked++;
+      sigsChecked++;
 
       final SigToVerify fBest = best;
       network.registerTask(

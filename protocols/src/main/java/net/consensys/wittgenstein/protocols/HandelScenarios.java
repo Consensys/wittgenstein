@@ -30,6 +30,7 @@ public class HandelScenarios {
     final int msgRcvMax;
 
     final int msgFilteredAvg;
+    final int sigChecked;
 
     BasicStats(
         long doneAtMin,
@@ -38,7 +39,8 @@ public class HandelScenarios {
         long msgRcvMin,
         long msgRcvAvg,
         long msgRcvMax,
-        long msgFilteredAvg) {
+        long msgFilteredAvg,
+        long sigChecked) {
       this.doneAtMin = (int) doneAtMin;
       this.doneAtAvg = (int) doneAtAvg;
       this.doneAtMax = (int) doneAtMax;
@@ -46,11 +48,12 @@ public class HandelScenarios {
       this.msgRcvAvg = (int) msgRcvAvg;
       this.msgRcvMax = (int) msgRcvMax;
       this.msgFilteredAvg = (int) msgFilteredAvg;
+      this.sigChecked = (int) sigChecked;
     }
 
     @Override
     public String toString() {
-      return "; doneAtAvg=" + doneAtAvg + "; msgRcvAvg=" + msgRcvAvg;
+      return msgRcvAvg + ", " + msgFilteredAvg + ", " + sigChecked + ", " + doneAtAvg;
     }
   }
 
@@ -126,12 +129,21 @@ public class HandelScenarios {
     }
   }
 
+  private static class SigCheckedGetter extends StatsHelper.SimpleStatsGetter {
+
+    @Override
+    public StatsHelper.Stat get(List<? extends Node> liveNodes) {
+      return getStatsOn(liveNodes, n -> ((Handel.HNode) n).getSigsChecked());
+    }
+  }
+
   private BasicStats run(int rounds, Handel.HandelParameters params) {
     List<StatsHelper.StatsGetter> stats =
         List.of(
             new StatsHelper.DoneAtStatGetter(),
             new StatsHelper.MsgReceivedStatGetter(),
-            new MsgFilteredGetter());
+            new MsgFilteredGetter(),
+            new SigCheckedGetter());
     RunMultipleTimes<Handel> rmt =
         new RunMultipleTimes<>(new Handel(params), rounds, 0, stats, null);
     List<StatsHelper.Stat> res = rmt.run(Handel.newContIf());
@@ -143,7 +155,8 @@ public class HandelScenarios {
         res.get(1).get("min"),
         res.get(1).get("avg"),
         res.get(1).get("max"),
-        res.get(2).get("avg"));
+        res.get(2).get("avg"),
+        res.get(3).get("avg"));
   }
 
   private void runOnce(Handel.HandelParameters params, String fileName) {
@@ -166,51 +179,57 @@ public class HandelScenarios {
         "\nImpact of the ratio of nodes behind tor - "
             + defaultParams(n, null, null, null, null, null, null, null, null));
 
+    String id = "tor";
     for (double tor : RegistryNodeBuilders.tor()) {
       Handel.HandelParameters params =
           defaultParams(n, null, tor, null, null, null, null, null, null);
       BasicStats bs = run(5, params);
-      System.out.println(tor + " tor: " + bs);
+      System.out.println(id + ", " + 2048 + ", " + tor + ", " + bs);
     }
   }
 
   private void noSyncStart() {
     System.out.println("\nImpact of nodes not starting at the same time - " + defaultParams());
 
+    String id = "noSyncStart";
     for (int s : new int[] {0, 50, 100, 200, 400, 800}) {
       Handel.HandelParameters params =
           defaultParams(2048, null, 0.0, s, null, null, null, null, null);
       BasicStats bs = run(10, params);
-      System.out.println(s + " delay: " + bs);
+      System.out.println(id + ", " + 2048 + ", " + s + ", " + bs);
     }
   }
 
   private void byzantineSuicide() {
-    int n = 512;
+    String id = "byzSuicide";
+    boolean print = false;
 
-    System.out.println(
-        "\nByzantine nodes are filling honest node's queues with bad signatures - "
-            + defaultParams(n, null, null, null, null, null, true, null, null));
-
-    for (int ni = 128; ni <= 2048; ni *= 2) {
+    for (int n = 128; n <= 2048; n *= 2) {
       Handel.HandelParameters params =
-          defaultParams(ni, null, null, null, null, null, true, null, null);
+          defaultParams(n, null, null, null, null, null, true, null, null);
+
+      if (!print) {
+        System.out.println("\nByzantine nodes are creating nearly useless signatures: " + params);
+        print = true;
+      }
+
       BasicStats bs = run(5, params);
-      System.out.println(ni + " nodes, " + params.nodesDown + " byzantines: " + bs);
+      System.out.println(id + ", " + n + ", " + params.nodesDown + ", " + bs);
     }
 
+    int n = 2048;
     for (double dr : new Double[] {0.0, .10, .20, .30, .40, .50}) {
       Handel.HandelParameters params;
 
       if (dr > 0) {
         params = defaultParams(n, dr, null, null, null, null, false, null, null);
         BasicStats bs = run(2, params);
-        System.out.println(n + " nodes, " + dr + " fail-silent: " + bs);
+        System.out.println(id + ", " + n + ", " + params.nodesDown + ", " + bs);
       }
 
       params = defaultParams(n, dr, null, null, null, null, true, null, null);
       BasicStats bs = run(2, params);
-      System.out.println(n + " nodes, " + dr + " byzantines: " + bs);
+      System.out.println(id + ", " + n + ", " + dr + ", " + bs);
     }
   }
 
@@ -237,31 +256,34 @@ public class HandelScenarios {
   }
 
   private void hiddenByzantine() {
-    int n = 4096;
-
-    System.out.println(
-        "\nByzantine nodes are creating nearly useless signatures"
-            + defaultParams(n, null, null, null, null, null, true, null, null));
-
-    for (int ni = 128; ni < n; ni *= 2) {
+    String id = "byzHidden";
+    boolean print = false;
+    for (int n = 128; n < 4096; n *= 2) {
       Handel.HandelParameters params =
-          defaultParams(ni, null, null, null, null, null, false, true, null);
+          defaultParams(n, null, null, null, null, null, false, true, null);
+
+      if (!print) {
+        System.out.println("\nByzantine nodes are creating nearly useless signatures: " + params);
+        print = true;
+      }
+
       BasicStats bs = run(2, params);
-      System.out.println(ni + " nodes, " + params.nodesDown + " byzantines: " + bs);
+      System.out.println(id + ", " + n + ", " + params.nodesDown + ", " + bs);
     }
 
+    int n = 4096;
     for (double dr : new Double[] {0.0, .10, .20, .30, .40, .50}) {
       Handel.HandelParameters params;
 
       if (dr > 0) {
         params = defaultParams(n, dr, null, null, null, null, false, false, null);
         BasicStats bs = run(5, params);
-        System.out.println(n + " nodes, " + dr + " fail-silent: " + bs);
+        System.out.println(id + ", " + n + ", " + dr + ", " + bs);
       }
 
       params = defaultParams(n, dr, null, null, null, null, false, true, null);
       BasicStats bs = run(5, params);
-      System.out.println(n + " nodes, " + dr + " byzantines: " + bs);
+      System.out.println(id + ", " + n + ", " + dr + ", " + bs);
     }
   }
 
@@ -356,6 +378,7 @@ public class HandelScenarios {
       mAs[i] = new Graph.Series("average number of messages, errors=" + e + "%");
     }
 
+    String id = "errror";
     for (int i = 0; i < errors.length; i++) {
       double e = errors[i];
       for (int n = 1024; n <= 1024 * 8; n *= 2) {
@@ -377,7 +400,7 @@ public class HandelScenarios {
         }
 
         BasicStats bs = run(n > 9000 ? 2 : n < 1000 ? 10 : 1, params);
-        System.out.println(n + " nodes: " + e + bs);
+        System.out.println(id + ", " + n + ", " + n + ", " + bs);
         System.out.flush();
 
         tAs[i].addLine(new Graph.ReportLine(n, bs.doneAtAvg));
@@ -425,18 +448,7 @@ public class HandelScenarios {
       }
 
       BasicStats bs = run(r, params);
-      System.out.println(
-          id
-              + ", "
-              + n
-              + ", "
-              + p
-              + ", "
-              + bs.msgRcvAvg
-              + ", "
-              + bs.msgFilteredAvg
-              + ", "
-              + bs.doneAtAvg);
+      System.out.println(id + ", " + n + ", " + p + ", " + bs);
 
       tA.addLine(new Graph.ReportLine(p, bs.doneAtAvg));
       mA.addLine(new Graph.ReportLine(p, bs.msgRcvAvg));
@@ -467,6 +479,7 @@ public class HandelScenarios {
     Graph.Series tA = new Graph.Series("average time");
     Graph.Series mA = new Graph.Series("average number of messages");
 
+    String id = "delayedStart";
     int n = 4096;
     int r = 10;
     for (int s : new int[] {0, 10, 20, 30, 50, 70, 100}) {
@@ -481,7 +494,7 @@ public class HandelScenarios {
       }
 
       BasicStats bs = run(r, params);
-      System.out.println(n + " ;" + s + ";" + bs.msgRcvAvg + "; " + bs.doneAtAvg);
+      System.out.println(id + ", " + n + ", " + s + ", " + bs);
 
       tA.addLine(new Graph.ReportLine(s, bs.doneAtAvg));
       mA.addLine(new Graph.ReportLine(s, bs.msgRcvAvg));
@@ -528,18 +541,7 @@ public class HandelScenarios {
       }
 
       BasicStats bs = run(r, params);
-      System.out.println(
-          id
-              + ", "
-              + n
-              + ", "
-              + s
-              + ", "
-              + bs.msgRcvAvg
-              + ", "
-              + bs.msgFilteredAvg
-              + ", "
-              + bs.doneAtAvg);
+      System.out.println(id + ", " + n + ", " + s + ", " + bs);
 
       tA.addLine(new Graph.ReportLine(s, bs.doneAtAvg));
       mA.addLine(new Graph.ReportLine(s, bs.msgRcvAvg));
@@ -579,18 +581,7 @@ public class HandelScenarios {
       }
 
       BasicStats bs = run(r, params);
-      System.out.println(
-          id
-              + ", "
-              + n
-              + ", "
-              + ec
-              + ", "
-              + bs.msgRcvAvg
-              + ", "
-              + bs.msgFilteredAvg
-              + ", "
-              + bs.doneAtAvg);
+      System.out.println(id + ", " + n + ", " + ec + ", " + bs);
     }
   }
 
@@ -615,18 +606,7 @@ public class HandelScenarios {
       }
 
       BasicStats bs = run(r, params);
-      System.out.println(
-          id
-              + ", "
-              + n
-              + ", "
-              + accCallCount
-              + ", "
-              + bs.msgRcvAvg
-              + ", "
-              + bs.msgFilteredAvg
-              + ", "
-              + bs.doneAtAvg);
+      System.out.println(id + ", " + n + ", " + accCallCount + ", " + bs);
 
       tA.addLine(new Graph.ReportLine(accCallCount, bs.doneAtAvg));
       mA.addLine(new Graph.ReportLine(accCallCount, bs.msgRcvAvg));
@@ -653,7 +633,7 @@ public class HandelScenarios {
   public static void allScenarios() throws IOException {
     HandelScenarios scenario = new HandelScenarios();
 
-    System.out.println("type, node, analyzed, msg, msgFiltered, time, info");
+    System.out.println("type, node, analyzed, msg, msgFiltered, sigsChecked, time");
 
     scenario.logPeriodTime(RegistryNodeBuilders.Location.CITIES, 0.0, 0.0, "301");
     scenario.logPeriodTime(RegistryNodeBuilders.Location.CITIES, 0.2, 0.0, "30");
