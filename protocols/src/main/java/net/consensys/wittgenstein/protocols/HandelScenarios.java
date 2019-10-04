@@ -86,22 +86,22 @@ public class HandelScenarios {
 
     int deadN = (int) (nodes * deadRatio);
     int eCy = extraCycle == null ? 10 : extraCycle;
-    double tresholdR = (1.0 - deadRatio) * .99; // (1.0 - (deadRatio + 0.01));
-    int treshold = (int) (nodes * tresholdR);
-    if (treshold > nodes - deadN) {
-      treshold = nodes - deadN;
-    } else if (treshold < 2) {
-      treshold = 2;
+    double thresholdR = (1.0 - deadRatio) * .99;
+    int threshold = (int) (nodes * thresholdR);
+    if (threshold > nodes - deadN) {
+      threshold = nodes - deadN;
+    } else if (threshold < 2) {
+      threshold = 2;
     }
-    if (treshold > nodes - deadN) {
+    if (threshold > nodes - deadN) {
       throw new IllegalArgumentException(
-          "treshold=" + treshold + ", live nodes=" + (nodes - deadN));
+          "threshold=" + threshold + ", live nodes=" + (nodes - deadN));
     }
 
     Handel.HandelParameters p =
         new Handel.HandelParameters(
             nodes,
-            treshold,
+            threshold,
             4,
             50,
             eCy,
@@ -267,27 +267,6 @@ public class HandelScenarios {
     }
   }
 
-  void shuffleTimeTest() {
-    int n = 1024;
-    int nbRounds = 5;
-    Handel.HandelParameters params =
-        defaultParams(n, null, 0.0, null, null, null, null, null, null, null);
-    String[] shuffle =
-        new String[] {Handel.HandelParameters.SHUFFLE_SQUARE, Handel.HandelParameters.SHUFFLE_XOR};
-    // new String[] {Handel.HandelParameters.SHUFFLE_XOR};
-    // new String[] {Handel.HandelParameters.SHUFFLE_SQUARE};
-    // if we remove this, the shuffle square is faster
-    // params.window = new Handel.WindowParameters(10, true, true);
-    for (String s : shuffle) {
-      params.shuffle = s;
-      long startTime = System.nanoTime();
-      BasicStats bs = run(nbRounds, params);
-      long endTime = System.nanoTime();
-      System.out.println(s + " delay: " + bs);
-      System.out.println("With shuffling " + s + " -> " + (endTime - startTime) / 1000000);
-    }
-  }
-
   void genAnim() {
     int n = 4096;
     // runOnce(defaultParams(n, null, null, 200, null, null), "unsync.gif");
@@ -440,9 +419,9 @@ public class HandelScenarios {
 
     int n = 4096;
     int r = 5;
-    for (int p : new int[] {1, 5, 10, 15, 20, 40, 80}) {
+    for (int p : new int[] {50, 100, 200, 1, 5, 10, 15, 20, 40, 80, 160}) {
       Handel.HandelParameters params =
-          defaultParams(n, dead, tor, p, null, 100, null, null, null, loc);
+          defaultParams(n, dead, tor, p, 5, 100, null, null, null, loc);
       if (!print) {
         print = true;
         System.out.println("Changing period time");
@@ -632,7 +611,7 @@ public class HandelScenarios {
     for (int accCallCount : new int[] {0, 5, 10, 20, 40}) {
       Handel.HandelParameters params =
           defaultParams(n, dead, tor, null, null, 100, null, null, null, loc);
-      params.acceleratedCallsCount = accCallCount;
+      params.fastPath = accCallCount;
 
       if (!print) {
         print = true;
@@ -680,6 +659,10 @@ public class HandelScenarios {
     HandelScenarios scenario = new HandelScenarios();
 
     System.out.println("type, node, analyzed, msg, msgFiltered, time, info");
+
+    scenario.logPeriodTime(RegistryNodeBuilders.Location.CITIES, 0.0, 0.0, "301");
+    scenario.logPeriodTime(RegistryNodeBuilders.Location.CITIES, 0.2, 0.0, "30");
+
     scenario.logExtraCycle(RegistryNodeBuilders.Location.CITIES, 0, 0, "40");
     scenario.logExtraCycle(RegistryNodeBuilders.Location.CITIES, .2, 0, "401");
 
@@ -689,9 +672,6 @@ public class HandelScenarios {
     scenario.logContactedNode(RegistryNodeBuilders.Location.CITIES, 0.0, 0.0, "20");
     scenario.logContactedNode(RegistryNodeBuilders.Location.CITIES, 0.2, 0.0, "201");
 
-    scenario.logPeriodTime(RegistryNodeBuilders.Location.CITIES, 0.2, 0.0, "30");
-    scenario.logPeriodTime(RegistryNodeBuilders.Location.CITIES, 0.0, 0.0, "301");
-
     scenario.logExtraCycle(RegistryNodeBuilders.Location.CITIES, .2, 0.2, "41");
     scenario.logStartTime(RegistryNodeBuilders.Location.CITIES, 0.2, 0.2, "111");
     scenario.logContactedNode(RegistryNodeBuilders.Location.CITIES, 0.2, 0.2, "211");
@@ -699,6 +679,7 @@ public class HandelScenarios {
   }
 
   public static void main(String[] args) throws IOException {
+    allScenarios();
     HandelScenarios scenario = new HandelScenarios();
     scenario.logErrors(0.0);
   }

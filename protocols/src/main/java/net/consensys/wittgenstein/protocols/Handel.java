@@ -22,15 +22,23 @@ public class Handel implements Protocol {
     /** The number of signatures to reach to finish the protocol. */
     final int threshold;
 
-    /** The minimum time it takes to do a pairing for a node. */
+    /** The minimum time it takes to do a pairing for a standard node. */
     final int pairingTime;
 
     int levelWaitTime;
-    final int periodDurationMs;
-    int acceleratedCallsCount;
+    final int disseminationPeriodMs;
+    int fastPath;
+
+    /**
+     * He number of DP we continue to send signatures (but while filtering the incoming messages)
+     * once we reach the threshold. Negatives means we exit immediately once we reached it.
+     */
     int extraCycle;
 
+    /** Number of nodes down or Byzantine */
     final int nodesDown;
+
+    /** Allows to mark which nodes should be down. */
     final BitSet badNodes;
 
     final String nodeBuilderName;
@@ -53,10 +61,6 @@ public class Handel implements Protocol {
 
     final boolean hiddenByzantine;
 
-    public String shuffle;
-    static final String SHUFFLE_SQUARE = "SQUARE";
-    static final String SHUFFLE_XOR = "XOR";
-
     /** parameters related to the window-ing technique - null if not set */
     public WindowParameters window;
 
@@ -73,15 +77,14 @@ public class Handel implements Protocol {
       this.pairingTime = 3;
       this.levelWaitTime = 50;
       this.extraCycle = 10;
-      this.periodDurationMs = 10;
-      this.acceleratedCallsCount = 10;
+      this.disseminationPeriodMs = 10;
+      this.fastPath = 10;
       this.nodesDown = 0;
       this.nodeBuilderName = null;
       this.networkLatencyName = null;
       this.desynchronizedStart = 0;
       this.byzantineSuicide = false;
       this.hiddenByzantine = false;
-      this.shuffle = SHUFFLE_XOR;
       this.badNodes = null;
       this.window = new WindowParameters();
     }
@@ -92,8 +95,8 @@ public class Handel implements Protocol {
         int pairingTime,
         int levelWaitTime,
         int extraCycle,
-        int periodDurationMs,
-        int acceleratedCallsCount,
+        int disseminationPeriodMs,
+        int fastPath,
         int nodesDown,
         String nodeBuilderName,
         String networkLatencyName,
@@ -125,16 +128,15 @@ public class Handel implements Protocol {
       this.threshold = threshold;
       this.pairingTime = pairingTime;
       this.levelWaitTime = levelWaitTime;
-      this.periodDurationMs = periodDurationMs;
+      this.disseminationPeriodMs = disseminationPeriodMs;
       this.extraCycle = extraCycle;
-      this.acceleratedCallsCount = acceleratedCallsCount;
+      this.fastPath = fastPath;
       this.nodesDown = nodesDown;
       this.nodeBuilderName = nodeBuilderName;
       this.networkLatencyName = networkLatencyName;
       this.desynchronizedStart = desynchronizedStart;
       this.byzantineSuicide = byzantineSuicide;
       this.hiddenByzantine = hiddenByzantine;
-      this.shuffle = SHUFFLE_XOR;
       this.badNodes = badNodes;
       this.window = new WindowParameters();
     }
@@ -226,9 +228,9 @@ public class Handel implements Protocol {
         + "ms, levelWaitTime="
         + params.levelWaitTime
         + "ms, period="
-        + params.periodDurationMs
+        + params.disseminationPeriodMs
         + "ms, acceleratedCallsCount="
-        + params.acceleratedCallsCount
+        + params.fastPath
         + ", dead nodes="
         + params.nodesDown
         + ", builder="
@@ -775,11 +777,8 @@ public class Handel implements Protocol {
         if (l.level > vsl.level) {
           l.totalOutgoing.clear();
           l.totalOutgoing.or(cur);
-          if (justCompleted
-              && params.acceleratedCallsCount > 0
-              && !l.outgoingFinished
-              && l.outgoingComplete()) {
-            List<HNode> peers = l.getRemainingPeers(params.acceleratedCallsCount);
+          if (justCompleted && params.fastPath > 0 && !l.outgoingFinished && l.outgoingComplete()) {
+            List<HNode> peers = l.getRemainingPeers(params.fastPath);
             SendSigs sendSigs = new SendSigs(l.totalOutgoing, l);
             network.send(sendSigs, this, peers);
           }
@@ -1074,7 +1073,8 @@ public class Handel implements Protocol {
     for (HNode n : network.allNodes) {
       n.initLevel();
       if (!n.isDown()) {
-        network.registerPeriodicTask(n::dissemination, n.startAt + 1, params.periodDurationMs, n);
+        network.registerPeriodicTask(
+            n::dissemination, n.startAt + 1, params.disseminationPeriodMs, n);
         network.registerConditionalTask(
             n::checkSigs, n.startAt + 1, n.nodePairingTime, n, n::hasSigToVerify, () -> !n.done);
       }
@@ -1143,7 +1143,7 @@ public class Handel implements Protocol {
   public static Predicate<Handel> newContIf() {
     return p -> {
       for (HNode n : p.network().liveNodes()) {
-        if (n.doneAt == 0 || n.addedCycle != 0) {
+        if (n.doneAt == 0 || n.addedCycle > 0) {
           return true;
         }
       }

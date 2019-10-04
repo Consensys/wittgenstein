@@ -8,7 +8,7 @@ public class ETHMinerAgentTest {
 
   @Test
   public void basicTest() {
-    ETHMinerAgent.ETHPowWithAgent p = ETHMinerAgent.create(.4);
+    ETHMinerAgent.ETHPowWithAgent p = ETHMinerAgent.create(.4, 0);
     p.init();
     p.network.run(200);
 
@@ -20,7 +20,7 @@ public class ETHMinerAgentTest {
     Assert.assertTrue(n.decisionNeeded);
 
     int size = n.minedToSend.size();
-    Assert.assertTrue(size > 2);
+    Assert.assertTrue("size=" + size, size > 2);
 
     n.sendMinedBlocks(2);
     Assert.assertEquals(size - 2, n.minedToSend.size());
@@ -28,7 +28,7 @@ public class ETHMinerAgentTest {
 
   @Test
   public void testSteps() {
-    ETHMinerAgent.ETHPowWithAgent p = ETHMinerAgent.create(.4);
+    ETHMinerAgent.ETHPowWithAgent p = ETHMinerAgent.create(.4, 0);
     p.init();
     p.network.runH(1);
 

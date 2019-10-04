@@ -163,6 +163,10 @@ public class ETHMinerAgent extends ETHMiner {
   }
 
   public static ETHPowWithAgent create(double byzHashPowerShare) {
+    return create(byzHashPowerShare, System.nanoTime());
+  }
+
+  public static ETHPowWithAgent create(double byzHashPowerShare, long rdSeed) {
     final String bdlName = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
     final String nlName = RegistryNetworkLatencies.name(RegistryNetworkLatencies.Type.FIXED, 1000);
 
@@ -171,7 +175,7 @@ public class ETHMinerAgent extends ETHMiner {
             bdlName, nlName, 10, ETHMinerAgent.class.getName(), byzHashPowerShare);
 
     ETHPowWithAgent res = new ETHPowWithAgent(params);
-    res.network.rd.setSeed(System.currentTimeMillis());
+    res.network.rd.setSeed(rdSeed);
     return res;
   }
 
