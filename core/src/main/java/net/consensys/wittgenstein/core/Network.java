@@ -647,6 +647,9 @@ public class Network<TN extends Node> {
 
   public void printNetworkLatency() {
     System.out.println("" + networkLatency);
+    NetworkLatency.MeasuredNetworkLatency mn =
+        NetworkLatency.MeasuredNetworkLatency.estimateLatency(this, 1000);
+    System.out.println("" + mn);
   }
 
   /**

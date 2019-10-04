@@ -57,7 +57,7 @@ public class RegistryNodeBuilders {
               throw new IllegalStateException();
           }
           if (!speedConstant) {
-            nb.aspects.add(new Node.SpeedRatioAspect(new Node.GaussianSpeed()));
+            nb.aspects.add(new Node.SpeedRatioAspect(new Node.UniformSpeed()));
           }
           if (tor > 0.001) {
             nb.aspects.add(new Node.ExtraLatencyAspect(tor));

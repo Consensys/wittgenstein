@@ -75,7 +75,7 @@ public class HandelScenarios {
     desynchronizedStart = desynchronizedStart != null ? desynchronizedStart : 0;
     hiddenByzantine = hiddenByzantine != null ? hiddenByzantine : false;
     byzantineSuicide = byzantineSuicide != null ? byzantineSuicide : false;
-    loc = loc == null ? RegistryNodeBuilders.Location.AWS : loc;
+    loc = loc == null ? RegistryNodeBuilders.Location.CITIES : loc;
     String lat =
         loc == RegistryNodeBuilders.Location.AWS
             ? NetworkLatency.AwsRegionNetworkLatency.class.getSimpleName()
@@ -416,8 +416,8 @@ public class HandelScenarios {
 
     int n = 4096;
     int r = 5;
-    for (int p : new int[] {50, 100, 200, 1, 5, 10, 15, 20, 40, 80, 160}) {
-      Handel.HandelParameters params = defaultParams(n, dead, tor, p, 5, 100, null, null, loc);
+    for (int p : new int[] {1, 5, 10, 15, 20, 40, 80, 160, 320}) {
+      Handel.HandelParameters params = defaultParams(n, dead, tor, p, 10, 100, null, null, loc);
       if (!print) {
         print = true;
         System.out.println("Changing period time");
@@ -673,7 +673,15 @@ public class HandelScenarios {
     scenario.logPeriodTime(RegistryNodeBuilders.Location.CITIES, 0.2, 0.2, "311");
   }
 
+  private static void info() {
+    Handel h = new Handel(defaultParams());
+    h.init();
+    h.network().printSpeedDistribution(10);
+    h.network().printNetworkLatency();
+  }
+
   public static void main(String[] args) throws IOException {
+    info();
     allScenarios();
     HandelScenarios scenario = new HandelScenarios();
     scenario.logErrors(0.0);
