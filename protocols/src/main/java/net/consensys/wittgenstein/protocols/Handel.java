@@ -255,14 +255,6 @@ public class Handel implements Protocol {
       }
     }
 
-    private SendSigs(HNode from, HNode to) {
-      this.level = to.level(from);
-      this.sigs = to.levels.get(level).waitedSigs;
-      this.levelFinished = false;
-      this.size = 1;
-      this.badSig = true;
-    }
-
     @Override
     public int size() {
       return size;
@@ -304,8 +296,7 @@ public class Handel implements Protocol {
 
     @Override
     public String toString() {
-      String s = "HNode{" + nodeId + "}";
-      return s;
+      return "HNode{" + nodeId + "}";
     }
 
     public long getMsgFiltered() {
@@ -360,6 +351,7 @@ public class Handel implements Protocol {
       throw new IllegalStateException();
     }
 
+    @SuppressWarnings("RedundantIfStatement")
     public class HLevel {
       final int level;
       final int size;
@@ -973,53 +965,13 @@ public class Handel implements Protocol {
     }
   }
 
-  @FunctionalInterface
-  public interface Shuffler {
-    /** rank returns the rank of the sender with respect to the receiver. */
-    int rank(HNode receiver, HNode sender);
-  }
-
-  public class ShufflingSquare implements Shuffler {
-
-    List<HNode> nodes;
-
-    public ShufflingSquare(List<HNode> nodes) {
-      for (HNode n : nodes) {
-        for (HNode.HLevel l : n.levels) {
-          List<HNode> expected = l.expectedNodes();
-          Collections.shuffle(expected, network.rd);
-          int startIdx = (int) Math.pow(2, l.level - 1);
-          // put back the rank *for the level* in the global list
-          for (int i = 0; i < expected.size(); i++) {
-            n.receptionRanks[expected.get(i).nodeId] = startIdx + i;
-          }
-        }
+  private void setReceivingRanks() {
+    List<HNode> expected = new ArrayList<>(network.allNodes);
+    for (HNode n : network.allNodes) {
+      Collections.shuffle(expected, network.rd);
+      for (int i = 0; i < expected.size(); i++) {
+        n.receptionRanks[expected.get(i).nodeId] = i;
       }
-      this.nodes = nodes;
-    }
-
-    @Override
-    public int rank(HNode receiver, HNode sender) {
-      return receiver.receptionRanks[sender.nodeId];
-    }
-
-    @Override
-    public String toString() {
-      StringBuilder sb = new StringBuilder();
-      for (HNode n : nodes) {
-        sb.append("reception ranks of node ").append(n.nodeId).append(" => \n");
-        for (HNode.HLevel l : n.levels) {
-          sb.append("\tlvl").append(l.level).append(" -> ");
-          for (HNode expected : l.expectedNodes()) {
-            sb.append(expected.nodeId)
-                .append(":")
-                .append(n.receptionRanks[expected.nodeId])
-                .append(" - ");
-          }
-          sb.append("\n");
-        }
-      }
-      return sb.toString();
     }
   }
 
@@ -1059,10 +1011,8 @@ public class Handel implements Protocol {
       }
     }
 
-    List<HNode> an = new ArrayList<>(network.allNodes);
-
-    // The shuffler will give us the reception rank.
-    Shuffler s = new ShufflingSquare(an);
+    // We set all the receiving ranks for all nodes
+    setReceivingRanks();
 
     // Now we can build the emission lists from the emission rank
     // Rule: you're contacting first the peers that gave you a good reception rank
@@ -1073,12 +1023,11 @@ public class Handel implements Protocol {
         continue;
       }
 
-      //
       for (HNode.HLevel l : sender.levels) {
         List<HNode>[] emissionList =
             new List[params.nodeCount]; // ranks are [0..nodeCount], whatever the level
         for (HNode receiver : l.expectedNodes()) {
-          int recRank = s.rank(receiver, sender);
+          int recRank = receiver.receptionRanks[sender.nodeId];
           List<HNode> levelList = emissionList[recRank];
           if (levelList == null) {
             levelList = new ArrayList<>(1);
@@ -1097,6 +1046,7 @@ public class Handel implements Protocol {
     return network;
   }
 
+  /** This class is used to draw the nodes on a map. */
   class HNodeStatus implements NodeDrawer.NodeStatus {
     @Override
     public int getMax() {

@@ -381,7 +381,7 @@ public class HandelScenarios {
     String id = "errror";
     for (int i = 0; i < errors.length; i++) {
       double e = errors[i];
-      for (int n = 1024; n <= 1024 * 8; n *= 2) {
+      for (int n = 128; n <= 1024 * 8; n *= 2) {
         Handel.HandelParameters params =
             defaultParams(
                 n,
@@ -661,8 +661,8 @@ public class HandelScenarios {
   }
 
   public static void main(String[] args) throws IOException {
-    info();
-    allScenarios();
+    // info();
+    // allScenarios();
     HandelScenarios scenario = new HandelScenarios();
     scenario.logErrors(0.0);
   }
