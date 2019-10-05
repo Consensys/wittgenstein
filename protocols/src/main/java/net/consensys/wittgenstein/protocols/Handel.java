@@ -25,8 +25,13 @@ public class Handel implements Protocol {
     /** The minimum time it takes to do a pairing for a standard node. */
     final int pairingTime;
 
+    /** The time we wait before starting a level */
     int levelWaitTime;
+
+    /** Time between two disseminations */
     final int disseminationPeriodMs;
+
+    /** Number of peers contacted when fast path is triggered */
     int fastPath;
 
     /**
@@ -589,7 +594,7 @@ public class Handel implements Protocol {
             curatedList.add(stv);
             if (stv.rank <= windowIndex + currWindowSize) {
 
-              int score = evaluateSig(this, stv.sig);
+              int score = score(this, stv.sig);
               if (score > bestScoreInside) {
                 bestScoreInside = score;
                 bestInside = stv;
@@ -636,59 +641,22 @@ public class Handel implements Protocol {
     /**
      * Evaluate the interest to verify a signature by setting a score The higher the score the more
      * interesting the signature is. 0 means the signature is not interesting and can be discarded.
+     *
+     * @return the number of signature added is we verify this signature
      */
-    private int evaluateSig(HLevel l, BitSet sig) {
-      int newTotal = 0; // The number of signatures in our new best
-      int addedSigs =
-          0; // The number of sigs we add with our new best compared to the existing one. Can be
-      // negative
-      int combineCt =
-          0; // The number of sigs in our new best that come from combining it with individual sigs
-
+    private int score(HLevel l, BitSet sig) {
       if (l.lastAggVerified.cardinality() >= l.expectedSigs()) {
         return 0;
+      }
+
+      if (!l.lastAggVerified.intersects(sig)) {
+        return l.lastAggVerified.cardinality() + sig.cardinality();
       }
 
       BitSet withIndiv = (BitSet) l.verifiedIndSignatures.clone();
       withIndiv.or(sig);
 
-      if (l.lastAggVerified.cardinality() == 0) {
-        // the best is the new multi-sig combined with the ind. sigs
-        newTotal = sig.cardinality();
-        addedSigs = newTotal;
-        combineCt = 0;
-      } else {
-        if (sig.intersects(l.lastAggVerified)) {
-          // We can't merge, it's a replace
-          newTotal = withIndiv.cardinality();
-          addedSigs = newTotal - l.lastAggVerified.cardinality();
-          combineCt = newTotal;
-        } else {
-          // We can merge our current best and the new ms. We also add individual
-          //  signatures that we previously verified
-          withIndiv.or(l.lastAggVerified);
-          newTotal = withIndiv.cardinality();
-          addedSigs = newTotal - l.lastAggVerified.cardinality();
-          combineCt = newTotal;
-        }
-      }
-
-      if (addedSigs <= 0) {
-        if (sig.cardinality() == 1 && !sig.intersects(l.verifiedIndSignatures)) {
-          return 1;
-        }
-        return 0;
-      }
-
-      if (newTotal == l.expectedSigs()) {
-        // This completes a level! That's the best options for us. We give
-        //  a greater value to the first levels/
-        return 1000000 - l.level * 10;
-      }
-
-      // It adds value, but does not complete a level. We
-      //  favorize the older level but take into account the number of sigs we receive as well.
-      return 100000 - l.level * 100 + addedSigs;
+      return Math.max(0, withIndiv.cardinality() - l.lastAggVerified.cardinality());
     }
 
     /** @return all the signatures you should have when this round is finished. */
@@ -813,11 +781,11 @@ public class Handel implements Protocol {
           new SigToVerify(from.nodeId, l.level, receptionRanks[from.nodeId], cs, ssigs.badSig));
     }
 
-    SigToVerify chooseBestFromLevels(List<SigToVerify> bestByLevels) {
+    private SigToVerify chooseBestFromLevels(List<SigToVerify> bestByLevels) {
       return bestByLevels.get(network.rd.nextInt(bestByLevels.size()));
     }
 
-    void checkSigs() {
+    private void checkSigs() {
       ArrayList<SigToVerify> byLevels = new ArrayList<>();
 
       for (HLevel l : levels) {
