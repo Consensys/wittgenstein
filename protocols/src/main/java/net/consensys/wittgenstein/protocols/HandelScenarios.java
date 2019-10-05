@@ -439,7 +439,7 @@ public class HandelScenarios {
 
     int n = 4096;
     int r = 5;
-    for (int p : new int[] {1, 5, 10, 15, 20, 40, 80, 160, 320}) {
+    for (int p : new int[] {1, 5, 10, 15, 20, 40, 80, 160, 320, 640}) {
       Handel.HandelParameters params = defaultParams(n, dead, tor, p, 10, 100, null, null, loc);
       if (!print) {
         print = true;
