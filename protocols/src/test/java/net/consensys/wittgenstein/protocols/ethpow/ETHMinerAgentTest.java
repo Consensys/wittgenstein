@@ -22,15 +22,15 @@ public class ETHMinerAgentTest {
     int size = n.minedToSend.size();
     Assert.assertTrue("size=" + size, size > 2);
 
-    n.sendMinedBlocks(2);
-    Assert.assertEquals(size - 2, n.minedToSend.size());
+    n.sendMinedBlocks(1);
+    Assert.assertEquals(size - 1, n.minedToSend.size());
   }
 
   @Test
   public void testSteps() {
     ETHMinerAgent.ETHPowWithAgent p = ETHMinerAgent.create(.4, 0);
     p.init();
-    p.network.runH(1);
+    p.network.runH(2);
 
     ETHMinerAgent n = p.getByzNode();
     ETHPoW.POWBlock base = n.head;
@@ -40,6 +40,7 @@ public class ETHMinerAgentTest {
     Set<ETHPoW.POWBlock> b = n.blocksReceivedByHeight.get(n.head.height);
     for (ETHPoW.POWBlock block : b) {
       System.out.println("Block received at height: " + block.height);
+      System.out.println("Number oof blocks mined: " + (n.head.height - p.genesis.height));
     }
   }
 }
