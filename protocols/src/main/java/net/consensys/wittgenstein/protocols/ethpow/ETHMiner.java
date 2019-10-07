@@ -162,7 +162,7 @@ public class ETHMiner extends ETHPoW.ETHPoWNode {
   }
 
   /** Helper function: send all the blocks mined not yet sent. */
-  protected void sendAllMined() {
+  public void sendAllMined() {
     List<ETHPoW.POWBlock> all = new ArrayList<>(minedToSend);
     minedToSend.clear();
     for (ETHPoW.POWBlock b : all) {

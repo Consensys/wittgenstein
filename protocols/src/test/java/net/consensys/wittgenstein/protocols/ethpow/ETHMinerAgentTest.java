@@ -23,7 +23,7 @@ public class ETHMinerAgentTest {
     Assert.assertTrue("size=" + size, size > 2);
 
     n.sendMinedBlocks(1);
-    Assert.assertEquals(size - 2, n.minedToSend.size());
+    Assert.assertEquals(size - 1, n.minedToSend.size());
   }
 
   @Test
