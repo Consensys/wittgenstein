@@ -17,7 +17,9 @@ public class SanFerminTest {
     allNodes = new ArrayList<>();
     NodeBuilder nb = new NodeBuilder();
     int count = 8;
-    for (int i = 0; i < count; i++) allNodes.add(new Node(new Random(0), nb));
+    for (int i = 0; i < count; i++) {
+      allNodes.add(new Node(new Random(0), nb));
+    }
   }
 
   @Test

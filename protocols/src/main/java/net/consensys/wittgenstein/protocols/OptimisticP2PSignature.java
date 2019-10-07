@@ -173,21 +173,19 @@ public class OptimisticP2PSignature implements Protocol {
     System.out.println("" + nl);
     boolean printLat = false;
 
-    for (int i = 1000; i < 2000; i += 1000) {
-      OptimisticP2PSignature p2ps =
-          new OptimisticP2PSignature(
-              new OptimisticP2PSignatureParameters(i, i / 2 + 1, 13, 3, nb, nl));
-      p2ps.init();
-      P2PSigNode observer = p2ps.network.getNodeById(0);
+    OptimisticP2PSignature p2ps =
+        new OptimisticP2PSignature(
+            new OptimisticP2PSignatureParameters(1000, 1000 / 2 + 1, 13, 3, nb, nl));
+    p2ps.init();
+    P2PSigNode observer = p2ps.network.getNodeById(0);
 
-      if (!printLat) {
-        System.out.println("NON P2P " + NetworkLatency.estimateLatency(p2ps.network, 100000));
-        System.out.println("\nP2P " + NetworkLatency.estimateP2PLatency(p2ps.network, 100000));
-        printLat = true;
-      }
-
-      p2ps.network.run(5);
-      System.out.println(observer);
+    if (!printLat) {
+      System.out.println("NON P2P " + NetworkLatency.estimateLatency(p2ps.network, 100000));
+      System.out.println("\nP2P " + NetworkLatency.estimateP2PLatency(p2ps.network, 100000));
+      printLat = true;
     }
+
+    p2ps.network.run(5);
+    System.out.println(observer);
   }
 }

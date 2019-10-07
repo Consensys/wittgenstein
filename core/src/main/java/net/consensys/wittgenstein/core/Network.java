@@ -2,11 +2,7 @@ package net.consensys.wittgenstein.core;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import net.consensys.wittgenstein.core.messages.ConditionalTask;
-import net.consensys.wittgenstein.core.messages.Message;
-import net.consensys.wittgenstein.core.messages.PeriodicTask;
-import net.consensys.wittgenstein.core.messages.SendMessage;
-import net.consensys.wittgenstein.core.messages.Task;
+import net.consensys.wittgenstein.core.messages.*;
 
 /**
  * There is a single network for a simulation.
@@ -651,6 +647,9 @@ public class Network<TN extends Node> {
 
   public void printNetworkLatency() {
     System.out.println("" + networkLatency);
+    NetworkLatency.MeasuredNetworkLatency mn =
+        NetworkLatency.MeasuredNetworkLatency.estimateLatency(this, 1000);
+    System.out.println("" + mn);
   }
 
   /**

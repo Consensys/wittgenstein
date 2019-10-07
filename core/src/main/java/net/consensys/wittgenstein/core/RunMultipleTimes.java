@@ -83,4 +83,16 @@ public class RunMultipleTimes<TP extends Protocol> {
 
     return res;
   }
+
+  /** A simple continutation critera where we check for the done status. */
+  public static <TP extends Protocol> Predicate<TP> contUntilDone() {
+    return p -> {
+      for (Node n : p.network().liveNodes()) {
+        if (n.doneAt == 0) {
+          return true;
+        }
+      }
+      return false;
+    };
+  }
 }

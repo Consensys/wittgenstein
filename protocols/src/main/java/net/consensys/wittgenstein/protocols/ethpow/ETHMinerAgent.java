@@ -68,13 +68,12 @@ public class ETHMinerAgent extends ETHMiner {
     while (howMany-- > 0 && !minedToSend.isEmpty()) {
       actionSendOldestBlockMined();
     }
-    if (howMany == 0 && this.inMining != null && privateMinerBlock!=null ) {
+    if (howMany == 0 && this.inMining != null && privateMinerBlock != null) {
       startNewMining(privateMinerBlock);
     }
     if (minedToSend.isEmpty()) {
       privateMinerBlock = null;
     }
-
   }
 
   public boolean goNextStep() {
@@ -151,7 +150,7 @@ public class ETHMinerAgent extends ETHMiner {
     }
     privateMinerBlock = mined;
 
-    //startNewMining(privateMinerBlock);
+    // startNewMining(privateMinerBlock);
   }
 
   public void actionSendOldestBlockMined() {
@@ -164,6 +163,10 @@ public class ETHMinerAgent extends ETHMiner {
   }
 
   public static ETHPowWithAgent create(double byzHashPowerShare) {
+    return create(byzHashPowerShare, System.nanoTime());
+  }
+
+  public static ETHPowWithAgent create(double byzHashPowerShare, long rdSeed) {
     final String bdlName = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.CITIES, true, 0);
     final String nlName = RegistryNetworkLatencies.name(RegistryNetworkLatencies.Type.FIXED, 1000);
 
@@ -172,7 +175,7 @@ public class ETHMinerAgent extends ETHMiner {
             bdlName, nlName, 10, ETHMinerAgent.class.getName(), byzHashPowerShare);
 
     ETHPowWithAgent res = new ETHPowWithAgent(params);
-    res.network.rd.setSeed(System.currentTimeMillis());
+    res.network.rd.setSeed(rdSeed);
     return res;
   }
 

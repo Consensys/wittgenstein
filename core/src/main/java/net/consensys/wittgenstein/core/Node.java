@@ -212,7 +212,7 @@ public class Node implements Closeable {
 
     @Override
     public String toString() {
-      return "GaussianSpeed";
+      return this.getClass().getSimpleName();
     }
   }
 
@@ -224,6 +224,23 @@ public class Node implements Closeable {
       }
     }
     return defVal;
+  }
+
+  /**
+   * We suppose that the computer speed are uniformly distributed from 3 times faster to 3 times
+   * slower than the standard.
+   */
+  public static class UniformSpeed implements SpeedModel {
+
+    @Override
+    public double getSpeedRatio(Random rd) {
+      return rd.nextBoolean() ? (rd.nextInt(67) + 33) / 100.0 : (rd.nextInt(200) + 100) / 100.0;
+    }
+
+    @Override
+    public String toString() {
+      return this.getClass().getSimpleName();
+    }
   }
 
   public Node(Random rd, NodeBuilder nb, boolean byzantine) {

@@ -22,15 +22,28 @@ public class Handel implements Protocol {
     /** The number of signatures to reach to finish the protocol. */
     final int threshold;
 
-    /** The minimum time it takes to do a pairing for a node. */
+    /** The minimum time it takes to do a pairing for a standard node. */
     final int pairingTime;
 
+    /** The time we wait before starting a level */
     int levelWaitTime;
-    final int periodDurationMs;
-    int acceleratedCallsCount;
+
+    /** Time between two disseminations */
+    final int disseminationPeriodMs;
+
+    /** Number of peers contacted when fast path is triggered */
+    int fastPath;
+
+    /**
+     * He number of DP we continue to send signatures (but while filtering the incoming messages)
+     * once we reach the threshold. Negatives means we exit immediately once we reached it.
+     */
     int extraCycle;
 
+    /** Number of nodes down or Byzantine */
     final int nodesDown;
+
+    /** Allows to mark which nodes should be down. */
     final BitSet badNodes;
 
     final String nodeBuilderName;
@@ -53,35 +66,25 @@ public class Handel implements Protocol {
 
     final boolean hiddenByzantine;
 
-    public String shuffle;
-    static final String SHUFFLE_SQUARE = "SQUARE";
-    static final String SHUFFLE_XOR = "XOR";
-
     /** parameters related to the window-ing technique - null if not set */
     public WindowParameters window;
-
-    final String bestLevelFunction;
-    static final String BESTLEVEL_RANDOM = "RANDOM";
-    static final String BESTLEVEL_SCORE = "SCORE";
 
     // Used for json / http server
     @SuppressWarnings("unused")
     public HandelParameters() {
-      this.bestLevelFunction = BESTLEVEL_RANDOM;
       this.nodeCount = 32768 / 1024;
       this.threshold = (int) (nodeCount * (0.99));
       this.pairingTime = 3;
       this.levelWaitTime = 50;
       this.extraCycle = 10;
-      this.periodDurationMs = 10;
-      this.acceleratedCallsCount = 10;
+      this.disseminationPeriodMs = 10;
+      this.fastPath = 10;
       this.nodesDown = 0;
       this.nodeBuilderName = null;
       this.networkLatencyName = null;
       this.desynchronizedStart = 0;
       this.byzantineSuicide = false;
       this.hiddenByzantine = false;
-      this.shuffle = SHUFFLE_XOR;
       this.badNodes = null;
       this.window = new WindowParameters();
     }
@@ -92,20 +95,15 @@ public class Handel implements Protocol {
         int pairingTime,
         int levelWaitTime,
         int extraCycle,
-        int periodDurationMs,
-        int acceleratedCallsCount,
+        int disseminationPeriodMs,
+        int fastPath,
         int nodesDown,
         String nodeBuilderName,
         String networkLatencyName,
         int desynchronizedStart,
         boolean byzantineSuicide,
         boolean hiddenByzantine,
-        String bestLevelFunction,
         BitSet badNodes) {
-      this.bestLevelFunction =
-          bestLevelFunction != null && !"".equals(bestLevelFunction)
-              ? bestLevelFunction
-              : BESTLEVEL_RANDOM;
 
       if (nodesDown >= nodeCount
           || nodesDown < 0
@@ -125,16 +123,15 @@ public class Handel implements Protocol {
       this.threshold = threshold;
       this.pairingTime = pairingTime;
       this.levelWaitTime = levelWaitTime;
-      this.periodDurationMs = periodDurationMs;
+      this.disseminationPeriodMs = disseminationPeriodMs;
       this.extraCycle = extraCycle;
-      this.acceleratedCallsCount = acceleratedCallsCount;
+      this.fastPath = fastPath;
       this.nodesDown = nodesDown;
       this.nodeBuilderName = nodeBuilderName;
       this.networkLatencyName = networkLatencyName;
       this.desynchronizedStart = desynchronizedStart;
       this.byzantineSuicide = byzantineSuicide;
       this.hiddenByzantine = hiddenByzantine;
-      this.shuffle = SHUFFLE_XOR;
       this.badNodes = badNodes;
       this.window = new WindowParameters();
     }
@@ -226,9 +223,9 @@ public class Handel implements Protocol {
         + "ms, levelWaitTime="
         + params.levelWaitTime
         + "ms, period="
-        + params.periodDurationMs
+        + params.disseminationPeriodMs
         + "ms, acceleratedCallsCount="
-        + params.acceleratedCallsCount
+        + params.fastPath
         + ", dead nodes="
         + params.nodesDown
         + ", builder="
@@ -263,14 +260,6 @@ public class Handel implements Protocol {
       }
     }
 
-    private SendSigs(HNode from, HNode to) {
-      this.level = to.level(from);
-      this.sigs = to.levels.get(level).waitedSigs;
-      this.levelFinished = false;
-      this.size = 1;
-      this.badSig = true;
-    }
-
     @Override
     public int size() {
       return size;
@@ -300,7 +289,7 @@ public class Handel implements Protocol {
     final HiddenByzantine hiddenByzantine;
 
     boolean done = false;
-    int sigChecked = 0;
+    int sigsChecked = 0;
     int sigQueueSize = 0;
     int msgFiltered = 0;
 
@@ -312,12 +301,15 @@ public class Handel implements Protocol {
 
     @Override
     public String toString() {
-      String s = "HNode{" + nodeId + "}";
-      return s;
+      return "HNode{" + nodeId + "}";
     }
 
     public long getMsgFiltered() {
       return msgFiltered;
+    }
+
+    public long getSigsChecked() {
+      return sigsChecked;
     }
 
     public void initLevel() {
@@ -364,6 +356,7 @@ public class Handel implements Protocol {
       throw new IllegalStateException();
     }
 
+    @SuppressWarnings("RedundantIfStatement")
     public class HLevel {
       final int level;
       final int size;
@@ -601,7 +594,7 @@ public class Handel implements Protocol {
             curatedList.add(stv);
             if (stv.rank <= windowIndex + currWindowSize) {
 
-              int score = evaluateSig(this, stv.sig);
+              int score = score(this, stv.sig);
               if (score > bestScoreInside) {
                 bestScoreInside = score;
                 bestInside = stv;
@@ -648,59 +641,22 @@ public class Handel implements Protocol {
     /**
      * Evaluate the interest to verify a signature by setting a score The higher the score the more
      * interesting the signature is. 0 means the signature is not interesting and can be discarded.
+     *
+     * @return the number of signature added is we verify this signature
      */
-    private int evaluateSig(HLevel l, BitSet sig) {
-      int newTotal = 0; // The number of signatures in our new best
-      int addedSigs =
-          0; // The number of sigs we add with our new best compared to the existing one. Can be
-      // negative
-      int combineCt =
-          0; // The number of sigs in our new best that come from combining it with individual sigs
-
+    private int score(HLevel l, BitSet sig) {
       if (l.lastAggVerified.cardinality() >= l.expectedSigs()) {
         return 0;
+      }
+
+      if (!l.lastAggVerified.intersects(sig)) {
+        return l.lastAggVerified.cardinality() + sig.cardinality();
       }
 
       BitSet withIndiv = (BitSet) l.verifiedIndSignatures.clone();
       withIndiv.or(sig);
 
-      if (l.lastAggVerified.cardinality() == 0) {
-        // the best is the new multi-sig combined with the ind. sigs
-        newTotal = sig.cardinality();
-        addedSigs = newTotal;
-        combineCt = 0;
-      } else {
-        if (sig.intersects(l.lastAggVerified)) {
-          // We can't merge, it's a replace
-          newTotal = withIndiv.cardinality();
-          addedSigs = newTotal - l.lastAggVerified.cardinality();
-          combineCt = newTotal;
-        } else {
-          // We can merge our current best and the new ms. We also add individual
-          //  signatures that we previously verified
-          withIndiv.or(l.lastAggVerified);
-          newTotal = withIndiv.cardinality();
-          addedSigs = newTotal - l.lastAggVerified.cardinality();
-          combineCt = newTotal;
-        }
-      }
-
-      if (addedSigs <= 0) {
-        if (sig.cardinality() == 1 && !sig.intersects(l.verifiedIndSignatures)) {
-          return 1;
-        }
-        return 0;
-      }
-
-      if (newTotal == l.expectedSigs()) {
-        // This completes a level! That's the best options for us. We give
-        //  a greater value to the first levels/
-        return 1000000 - l.level * 10;
-      }
-
-      // It adds value, but does not complete a level. We
-      //  favorize the older level but take into account the number of sigs we receive as well.
-      return 100000 - l.level * 100 + addedSigs;
+      return Math.max(0, withIndiv.cardinality() - l.lastAggVerified.cardinality());
     }
 
     /** @return all the signatures you should have when this round is finished. */
@@ -775,11 +731,8 @@ public class Handel implements Protocol {
         if (l.level > vsl.level) {
           l.totalOutgoing.clear();
           l.totalOutgoing.or(cur);
-          if (justCompleted
-              && params.acceleratedCallsCount > 0
-              && !l.outgoingFinished
-              && l.outgoingComplete()) {
-            List<HNode> peers = l.getRemainingPeers(params.acceleratedCallsCount);
+          if (justCompleted && params.fastPath > 0 && !l.outgoingFinished && l.outgoingComplete()) {
+            List<HNode> peers = l.getRemainingPeers(params.fastPath);
             SendSigs sendSigs = new SendSigs(l.totalOutgoing, l);
             network.send(sendSigs, this, peers);
           }
@@ -828,26 +781,11 @@ public class Handel implements Protocol {
           new SigToVerify(from.nodeId, l.level, receptionRanks[from.nodeId], cs, ssigs.badSig));
     }
 
-    SigToVerify chooseBestFromLevels(List<SigToVerify> bestByLevels) {
-      switch (Handel.this.params.bestLevelFunction) {
-        case HandelParameters.BESTLEVEL_RANDOM:
-          return bestByLevels.get(network.rd.nextInt(bestByLevels.size()));
-        case HandelParameters.BESTLEVEL_SCORE:
-          int maxScore = 0;
-          SigToVerify maxSig = null;
-          for (SigToVerify s : bestByLevels) {
-            int score = evaluateSig(this.levels.get(s.level), s.sig);
-            if (score > maxScore) {
-              maxScore = score;
-              maxSig = s;
-            }
-          }
-          return maxSig;
-      }
-      return null;
+    private SigToVerify chooseBestFromLevels(List<SigToVerify> bestByLevels) {
+      return bestByLevels.get(network.rd.nextInt(bestByLevels.size()));
     }
 
-    void checkSigs() {
+    private void checkSigs() {
       ArrayList<SigToVerify> byLevels = new ArrayList<>();
 
       for (HLevel l : levels) {
@@ -885,7 +823,7 @@ public class Handel implements Protocol {
         receptionRanks[best.from] = Integer.MAX_VALUE;
       }
 
-      sigChecked++;
+      sigsChecked++;
 
       final SigToVerify fBest = best;
       network.registerTask(
@@ -995,53 +933,13 @@ public class Handel implements Protocol {
     }
   }
 
-  @FunctionalInterface
-  public interface Shuffler {
-    /** rank returns the rank of the sender with respect to the receiver. */
-    int rank(HNode receiver, HNode sender);
-  }
-
-  public class ShufflingSquare implements Shuffler {
-
-    List<HNode> nodes;
-
-    public ShufflingSquare(List<HNode> nodes) {
-      for (HNode n : nodes) {
-        for (HNode.HLevel l : n.levels) {
-          List<HNode> expected = l.expectedNodes();
-          Collections.shuffle(expected, network.rd);
-          int startIdx = (int) Math.pow(2, l.level - 1);
-          // put back the rank *for the level* in the global list
-          for (int i = 0; i < expected.size(); i++) {
-            n.receptionRanks[expected.get(i).nodeId] = startIdx + i;
-          }
-        }
+  private void setReceivingRanks() {
+    List<HNode> expected = new ArrayList<>(network.allNodes);
+    for (HNode n : network.allNodes) {
+      Collections.shuffle(expected, network.rd);
+      for (int i = 0; i < expected.size(); i++) {
+        n.receptionRanks[expected.get(i).nodeId] = i;
       }
-      this.nodes = nodes;
-    }
-
-    @Override
-    public int rank(HNode receiver, HNode sender) {
-      return receiver.receptionRanks[sender.nodeId];
-    }
-
-    @Override
-    public String toString() {
-      StringBuilder sb = new StringBuilder();
-      for (HNode n : nodes) {
-        sb.append("reception ranks of node ").append(n.nodeId).append(" => \n");
-        for (HNode.HLevel l : n.levels) {
-          sb.append("\tlvl").append(l.level).append(" -> ");
-          for (HNode expected : l.expectedNodes()) {
-            sb.append(expected.nodeId)
-                .append(":")
-                .append(n.receptionRanks[expected.nodeId])
-                .append(" - ");
-          }
-          sb.append("\n");
-        }
-      }
-      return sb.toString();
     }
   }
 
@@ -1074,16 +972,15 @@ public class Handel implements Protocol {
     for (HNode n : network.allNodes) {
       n.initLevel();
       if (!n.isDown()) {
-        network.registerPeriodicTask(n::dissemination, n.startAt + 1, params.periodDurationMs, n);
+        network.registerPeriodicTask(
+            n::dissemination, n.startAt + 1, params.disseminationPeriodMs, n);
         network.registerConditionalTask(
             n::checkSigs, n.startAt + 1, n.nodePairingTime, n, n::hasSigToVerify, () -> !n.done);
       }
     }
 
-    List<HNode> an = new ArrayList<>(network.allNodes);
-
-    // The shuffler will give us the reception rank.
-    Shuffler s = new ShufflingSquare(an);
+    // We set all the receiving ranks for all nodes
+    setReceivingRanks();
 
     // Now we can build the emission lists from the emission rank
     // Rule: you're contacting first the peers that gave you a good reception rank
@@ -1094,12 +991,11 @@ public class Handel implements Protocol {
         continue;
       }
 
-      //
       for (HNode.HLevel l : sender.levels) {
         List<HNode>[] emissionList =
             new List[params.nodeCount]; // ranks are [0..nodeCount], whatever the level
         for (HNode receiver : l.expectedNodes()) {
-          int recRank = s.rank(receiver, sender);
+          int recRank = receiver.receptionRanks[sender.nodeId];
           List<HNode> levelList = emissionList[recRank];
           if (levelList == null) {
             levelList = new ArrayList<>(1);
@@ -1118,6 +1014,7 @@ public class Handel implements Protocol {
     return network;
   }
 
+  /** This class is used to draw the nodes on a map. */
   class HNodeStatus implements NodeDrawer.NodeStatus {
     @Override
     public int getMax() {
@@ -1143,7 +1040,7 @@ public class Handel implements Protocol {
   public static Predicate<Handel> newContIf() {
     return p -> {
       for (HNode n : p.network().liveNodes()) {
-        if (n.doneAt == 0 || n.addedCycle != 0) {
+        if (n.doneAt == 0 || n.addedCycle > 0) {
           return true;
         }
       }
