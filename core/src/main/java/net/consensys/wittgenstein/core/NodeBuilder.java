@@ -80,12 +80,18 @@ public class NodeBuilder implements Cloneable {
 
     @Override
     public int getX(int rdInt) {
-      return Math.abs(rdInt >> 16) % MAX_X + 1;
+      // Math abs can return a negative value so we use long to save us
+      // https://stackoverflow.com/questions/5444611/math-abs-returns-wrong-value-for-integer-min-value
+      long r = rdInt >> 16;
+      r = Math.abs(r);
+      return (int) (r % MAX_X + 1);
     }
 
     @Override
     public int getY(int rdInt) {
-      return Math.abs(rdInt << 16) % MAX_Y + 1;
+      long r = rdInt << 16;
+      r = Math.abs(r);
+      return (int) (r % MAX_Y + 1);
     }
   }
 
