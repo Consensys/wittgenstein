@@ -68,12 +68,13 @@ public class ETHMinerAgent extends ETHMiner {
     while (howMany-- > 0 && !minedToSend.isEmpty()) {
       actionSendOldestBlockMined();
     }
+    if (howMany == 0 && this.inMining != null && privateMinerBlock!=null ) {
+      startNewMining(privateMinerBlock);
+    }
     if (minedToSend.isEmpty()) {
       privateMinerBlock = null;
     }
-    if (howMany == 0 && this.inMining != null) {
-      startNewMining(privateMinerBlock);
-    }
+
   }
 
   public boolean goNextStep() {
@@ -150,7 +151,7 @@ public class ETHMinerAgent extends ETHMiner {
     }
     privateMinerBlock = mined;
 
-    startNewMining(privateMinerBlock);
+    //startNewMining(privateMinerBlock);
   }
 
   public void actionSendOldestBlockMined() {
@@ -163,7 +164,7 @@ public class ETHMinerAgent extends ETHMiner {
   }
 
   public static ETHPowWithAgent create(double byzHashPowerShare) {
-    final String bdlName = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
+    final String bdlName = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.CITIES, true, 0);
     final String nlName = RegistryNetworkLatencies.name(RegistryNetworkLatencies.Type.FIXED, 1000);
 
     ETHPoW.ETHPoWParameters params =
