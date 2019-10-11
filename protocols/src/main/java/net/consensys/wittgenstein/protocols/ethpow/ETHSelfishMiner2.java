@@ -64,7 +64,7 @@ public class ETHSelfishMiner2 extends ETHMiner {
       sendAllMined();
       startNewMining(head);
     } else {
-      // We're ahead. We
+      // We're ahead.
       ETHPoW.POWBlock toSend = privateMinerBlock;
       while (toSend.parent != null
           && toSend.height >= rcv.height

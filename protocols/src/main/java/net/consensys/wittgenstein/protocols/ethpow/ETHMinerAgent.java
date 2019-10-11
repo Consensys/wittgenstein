@@ -2,6 +2,7 @@ package net.consensys.wittgenstein.protocols.ethpow;
 
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import net.consensys.wittgenstein.core.BlockChainNetwork;
 import net.consensys.wittgenstein.core.NodeBuilder;
 import net.consensys.wittgenstein.core.RegistryNetworkLatencies;
@@ -98,6 +99,33 @@ public class ETHMinerAgent extends ETHMiner {
     return head.allRewards().getOrDefault(this, 0.0);
   }
 
+  public double getReward(int lastBlocksCount) {
+    return head.allRewards(head.height - lastBlocksCount).getOrDefault(this, 0.0);
+  }
+
+  public double getRewardRatio() {
+    HashMap<ETHMiner, Double> ar = head.allRewards();
+    double all = ar.values().stream().mapToDouble(Double::doubleValue).sum();
+    double me = ar.getOrDefault(this, 0.0);
+    return me > 0 ? me / all : 0;
+  }
+
+  public boolean iAmAhead() {
+    return head.producer == this;
+  }
+
+  public int countMyBlocks() {
+    int count = 0;
+    ETHPoW.POWBlock cur = head;
+    while (cur != null) {
+      if (cur.producer == this) {
+        count++;
+      }
+      cur = cur.parent;
+    }
+    return count;
+  }
+
   public static class ETHPowWithAgent extends ETHPoW {
 
     public ETHPowWithAgent(ETHPoWParameters params) {
@@ -180,6 +208,14 @@ public class ETHMinerAgent extends ETHMiner {
   }
 
   public static void main(String... args) {
-    create(0.25);
+    final int runs = 4;
+    final int hours = 6;
+    final String bdlName = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
+    final String nlName = RegistryNetworkLatencies.name(RegistryNetworkLatencies.Type.FIXED, 1000);
+
+    final double[] pows = new double[] {0.10, 0.40, 0.60};
+
+    ETHMiner.tryMiner(bdlName, nlName, ETHSelfishMiner.class, pows, hours, runs);
+    ETHMiner.tryMiner(bdlName, nlName, ETHMiner.class, pows, hours, runs);
   }
 }

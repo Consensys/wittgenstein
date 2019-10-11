@@ -1,5 +1,7 @@
 package net.consensys.wittgenstein.protocols;
 
+import static net.consensys.wittgenstein.core.utils.StatsHelper.getStatsOn;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -205,7 +207,73 @@ public class P2PFlood implements Protocol {
     new ProgressPerTime(p, "", "node count", sg, 1, null, 10, TimeUnit.MILLISECONDS).run(contIf);
   }
 
+  static class BasicStats {
+    final int doneAtMin;
+    final int doneAtAvg;
+    final int doneAtMax;
+
+    final int msgRcvMin;
+    final int msgRcvAvg;
+    final int msgRcvMax;
+
+    BasicStats(
+        long doneAtMin,
+        long doneAtAvg,
+        long doneAtMax,
+        long msgRcvMin,
+        long msgRcvAvg,
+        long msgRcvMax) {
+      this.doneAtMin = (int) doneAtMin;
+      this.doneAtAvg = (int) doneAtAvg;
+      this.doneAtMax = (int) doneAtMax;
+      this.msgRcvMin = (int) msgRcvMin;
+      this.msgRcvAvg = (int) msgRcvAvg;
+      this.msgRcvMax = (int) msgRcvMax;
+    }
+
+    @Override
+    public String toString() {
+      return doneAtAvg + ", " + msgRcvAvg;
+    }
+  }
+
+  private static class SigsSentGetter extends StatsHelper.SimpleStatsGetter {
+
+    @Override
+    public StatsHelper.Stat get(List<? extends Node> liveNodes) {
+      return getStatsOn(liveNodes, Node::getBytesReceived);
+    }
+  }
+
+  private static BasicStats run(int rounds, P2PFloodParameters params) {
+    List<StatsHelper.StatsGetter> stats =
+        List.of(
+            new StatsHelper.DoneAtStatGetter(),
+            new StatsHelper.MsgReceivedStatGetter(),
+            new SigsSentGetter());
+    RunMultipleTimes<P2PFlood> rmt =
+        new RunMultipleTimes<>(new P2PFlood(params), rounds, 0, stats, null);
+    List<StatsHelper.Stat> res = rmt.run(RunMultipleTimes.contUntilDone());
+
+    return new BasicStats(
+        res.get(0).get("min"),
+        res.get(0).get("avg"),
+        res.get(0).get("max"),
+        res.get(1).get("min"),
+        res.get(1).get("avg"),
+        res.get(1).get("max"));
+  }
+
+  public static void time() {
+    for (int n = 128; n <= 1024; n *= 2) {
+      P2PFloodParameters params = new P2PFloodParameters(n, 0, 1, n, 1, 13, 0, null, null);
+      BasicStats bs = run(5, params);
+      System.out.println(n + "," + n + ", " + bs);
+      System.out.flush();
+    }
+  }
+
   public static void main(String... args) {
-    floodTime();
+    time();
   }
 }
