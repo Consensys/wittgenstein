@@ -167,12 +167,13 @@ public class ETHMinerAgent extends ETHMiner {
       decisionNeeded = ON_OTHER_PRIVATE_HEAD;
     }
 
-    if (!minedToSend.isEmpty()) {
+    for (boolean cont = true; cont && !minedToSend.isEmpty(); ) {
       ETHPoW.POWBlock youngest =
-          Collections.max(minedToSend, Comparator.comparingInt(o -> o.proposalTime));
-      if (youngest.height - otherMinersHead.height < 0) {
-        sendAllMined();
-        startNewMining(otherMinersHead);
+          Collections.min(minedToSend, Comparator.comparingInt(o -> o.height));
+      if (youngest.height <= otherMinersHead.height) {
+        sendMinedBlocks(1);
+      } else {
+        cont = false;
       }
     }
   }

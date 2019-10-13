@@ -17,13 +17,6 @@ public class ETHMinerAgentTest {
     Assert.assertTrue(n.head.height > p.genesis.height);
     Assert.assertTrue(n.otherMinersHead.height > p.genesis.height);
     Assert.assertNotSame(n.otherMinersHead.producer, n);
-    Assert.assertTrue(n.decisionNeeded > 0);
-
-    int size = n.minedToSend.size();
-    Assert.assertTrue("size=" + size, size > 2);
-
-    n.sendMinedBlocks(1);
-    Assert.assertEquals(size - 1, n.minedToSend.size());
   }
 
   @Test
