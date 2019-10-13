@@ -17,7 +17,7 @@ public class ETHMinerAgentTest {
     Assert.assertTrue(n.head.height > p.genesis.height);
     Assert.assertTrue(n.otherMinersHead.height > p.genesis.height);
     Assert.assertNotSame(n.otherMinersHead.producer, n);
-    Assert.assertTrue(n.decisionNeeded);
+    Assert.assertTrue(n.decisionNeeded > 0);
 
     int size = n.minedToSend.size();
     Assert.assertTrue("size=" + size, size > 2);
@@ -35,7 +35,7 @@ public class ETHMinerAgentTest {
     ETHMinerAgent n = p.getByzNode();
     ETHPoW.POWBlock base = n.head;
     for (int i = 0; i < 100; i++) {
-      Assert.assertTrue(n.goNextStep());
+      Assert.assertTrue(n.goNextStep() > 0);
     }
     Set<ETHPoW.POWBlock> b = n.blocksReceivedByHeight.get(n.head.height);
     for (ETHPoW.POWBlock block : b) {

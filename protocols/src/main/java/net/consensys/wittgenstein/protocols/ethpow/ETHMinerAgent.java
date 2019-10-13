@@ -46,7 +46,11 @@ public class ETHMinerAgent extends ETHMiner {
   ETHPoW.POWBlock otherMinersHead = genesis;
 
   /** A boolean we use to decide if we want the agent to take a decision. */
-  boolean decisionNeeded = false;
+  int decisionNeeded = 0;
+
+  public static final int ON_MINED_BLOCK = 1;
+  public static final int ON_OTHER_NEW_HEAD = 2;
+  public static final int ON_OTHER_PRIVATE_HEAD = 3;
 
   public ETHMinerAgent(
       BlockChainNetwork<ETHPoW.POWBlock, ETHMiner> network,
@@ -62,7 +66,7 @@ public class ETHMinerAgent extends ETHMiner {
   }
 
   public void sendMinedBlocks(int howMany) {
-    if (!decisionNeeded) {
+    if (decisionNeeded == 0) {
       throw new IllegalStateException("no action needed");
     }
 
@@ -77,12 +81,16 @@ public class ETHMinerAgent extends ETHMiner {
     }
   }
 
-  public boolean goNextStep() {
-    decisionNeeded = false;
-    while (!decisionNeeded) {
+  public int goNextStep() {
+    decisionNeeded = 0;
+    while (decisionNeeded == 0) {
       network.runMs(1);
+      if (decisionNeeded > ON_MINED_BLOCK && minedToSend.isEmpty()) {
+        // No decision to take actually
+        decisionNeeded = 0;
+      }
     }
-    return true;
+    return decisionNeeded;
   }
 
   public int getSecretBlockSize() {
@@ -154,11 +162,11 @@ public class ETHMinerAgent extends ETHMiner {
   protected void onReceivedBlock(ETHPoW.POWBlock rcv) {
     otherMinersHead = best(otherMinersHead, rcv);
     if (head == rcv) {
-      decisionNeeded = true;
+      decisionNeeded = ON_OTHER_NEW_HEAD;
+    } else if (otherMinersHead == rcv) {
+      decisionNeeded = ON_OTHER_PRIVATE_HEAD;
     }
-    if (best(head, rcv) == head) {
-      decisionNeeded = true;
-    }
+
     if (!minedToSend.isEmpty()) {
       ETHPoW.POWBlock youngest =
           Collections.max(minedToSend, Comparator.comparingInt(o -> o.proposalTime));
@@ -171,7 +179,7 @@ public class ETHMinerAgent extends ETHMiner {
 
   @Override
   protected void onMinedBlock(ETHPoW.POWBlock mined) {
-    decisionNeeded = true;
+    decisionNeeded = ON_MINED_BLOCK;
     if (privateMinerBlock != null && mined.height <= privateMinerBlock.height) {
       throw new IllegalStateException(
           "privateMinerBlock=" + privateMinerBlock + ", mined=" + mined);
