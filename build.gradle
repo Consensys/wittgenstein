@@ -35,7 +35,7 @@ subprojects {
     test {
         jvmArgs "-XX:+UnlockExperimentalVMOptions", "-XX:+UseCGroupMemoryLimitForHeap"
         // We need to limit the memory to be on par with CircleCI
-        maxHeapSize = "2500m"
+        maxHeapSize = "3500m"
         afterSuite { desc, result ->
             if (!desc.parent)
                 println("${result.resultType} " +
