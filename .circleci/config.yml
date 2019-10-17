@@ -39,7 +39,7 @@ jobs:
           key: v1-dependencies-{{ checksum "build.gradle" }}
         
       # run tests!
-      - run: gradle spotlessCheck test
+      - run: gradle spostlessCheck build test -Dorg.gradle.jvmargs=-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap 
 
 
 
