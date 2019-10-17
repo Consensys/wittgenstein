@@ -19,7 +19,7 @@ jobs:
     environment:
       # Customize the JVM maximum heap limit
       JVM_OPTS: -Xmx3000m -XX:MaxPermSize=256m
-      GRADLE_OPTS: Xms1848m -Xmx2848m -Dorg.gradle.daemon=false
+      GRADLE_OPTS: -Xms1848m -Xmx2848m -Dorg.gradle.daemon=false
       TERM: dumb
     
     steps:
@@ -40,7 +40,7 @@ jobs:
           key: v1-dependencies-{{ checksum "build.gradle" }}
         
       # run tests!
-      - run: gradle spotlessCheck build test --max-workers 1 --no-daemon -Dorg.gradle.jvmargs=-XX:+UseContainerSupport
+      - run: gradle spotlessCheck build test --max-workers 1 --no-daemon --info
 
 
 
