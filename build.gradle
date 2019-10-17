@@ -18,7 +18,7 @@ subprojects {
 
     dependencies {
         implementation "org.springframework.boot:spring-boot-starter-web:2.1.9.RELEASE"
-        implementation 'com.google.guava:guava:27.1-jre'
+        implementation 'com.google.guava:guava:28.1-jre'
 
         testImplementation 'junit:junit:4.12'
     }
@@ -33,9 +33,10 @@ subprojects {
     }
 
     test {
-        jvmArgs "-XX:+UnlockExperimentalVMOptions", "-XX:+UseCGroupMemoryLimitForHeap", "-XX:+UseContainerSupport"
+        // To use less memory during the tests, for the execution on circle ci...
+        jvmArgs "-XX:+UseSerialGC"
         // We need to limit the memory to be on par with CircleCI
-        maxHeapSize = "2600m"
+        maxHeapSize = "2400m"
         afterSuite { desc, result ->
             if (!desc.parent)
                 println("${result.resultType} " +
