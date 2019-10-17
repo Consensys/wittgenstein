@@ -19,7 +19,7 @@ jobs:
     environment:
       # Customize the JVM maximum heap limit
       JVM_OPTS: -Xmx6200m
-      GRADLE_OPTS: -Xmx2048m -Dorg.gradle.daemon=false
+      GRADLE_OPTS: -Xmx2548m -Dorg.gradle.daemon=false
       TERM: dumb
     
     steps:
