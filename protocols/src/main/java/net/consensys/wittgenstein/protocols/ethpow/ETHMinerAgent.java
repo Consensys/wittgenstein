@@ -46,11 +46,11 @@ public class ETHMinerAgent extends ETHMiner {
   ETHPoW.POWBlock otherMinersHead = genesis;
 
   /** A boolean we use to decide if we want the agent to take a decision. */
-  int decisionNeeded = 0;
+  private int decisionNeeded = 0;
 
-  public static final int ON_MINED_BLOCK = 1;
-  public static final int ON_OTHER_NEW_HEAD = 2;
-  public static final int ON_OTHER_PRIVATE_HEAD = 3;
+  private static final int ON_MINED_BLOCK = 1;
+  private static final int ON_OTHER_NEW_HEAD = 2;
+  private static final int ON_OTHER_PRIVATE_HEAD = 3;
 
   public ETHMinerAgent(
       BlockChainNetwork<ETHPoW.POWBlock, ETHMiner> network,
@@ -67,14 +67,20 @@ public class ETHMinerAgent extends ETHMiner {
 
   public void sendMinedBlocks(int howMany) {
     if (decisionNeeded == 0) {
-      throw new IllegalStateException("no action needed");
+      System.out.println(
+          "no action needed: howMany="
+              + howMany
+              + ", advance="
+              + getAdvance()
+              + ", secretAdvance="
+              + getSecretAdvance());
     }
 
     while (howMany-- > 0 && !minedToSend.isEmpty()) {
       actionSendOldestBlockMined();
     }
     if (howMany == 0 && this.inMining != null && privateMinerBlock != null) {
-      startNewMining(privateMinerBlock);
+      startNewMining(head);
     }
     if (minedToSend.isEmpty()) {
       privateMinerBlock = null;
@@ -93,14 +99,33 @@ public class ETHMinerAgent extends ETHMiner {
     return decisionNeeded;
   }
 
-  public int getSecretBlockSize() {
-    return minedToSend.size();
-  }
-
-  public int getAdvance() {
+  /** How many blocks we secretly have mined in advance of the others miners */
+  public int getSecretAdvance() {
     int priv = privateMinerBlock == null ? 0 : privateMinerBlock.height;
     int diff = priv - otherMinersHead.height;
     return Math.max(diff, 0);
+  }
+
+  /** How many blocks we have in a row from the current head. */
+  public int getAdvance() {
+    ETHPoW.POWBlock cur = head;
+    int score = 0;
+    while (cur.producer == this) {
+      cur = cur.parent;
+      score++;
+    }
+    return score;
+  }
+
+  /** How many blocks the other miners got in a row from the current head. */
+  public int getLag() {
+    ETHPoW.POWBlock cur = head;
+    int score = 0;
+    while (cur.producer != this) {
+      cur = cur.parent;
+      score++;
+    }
+    return score;
   }
 
   public double getReward() {

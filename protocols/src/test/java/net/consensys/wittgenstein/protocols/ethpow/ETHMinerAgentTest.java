@@ -8,7 +8,7 @@ public class ETHMinerAgentTest {
 
   @Test
   public void basicTest() {
-    ETHMinerAgent.ETHPowWithAgent p = ETHMinerAgent.create(.4, 1);
+    ETHMinerAgent.ETHPowWithAgent p = ETHMinerAgent.create(.6, 1);
     p.init();
     p.network.run(200);
 
