@@ -21,7 +21,6 @@ public class ENRGossiping implements Protocol {
   private final ENRParameters params;
   private final NodeBuilder nb;
   private List<ETHNode> changedNodes;
-  private HashMap<String, ETHNode> nodesInIsland = new HashMap<>();
 
   @SuppressWarnings("WeakerAccess")
   public static class ENRParameters extends WParameters {
@@ -62,7 +61,7 @@ public class ENRGossiping implements Protocol {
     }
 
     public ENRParameters() {
-      this.NODES = 100;
+      this.NODES = 50;
       this.timeToChange = minutesToMs(10000);
       this.capGossipTime = minutesToMs(5);
       this.discardTime = 100;
@@ -70,7 +69,7 @@ public class ENRGossiping implements Protocol {
       this.totalPeers = 5;
       this.changingNodes = 10;
       this.maxPeers = 50;
-      this.numberOfDifferentCapabilities = 15;
+      this.numberOfDifferentCapabilities = 5;
       this.capPerNode = 5;
       this.nodeBuilderName = null;
       this.networkLatencyName = null;
