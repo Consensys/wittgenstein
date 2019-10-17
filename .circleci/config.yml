@@ -35,11 +35,11 @@ jobs:
 
       - save_cache:
           paths:
-            - ~/.gradle 
+            - ~/.gradle
           key: v1-dependencies-{{ checksum "build.gradle" }}
         
       # run tests!
-      - run: gradle spostlessCheck build test --no-daemon -Dorg.gradle.jvmargs=-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap
+      - run: gradle spotlessCheck build test --no-daemon -Dorg.gradle.jvmargs=-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap
 
 
 
