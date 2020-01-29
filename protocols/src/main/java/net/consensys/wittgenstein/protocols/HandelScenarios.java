@@ -378,10 +378,9 @@ public class HandelScenarios {
       mAs[i] = new Graph.Series("average number of messages, errors=" + e + "%");
     }
 
-    String id = "errror";
+    String id = "fail-silent:" + errorRate;
     for (int i = 0; i < errors.length; i++) {
-      double e = errors[i];
-      for (int n = 128; n <= 1024 * 8; n *= 2) {
+      for (int n = 32; n <= 1024 * 4; n *= 2) {
         Handel.HandelParameters params =
             defaultParams(
                 n,

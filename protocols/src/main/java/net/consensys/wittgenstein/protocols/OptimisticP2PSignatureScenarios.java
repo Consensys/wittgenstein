@@ -69,7 +69,7 @@ public class OptimisticP2PSignatureScenarios {
 
     for (int i = 0; i < errors.length; i++) {
       double e = errors[i];
-      for (int n = 1024; n <= 1024 * 8; n *= 2) {
+      for (int n = 128; n <= 4096; n *= 2) {
         OptimisticP2PSignatureParameters params = defaultParams(n, errors[i], null, null, null);
 
         if (!printed) {

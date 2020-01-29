@@ -4,7 +4,7 @@ import java.util.BitSet;
 import net.consensys.wittgenstein.core.NetworkLatency;
 import net.consensys.wittgenstein.core.Node;
 import net.consensys.wittgenstein.core.RegistryNodeBuilders;
-import net.consensys.wittgenstein.core.messages.Message;
+import net.consensys.wittgenstein.core.RunMultipleTimes;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -12,10 +12,7 @@ import org.junit.Test;
 public class P2PHandelTest {
   private String nl = NetworkLatency.NetworkLatencyByDistanceWJitter.class.getSimpleName();
   private String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
-  private P2PHandel ps =
-      new P2PHandel(
-          new P2PHandel.P2PHandelParameters(
-              100, 0, 60, 10, 2, 20, false, P2PHandel.SendSigsStrategy.dif, 4, nb, nl));
+  private P2PHandel ps = new P2PHandel(P2PHandelScenarios.defaultParams(32, 0.0, 4, null, null));
   private P2PHandel.P2PHandelNode n1;
   private P2PHandel.P2PHandelNode n2;
 
@@ -40,7 +37,7 @@ public class P2PHandelTest {
   public void testRepeatability() {
     P2PHandel.P2PHandelParameters params =
         new P2PHandel.P2PHandelParameters(
-            100, 0, 25, 10, 2, 5, false, P2PHandel.SendSigsStrategy.dif, 4, nb, nl);
+            100, 0, 25, 10, 2, 5, false, P2PHandel.SendSigsStrategy.dif, true, nb, nl);
 
     P2PHandel p1 = new P2PHandel(params);
     P2PHandel p2 = new P2PHandel(params);
@@ -55,19 +52,29 @@ public class P2PHandelTest {
   }
 
   @Test
-  public void testSendSigs() {
-    n1.peersState.put(n2.nodeId, new P2PHandel.State(n2));
+  public void testSimpleRunWithoutState() {
+    P2PHandel.P2PHandelParameters params =
+        new P2PHandel.P2PHandelParameters(
+            64, 0, 60, 3, 2, 5, true, P2PHandel.SendSigsStrategy.all, false, nb, nl);
+    P2PHandel p1 = new P2PHandel(params);
 
-    ps.network.msgs.clear();
-    n1.sendSigs();
-    Message<?> mc = ps.network.msgs.peekFirstMessageContent();
-    Assert.assertNotNull(mc);
+    p1.init();
+    for (; RunMultipleTimes.contUntilDone().test(p1); ) {
+      p1.network.runMs(1000);
+    }
+  }
 
-    P2PHandel.SendSigs ss = (P2PHandel.SendSigs) mc;
-    Assert.assertNotNull(ss);
-    Assert.assertEquals(1, ss.sigs.cardinality());
-    Assert.assertTrue(ss.sigs.get(n1.nodeId));
-    Assert.assertTrue(n1.peersState.isEmpty());
+  @Test
+  public void testSimpleRunWithState() {
+    P2PHandel.P2PHandelParameters params =
+        new P2PHandel.P2PHandelParameters(
+            20, 0, 3, 3, 2, 5, true, P2PHandel.SendSigsStrategy.cmp_diff, true, nb, nl);
+    P2PHandel p1 = new P2PHandel(params);
+
+    p1.init();
+    for (; RunMultipleTimes.contUntilDone().test(p1); ) {
+      p1.network.runMs(1000);
+    }
   }
 
   @Test
@@ -152,7 +159,7 @@ public class P2PHandelTest {
     P2PHandel p1 =
         new P2PHandel(
             new P2PHandel.P2PHandelParameters(
-                500, 2, 60, 10, 2, 20, false, P2PHandel.SendSigsStrategy.dif, 4, nb, nl));
+                500, 2, 60, 10, 2, 20, false, P2PHandel.SendSigsStrategy.dif, true, nb, nl));
 
     P2PHandel p2 = p1.copy();
     p1.init();

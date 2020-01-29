@@ -6,7 +6,7 @@ import net.consensys.wittgenstein.core.messages.FloodMessage;
 public class P2PNetwork<TN extends P2PNode<TN>> extends Network<TN> {
   private final int connectionCount;
   private final boolean minimum;
-  Set<Long> existingLinks = new HashSet<>();
+  private Set<Long> existingLinks = new HashSet<>();
 
   /**
    * @param connectionCount - the target for the number of connection
@@ -19,6 +19,13 @@ public class P2PNetwork<TN extends P2PNode<TN>> extends Network<TN> {
   }
 
   public void setPeers() {
+    if (connectionCount >= allNodes.size()) {
+      throw new IllegalArgumentException(
+          "Wrong configuration: #nodes="
+              + allNodes.size()
+              + ", connection target="
+              + connectionCount);
+    }
 
     if (!minimum) {
       int toCreate = (allNodes.size() * connectionCount) / 2;

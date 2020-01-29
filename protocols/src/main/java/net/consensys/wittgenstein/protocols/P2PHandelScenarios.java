@@ -85,14 +85,9 @@ public class P2PHandelScenarios {
       errors = new double[] {errorRate};
     }
 
-    for (int i = 0; i < errors.length; i++) {
-      int e = (int) (errors[i] * 100);
-    }
-
-    for (int i = 0; i < errors.length; i++) {
-      double e = errors[i];
-      for (int n = 128; n <= 1024 * 32; n *= 2) {
-        P2PHandel.P2PHandelParameters params = defaultParams(n, errors[i], 15, null, null);
+    for (double e : errors) {
+      for (int n = 32; n <= 4096; n *= 2) {
+        P2PHandel.P2PHandelParameters params = defaultParams(n, e, 8, null, null);
 
         if (!printed) {
           System.out.println("\nBehavior when the number of nodes increases - " + params);
@@ -106,7 +101,7 @@ public class P2PHandelScenarios {
     }
   }
 
-  public static void sigsPerTime() {
+  static void sigsPerTime() {
     String nl = NetworkLatency.NetworkLatencyByDistanceWJitter.class.getSimpleName();
     String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
     int nodeCt = 1024;
@@ -125,7 +120,7 @@ public class P2PHandelScenarios {
                 50,
                 true,
                 P2PHandel.SendSigsStrategy.all,
-                2,
+                false,
                 nb,
                 nl));
 
@@ -213,12 +208,22 @@ public class P2PHandelScenarios {
     P2PHandel ps1 =
         new P2PHandel(
             new P2PHandel.P2PHandelParameters(
-                nodeCt, 0, nodeCt, 15, 3, 20, true, P2PHandel.SendSigsStrategy.all, 1, nb, nl));
+                nodeCt, 0, nodeCt, 15, 3, 20, true, P2PHandel.SendSigsStrategy.all, false, nb, nl));
 
     P2PHandel ps2 =
         new P2PHandel(
             new P2PHandel.P2PHandelParameters(
-                nodeCt, 0, nodeCt, 15, 3, 20, false, P2PHandel.SendSigsStrategy.all, 1, nb, nl));
+                nodeCt,
+                0,
+                nodeCt,
+                15,
+                3,
+                20,
+                false,
+                P2PHandel.SendSigsStrategy.all,
+                false,
+                nb,
+                nl));
 
     Graph graph = new Graph("number of sig per time", "time in ms", "sig count");
     Graph.Series series1avg = new Graph.Series("sig count - full aggregate strategy");
@@ -253,7 +258,7 @@ public class P2PHandelScenarios {
     }
   }
 
-  private static P2PHandel.P2PHandelParameters defaultParams(
+  public static P2PHandel.P2PHandelParameters defaultParams(
       int nodes,
       Double deadRatio,
       Integer connectionCount_,
@@ -265,10 +270,10 @@ public class P2PHandelScenarios {
     String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.CITIES, true, 0);
     String nl = NetworkLatency.NetworkLatencyByCityWJitter.class.getSimpleName();
 
-    int connectionCount = connectionCount_ == null ? 13 : connectionCount_;
+    int connectionCount = connectionCount_ == null ? 10 : connectionCount_;
 
     return new P2PHandel.P2PHandelParameters(
-        nodes, 0, ts, connectionCount, 4, 20, true, P2PHandel.SendSigsStrategy.cmp_diff, 2, nb, nl);
+        nodes, 0, ts, connectionCount, 4, 20, true, P2PHandel.SendSigsStrategy.dif, false, nb, nl);
   }
 
   public static void main(String... args) {

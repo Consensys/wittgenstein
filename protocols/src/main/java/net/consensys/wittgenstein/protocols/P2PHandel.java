@@ -1,7 +1,5 @@
 package net.consensys.wittgenstein.protocols;
 
-import static net.consensys.wittgenstein.protocols.P2PHandelScenarios.sigsPerTime;
-
 import java.util.*;
 import net.consensys.wittgenstein.core.*;
 import net.consensys.wittgenstein.core.messages.Message;
@@ -12,8 +10,11 @@ import net.consensys.wittgenstein.core.utils.MoreMath;
  *
  * <p>A node: Sends its states to all its direct peers whenever it changes Keeps the list of the
  * states of its direct peers Sends, every x milliseconds, to one of its peers a set of missing
- * signatures Runs in parallel a task to validate the signatures sets it has received. Send only
- * validated signatures to its peers.
+ * signatures. Runs in parallel a task to validate the signatures sets it has received. Send only
+ * validated signatures to its peers. We suppose we use a single core to verify the signature, i.e.
+ * we verify the signature one by one (but there is an option to aggregate before verifying if we
+ * received multiple signatures. In any case, all signatures received from the same host can
+ * reasonably be verified altogether.
  */
 @SuppressWarnings("WeakerAccess")
 public class P2PHandel implements Protocol {
@@ -58,11 +59,12 @@ public class P2PHandel implements Protocol {
     /**
      * If true the nodes send their state to the peers they are connected with. If false they don't.
      */
-    final boolean withState = false;
+    final boolean sendState;
 
     final String nodeBuilderName;
     final String networkLatencyName;
 
+    /** Send all sigs, diff, compress, compress or diff */
     final SendSigsStrategy sendSigsStrategy;
 
     @SuppressWarnings("unused")
@@ -75,6 +77,7 @@ public class P2PHandel implements Protocol {
       this.sigsSendPeriod = 1000;
       this.doubleAggregateStrategy = true;
       this.sendSigsStrategy = SendSigsStrategy.dif;
+      this.sendState = false;
       this.nodeBuilderName = null;
       this.networkLatencyName = null;
     }
@@ -88,7 +91,7 @@ public class P2PHandel implements Protocol {
         int sigsSendPeriod,
         boolean doubleAggregateStrategy,
         SendSigsStrategy sendSigsStrategy,
-        int sigRange,
+        boolean sendState,
         String nodeBuilderName,
         String networkLatencyName) {
       this.signingNodeCount = signingNodeCount;
@@ -99,6 +102,7 @@ public class P2PHandel implements Protocol {
       this.sigsSendPeriod = sigsSendPeriod;
       this.doubleAggregateStrategy = doubleAggregateStrategy;
       this.sendSigsStrategy = sendSigsStrategy;
+      this.sendState = sendState;
       this.nodeBuilderName = nodeBuilderName;
       this.networkLatencyName = networkLatencyName;
     }
@@ -145,7 +149,7 @@ public class P2PHandel implements Protocol {
    * => we have 2 sigs instead of 7</br> 0111 0111 => we have 6 sigs </br>
    *
    * <p>Note that we don't aggregate consecutive ranges, because we would not be able to merge
-   * bitsets later.</br> For example, still with a range of for, with two nodes:</br> node 1: 1111
+   * bitsets later.</br> For example, still with a range of 4, with two nodes:</br> node 1: 1111
    * 1111 0000 => 2 sigs, and not 1</br> node 2: 0000 1111 1111 => again, 2 sigs and not 1</br>
    *
    * <p>By keeping the two aggregated signatures node 1 & node 2 can exchange aggregated signatures.
@@ -244,14 +248,14 @@ public class P2PHandel implements Protocol {
 
     @Override
     public void action(Network<P2PHandelNode> network, P2PHandelNode from, P2PHandelNode to) {
-      to.onNewSig(sigs);
+      to.onNewSig(from, sigs);
     }
   }
 
   public class P2PHandelNode extends P2PNode<P2PHandelNode> {
     final BitSet verifiedSignatures = new BitSet(params.signingNodeCount);
     final Set<BitSet> toVerify = new HashSet<>();
-    final Map<Integer, State> peersState = new HashMap<>();
+    final Map<Integer, BitSet> peersState = new HashMap<>();
     final boolean justRelay;
 
     P2PHandelNode(boolean justRelay) {
@@ -262,19 +266,26 @@ public class P2PHandel implements Protocol {
       }
     }
 
+    @Override
+    public void start() {
+      super.start();
+      for (P2PNode p : peers) {
+        // We initialize the state of our peers.
+        // We don't know if our peer is a validator or not, nor its validator id, so
+        // we can't initialize it with its own signature.
+        peersState.put(p.nodeId, new BitSet());
+      }
+    }
+
     /** Asynchronous, so when we receive a state it can be an old one. */
     void onPeerState(State state) {
-      int newCard = state.desc.cardinality();
-      State old = peersState.get(state.who.nodeId);
-
-      if (newCard < params.threshold && (old == null || old.desc.cardinality() < newCard)) {
-        peersState.put(state.who.nodeId, state);
-      }
+      peersState.get(state.who.nodeId).or(state.desc);
     }
 
     /**
      * If the state has changed we send a message to all. If we're done, we update all our peers: it
-     * will be our last message.
+     * will be our last message. We consider here that this last message will always arrive, to
+     * there is no risk to have a node still waiting for a tx.
      */
     void updateVerifiedSignatures(BitSet sigs) {
       int oldCard = verifiedSignatures.cardinality();
@@ -282,17 +293,27 @@ public class P2PHandel implements Protocol {
       int newCard = verifiedSignatures.cardinality();
 
       if (newCard > oldCard) {
-        if (params.withState) {
-          sendStateToPeers();
-        }
-
         if (doneAt == 0 && verifiedSignatures.cardinality() >= params.threshold) {
           doneAt = network.time;
-          while (!peersState.isEmpty()) {
-            sendSigs();
-          }
+          sendFinalSigToPeers();
+        } else if (doneAt == 0 && params.sendState) {
+          sendStateToPeers();
         }
       }
+    }
+
+    void sendFinalSigToPeers() {
+      // When we're done we send the valid aggregation to all our peers.
+      // It's a simplification to ensure the protocol ends.
+      List<P2PHandelNode> dest = new ArrayList<>();
+      for (P2PHandelNode p : peers) {
+        if (peersState.get(p.nodeId).cardinality() < params.threshold) {
+          dest.add(p);
+          peersState.get(p.nodeId).or(verifiedSignatures);
+        }
+      }
+      // The final signature has a size of 1, as we can aggregate it fully.
+      network().send(new SendSigs(verifiedSignatures, 1), this, dest);
     }
 
     void sendStateToPeers() {
@@ -300,8 +321,11 @@ public class P2PHandel implements Protocol {
       network.send(s, this, peers);
     }
 
-    /** Nothing much to do when we receive a sig set: we just add it to our toVerify list. */
-    void onNewSig(BitSet sigs) {
+    /** Called when we receive a set of signature from our peers */
+    void onNewSig(Node from, BitSet sigs) {
+      // We update our vision of our peer.
+      peersState.get(from.nodeId).or(sigs);
+      // We add what it sent us to our verification list.
       toVerify.add(sigs);
     }
 
@@ -310,40 +334,72 @@ public class P2PHandel implements Protocol {
      * sent it a signature set.
      */
     void sendSigs() {
-      State found = null;
-      BitSet toSend = null;
-      Iterator<State> it = peersState.values().iterator();
-      while (it.hasNext() && found == null) {
-        State cur = it.next();
-        toSend = (BitSet) verifiedSignatures.clone();
-        toSend.andNot(cur.desc);
-        int v1 = toSend.cardinality();
-
-        if (v1 > 0) {
-          found = cur;
-          it.remove();
-        }
+      if (doneAt > 0) {
+        return;
       }
 
-      if (!params.withState) {
-        found = new State(peers.get(network.rd.nextInt(peers.size())));
+      P2PHandelNode dest = bestDest();
+      if (dest == null) { // Nobody needs anything from us right now.
+        return;
       }
 
-      if (found != null) {
-        SendSigs ss;
-        if (params.sendSigsStrategy == SendSigsStrategy.dif) {
-          ss = new SendSigs(toSend);
-        } else if (params.sendSigsStrategy == SendSigsStrategy.cmp_all) {
-          ss =
-              new SendSigs((BitSet) verifiedSignatures.clone(), compressedSize(verifiedSignatures));
-        } else if (params.sendSigsStrategy == SendSigsStrategy.cmp_diff) {
-          int s1 = compressedSize(verifiedSignatures);
-          int s2 = compressedSize(toSend);
-          ss = new SendSigs((BitSet) verifiedSignatures.clone(), Math.min(s1, s2));
-        } else {
-          ss = new SendSigs((BitSet) verifiedSignatures.clone());
+      BitSet toSend = diff(dest);
+
+      // We update our vision of our peer: we consider it will receive our message and
+      //  update the state accordingly
+      peersState.get(dest.nodeId).or(verifiedSignatures);
+
+      SendSigs ss = createSendSigs(toSend);
+      network.send(ss, this, dest);
+    }
+
+    private BitSet diff(P2PHandelNode peer) {
+      BitSet needed = (BitSet) verifiedSignatures.clone();
+      needed.andNot(peersState.get(peer.nodeId));
+      return needed;
+    }
+
+    /**
+     * We select the best destination, eg. the largest diff. This opens a lot of doors for an
+     * attacker: by lying on its state it will be prioritized vs. the other peers. Note that with
+     * honest peers, we minimize the number of message but increase the number of signatures sent.
+     */
+    private P2PHandelNode bestDest() {
+      P2PHandelNode dest = null;
+      int destSize = 0;
+      for (P2PHandelNode p : peers) {
+        int size = diff(p).cardinality();
+        if (size > destSize) {
+          dest = p;
+          destSize = size;
         }
-        network.send(ss, this, found.who);
+      }
+      return dest;
+    }
+
+    /**
+     * We select randomly our destination among our peers. We could do something in the middle as
+     * well eg.
+     */
+    private P2PHandelNode randomDest() {
+      return peers.get(network.rd.nextInt(peers.size()));
+    }
+
+    /** The only difficulty here is to calculate the actual number of signatures we're sending. */
+    private SendSigs createSendSigs(BitSet toSend) {
+      if (params.sendSigsStrategy == SendSigsStrategy.dif) {
+        return new SendSigs(toSend);
+      } else if (params.sendSigsStrategy == SendSigsStrategy.cmp_all) {
+        return new SendSigs(
+            (BitSet) verifiedSignatures.clone(), compressedSize(verifiedSignatures));
+      } else if (params.sendSigsStrategy == SendSigsStrategy.cmp_diff) {
+        // Sometimes it's better to send more signatures because they compress better.
+        // There could be even smarter strategies, where you look at all subsets.
+        int s1 = compressedSize(verifiedSignatures);
+        int s2 = compressedSize(toSend);
+        return new SendSigs((BitSet) verifiedSignatures.clone(), Math.min(s1, s2));
+      } else {
+        return new SendSigs((BitSet) verifiedSignatures.clone());
       }
     }
 
@@ -425,6 +481,9 @@ public class P2PHandel implements Protocol {
 
   @Override
   public void init() {
+    // Some nodes are not participating in the aggregation, they just relay messages.
+    // This allow the aggregator nodes to hide themselves among standard nodes, even if
+    //  it's should be simple to do the distinction in real life.
     Set<Integer> justRelay = new HashSet<>(params.relayingNodeCount);
     while (justRelay.size() < params.relayingNodeCount) {
       justRelay.add(network.rd.nextInt(params.signingNodeCount + params.relayingNodeCount));
@@ -433,20 +492,15 @@ public class P2PHandel implements Protocol {
     for (int i = 0; i < params.signingNodeCount + params.relayingNodeCount; i++) {
       final P2PHandelNode n = new P2PHandelNode(justRelay.contains(i));
       network.addNode(n);
-      if (params.withState) {
+      if (params.sendState) {
+        // If nodes exchange their state that's an extra type of message.
         network.registerTask(n::sendStateToPeers, 1, n);
       }
-      network.registerConditionalTask(
-          n::sendSigs,
-          1,
-          params.sigsSendPeriod,
-          n,
-          () -> !(n.peersState.isEmpty()),
-          () -> n.doneAt == 0 || true);
 
-      // We stop sending sigs when we have finished. Technically it could be an issue because
-      //  we could own signatures we haven't distributed.
+      // All nodes will be sending their updated aggregation periodically.
+      network.registerPeriodicTask(n::sendSigs, 1, params.sigsSendPeriod, n);
 
+      // We also check signatures before sending them.
       network.registerConditionalTask(
           n::checkSigs, 1, params.pairingTime, n, () -> !n.toVerify.isEmpty(), () -> n.doneAt == 0);
     }
@@ -459,12 +513,8 @@ public class P2PHandel implements Protocol {
     return network;
   }
 
+  @Override
   public P2PHandel copy() {
     return new P2PHandel(params);
-  }
-
-  public static void main(String... args) {
-    sigsPerTime();
-    // sigsPerStrategy();
   }
 }
