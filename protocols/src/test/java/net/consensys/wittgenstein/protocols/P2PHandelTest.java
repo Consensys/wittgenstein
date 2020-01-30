@@ -59,22 +59,24 @@ public class P2PHandelTest {
     P2PHandel p1 = new P2PHandel(params);
 
     p1.init();
-    for (; RunMultipleTimes.contUntilDone().test(p1); ) {
-      p1.network.runMs(1000);
+    for (; RunMultipleTimes.contUntilDone().test(p1) && p1.network().time < 20000; ) {
+      p1.network().runMs(1000);
     }
+    Assert.assertFalse(RunMultipleTimes.contUntilDone().test(p1));
   }
 
   @Test
   public void testSimpleRunWithState() {
     P2PHandel.P2PHandelParameters params =
         new P2PHandel.P2PHandelParameters(
-            20, 0, 3, 3, 2, 5, true, P2PHandel.SendSigsStrategy.cmp_diff, true, nb, nl);
+            20, 0, 20, 3, 2, 50, true, P2PHandel.SendSigsStrategy.cmp_diff, true, nb, nl);
     P2PHandel p1 = new P2PHandel(params);
 
     p1.init();
-    for (; RunMultipleTimes.contUntilDone().test(p1); ) {
-      p1.network.runMs(1000);
+    for (; RunMultipleTimes.contUntilDone().test(p1) && p1.network().time < 20000; ) {
+      p1.network().runMs(1000);
     }
+    Assert.assertFalse(RunMultipleTimes.contUntilDone().test(p1));
   }
 
   @Test

@@ -2,6 +2,7 @@ package net.consensys.wittgenstein.protocols;
 
 import net.consensys.wittgenstein.core.NetworkLatency;
 import net.consensys.wittgenstein.core.RegistryNodeBuilders;
+import net.consensys.wittgenstein.core.RunMultipleTimes;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -30,5 +31,20 @@ public class HandelTest {
         Assert.assertEquals(n1.totalSigSize(), n2.totalSigSize());
       }
     }
+  }
+
+  @Test
+  public void testRun() {
+    Handel p1 =
+        new Handel(
+            new Handel.HandelParameters(
+                64, 60, 6, 10, 5, 5, 10, 2, nb, nl, 100, false, false, null));
+
+    p1.init();
+    for (; RunMultipleTimes.contUntilDone().test(p1) && p1.network().time < 20000; ) {
+      p1.network().runMs(1000);
+    }
+
+    Assert.assertFalse(RunMultipleTimes.contUntilDone().test(p1));
   }
 }
