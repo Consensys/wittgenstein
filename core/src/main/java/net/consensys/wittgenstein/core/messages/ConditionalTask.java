@@ -16,15 +16,20 @@ public final class ConditionalTask<TN extends Node> extends Task<TN> {
   /** Will start after this time. */
   public int minStartTime;
 
+  /** The node on which the task is executed. The task won't be executed if the node is down */
+  public final TN from;
+
   public ConditionalTask(
       Network.Condition startIf,
       Network.Condition repeatIf,
       Runnable r,
       int minStartTime,
+      TN from,
       int duration) {
     super(r);
     this.startIf = startIf;
     this.repeatIf = repeatIf;
+    this.from = from;
     this.duration = duration;
     this.minStartTime = minStartTime;
   }

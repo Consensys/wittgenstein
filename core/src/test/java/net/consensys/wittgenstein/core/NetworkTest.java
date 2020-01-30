@@ -433,4 +433,75 @@ public class NetworkTest {
       network.send(act, n0, n1);
     }
   }
+
+  @Test
+  public void testTask() {
+    final AtomicInteger ai = new AtomicInteger(0);
+    network.registerTask(ai::getAndIncrement, 1000, n0);
+
+    network.runMs(500);
+    Assert.assertEquals(0, ai.get());
+    network.runMs(500);
+    Assert.assertEquals(1, ai.get());
+    network.runMs(100);
+    Assert.assertEquals(1, ai.get());
+    network.runMs(5000);
+    Assert.assertEquals(1, ai.get());
+  }
+
+  @Test
+  public void testTaskOnStoppedNode() {
+    final AtomicInteger ai = new AtomicInteger(0);
+    network.registerTask(ai::getAndIncrement, 1000, n0);
+
+    n0.stop();
+    network.runMs(5000);
+    Assert.assertEquals(0, ai.get());
+  }
+
+  @Test
+  public void testPeriodicTask() {
+    final AtomicInteger ai = new AtomicInteger(0);
+    network.registerPeriodicTask(ai::getAndIncrement, 1000, 100, n0);
+
+    network.runMs(500);
+    Assert.assertEquals(0, ai.get());
+    network.runMs(500);
+    Assert.assertEquals(1, ai.get());
+    network.runMs(100);
+    Assert.assertEquals(2, ai.get());
+    network.runMs(50);
+    Assert.assertEquals(2, ai.get());
+
+    n0.stop();
+    network.runMs(1000);
+    Assert.assertEquals(2, ai.get());
+  }
+
+  @Test
+  public void testConditionalTask() {
+    final AtomicBoolean ab = new AtomicBoolean(false);
+    final AtomicInteger ai = new AtomicInteger(0);
+    network.registerConditionalTask(ai::getAndIncrement, 1000, 100, n0, ab::get, () -> true);
+
+    network.runMs(500);
+    Assert.assertEquals(0, ai.get());
+
+    network.runMs(500);
+    Assert.assertEquals(0, ai.get());
+
+    ab.set(true);
+    network.runMs(1);
+    Assert.assertEquals(1, ai.get());
+
+    network.runMs(99);
+    Assert.assertEquals(1, ai.get());
+
+    network.runMs(1);
+    Assert.assertEquals(2, ai.get());
+
+    n0.stop();
+    network.runMs(1000);
+    Assert.assertEquals(2, ai.get());
+  }
 }

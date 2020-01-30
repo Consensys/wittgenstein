@@ -9,6 +9,7 @@ public class Task<TN extends Node> extends Message<TN> {
   @JsonIgnore public final Runnable r;
 
   public Task(Runnable r) {
+    assert r != null;
     this.r = r;
   }
 
@@ -24,6 +25,7 @@ public class Task<TN extends Node> extends Message<TN> {
 
   @Override
   public void action(Network<TN> network, TN from, TN to) {
+    assert r != null;
     r.run();
   }
 }

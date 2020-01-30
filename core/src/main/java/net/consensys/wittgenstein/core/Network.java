@@ -525,20 +525,61 @@ public class Network<TN extends Node> {
       TN fromNode,
       Condition startIf,
       Condition repeatIf) {
-    ConditionalTask<TN> ct = new ConditionalTask<>(startIf, repeatIf, task, startAt, duration);
+    ConditionalTask<TN> ct =
+        new ConditionalTask<>(startIf, repeatIf, task, startAt, fromNode, duration);
     conditionalTasks.add(ct);
   }
 
   private Envelope<?> nextMessage(int until) {
+    List<ConditionalTask<TN>> cts = null;
+
     while (time <= until) {
       Envelope<?> m = msgs.poll(time);
       if (m != null) {
         return m;
       } else {
         time++;
+
+        if (cts == null) {
+          cts = new ArrayList<>(conditionalTasks);
+        }
+
+        Iterator<ConditionalTask<TN>> it = cts.iterator();
+        while (it.hasNext()) {
+          ConditionalTask<TN> ct = it.next();
+          if (ct.minStartTime > until || ct.from.isDown()) {
+            it.remove();
+            continue;
+          }
+
+          if (ct.minStartTime <= time) {
+            it.remove();
+            if (ct.startIf.check()) {
+              ct.r.run();
+              ct.minStartTime = time + ct.duration;
+              if (!ct.repeatIf.check()) {
+                conditionalTasks.remove(ct);
+              }
+            }
+          }
+        }
       }
     }
     return null;
+  }
+
+  private void executeConditionalTask(ConditionalTask<TN> ct) {
+    assert ct.r != null;
+
+    if (ct.startIf.check()) {
+      ct.r.run();
+      ct.minStartTime = time + ct.duration;
+      if (ct.repeatIf.check()) {
+        registerTask(() -> executeConditionalTask(ct), ct.minStartTime, null);
+      }
+    } else {
+      conditionalTasks.add(ct);
+    }
   }
 
   @SuppressWarnings("unchecked")
@@ -546,6 +587,7 @@ public class Network<TN extends Node> {
     int previousTime = time;
     Envelope<?> next = nextMessage(until);
     if (next == null) {
+      // If there is no message the state cannot change so we're done
       return false;
     }
     while (next != null) {
@@ -555,24 +597,12 @@ public class Network<TN extends Node> {
         if (time > na) {
           throw new IllegalStateException("time:" + time + ", arrival=" + na + ", m:" + m);
         }
-
-        Iterator<ConditionalTask<TN>> it = conditionalTasks.iterator();
-        while (it.hasNext()) {
-          ConditionalTask ct = it.next();
-          if (!ct.repeatIf.check()) {
-            it.remove();
-          } else {
-            if (time >= ct.minStartTime && ct.startIf.check()) {
-              ct.r.run();
-              ct.minStartTime = time + ct.duration;
-            }
-          }
-        }
       }
 
       TN from = allNodes.get(m.getFromId());
       TN to = allNodes.get(m.getNextDestId());
-      if (partitionId(from) == partitionId(to)) {
+
+      if (!to.isDown() && partitionId(from) == partitionId(to)) {
         if (!(m.getMessage() instanceof Task<?>)) {
           if (m.getMessage().size() == 0) {
             throw new IllegalStateException("Message size should be greater than zero: " + m);
