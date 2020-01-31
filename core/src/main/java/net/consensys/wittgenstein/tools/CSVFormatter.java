@@ -4,7 +4,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class CSVFormatter {
-  private class emptyObject {
+  private static class EmptyObject {
     @Override
     public String toString() {
       return "";
@@ -29,7 +29,7 @@ public class CSVFormatter {
     for (String field : fields) {
       List<Object> l = this.values.getOrDefault(field, new ArrayList<>());
       Object value = vals.get(field);
-      l.add(Objects.requireNonNullElseGet(value, emptyObject::new));
+      l.add(Objects.requireNonNullElseGet(value, EmptyObject::new));
       this.values.put(field, l);
     }
     this.nbRows++;

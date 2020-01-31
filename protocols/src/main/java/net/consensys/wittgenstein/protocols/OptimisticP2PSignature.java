@@ -44,6 +44,8 @@ public class OptimisticP2PSignature implements Protocol {
     final String nodeBuilderName;
     final String networkLatencyName;
 
+    // for json
+    @SuppressWarnings("unused")
     public OptimisticP2PSignatureParameters() {
       this.nodeCount = 100;
       this.threshold = 99;

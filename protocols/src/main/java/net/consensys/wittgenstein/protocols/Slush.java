@@ -44,6 +44,8 @@ public class Slush implements Protocol {
       this.networkLatencyName = networkLatencyName;
     }
 
+    // For json
+    @SuppressWarnings("unused")
     public SlushParameters() {
       this(100, 4, 7, 4, null, null);
     }

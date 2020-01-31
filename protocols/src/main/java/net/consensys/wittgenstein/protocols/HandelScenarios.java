@@ -18,6 +18,7 @@ import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.tools.Graph;
 import net.consensys.wittgenstein.tools.NodeDrawer;
 
+@SuppressWarnings({"unused", "SameParameterValue"})
 public class HandelScenarios {
 
   static class BasicStats {

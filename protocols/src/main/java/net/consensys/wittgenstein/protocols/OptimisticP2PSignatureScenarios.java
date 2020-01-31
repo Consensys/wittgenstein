@@ -7,6 +7,7 @@ import net.consensys.wittgenstein.core.RunMultipleTimes;
 import net.consensys.wittgenstein.core.utils.StatsHelper;
 import net.consensys.wittgenstein.protocols.OptimisticP2PSignature.OptimisticP2PSignatureParameters;
 
+@SuppressWarnings("SameParameterValue")
 public class OptimisticP2PSignatureScenarios {
 
   static class BasicStats {

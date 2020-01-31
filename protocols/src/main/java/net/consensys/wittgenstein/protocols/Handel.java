@@ -10,6 +10,10 @@ import net.consensys.wittgenstein.core.utils.BitSetUtils;
 import net.consensys.wittgenstein.core.utils.MoreMath;
 import net.consensys.wittgenstein.tools.NodeDrawer;
 
+/**
+ * Implementation of Handel (https://arxiv.org/abs/1906.05132) Handel: Practical Multi-Signature
+ * Aggregation for Large Byzantine Committees
+ */
 @SuppressWarnings("WeakerAccess")
 public class Handel implements Protocol {
   private final HandelParameters params;

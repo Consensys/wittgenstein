@@ -3,6 +3,11 @@ package net.consensys.wittgenstein.core;
 import java.util.*;
 import net.consensys.wittgenstein.core.messages.FloodMessage;
 
+/**
+ * A peer-to-peer network, i.e. network with nodes interconnected with a small number of peers
+ * (typically 3-100). On top of this it's possible to add a protocol (gossip, kademlia, ...) to
+ * exchange messages.
+ */
 public class P2PNetwork<TN extends P2PNode<TN>> extends Network<TN> {
   private final int connectionCount;
   private final boolean minimum;

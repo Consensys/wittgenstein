@@ -22,7 +22,7 @@ public abstract class NetworkThroughput {
 
     /**
      * Using the optimistic numbers here. It's rather imprecise, because most of the loss come from
-     * burst . Note that the paper proposes to use a Pareto distribution.
+     * bursts. Note that the paper proposes to use a Pareto distribution.
      * https://pdfs.semanticscholar.org/297a/0cc3af443542710d69010676918a0271f2e3.pdf
      */
     private final double loss = 0.004;

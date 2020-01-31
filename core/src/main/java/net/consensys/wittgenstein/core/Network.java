@@ -555,6 +555,7 @@ public class Network<TN extends Node> {
           if (ct.minStartTime <= time) {
             it.remove();
             if (ct.startIf.check()) {
+              assert ct.r != null;
               ct.r.run();
               ct.minStartTime = time + ct.duration;
               if (!ct.repeatIf.check()) {

@@ -72,6 +72,8 @@ public class P2PFlood implements Protocol {
     final String nodeBuilderName;
     final String networkLatencyName;
 
+    // For json
+    @SuppressWarnings("unused")
     public P2PFloodParameters() {
       this.nodeCount = 100;
       this.deadNodeCount = 10;

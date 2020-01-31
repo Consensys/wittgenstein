@@ -53,6 +53,8 @@ public class Snowflake implements Protocol {
       this.networkLatencyName = networkLatencyName;
     }
 
+    // For json
+    @SuppressWarnings("unused")
     public SnowflakeParameters() {
       this(100, 4, 7, 4, 7, null, null);
     }

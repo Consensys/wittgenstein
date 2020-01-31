@@ -63,7 +63,7 @@ public class ETHSelfishMiner extends ETHMiner {
     // The previous delta between the two chains
     int deltaP = privateHeight() - (otherMinersHead.height - 1);
 
-    // In ethereum difficulty changes all the time, the block kept does
+    // In Ethereum difficulty changes all the time, the block kept does
     //  not depend on network order issue but on the (total) difficulty. So we
     //  could optimize this attack by not looking only at the depth
     //  but at the real total difficulty.

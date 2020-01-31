@@ -110,8 +110,8 @@ public class NodeDrawer implements Closeable {
 
   private BufferedImage loadWM() throws IOException {
     try (InputStream bg = getClass().getClassLoader().getResourceAsStream("world-map-2000px.png")) {
-      BufferedImage bi = ImageIO.read(bg);
-      return bi;
+      assert bg != null;
+      return ImageIO.read(bg);
     }
   }
 
