@@ -79,7 +79,7 @@ public class Server implements IServer {
     }
     if (bc == null) {
       throw new IllegalStateException(
-          "no constructor in "
+          "No constructor in "
               + fullClassName
               + ", we need a *public* "
               + "constructor taking a subclass of WParameters as unique parameter.");
