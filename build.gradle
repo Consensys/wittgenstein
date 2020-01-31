@@ -33,8 +33,9 @@ subprojects {
     }
 
     test {
+        environment "GROOVY_TURN_OFF_JAVA_WARNINGS", "true"
         // To use less memory during the tests, for the execution on circle ci...
-        jvmArgs "-XX:+UseSerialGC", "-Xss512k", "-Dspring.test.context.cache.maxSize=1", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseCGroupMemoryLimitForHeap"
+        jvmArgs "-XX:+UseSerialGC", "-Xss512k", "-Dspring.test.context.cache.maxSize=1"
         // We need to limit the memory to be on par with CircleCI
         // It seems that 2g is the maximum we can get on CircleCI
         maxHeapSize = "2400m"

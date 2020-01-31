@@ -19,7 +19,7 @@ public class ENRGossipingTest {
     String nl = NetworkLatency.NetworkLatencyByDistanceWJitter.class.getSimpleName();
     ENRGossiping p1 =
         new ENRGossiping(
-            new ENRGossiping.ENRParameters(100, 10, 25, 15000, 2, 20, 0.4f, 30, 20, 5, nb, nl));
+            new ENRGossiping.ENRParameters(100, 10, 25, 15000, 2, 20, 0.4f, 10, 5, 5, nb, nl));
     ENRGossiping p2 = p1.copy();
     p1.init();
     p1.network().run(10);
@@ -41,11 +41,11 @@ public class ENRGossipingTest {
   @Test
   public void testPPT() {
     String nb = RegistryNodeBuilders.name(RegistryNodeBuilders.Location.RANDOM, true, 0);
-    ;
+
     String nl = NetworkLatency.NetworkLatencyByDistanceWJitter.class.getSimpleName();
     ENRGossiping p1 =
         new ENRGossiping(
-            new ENRGossiping.ENRParameters(100, 10, 25, 15000, 2, 20, 0.4f, 30, 20, 5, nb, nl));
+            new ENRGossiping.ENRParameters(100, 10, 25, 15000, 2, 20, 0.4f, 30, 10, 5, nb, nl));
     Predicate<Protocol> contIf = pp1 -> pp1.network().time <= 1000 * 100;
     StatsHelper.StatsGetter sg =
         new StatsHelper.StatsGetter() {
